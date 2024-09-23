@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+includes:
+  ssh:
+    taskfile: ssh.yaml
+
+# These tasks are for somewhat routine remote operations, rather than local or one time
+tasks:
+  shutdown:
+    cmds:
+      - task: ssh:run-command
+        vars:
+          COMMANDS:
+            - enable
+            - reload halt
+  reboot:
+    dir: "{{ .TASKFILE_DIR }}"
+    cmds:
+      - task: ssh:run-command
+        vars:
+          COMMANDS:
+            - enable
+            - reload
+      - task: ssh:wait-online
+  dump-config:
+    cmds:
+      - task: ssh:run-command
+        vars:
+          COMMANDS:
+            - enable
+            - show running-config

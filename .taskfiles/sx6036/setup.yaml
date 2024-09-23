@@ -1,0 +1,578 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+includes:
+  ssh:
+    taskfile: ssh.yaml
+    internal: true
+  local:
+    taskfile: local.yaml
+    internal: true
+
+vars:
+  FIRMWARE_DIR: '{{ default "/tmp/host-mounts/mellanox-firmware" .FIRMWARE_DIR }}'
+  FIRMWARE_URLS:
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.4.2008.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.5.1006.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.1002.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.2002.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.2102.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.3004.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.5000.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.5009.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8008.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8010.img
+    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8012.img
+  MTU: "9216"
+
+tasks:
+  # This is really janky, but unfortunately due to several taskfile limitations there isn't really a
+  # cleaner way
+  update-firmware-all:
+    deps:
+      - task: download-firmware-all
+    cmds:
+      - defer: |
+          rm -rvf {{ shellQuote .FIRMWARE_DIR }}
+      # Run updates until it fails, presumably due to no more updates being available
+      - for:
+          var: FIRMWARE_URLS
+        task: update-firmware-next
+
+  update-firmware-next:
+    deps:
+      - task: local:configure-ssh
+      - task: download-firmware-all
+    vars:
+      NGINX_IMAGE: nginx:1.27.1
+      CONTAINER_NAME: mellanox-firmware
+      LOCAL_HTTP_PORT: "8080" # This task does not configure any firewalls that may block traffic to this port
+    dir: "{{ .TASKFILE_DIR }}"
+    cmds:
+      - defer: |
+          CONTAINER_ID="$(docker ps -a -q --filter="name={{ .CONTAINER_NAME }}")"
+          if [ -z "${CONTAINER_ID}" ]; then exit; fi
+
+          echo "Stopping firmware container..."
+          docker container stop "${CONTAINER_ID}" > /dev/null
+      # These can't even be split up into `var: sh` stanzas because vars run prior to dependencies executing, and
+      # in parallel (despite what the docs say) (WTF??????????)
+      - cmd: |
+          # Get the currently running firmware version
+          echo "Getting the currently running version..."
+          CURRENT_IMAGES="$(task -o group run-command -- "enable" "show images")"
+          ACTIVE_PARTITION="$(echo "$CURRENT_IMAGES" | sed -nr 's/^Last boot partition: ([[:digit:]]+)/\1/p')"
+
+          case "${ACTIVE_PARTITION}" in
+            "1")
+              LINE_NUMBER=4
+              NEXT_PARTITION=2
+              ;;
+            "2")
+              LINE_NUMBER=7
+              NEXT_PARTITION=1
+              ;;
+            *) 
+              >&2 echo "Unknown partition number '${ACTIVE_PARTITION}'"
+              exit 1
+              ;;
+          esac
+
+          VERSION_REGEX='s/^.*([[:digit:]]\.[[:digit:]]\.[[:digit:]]{4}).*/\1/'
+          CURRENT_IMAGE_VERSION="$(echo "$CURRENT_IMAGES" | sed -e "${LINE_NUMBER}q;d" | sed -r "${VERSION_REGEX}")"
+
+          echo "Currently running ${CURRENT_IMAGE_VERSION}"
+
+          # Get the next newest version by adding the current version to the list of available versions, sorting it,
+          # and picking the next item on the list
+          NEXT_VERSION=$(
+            printf '%s\n%s' \
+              "$(ls "{{ .FIRMWARE_DIR }}")" \
+              "${CURRENT_IMAGE_VERSION}" \
+            | sed 's/.img$//' \
+            | sort -u \
+            | grep -A1 "${CURRENT_IMAGE_VERSION}" \
+            | tail -n 1
+          )
+
+          if [ "${NEXT_VERSION}" == "${CURRENT_IMAGE_VERSION}" ]; then
+            echo "Already running the lastest available version"
+          fi
+
+          echo "Updating to ${NEXT_VERSION}..."
+
+          # Start a container that serves the images
+          docker run --rm -d --name "{{ .CONTAINER_NAME }}" \
+            -v "{{ .FIRMWARE_DIR }}:/usr/share/nginx/html:ro" \
+            -p {{ .LOCAL_HTTP_PORT }}:80 "{{ .NGINX_IMAGE }}" > /dev/null
+
+          # Fetch the image on the switch
+          # Get the IP address that the switch sees this device as by looking at the audit log
+          CURRENT_USER="$(task -o group run-command -- "show whoami" | grep 'Current user:' | tr -d ' ' | cut -d':' -f2)"
+          USER_HISTORY="$(task -o group run-command -- "enable" "configure terminal" "show users history username ${CURRENT_USER}")"
+          LOCAL_IP_ADDRESS="$(echo "${USER_HISTORY}" | grep 'pts/' | head -n 1 | tr -s ' ' | cut -d' ' -f3)"
+
+          task -o group run-command-config -- \
+            "image fetch http://${LOCAL_IP_ADDRESS}:{{ .LOCAL_HTTP_PORT }}/${NEXT_VERSION}.img" \
+            "image install ${NEXT_VERSION}.img verify require-sig" \
+            "image delete ${NEXT_VERSION}.img" \
+            "boot system location ${NEXT_PARTITION}"
+
+          # Reboot and wait
+          task -o group reboot
+
+  download-firmware-all:
+    internal: true
+    deps:
+      - for:
+          var: FIRMWARE_URLS
+        vars:
+          FIRMWARE_URL: "{{ .ITEM }}"
+        task: download-firmware
+
+  download-firmware:
+    internal: true
+    requires:
+      vars:
+        - FIRMWARE_URL
+    vars:
+      REMOTE_FILE_NAME:
+        sh: basename "{{ .FIRMWARE_URL }}"
+      FILE_VERSION:
+        sh: echo "{{ .REMOTE_FILE_NAME }}" | sed -r 's/.*([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+).*/\1/'
+      OUTPUT_FILE_PATH:
+        sh: echo "{{ .FIRMWARE_DIR }}/{{ .FILE_VERSION }}.img"
+    prefix: "{{ .TASK }} ({{ .FILE_VERSION }})"
+    cmd: |
+      # For some reason the `dir` directive is not treating the value as absolute despite the leading `/` (WTF??)
+      mkdir -pv "{{ .FIRMWARE_DIR }}"
+      cd "{{ .FIRMWARE_DIR }}"
+
+      FILE_EXTENSION="$(echo "{{ .REMOTE_FILE_NAME }}" | sed 's/.*\.//')"
+      LOCAL_DOWNLOAD_FILE_NAME="{{ .FILE_VERSION }}.${FILE_EXTENSION}"
+
+      echo "Downloading firmware version {{ .FILE_VERSION }}..."
+      curl -fsSL -o "${LOCAL_DOWNLOAD_FILE_NAME}" "{{ .FIRMWARE_URL }}"
+
+      # Don't extract if not a zip file
+      if [ "${FILE_EXTENSION}" != 'zip' ]; then exit; fi
+
+      echo "Extracting img file from downloaded zip..."
+      IMG_FILE_NAME="$(unzip -lqq "${LOCAL_DOWNLOAD_FILE_NAME}" '*.img' | tr -s ' ' | cut -d' ' -f4)"
+      unzip -u "${LOCAL_DOWNLOAD_FILE_NAME}" "${IMG_FILE_NAME}"
+      rm -rvf "${LOCAL_DOWNLOAD_FILE_NAME}"
+
+      mv -v "${IMG_FILE_NAME}" "{{ .OUTPUT_FILE_PATH }}"
+    status:
+      - test -f "{{ .OUTPUT_FILE_PATH }}"
+
+  full-configuration:
+    deps:
+      - task: local:configure-ssh
+    cmds:
+      - task: set-profile
+      - task: remove-bootloader-password
+      - task: load-licenses
+      - task: update-clock
+      - task: setup-accounts
+      - task: configure-global-settings
+      - task: configure-vlans
+      - task: configure-ports
+
+  # WARNING: this will reset all configuration on the switch.
+  set-profile:
+    internal: true
+    vars:
+      PROFILE:
+        ref: default "vpi-single-switch" .PROFILE
+    dir: "{{ .TASKFILE_DIR }}"
+    cmds:
+      - task: ssh:run-command
+        vars:
+          COMMANDS:
+            - enable
+            - configure terminal
+            - system profile {{ .PROFILE }} force
+      - task: ssh:wait-online
+    status:
+      - |
+        CURRENT_PROFILE="$(task -o group run-command -- "enable" "show system profile" | grep 'Profile:' | tr -d ' ' | cut -d':' -f2)"
+        test "${CURRENT_PROFILE}" == {{ .PROFILE }}
+
+  # Useful for maintenance. Given taht every unit has the same password, this really doesn't add
+  # much security anyway.
+  remove-bootloader-password:
+    internal: true
+    cmds:
+      - task: ssh:run-command-shell
+        vars:
+          # Current password for factory reset systems should be "$1$yCoib8pn$vSaWSssw2k17iOJRIdmcw/", without quotes.
+          # Again, every switched ever produced has this as the default "password", so there is little to no security
+          # risk of listing it in plain-text here.
+          COMMAND: |
+            CURRENT_PASSWORD="$(/opt/tms/bin/mddbreq -v /config/db/initial query get - /system/bootmgr/password)"
+
+            test -z "${CURRENT_PASSWORD}" && exit
+
+            echo "Current password: ${CURRENT_PASSWORD}"
+            echo "Removing password..."
+            /opt/tms/bin/mddbreq /config/db/initial set modify - /system/bootmgr/password string ''
+            eetool -a bf -s UBPASSWD=""
+            cli
+            enable
+            configure terminal
+            boot bootmgr password 7 ""
+
+  load-licenses:
+    internal: true
+    silent: true
+    vars:
+      LICENSE_FILE:
+        sh: SOPS_AGE_KEY_FILE="{{ shellQuote .ROOT_DIR }}/${SOPS_AGE_KEY_FILE}" sops decrypt resources/license.sops.txt
+    dir: "{{ .TASKFILE_DIR }}"
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          {{ range $i, $licenseKey := splitList "\n" .LICENSE_FILE }}
+          license install {{ $licenseKey }}
+          {{ end }}
+
+  update-clock:
+    vars:
+      DATETIME:
+        sh: date -u '+%T %Y/%m/%d'
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMANDS:
+          - clock timezone UTC
+          - clock set {{ .DATETIME }}
+
+  setup-accounts:
+    internal: true
+    vars:
+      RSA_PUBLIC_KEY_PATH: ~/.ssh/id_rsa.pub
+      PASSWORD_LINES:
+        # Decrypt the password file and load it as a string that looks like:
+        # ```
+        # username1:$5$hashedPassword1...
+        # username2:$5$hashedPassword2...
+        # ...
+        # ```
+        # This is easy to parse with a golang template.
+        sh: |
+          SOPS_AGE_KEY_FILE="{{ shellQuote .ROOT_DIR }}/${SOPS_AGE_KEY_FILE}"
+
+          sops decrypt resources/passwords.sops.yaml | while read -r LINE; do
+            USERNAME="$(echo "${LINE}" | yq -r 'keys | first')"
+            HASHED_PASSWORD="$(echo "${LINE}" | yq -r ".[\"$USERNAME\"]" | mkpasswd -m sha512crypt --stdin)"
+            echo "${USERNAME}:${HASHED_PASSWORD}"
+          done
+      RSA_PUBLIC_KEY:
+        sh: cat {{ .RSA_PUBLIC_KEY_PATH }}
+    dir: "{{ .TASKFILE_DIR }}"
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          ssh client user admin authorized-key sshv2 {{ quote .RSA_PUBLIC_KEY }}
+          {{ range $i, $passwordLines := splitList "\n" .PASSWORD_LINES }}
+            {{ $credentialParts := splitn ":" 2 $passwordLines }}
+            {{ $username := $credentialParts._0 }}
+            {{ $password := $credentialParts._1 }}
+            username {{ $username }} password 7 {{ $password }}
+          {{ end }}
+
+  configure-global-settings:
+    internal: true
+    vars:
+      HOSTNAME: switch-01
+      PORT_RANGE: 1/1-1/36
+    dir: "{{ .TASKFILE_DIR }}"
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          hostname "{{ .HOSTNAME }}"
+
+          {{/* Switch all ports to Ethernet */}}
+          port {{ .PORT_RANGE }} type ethernet force
+
+          {{/* Configure link groups */}}
+          lacp
+          {{/*
+            Balance packets based on L3/L4 information, to (hopefully) evenly spread it
+            across links
+          */}}
+          port-channel load-balance ethernet source-destination-ip source-destination-port
+
+          {{/* Default config */}}
+          interface ethernet {{ .PORT_RANGE }}
+          shutdown
+
+          mtu {{ .MTU }}
+
+          no shutdown
+          exit
+
+          {{/* This is minorly annoying and could potentially screw up a script */}}
+          banner login-remote ""
+
+  configure-vlans:
+    internal: true
+    vars:
+      VLANS:
+        map:
+          "100": Management
+          "200": Hosts
+          "300": Kubernetes
+          "400": Infrastructure devices
+          "500": User devices
+          "600": Guest devices
+          "700": "IoT devices"
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          {{ range $id, $name := .VLANS }}
+          vlan {{ $id }}
+          name "{{ $name }}"
+          exit
+          {{ end }}
+
+  configure-ports:
+    internal: true
+    cmds:
+      - task: configure-management-interface
+      - task: configure-brocade-icx-7250-ports
+      - task: configure-r730xd-ports
+      - task: configure-all-ms-01-ports
+      - task: configure-device-ports
+
+  configure-management-interface:
+    internal: true
+    vars:
+      VLAN: "100"
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        # Unfortunately mgmt0 cannot be joined to a vlan, so add a new in-band interface
+        # with the same IP instead. Port mgmt0 will remain enabled for local access.
+        # The interface isolation feature does not support vlan interfaces, so anything on the
+        # vlan can talk with this port.
+        COMMAND: |
+          ip l3 {{/* Routing functionality must be enabled to add an in-band interface to the vlan. */}}
+          interface vlan {{ .VLAN }}
+          ip address {{ .MGMT_IP }} /24
+          exit
+
+  configure-brocade-icx-7250-ports:
+    internal: true
+    vars:
+      PORT: "33"
+      PORT_CHANNEL_NUMBER: "5"
+      HOSTNAME: switch-02
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          {{/* Bonded link config */}}
+          interface port-channel {{ .PORT_CHANNEL_NUMBER }}
+          shutdown
+
+          {{/* General config */}}
+          mtu {{ .MTU }}
+          description {{ .HOSTNAME }}
+
+          {{/* VLAN config */}}
+          switchport mode trunk
+          switchport trunk allowed-vlan all
+
+          {{/* Link bonding */}}
+          lacp-individual enable force
+
+          no shutdown
+          exit
+
+          {{/* Split the interfaces into four subports */}}
+          interface ethernet 1/33
+          shutdown
+          module-type qsfp-split-4 force
+
+          {{/* Individual port config */}}
+          {{ range $i := until 4 }}
+          {{ $subport := add1 $i }}
+          interface ethernet 1/{{ $.PORT }}/{{ $subport }}
+          shutdown
+
+          {{/* General config */}}
+          mtu {{ $.MTU }}
+          description {{ $.HOSTNAME }} SFP+ {{ $subport }}
+
+          {{/* VLAN config */}}
+          switchport mode trunk
+          switchport trunk allowed-vlan all
+
+          {{/* Link bonding */}}
+          lacp rate fast
+          channel-group {{ $.PORT_CHANNEL_NUMBER }} mode active
+
+          no shutdown
+          exit
+          {{ end }}
+
+  configure-r730xd-ports:
+    internal: true
+    vars:
+      PORT: "2"
+      SPEED: 56G
+      HOSTNAME: "proxmox-vm-host-01"
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          {{/* General config */}}
+          interface ethernet 1/{{ .PORT }}
+          shutdown
+
+          description "{{ .HOSTNAME }}"
+          mtu {{ .MTU }}
+          speed {{ .SPEED }}
+
+          {{/* VLAN config */}}
+          switchport mode trunk
+          switchport trunk allowed-vlan all
+
+          no shutdown
+          exit
+
+  configure-all-ms-01-ports:
+    internal: true
+    vars:
+      SWITCH_INTERFACES:
+        - "9"
+        - "10"
+      NODE_COUNT: 4
+      NODE_NUMBERS:
+        ref: seq .NODE_COUNT
+    cmds:
+      - task: ssh:run-command-config
+        vars:
+          COMMAND: |
+            {{/* Split the interfaces into four subports */}}
+            {{ range $i, $interface := .SWITCH_INTERFACES }}
+            interface ethernet 1/{{ $interface }}
+            shutdown
+            module-type qsfp-split-4 force
+            {{ end }}
+      - for:
+          var: NODE_NUMBERS
+        task: configure-ms-01-ports
+        vars:
+          NODE_NUMBER: "{{ .ITEM }}"
+          SWITCH_INTERFACES:
+            ref: .SWITCH_INTERFACES
+
+  configure-ms-01-ports:
+    internal: true
+    requires:
+      vars:
+        - NODE_NUMBER
+        - SWITCH_INTERFACES
+    vars:
+      PORT_CHANNEL_NUMBER:
+        ref: default .NODE_NUMBER .PORT_CHANNEL_NUMBER
+      DEFAULT_VLAN:
+        ref: default "200" .DEFAULT_VLAN
+      TRUNKED_VLANS:
+        ref: default (list "300") .TRUNKED_VLANS
+      HOSTNAME:
+        ref: printf "talos-k8s-mixed-%02d" (atoi .NODE_NUMBER)
+    cmd:
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          {{/* Bonded link config */}}
+          interface port-channel {{ .PORT_CHANNEL_NUMBER }}
+          shutdown
+
+          {{/* General config */}}
+          description "{{ .HOSTNAME }}"
+          mtu {{ .MTU }}
+
+          {{/* VLAN config */}}
+          switchport mode hybrid
+          switchport access vlan {{ $.DEFAULT_VLAN }}
+          {{ range $j, $vlan := $.TRUNKED_VLANS }}
+          switchport hybrid allowed-vlan {{ $vlan }}
+          {{ end }}
+
+          {{/* Link bonding */}}
+          lacp-individual enable force
+
+          no shutdown
+          exit
+
+          {{/* Individual port config */}}
+          {{ range $i, $interface := .SWITCH_INTERFACES }}
+          interface ethernet 1/{{ $interface }}/{{ $.NODE_NUMBER }}
+          shutdown
+
+          {{/* General config */}}
+          description "{{ $.HOSTNAME }} SFP+ {{ add1 $i }}"
+          mtu {{ $.MTU }}
+
+          {{/* VLAN config */}}
+          switchport mode hybrid
+          switchport access vlan {{ $.DEFAULT_VLAN }}
+          {{ range $j, $vlan := $.TRUNKED_VLANS }}
+          switchport hybrid allowed-vlan {{ $vlan }}
+          {{ end }}
+
+          {{/* Link bonding */}}
+          lacp rate fast
+          channel-group {{ $.PORT_CHANNEL_NUMBER }} mode active
+
+          no shutdown
+          exit
+          {{ end }}
+
+  configure-device-ports:
+    internal: true
+    vars:
+      PORTS:
+        - "27"
+        - "28"
+        - "32"
+      VLAN: "500"
+      DESCRIPTION: User devices
+    cmd:
+      for:
+        var: PORTS
+      task: ssh:run-command-config
+      vars:
+        COMMAND: |
+          {{/* Split the interfaces into four subports */}}
+          interface ethernet 1/{{ .ITEM }}
+          shutdown
+          module-type qsfp-split-4 force
+
+          {{/* Individual port config */}}
+          {{ range $i := until 4 }}
+          {{ $subport := add1 $i }}
+          interface ethernet 1/{{ $.ITEM }}/{{ $subport }}
+          shutdown
+
+          {{/* General config */}}
+          description "{{ $.DESCRIPTION }}"
+          mtu {{ $.MTU }}
+
+          {{/* VLAN config */}}
+          switchport mode access
+          switchport access vlan {{ $.VLAN }}
+
+          no shutdown
+          exit
+          {{ end }}

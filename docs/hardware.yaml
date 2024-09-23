@@ -1,0 +1,758 @@
+---
+# This doesn't (currently) have a rigid standard, but is intended to be a
+# comprehensive, human-readable, machine-parsable description of the my
+# hardware infrastructure.
+Compute:
+  - Manufacturer: Dell
+    Model: R730XD
+    Type: Server
+    Generation: 13
+    Rack height: 2 # Rack units
+    Count: 1
+    Hardware:
+      CPU:
+        - Manufacturer: Intel
+          Model: E5-2667v4
+          Count: 2
+          Clock frequency max: 3.2 # GHz
+          Core count: 8
+          Thread count: 16
+          Socket: LGA 2011-v3
+          TDP: 135 # Watts
+      RAM:
+        - Manufacturer: Kingston
+          Model: KCPC7G-MIA
+          Count: 8
+          Type: DDR4 SDRAM
+          Form factor: DIMM
+          ECC: true
+          Size: 32 # GB
+          Clock frequency max: 2400 # MHz
+          Physical locations:
+            - Slot: A1
+            - Slot: A2
+            - Slot: A3
+            - Slot: A4
+            - Slot: B1
+            - Slot: B2
+            - Slot: B3
+            - Slot: B4
+      Storage:
+        HBAs:
+          - Manufacturer: LSI
+            Model: 9207-8e
+            Ports:
+              - Connector: SFF-8088
+                Data rates supported: # Mbps
+                  - 1500
+                  - 3000
+                  - 6000
+                Physical layers supported:
+                  SAS: true
+                Links per port: 4
+                Cables:
+                  - Manufacturer: Generic
+                    Model: Generic
+                    Device connector:
+                      Connector: SFF-8088
+                      Direction: Straight
+                      Count: 1
+                    Downstream connector:
+                      Connector: SFF-8436
+                      Direction: Straight
+                      Count: 1
+                    Length:
+                      Measurement: 3
+                      Unit: M
+                    Count: 2
+                    Downstream connections:
+                      - Manufacturer: NetApp
+                        Model: DS4246
+                        Subsystem: Storage
+                        Function: Disk shelf
+                Count: 2
+            Max drive count: 1024
+            Physical location:
+              - PCIe slot: 1
+          # I'm putting this under "storage" instead of network because its
+          # purpose is to attach storage exclusively, even if it's on a storage
+          # attached network
+          - Manufacturer: QLogic
+            Model: QLE2562
+            Ports:
+              - Connector: SFP+ cage
+                Data rates supported: # Mbps
+                  - 2000
+                  - 4000
+                  - 8000
+                Physical layers supported:
+                  Fiber channel: true
+                Cages:
+                  - Type: Transciever
+                    Manufacturer: QLogic
+                    Model: AFBR-57D9AMZ-QL
+                    Connector: SFP+
+                    Data rate: 8000 # Mbps
+                    Physical layer: Fiber channel
+                Cables:
+                  - Manufacturer: Generic
+                    Model: Generic
+                    Device connector:
+                      Connector: LC-UPC
+                      Direction: Straight
+                      Count: 1
+                    Downstream connector:
+                      Connector: LC-UPC
+                      Direction: Straight
+                      Count: 1
+                    Length:
+                      Measurement: 3
+                      Unit: M
+                    Count: 2
+                    Downstream connections:
+                      - Manufacturer: IBM
+                        Model: TS3200
+                        Subsystem: Storage
+                        Function: Tape library
+                Count: 2
+            Physical location:
+              - PCIe slot: 2
+        Drives:
+          - Manufacturer: Western Digital
+            Series: Black
+            Model: SN850X
+            Count: 2
+            Type: SSD
+            Form factor: M.2 2280 inside U.2 SFF-8639 adapter
+            Interface: NVMe
+            Capacity: 1000 # GB
+            PCIe:
+              Slot:
+                Generation: 3.0
+                Lanes: 4
+              Device:
+                Generation: 4.0
+                Lanes: 4
+            NAND technology: TLC
+            Has DRAM: true
+            Has PLP: false
+            Physical locations:
+              - Bay: 21
+              - Bay: 22
+          - Manufacturer: Intel
+            Series: Optane 800P
+            Model: SSDPEK1W060GA
+            Count: 2
+            Type: SSD
+            Form factor: M.2 2280 inside U.2 SFF-8639 adapter
+            Interface: NVMe
+            Capacity: 56 # GB
+            PCIe:
+              Slot:
+                Generation: 3.0
+                Lanes: 4
+              Device:
+                Generation: 4.0
+                Lanes: 2
+            NAND technology: 3D XPoint
+            Has DRAM: false
+            Has PLP: false
+            Physical locations:
+              - Bay: 23
+              - Bay: 24
+      Network:
+        Cards:
+          - Manufacturer: Dell
+            Model: X520/I350 C63DV
+            Ports:
+              - Connector: SFP+ cage
+                Data rates supported: # Mbps
+                  - 1000
+                  - 10000
+                Physical layers supported:
+                  Ethernet: true
+                Cages:
+                  - Type: Transciever
+                    Manufacturer: BFW Solutions
+                    Model: WAS-110
+                    Connector: SFP+
+                    Data rate: 10000 # Mbps
+                    Physical layer: Ethernet
+                    Physical layer input: XGS PON
+                Count: 2
+              - Connector: RJ-45
+                Data rates supported: # Mbps
+                  - 1000
+                Physical layers supported:
+                  Ethernet: true
+                Count: 2
+            Physical location:
+              - Network mezzanine: 1
+          - Manufacturer: Mellanox
+            Model: ConnectX 3 Pro MCX314A-BCCT
+            Ports:
+              - Connector: QSFP+ cage
+                Data rates supported: # Mbps
+                  - 10000
+                  - 40000
+                  - 56000
+                Physical layers supported:
+                  Ethernet: true
+                  InfiniBand: true
+                Cages:
+                  - Type: DAC
+                    Manufacturer: Mellanox
+                    Model: MC2207130-002
+                    Connector: QSFP+
+                    Data rate: 56000 # Mbps
+                    Physical layer: Ethernet
+                Count: 2
+            Physical location:
+              - PCIe slot: 3
+        Integrated:
+          - Manufacturer: Dell
+            Model: iDRAC 8
+            Function: Out of band management
+            Ports:
+              - Connector: RJ-45
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                Physical layers supported:
+                  Ethernet: true
+                Count: 1
+            Physical location:
+              - Motherboard: 1
+      PCIe cards:
+        - Manufacturer: LSI
+          Model: 9207-8e
+          Subsystem: Storage
+          Function: HBA
+          Link:
+            Slot:
+              Generation: 3.0
+              Lanes: 8
+            Device:
+              Generation: 3.0
+              Lanes: 8
+          Physical location:
+            - PCIe slot: 1
+        - Manufacturer: QLogic
+          Model: QLE2562
+          Subsystem: Storage
+          Function: HBA
+          Link:
+            Slot:
+              Generation: 2.0
+              Lanes: 4
+            Device:
+              Generation: 3.0
+              Lanes: 8
+          Physical location:
+            - PCIe slot: 2
+        - Manufacturer: Mellanox
+          Model: ConnectX 3 Pro MCX314A-BCCT
+          Subsystem: Network
+          Function: NIC
+          Link:
+            Slot:
+              Generation: 3.0
+              Lanes: 8
+            Device:
+              Generation: 3.0
+              Lanes: 8
+          Physical location:
+            - PCIe slot: 3
+        - Manufacturer: Dell
+          Model: P31H2
+          Subsystem: Storage
+          Function: PCIe switch to U.2 backplane
+          Ports:
+            - Connector: SFF-8643
+              Internal: true
+              Cables:
+                # Generic replacement of an absurdly expensive Dell part
+                - Manufacturer: Generic
+                  Model: 04051018
+                  Device connector:
+                    Connector: SFF-8643
+                    Direction: Straight
+                    Count: 1
+                  Downstream connector:
+                    Connector: SFF-8643
+                    Direction: Right-angle
+                    Count: 1
+                  Length:
+                    Measurement: 0.65
+                    Unit: M
+                  Count: 4
+                  Downstream connections:
+                    - Manufacturer: Dell
+                      Model: PGP6R
+                      Function: U.2 backplane
+              Count: 4
+          Link:
+            Slot:
+              Generation: 3.0
+              Lanes: 16
+            Device:
+              Generation: 3.0
+              Lanes: 16
+          Physical location:
+            - PCIe slot: 4
+      Power:
+        Power supplies:
+          - Manufacturer: Dell
+            Model: 05RHVV
+            Type: Internal
+            Max supply: 750 # Watts
+            Hot swappable: true
+            Connector: C14
+            Count: 2
+    Software:
+      OOBM: # Out of band management
+        Manufacturer: Dell
+        Model: iDRAC 8
+      OS:
+        Kernel: Linux
+        Distribution: Proxmox
+    Mount:
+      Type: Rackmount rails
+      Manufacturer: Dell
+      Model: ReadyRails II
+    Cable management:
+      Type: Cable management arm
+      Manufacturer: Dell
+  - Manufacturer: Minisforum
+    Model: MS-01
+    Type: Mini PC
+    Rack height: 2 # Rack units
+    Count: 3
+    Hardware:
+      CPU:
+        - Manufacturer: Intel
+          Model: i9-13900H
+          Count: 1
+          Clock frequency max: 5.4 # GHz
+          Core count: 14
+          Thread count: 20
+          Socket: Fixed
+          TDP: 115 # Watts
+      RAM:
+        - Manufacturer: Mushkin
+          Model: MRA5S560LKKD48GX2
+          Count: 2
+          Type: DDR5 SDRAM
+          Form factor: SODIMM
+          Size: 48 # GB
+          Clock frequency max: 5200 # MHz
+          Physical locations:
+            - Slot: 1
+            - Slot: 2
+      Storage:
+        Drives:
+          - Manufacturer: Inland
+            Model: QN322
+            Count: 1
+            Type: SSD
+            Form factor: M.2 2280
+            Interface: NVMe
+            Capacity: 2000 # GB
+            PCIe:
+              Slot:
+                Generation: 4.0
+                Lanes: 4
+              Device:
+                Generation: 3.0
+                Lanes: 4
+            NAND technology: QLC
+            Has DRAM: false
+            Has PLP: false
+            Physical locations:
+              - M.2 slot: 2
+          - Manufacturer: Samsung
+            Series: PM9A3
+            Model: MZQL21T9HCJR-00A07
+            Count: 1
+            Type: SSD
+            Form factor: U.2 7mm
+            Interface: NVMe
+            Capacity: 1920 # GB
+            PCIe:
+              Slot:
+                Generation: 4.0
+                Lanes: 4
+              Device:
+                Generation: 4.0
+                Lanes: 4
+            NAND technology: TLC
+            Has DRAM: true
+            Has PLP: true
+            Physical locations:
+              - U.2 slot: 1
+      Network:
+        Integrated:
+          - Manufacturer: Intel
+            Model: I226-V
+            Ports:
+              - Connector: RJ-45
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                  - 2500
+                Physical layers supported:
+                  Ethernet: true
+                Physical location:
+                  - Motherboard: 1
+                Count: 1
+          - Manufacturer: Intel
+            Model: I226-LM
+            Function: Out of band management
+            Ports:
+              - Connector: RJ-45
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                  - 2500
+                Physical layers supported:
+                  Ethernet: true
+                Physical location:
+                  - Motherboard: 2
+                Count: 1
+          - Manufacturer: Intel
+            Model: X710
+            Ports:
+              - Connector: SFP+
+                Data rates supported: # Mbps
+                  - 100
+                  - 1000
+                  - 2500
+                  - 5000
+                  - 10000
+                Physical layers supported:
+                  Ethernet: true
+                Count: 2
+                Physical location:
+                  - Motherboard: 1
+                  - Motherboard: 2
+      Power:
+        Power supplies:
+          - Manufacturer: Minisforum
+            Model: Generic
+            Type: Brick
+            Max supply: 180 # Watts
+            Hot swappable: false
+            Connector: C14
+            Count: 1
+    Software:
+      OOBM: # Out of band management
+        Manufacturer: Intel
+        Model: vPro Enterprise
+      OS:
+        Kernel: Linux
+        Distribution: Talos
+    Mount:
+      Type: Shelf
+Network:
+  - Manufacturer: Mellanox
+    Model: SX6036
+    Type: Top of rack switch
+    Rack height: 1 # Rack units
+    Count: 1
+    Hardware:
+      Network:
+        Integrated:
+          - Ports:
+              - Connector: QSFP+
+                Data rates supported: # Mbps
+                  - 10000
+                  - 40000
+                Count: 36
+              - Connector: RJ-45
+                Management: true
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                Count: 2
+      Console:
+        Connector: RJ-45
+        Protocol: RS232
+      Power:
+        Power supplies:
+          - Manufacturer: TDK-Lambda
+            Model: YM-11-1825
+            Internal: true
+            Max supply: 300 # Watts
+            Hot swappable: true
+            Connector: C14
+            Count: 2
+    Physical layers supported:
+      Ethernet: True
+      InfiniBand: True
+    Mount:
+      Type: Rackmount rails
+      Manufacturer: Mellanox
+      Model: MSX60-SKIT
+  - Manufacturer: Brocade
+    Model: ICX 7250 24P 4x10 SFP+
+    Type: Access switch
+    Rack height: 1 # Rack units
+    Count: 1
+    Hardware:
+      Network:
+        Integrated:
+          - Ports:
+              - Connector: SFP+
+                Data rates supported: # Mbps
+                  - 10000
+                Count: 8
+              - Connector: RJ-45
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                PoE support: 802.3at
+                Count: 24
+              - Connector: RJ-45
+                Management: true
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                Count: 1
+      Console:
+        Connector: USB
+        Protocol: RS232
+      Power:
+        Power supplies:
+          - Manufacturer: Brocade
+            Model: Integrated
+            Internal: true
+            Max supply: 525 # Watts
+            Hot swappable: false
+            Connector: C14
+            Count: 1
+    Physical layers supported:
+      Ethernet: True
+    Mount:
+      # These can be manufactured for about $80, instead of the $500+ that most
+      # vendors want for the Brocade version. This includes a lacing bar that
+      # the Brocade version doesn't have.
+      Type: Rackmount rails
+      Manufacturer: Custom
+      Model: ./custom hardware/Brocade ICX 7250/Rack mount
+Storage:
+  - Manufacturer: NetApp
+    Model: DS4246
+    Type: Disk shelf
+    Rack height: 4 # Rack units
+    Count: 1
+    Hardware:
+      Controllers:
+        - Manufacturer: NetApp
+          Model: IOM6
+          Ports:
+            - Connector: SFF-8088
+              Data rates supported: # Mbps
+                - 1500
+                - 3000
+                - 6000
+              Physical layers supported:
+                SAS: true
+              Links per port: 4
+              Cables:
+                - Manufacturer: Generic
+                  Model: Generic
+                  Device connector:
+                    Connector: SFF-8088
+                    Direction: Straight
+                    Count: 1
+                  Downstream connector:
+                    Connector: SFF-8436
+                    Direction: Straight
+                    Count: 1
+                  Length:
+                    Measurement: 3
+                    Unit: M
+                  Count: 2
+                  Downstream connections:
+                    - Manufacturer: Dell
+                      Model: R730XD
+                      Subsystem: Compute
+                      Function: Server
+          Count: 2
+      Drives:
+        - Manufacturer: Toshiba
+          Model: MG06SCA800A
+          Count: 8
+          Type: HDD
+          Form factor: 3.5"
+          Interface: SFF-8639
+          Capacity: 8000 # GB
+          SAS:
+            Generation: 3
+          Physical locations:
+            - Bays:
+                Start: 8
+                Stop: 15
+      Power:
+        Power supplies:
+          - Manufacturer: NetApp
+            Model: X518A-R6
+            Internal: true
+            Max supply: 580 # Watts
+            Hot swappable: true
+            Connector: C14
+            Count: 2
+    Mount:
+      Type: Rackmount rails
+      Manufacturer: NetApp
+      Model: X5526A-R6
+  - Manufacturer: IBM
+    Model: TS3200
+    Type: Tape Library
+    Rack height: 4 # Rack units
+    Count: 1
+    Hardware:
+      Controller:
+        - Manufacturer: IBM
+          Model: CMLU-11
+          Ports:
+            - Connector: RJ-45
+              Management: true
+              Data rates supported: # Mbps
+                - 10
+                - 100
+                - 1000
+              Count: 1
+      Tape Drives:
+        - Manufacturer: IBM
+          Model: ULT3580-TD6
+          Type: LTO-6
+          Form factor: Full height
+          Ports:
+            - Connector: LC
+              Internal: false
+              Cables:
+                - Manufacturer: Generic
+                  Model: Generic
+                  Device connector:
+                    Connector: LC-UPC
+                    Direction: Straight
+                    Count: 1
+                  Downstream connector:
+                    Connector: LC-UPC
+                    Direction: Straight
+                    Count: 1
+                  Length:
+                    Measurement: 3
+                    Unit: M
+                  Count: 2
+                  Downstream connections:
+                    - Manufacturer: Dell
+                      Model: R730XD
+                      Subsystem: Compute
+                      Function: Server
+          Physical locations:
+            - Bay: 1
+            - Bay: 2
+          Count: 2
+      Drives:
+        - Manufacturer: Fuji
+          Series: Ultrium
+          Model: LTO-5
+          Count: 48
+          Type: Tape
+          Form factor: LTO
+          Capacity: 1500 # GB
+          Physical locations:
+            - Bays:
+                Start: 1
+                Stop: 48
+      Power:
+        Power supplies:
+          - Manufacturer: Delta Electronics
+            Model: EOE13030294
+            Internal: true
+            Max supply: 300 # Watts
+            Hot swappable: true
+            Connector: C14
+            Count: 2
+    Mount:
+      # IBM and Dell whitelabel the same tape libraries so the mounts are
+      # identical. Dell rails for this library are easier to find and cost much
+      # less than the IBM labeled ones.
+      Type: Rackmount rails
+      Manufacturer: Dell
+      Model: NN037
+Power:
+  - Manufacturer: Vertiv
+    Model: Liebert PS1500RT3-120W
+    Type: UPS
+    Hardware:
+      Power:
+        Inputs:
+          - Connector: 5-15P
+            Voltage: 120 # Volts, AC if `DC: false` (default if unset)
+            Max real current: 12 # Amps
+            Count: 1
+        Batteries:
+          - Type: Sealed lead acid
+            Connector: F2/T2 1/4" terminals
+            Physical:
+              Dimensions: # Inches
+                Height: 3.84
+                Length: 5.95
+                Width: 2.56
+              Weight: 7 # Pounds
+            Electrical:
+              Nominal voltage: 12 # Volts
+              Capacity: 9 # Amp hours
+            Count: 3
+        Outputs:
+          - Connector: 5-15R
+            Voltage: 120 # Volts, AC if `DC: false` (default if unset)
+            Max real current: 12 # Amps
+            Count: 8
+      Control board:
+        Manufacturer: Vertiv
+        Model: Intellisense
+        Ports:
+          - Connector: RJ-45
+            Management: true
+            Data rates supported: # Mbps
+              - 10
+              - 100
+            Count: 1
+  - Manufacturer: Vertiv
+    Model: MPH2 MPHR3141
+    Type: PDU
+    Hardware:
+      Inputs:
+        - Connector: C14
+          Voltage: 120 # Volts, AC if `DC: false` (default if unset)
+          Max real current: 16 # Amps
+          Count: 1
+      Outputs:
+        - Connector: C13
+          Voltage: 120 # Volts, AC if `DC: false` (default if unset)
+          Max real current: 10 # Amps
+          Count: 16
+      Control board:
+        Manufacturer: Vertiv
+        Model: RPC-2
+        Ports:
+          - Connector: RJ-45
+            Management: true
+            Data rates supported: # Mbps
+              - 10
+              - 100
+            Count: 1
+Rack:
+  - Manufacturer: Belden
+    Model: XUSD84-3-132226
+    Type: Cabinet
