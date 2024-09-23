@@ -1,0 +1,109 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+vars:
+  FIRMWARE_DIR:
+    ref: default "/tmp/host-mounts/brocade-firmware" .FIRMWARE_DIR
+
+tasks:
+  tftp-firmware-service:
+    cmd:
+      task: firmware-service
+      vars:
+        SERVICE_TYPE: tftp
+        CONTAINER_IMAGE: 3x3cut0r/tftpd-hpa:5.2
+        CONTAINER_MOUNT_PATH: /tftpboot
+        CONTAINER_PORT: 69
+        PORT_TYPE: udp
+        ENV_VARS:
+          map:
+            SECURE: 1
+            VERBOSITY: 4
+            MAPFILE: /dev/null
+        EXTRA_ARGS:
+          - --network=host
+        WAIT_INPUT: true
+
+  http-firmware-service:
+    cmd:
+      task: firmware-service
+      vars:
+        SERVICE_TYPE: http
+        CONTAINER_IMAGE: nginx:1.27.1
+        CONTAINER_MOUNT_PATH: /usr/share/nginx/html
+        CONTAINER_PORT: 443
+        LOCAL_PORT: 4443
+        WAIT_INPUT: true
+
+  firmware-service:
+    interactive: true
+    internal: true
+    # silent: true
+    requires:
+      vars:
+        - SERVICE_TYPE
+        - CONTAINER_IMAGE
+        - CONTAINER_MOUNT_PATH
+        - CONTAINER_PORT
+    vars:
+      WAIT_INPUT:
+        ref: default false .WAIT_INPUT
+      CONTAINER_NAME:
+        ref: printf "brocade-firmware-%s" .SERVICE_TYPE
+      LOCAL_PORT:
+        ref: default .CONTAINER_PORT .LOCAL_PORT
+      PORT_TYPE:
+        ref: default "tcp" .PORT_TYPE
+      ENV_VARS:
+        ref: default (list) .ENV_VARS
+    deps:
+      - task: download-firmware
+    cmds:
+      - defer: |
+          CONTAINER_ID="$(docker ps -a -q --filter="name={{ .CONTAINER_NAME }}")"
+          if [ -n "${CONTAINER_ID}" ]; then
+            echo "Stopping firmware container..."
+            docker container stop "${CONTAINER_ID}" > /dev/null
+          fi
+
+          rm -rvf {{ shellQuote .FIRMWARE_DIR }}
+      - >-
+        docker run --rm -d --name "{{ .CONTAINER_NAME }}"
+        -v "{{ .FIRMWARE_DIR }}:{{ .CONTAINER_MOUNT_PATH }}:ro"
+        -p {{ .LOCAL_PORT }}:{{ .CONTAINER_PORT }}/{{ .PORT_TYPE }}
+        {{- range $key, $value := .ENV_VARS }}
+        -e {{ $key }}={{ $value }}
+        {{- end }}
+        {{- range $arg := .EXTRA_ARGS }}
+        {{ $arg }}
+        {{- end }}
+        "{{ .CONTAINER_IMAGE }}" > /dev/null
+      - |
+        test {{ .WAIT_INPUT }} != 'true' && exit
+
+        # Wait for user input to clean up
+        printf "Press enter when finished..."
+        read _INPUT
+
+  download-firmware:
+    internal: true
+    silent: true
+    vars:
+      FIRMWARE_URL:
+        ref: default "https://fohdeesha.com/docs/store/brocade-08-03-2024.zip" .FIRMWARE_URL
+    cmd: |
+      mkdir -pv {{ shellQuote .FIRMWARE_DIR }}
+
+      # Download the firmware
+      # Ruckus's site requires an account and login and a bunch of nasty stuff to get the firmware.
+      # Pull from Fohdeesha's site instead.
+      echo "Downloading firmware..."
+      FIRMWARE_ZIP_PATH={{ shellQuote .FIRMWARE_DIR }}/firmware.zip
+      curl -fsSL -o "${FIRMWARE_ZIP_PATH}" {{ shellQuote .FIRMWARE_URL }}
+
+      # Extract the relevant contents of the zip file
+      unzip -u -j "${FIRMWARE_ZIP_PATH}" '*/TFTP-Content/ICX7xxx/*.bin' -d {{ shellQuote .FIRMWARE_DIR }}
+      rm -v "${FIRMWARE_ZIP_PATH}"
+    status:
+      - test -n "$(find {{ shellQuote .FIRMWARE_DIR }} -maxdepth 1 -type f -name '*.bin')"

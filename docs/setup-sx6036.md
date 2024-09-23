@@ -1,8 +1,3 @@
-# Relevant links:
-* [Initial setup manual](https://network.nvidia.com/related-docs/user_manuals/1U_HW_UM_SX60XX.pdf)
-* [Full docs](https://delivery04.dhe.ibm.com/sar/CMA/XSA/MLNX-OS_VPI_v3_4_3002_UM.pdf)
-* [Dell EMC branded version to generic Mellanox OS conversion](https://docs.google.com/document/d/1SS0_70PSD5NZDxMy-B---4X1i_2WiLoe)
-
 # Factory reset
 
 After first receiving my switch, I reset it to factory defaults by doing the following:
@@ -21,15 +16,12 @@ After first receiving my switch, I reset it to factory defaults by doing the fol
 
    This is a pretty common/standard set of defaults for serial connections.
 4. Press the `RST` button on front of the switch, under the LEDs, for _at least_ 15 seconds.
-5. Wait for reboot. This will take a few minutes.
-6. Log in. The default username/password is `admin` and `admin`. The first login will take several more minutes for initialization.
+1. Wait for reboot. This will take a few minutes.
+1. Log in. The default username/password is `admin` and `admin`. The first login will take several more minutes for initialization.
 
 # Initial management configuration
 
 After factory reset, the switch needs to be configured for remote management.
-
-> [!NOTE]
-> If the switch does not have an Ethernet license already loaded, [the licensing steps](#load-licenses) may need to be performed manually via console interface, prior to configuring for Ethernet network management.
 
 Manually run the following over the console interface, after logging in (default credentials are `admin/admin`). This enables remote management via the top 1000Base-T port on the front of the switch:
 ```shell
@@ -47,9 +39,37 @@ interface mgmt0 ip address 10.0.0.2 255.255.255.0
 configuration write
 ```
 
-Later steps will join this port to the management PVLAN.
+Lastly, connect the management port and your local computer to the same subnet (direct link or via another switch).
 
-# Port configuration and VLAN assignment
+# Updating firmware
+
+The switch is end of life and is no longer receiving firmware updates. However, it still needs to be initially updated to the latest version. Connect a local computer to the management interface subnet, and run `task sx6036:setup:update-firmware-all`. This will upgrade the switch to the latest version by installing every incremental update between the current and latest version.
+
+Note that each individual version update takes 30 minutes to an hour to complete.
+
+# Production configuration
+
+Update the following files with your own values:
+* [Licenses](../.taskfiles/sx6036/resources/license.sops.txt) (one per line)
+* [Account passwords](../.taskfiles/sx6036/resources/passwords.sops.yaml)
+
+Run `task sx6036:setup:full-configuration` to make the following changes:
+* Load all licenses
+* Configure the switch for mixed Ethernet/Infiniband mode
+* Remove the bootloader password
+* Update the clock to current UTC timezone time
+* Update account passwords and add the local RSA key to the admin account for SSH access
+* Remove SSH login banner
+* Add all VLANs
+* Add management interface to management VLAN
+* Split ports into subports (where needed)
+* Form LAGs
+* Assign port VLANs
+* Set port MTUs
+
+# Port configuration and VLAN assignment reference
+
+Ports are connected as follows:
 
 | Port   | Split | Untagged VLAN | Tagged VLANs | LAG number | Host name          | Host port            | Cable type | Link speed |
 | ------ | ----- | ------------- | ------------ | ---------- | ------------------ | -------------------- | ---------- | ---------- |
@@ -89,13 +109,8 @@ Splitting ports disables others as documented below:
 
 ![Port split](./assets/images/sx6036-port-split.drawio.svg)
 
-# Load licenses
+# Relevant links
 
-# Firmware upgrade
-The general process for upgrading the firmware is documented [here](https://docs.google.com/document/d/1SS0_70PSD5NZDxMy-B---4X1i_2WiLoe). Here are the specific steps I took to upgrade the firmware:
-
-1. Download required files:
-
-   ```shell
-   task setup:sx6036:download-all-firmware
-   ```
+* [Initial setup manual](https://network.nvidia.com/related-docs/user_manuals/1U_HW_UM_SX60XX.pdf)
+* [Full docs](https://delivery04.dhe.ibm.com/sar/CMA/XSA/MLNX-OS_VPI_v3_4_3002_UM.pdf)
+* [Dell EMC branded version to generic Mellanox OS conversion](https://docs.google.com/document/d/1SS0_70PSD5NZDxMy-B---4X1i_2WiLoe)

@@ -19,26 +19,30 @@ tasks:
     dir: "{{ .TASKFILE_DIR }}"
     vars:
       SSH_CONFIG_DIR: ~/.ssh/config.d
-      SSH_SWITCH_CONFIG_PATH: &SSH_SWITCH_CONFIG_PATH "{{ .SSH_CONFIG_DIR }}/sx6036"
+      SSH_SWITCH_CONFIG_PATH: &SSH_SWITCH_CONFIG_PATH "{{ .SSH_CONFIG_DIR }}/icx7250"
     cmds:
       - mkdir -pv {{ .SSH_CONFIG_DIR }}
       - sed 's/SWITCH_IP/{{ .MGMT_IP }}/' './resources/ssh_config' > {{ .SSH_SWITCH_CONFIG_PATH }}
       - chmod 644 {{ .SSH_SWITCH_CONFIG_PATH }}
     status:
-      - test -f {{ .SSH_SWITCH_CONFIG_PATH }}
+      - |
+        echo {{ .SSH_SWITCH_CONFIG_PATH }} > /tmp/log
+        test -f {{ .SSH_SWITCH_CONFIG_PATH }}
 
   ssh-config-file:
     internal: true
     vars:
       SSH_SWITCH_CONFIG_PATH: *SSH_SWITCH_CONFIG_PATH
     cmd: |
-      FILE_CONTENTS="$(cat ~/.ssh/config)"
-      cat << EOF > ~/.ssh/config
-      Include {{ .SSH_SWITCH_CONFIG_PATH }}
-      ${FILE_CONTENTS}
-      EOF
+      echo {{ .SSH_SWITCH_CONFIG_PATH }}
+      # FILE_CONTENTS="$(cat ~/.ssh/config)"
+      # cat << EOF > ~/.ssh/config
+      # Include {{ .SSH_SWITCH_CONFIG_PATH }}
+      # ${FILE_CONTENTS}
+      # EOF
     status:
-      - grep "Include {{ .SSH_SWITCH_CONFIG_PATH }}" ~/.ssh/config
+      - |
+        grep "Include {{ .SSH_SWITCH_CONFIG_PATH }}" ~/.ssh/config
 
   # Unfortunately ssh-keyscan cannot be told to use the old ciphers that the switch uses, so an actual ssh connection is used to load the host key
   # for the first time
@@ -47,4 +51,5 @@ tasks:
     cmds:
       - task: ssh:run-command
     status:
-      - ssh-keygen -F "{{ .MGMT_IP }}"
+      - |
+        ssh-keygen -F "{{ .MGMT_IP }}"

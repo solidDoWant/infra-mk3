@@ -10,34 +10,30 @@ includes:
     taskfile: local.yaml
     internal: true
 
-vars:
-  FIRMWARE_DIR: '{{ default "/tmp/host-mounts/mellanox-firmware" .FIRMWARE_DIR }}'
-  FIRMWARE_URLS:
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.4.2008.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.5.1006.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.1002.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.2002.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.2102.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.3004.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.5000.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.5009.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8008.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8010.img
-    - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8012.img
-  MTU: "9216"
-
 tasks:
   # This is really janky, but unfortunately due to several taskfile limitations there isn't really a
   # cleaner way
   update-firmware-all:
     deps:
       - task: download-firmware-all
+    vars:
+      FIRMWARE_DIR: &FIRMWARE_DIR '{{ default "/tmp/host-mounts/mellanox-firmware" .FIRMWARE_DIR }}'
     cmds:
       - defer: |
           rm -rvf {{ shellQuote .FIRMWARE_DIR }}
       # Run updates until it fails, presumably due to no more updates being available
-      - for:
-          var: FIRMWARE_URLS
+      - for: &FIRMWARE_URLS
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.4.2008.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.5.1006.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.1002.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.2002.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.2102.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.3004.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.5000.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.5009.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8008.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8010.img
+          - https://www.mellanox.com/downloads/Software/image-PPC_M460EX-3.6.8012.img
         task: update-firmware-next
 
   update-firmware-next:
@@ -45,6 +41,7 @@ tasks:
       - task: local:configure-ssh
       - task: download-firmware-all
     vars:
+      FIRMWARE_DIR: *FIRMWARE_DIR
       NGINX_IMAGE: nginx:1.27.1
       CONTAINER_NAME: mellanox-firmware
       LOCAL_HTTP_PORT: "8080" # This task does not configure any firewalls that may block traffic to this port
@@ -125,8 +122,7 @@ tasks:
   download-firmware-all:
     internal: true
     deps:
-      - for:
-          var: FIRMWARE_URLS
+      - for: *FIRMWARE_URLS
         vars:
           FIRMWARE_URL: "{{ .ITEM }}"
         task: download-firmware
@@ -137,6 +133,7 @@ tasks:
       vars:
         - FIRMWARE_URL
     vars:
+      FIRMWARE_DIR: *FIRMWARE_DIR
       REMOTE_FILE_NAME:
         sh: basename "{{ .FIRMWARE_URL }}"
       FILE_VERSION:
@@ -171,9 +168,9 @@ tasks:
     deps:
       - task: local:configure-ssh
     cmds:
+      - task: load-licenses
       - task: set-profile
       - task: remove-bootloader-password
-      - task: load-licenses
       - task: update-clock
       - task: setup-accounts
       - task: configure-global-settings
@@ -290,6 +287,7 @@ tasks:
     vars:
       HOSTNAME: switch-01
       PORT_RANGE: 1/1-1/36
+      MTU: &MTU "9216"
     dir: "{{ .TASKFILE_DIR }}"
     cmd:
       task: ssh:run-command-config
@@ -374,6 +372,7 @@ tasks:
       PORT: "33"
       PORT_CHANNEL_NUMBER: "5"
       HOSTNAME: switch-02
+      MTU: *MTU
     cmd:
       task: ssh:run-command-config
       vars:
@@ -429,6 +428,7 @@ tasks:
       PORT: "2"
       SPEED: 56G
       HOSTNAME: "proxmox-vm-host-01"
+      MTU: *MTU
     cmd:
       task: ssh:run-command-config
       vars:
@@ -490,6 +490,7 @@ tasks:
         ref: default (list "300") .TRUNKED_VLANS
       HOSTNAME:
         ref: printf "talos-k8s-mixed-%02d" (atoi .NODE_NUMBER)
+      MTU: *MTU
     cmd:
       task: ssh:run-command-config
       vars:
@@ -548,6 +549,7 @@ tasks:
         - "32"
       VLAN: "500"
       DESCRIPTION: User devices
+      MTU: *MTU
     cmd:
       for:
         var: PORTS
