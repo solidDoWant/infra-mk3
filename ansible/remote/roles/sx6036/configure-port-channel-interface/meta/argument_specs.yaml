@@ -1,0 +1,25 @@
+---
+argument_specs:
+  main:
+    options:
+      channel_group:
+        type: int
+        required: true
+        choices: "{{ range(1, 4096 + 1) | list }}"
+      description:
+        type: str
+        required: true
+      mtu:
+        type: int
+        default: 9216
+        choices: "{{ range(1500, 9216 + 1) | list }}"
+      untagged_vlan:
+        type: int
+        choices: "{{ range(1, 4094 + 1) | list }}"
+      tagged_vlans:
+        type: list
+        elements: int
+        choices: "{{ range(1, 4094 + 1) | list + ['all'] }}"
+      lacp_individual_mode_enabled:
+        type: bool
+        default: true

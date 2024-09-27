@@ -1,0 +1,27 @@
+---
+- name: Get InfiniBand ports
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_configure_terminal: false
+    sx6036_commands:
+      - show ports type | include InfiniBand
+    output_var: port_types
+  changed_when: false
+
+- name: Set ports to Ethernet type 
+  ansible.builtin.include_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - port {{ item }} type ethernet force
+  loop: >-
+    {{
+      port_types |
+      regex_replace("InfiniBand: ", "") |
+      trim |
+      regex_replace(" +", " ") |
+      split(" ") |
+      select() |
+      list
+    }}

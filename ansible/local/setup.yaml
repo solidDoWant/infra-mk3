@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json
+- name: Configure SSH client config directory
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Ensure the SSH client config directory exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/.ssh/config.d"
+        mode: u=rwx,g=rx,o=rx
+        state: directory
+    - name: Ensure config directory is included in SSH client config
+      ansible.builtin.blockinfile:
+        path: "{{ lookup('env', 'HOME') }}/.ssh/config"
+        mode: u=rw,g=r,o=r
+        block: Include ~/.ssh/config.d/*
+        insertbefore: BOF
+        create: true
+        append_newline: true
+
+- name: Configure SSH client for switches
+  hosts: switches
+  strategy: linear
+  gather_facts: false
+
+  tasks:
+    - name: Add SSH client config
+      delegate_to: localhost
+      ansible.builtin.blockinfile:
+        path: "{{ lookup('env', 'HOME') }}/.ssh/config.d/{{ inventory_hostname }}"
+        mode: u=rw,g=r,o=r
+        block: |
+          Host {{ inventory_hostname }}
+            User {{ ansible_username }}
+            KexAlgorithms +diffie-hellman-group14-sha1
+            HostKeyAlgorithms +ssh-rsa
+            PubkeyAcceptedKeyTypes +ssh-rsa
+            StrictHostKeyChecking no
+        create: true
+        append_newline: true

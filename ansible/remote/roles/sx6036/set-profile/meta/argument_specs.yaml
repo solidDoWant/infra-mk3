@@ -1,0 +1,11 @@
+---
+argument_specs:
+  main:
+    options:
+      sx6036_profile:
+        type: str
+        choices:
+          - ethernet-single-switch
+          - ib
+          - vpi-single-switch
+        default: vpi-single-switch

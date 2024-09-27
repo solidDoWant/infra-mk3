@@ -1,0 +1,45 @@
+---
+# This should really be converted to a plugin at some point
+- name: Run command over SSH # noqa risky-shell-pipe no-changed-when
+  delegate_to: localhost
+  register: command
+  environment:
+    SSHPASS: "{{ ansible_password }}"
+  vars:
+    # This really helps with escaping some regex, otherwise it's quotes in quotes in quotes with backslashes.
+    quote_regex: >-
+      "
+    quote_regex_replacement: >-
+      \"
+    slash_regex: >-
+      \\
+    slash_regex_replacement: >-
+      \\\\
+  ansible.builtin.shell: >-
+    {{ "sshpass -e" if ansible_password is defined }}
+    ssh{{ (" " ~ ansible_ssh_common_args) if ansible_ssh_common_args is defined }}
+    {{ ("%s@" | format(ansible_username|string)) if ansible_username is defined }}{{ inventory_hostname }}
+    cli -h '{{
+      (
+        (["enable", "configure terminal"] if sx6036_configure_terminal else []) +
+        sx6036_commands +
+        (["configuration write"] if sx6036_save else [])
+      ) |
+      map("trim") |
+      select("!=", "") |
+      map("regex_replace", slash_regex, slash_regex_replacement) |
+      map("regex_replace", quote_regex, quote_regex_replacement) |
+      map("regex_replace", "^(.*)$", '"\1"') |
+      join(" ")
+    }}'
+- name: Set output
+  vars:
+    first_line_regex: >-
+      ^(?:.|\n)*?(.*?>)
+  ansible.builtin.set_fact:
+    # Trim any information prior to the first line, like the login banner and last login time
+    "{{ output_var }}": >-
+      {{
+        command.stdout |
+        regex_replace(first_line_regex, "\\1", count=1, multiline=true)
+      }}

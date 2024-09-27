@@ -1,0 +1,17 @@
+---
+argument_specs:
+  main:
+    options:
+      sx6036_commands:
+        type: list
+        elements: str
+        default: []
+      sx6036_configure_terminal:
+        type: bool
+        default: true
+      sx6036_save:
+        type: bool
+        default: "{{ sx6036_configure_terminal }}"
+      output_var:
+        type: str
+        default: command_output

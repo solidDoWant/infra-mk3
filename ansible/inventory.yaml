@@ -1,0 +1,17 @@
+switches:
+  children:
+    sx6036:
+      hosts:
+        10.0.0.2:
+          hostname: switch-01
+      vars:
+        ansible_username: admin
+        # This won't be used after the SSH key is uploaded - only for bootstraping.
+        ansible_password: admin
+    icx7250:
+      hosts:
+        10.0.0.3:
+      vars:
+        ansible_username: super
+        # This won't be used after the SSH key is uploaded - only for bootstraping.
+        ansible_password: super

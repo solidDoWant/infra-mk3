@@ -1,0 +1,14 @@
+---
+argument_specs:
+  main:
+    options:
+      interface_port:
+        type: int
+        required: true
+      module_type:
+        type: str
+        default: qsfp
+        choices:
+          - qsfp
+          - qsfp-split-2
+          - qsfp-split-4

@@ -1,0 +1,40 @@
+---
+- name: Get current "split" status
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_configure_terminal: false
+    sx6036_commands:
+      - show interfaces ethernet status | include Eth1/{{ interface_port }}
+    output_var: interface_status
+  changed_when: false
+
+- name: Split interface
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    current_module_type: >-
+      {%- if interface_status | regex_search("^Eth1/" ~ interface_port ~ "/1 ") is none -%}
+      qsfp
+      {%- elif interface_status | regex_search("^Eth1/" ~ interface_port ~ "/4 ", multiline=true) is none -%}
+      qsfp-split-2
+      {%- else -%}
+      qsfp-split-4
+      {%- endif -%}
+    is_split: '{{ "split" in current_module_type }}'
+    should_split: '{{ "split" in module_type }}'
+    # split-2 or split-4 to split-4 or split-2 requires switching back to qsfp first
+    revert_single_commands:
+      - interface ethernet 1/{{ interface_port }}/1
+      - shutdown
+      - module-type qsfp force
+    split_commands:
+      - interface ethernet 1/{{ interface_port }}
+      - shutdown
+      - module-type {{ module_type }} force
+    sx6036_commands: >-
+      {{
+        (revert_single_commands if is_split else []) +
+        (split_commands if should_split else [])
+      }}
+  when: current_module_type != module_type

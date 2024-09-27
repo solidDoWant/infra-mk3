@@ -1,0 +1,7 @@
+---
+- name: Set the password
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - ssh client user {{ username }} authorized-key sshv2 "{{ public_rsa_key }}"

@@ -1,0 +1,17 @@
+---
+- name: Load host facts to get the current date/time
+  delegate_to: localhost
+  ansible.builtin.setup:
+    gather_subset:
+      - date_time
+
+- name: Set current date/time
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    datetime: >-
+      {{ ansible_date_time.hour }}:{{ ansible_date_time.minute }}:{{ ansible_date_time.second }}
+      {{ ansible_date_time.year }}/{{ ansible_date_time.month }}/{{ ansible_date_time.day }}
+    sx6036_commands:
+      - clock timezone {{ ansible_date_time.tz }}
+      - clock set {{ datetime }}

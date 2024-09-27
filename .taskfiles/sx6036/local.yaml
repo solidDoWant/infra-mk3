@@ -19,10 +19,10 @@ tasks:
     dir: "{{ .TASKFILE_DIR }}"
     vars:
       SSH_CONFIG_DIR: ~/.ssh/config.d
-      SSH_SWITCH_CONFIG_PATH: &SSH_SWITCH_CONFIG_PATH "{{ .SSH_CONFIG_DIR }}/sx6036"
+      SSH_SWITCH_CONFIG_PATH: "{{ .SSH_CONFIG_DIR }}/sx6036"
     cmds:
       - mkdir -pv {{ .SSH_CONFIG_DIR }}
-      - sed 's/SWITCH_IP/{{ .MGMT_IP }}/' './resources/ssh_config' > {{ .SSH_SWITCH_CONFIG_PATH }}
+      - sed 's/SWITCH_IP/{{ .SX6036_MGMT_IP }}/' './resources/ssh_config' > {{ .SSH_SWITCH_CONFIG_PATH }}
       - chmod 644 {{ .SSH_SWITCH_CONFIG_PATH }}
     status:
       - test -f {{ .SSH_SWITCH_CONFIG_PATH }}
@@ -30,7 +30,8 @@ tasks:
   ssh-config-file:
     internal: true
     vars:
-      SSH_SWITCH_CONFIG_PATH: *SSH_SWITCH_CONFIG_PATH
+      SSH_CONFIG_DIR: ~/.ssh/config.d
+      SSH_SWITCH_CONFIG_PATH: "{{ .SSH_CONFIG_DIR }}/sx6036"
     cmd: |
       FILE_CONTENTS="$(cat ~/.ssh/config)"
       cat << EOF > ~/.ssh/config
@@ -47,4 +48,4 @@ tasks:
     cmds:
       - task: ssh:run-command
     status:
-      - ssh-keygen -F "{{ .MGMT_IP }}"
+      - ssh-keygen -F "{{ .SX6036_MGMT_IP }}"

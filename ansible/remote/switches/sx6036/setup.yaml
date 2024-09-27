@@ -1,0 +1,213 @@
+---
+- name: Load licenses
+  hosts: sx6036
+  gather_facts: false
+
+  tasks:
+    - ansible.builtin.include_role:
+        name: ../../roles/sx6036/load-license
+      loop: "{{ sx6036_license_keys }}"
+      loop_control:
+        loop_var: sx6036_license_key
+      no_log: true
+
+- name: Configure global settings
+  hosts: sx6036
+  gather_facts: false
+  vars:
+    key_file_path: ~/.ssh/id_rsa.pub
+  
+  roles:
+    - name: Set profile
+      role: ../../roles/sx6036/set-profile
+    - name: Update clock
+      role: ../../roles/sx6036/update-clock
+    - name: Load admin SSH key
+      role: ../../roles/sx6036/load-ssh-key
+      vars:
+        username: admin
+        public_rsa_key: |-
+          {{ lookup('ansible.builtin.file', key_file_path) }}
+    - name: Configure miscellaneous settings
+      role: ../../roles/sx6036/run-command
+      vars:
+        sx6036_commands:
+          - hostname {{ hostname }}
+          # Enable LACP
+          - lacp
+          # Balance packets based on L3/L4 information, to (hopefully) evenly spread it
+          # across links
+          - port-channel load-balance ethernet source-destination-ip source-destination-port
+          # Remove the SSH login banner
+          - banner login-remote ""
+
+- name: Update credentials
+  hosts: sx6036
+  gather_facts: false
+  tasks:
+    - ansible.builtin.include_role:
+        name: ../../roles/sx6036/set-credential
+      vars:
+        username: "{{ item.key }}"
+        password: "{{ item.value }}"
+      loop: "{{ sx6036_credentials | dict2items }}"
+  no_log: true
+
+- name: Ensure all ports are Ethernet type
+  hosts: sx6036
+  gather_facts: false
+  roles:
+    - role: ../../roles/sx6036/ensure-ports-are-ethernet
+
+- name: Deploy VLANs
+  hosts: sx6036
+  gather_facts: false
+  tasks:
+    - ansible.builtin.include_role:
+        name: ../../roles/sx6036/vlan
+      vars:
+        vlan_id: "{{ item.key }}"
+        vlan_name: "{{ item.value }}"
+        vlans: &vlans
+          "100": Management
+          "200": Hosts
+          "300": Kubernetes
+          "400": Infrastructure devices
+          "500": User devices
+          "600": Guest devices
+          "700": "IoT devices"
+      loop: "{{ vlans | dict2items }}"
+
+- name: Configure management VLAN interface
+  hosts: sx6036
+  gather_facts: false
+  tasks:
+    - ansible.builtin.include_role:
+        name: ../../roles/sx6036/run-command
+      vars:
+        sx6036_commands:
+          # Unfortunately mgmt0 cannot be joined to a vlan, so add a new in-band interface
+          # with the same IP instead. Port mgmt0 will remain enabled for local access.
+          # The interface isolation feature does not support vlan interfaces, so anything on the
+          # vlan can talk with this port.
+          # Routing functionality must be enabled to add an in-band interface to the vlan.
+          - ip l3
+          - interface vlan 100
+          - ip address {{ inventory_hostname }} /24
+          - exit
+
+- name: Configure Brocade ICX 7250 ports
+  hosts: sx6036
+  gather_facts: false
+  vars:
+    vlans: *vlans
+    hostname: switch-2
+    interface_port: 33
+    channel_group: 100
+    tagged_vlans: "{{ vlans.keys() | map('int') | list }}"
+  roles:
+    - name: Configure LAG
+      role: ../../roles/sx6036/configure-port-channel-interface
+      vars:
+        lacp_individual_mode_enabled: true
+        description: "{{ hostname }}"
+    - name: Split the port
+      role: ../../roles/sx6036/set-interface-module-type
+      vars:
+        module_type: qsfp-split-4
+  post_tasks:
+    - name: Configure the individual ports
+      ansible.builtin.include_role:
+        name: ../../roles/sx6036/configure-ethernet-interface
+      vars:
+        interface_subport: "{{ item }}"
+        description: "{{ hostname }} SFP+ {{ item }}"
+      loop: "{{ range(1, 5) | list }}"
+
+- name: Configure R730XD ports
+  hosts: sx6036
+  gather_facts: false
+  vars:
+    vlans: *vlans
+  roles:
+    - name: Configure the individual ports
+      role: ../../roles/sx6036/configure-ethernet-interface
+      vars:
+        description: promxox-vm-host-01
+        interface_port: 2
+        speed: 56000
+        tagged_vlans: "{{ vlans.keys() | map('int') | list }}"
+
+- name: Configure MS-01 ports
+  hosts: sx6036
+  gather_facts: false
+  vars:
+    ports:
+      - 9
+      - 10
+    node_count: 4
+    untagged_vlan: 200
+    tagged_vlans:
+      - 300
+  tasks:
+    - name: Split the ports
+      ansible.builtin.include_role:
+        name: ../../roles/sx6036/set-interface-module-type
+      vars:
+        module_type: qsfp-split-4
+        interface_port: "{{ item }}"
+      loop: "{{ ports }}"
+    - name: Configure node ports
+      vars:
+        hostname_prefix: talos-k8s-mixed-
+      block:
+        - name: Configure LAGs
+          ansible.builtin.include_role:
+            name: ../../../roles/sx6036/configure-port-channel-interface
+          vars:
+            channel_group: "{{ item }}"
+            description: "{{ hostname_prefix ~ '%02d' | format(node_number | int) }}"
+          loop: "{{ range(1, node_count + 1) | list }}"
+        - name: Configure the individual ports
+          ansible.builtin.include_role:
+            name: ../../../roles/sx6036/configure-ethernet-interface
+          vars:
+            node_number: "{{ item[1] + 4 * (ansible_loop.index0 // 8) }}"
+            interface_port: "{{ item[0] }}"
+            interface_subport: "{{ item[1] }}"
+            description: >-
+              {{ hostname_prefix ~ "%02d" | format(node_number | int) }}
+              SFP+ {{ ansible_loop.index0 // 4 % 2 + 1 }}
+            channel_group: "{{ node_number }}"
+          loop: "{{ ports | product(query('sequence', 'start=1 end=4') | map('int')) | list }}"
+          loop_control:
+            extended: true
+
+- name: Configure device ports
+  hosts: sx6036
+  gather_facts: false
+  vars:
+    ports:
+      - 27
+      - 28
+      - 32
+    untagged_vlan: 500
+  tasks:
+    - name: Split the ports
+      ansible.builtin.include_role:
+        name: ../../roles/sx6036/set-interface-module-type
+      vars:
+        interface_port: "{{ item }}"
+        module_type: qsfp-split-4
+      loop: "{{ ports }}"
+    - name: Configure the individual ports
+      ansible.builtin.include_role:
+        name : ../../roles/sx6036/configure-ethernet-interface
+      vars:
+        interface_port: "{{ item[0] }}"
+        interface_subport: "{{ item[1] }}"
+        description: >-
+          User devices SFP+ {{ ansible_loop.index }}
+      loop: "{{ ports | product(query('sequence', 'start=1 end=4') | map('int')) | list }}"
+      loop_control:
+        extended: true

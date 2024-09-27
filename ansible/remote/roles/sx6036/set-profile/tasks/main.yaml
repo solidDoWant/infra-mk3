@@ -1,0 +1,37 @@
+---
+- name: Get current profile
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_configure_terminal: false
+    sx6036_commands:
+      - show system profile | include ":"
+    output_var: system_profile
+  changed_when: false
+
+- name: Register profile fact
+  ansible.builtin.set_fact:
+    sx6036_facts:
+      profile: "{{ system_profile | split(': ') | last | trim }}"
+
+- name: Update profile
+  block:
+    - name: Set profile
+      ansible.builtin.import_role:
+        name: ../../../roles/sx6036/run-command
+      vars:
+        sx6036_commands:
+          - system profile {{ sx6036_profile }} force
+
+    - name: Wait for the switch to come back online
+      ansible.builtin.import_role:
+        name: ../../../roles/sx6036/run-command
+      vars:
+        sx6036_commands: []
+      register: result
+      retries: 100
+      delay: 60
+      until: result.rc == 0
+      timeout: 15
+
+  when: sx6036_facts.profile != sx6036_profile

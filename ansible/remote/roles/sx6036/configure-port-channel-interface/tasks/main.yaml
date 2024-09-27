@@ -1,0 +1,124 @@
+---
+- name: Get general interface info
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_configure_terminal: false
+    sx6036_commands:
+      - show interfaces port-channel {{ channel_group }} | include Po{{ channel_group }} next 11
+    output_var: interface_info
+  changed_when: false
+
+- name: Set interface facts
+  ansible.builtin.set_fact:
+    sx6036_facts: "{{ full_fact | from_yaml }}"
+  vars:
+    info_fact_parts: >-
+      {{
+        (
+          interface_info.splitlines() | list
+        )[1:] |
+        map("trim") |
+        map("regex_replace", " +: ", ":", count=1) |
+        map("split", ":")
+      }}
+    info_fact_yaml: |
+      {% for fact in info_fact_parts %}
+      {{ fact[0] }}: {{ fact[1:] | join(":") | to_yaml }}
+      {% endfor %}
+    info_raw_facts: "{{ info_fact_yaml | from_yaml }}"
+    full_fact: |
+      interfaces:
+        port_channel:
+          "{{ channel_group }}":
+            enabled: {{ (info_raw_facts['Admin state'] | default('')) == 'Enabled' | to_yaml }}
+            description: |-
+              {{ info_raw_facts['Description'] if (info_raw_facts['Description'] | default("N\A")) != "N\A" else '' }}
+            mtu: {{ (info_raw_facts['MTU'] | default('')) | split(' ') | first }}
+            switchport_mode: "{{ info_raw_facts['Switchport mode'] | default('') }}"
+            lacp_individual_mode_enabled: {{ (info_raw_facts['lacp-individual mode'] | default('')) == "Enabled" }}
+  changed_when: false
+
+# Set properties that need changed
+- name: Set description
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - interface port-channel {{ channel_group }}
+      - description "{{ description }}"
+      - exit
+  when: description != sx6036_facts.interfaces.port_channel[channel_group | string].description
+
+- name: Set individual mode
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - interface port-channel {{ channel_group }}
+      - >-
+        {{ "no" if not lacp_individual_mode_enabled }} lacp-individual enable force
+      - exit
+  when: lacp_individual_mode_enabled != sx6036_facts.interfaces.port_channel[channel_group | string].lacp_individual_mode_enabled
+
+
+- name: Set switchport mode
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    switchport_mode: &spm >-
+      {%- if tagged_vlans is defined and tagged_vlans | length > 0 -%}
+        {%- if untagged_vlan is defined -%}
+          hybrid
+        {%- else -%}
+          trunk
+        {%- endif -%}
+      {%- else -%}
+        access
+      {%- endif -%}
+    sx6036_commands:
+      - interface port-channel {{ channel_group }}
+      - switchport mode {{ switchport_mode }}
+      - exit
+  when: switchport_mode != sx6036_facts.interfaces.port_channel[channel_group | string].switchport_mode
+
+- name: Set untagged VLAN ID
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - interface port-channel {{ channel_group }}
+      - switchport access vlan {{ untagged_vlan }}
+      - exit
+  when: untagged_vlan is defined
+
+- name: Set tagged VLAN IDs
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    switchport_mode: *spm
+    allow_vlan_commands: >-
+      {{
+        tagged_vlans |
+        map("regex_replace", "^(.*)$", "switchport " ~ switchport_mode ~ " allowed-vlan add \1") |
+        list
+      }}
+    sx6036_commands: >-
+      {{
+        ["interface port-channel " ~ channel_group] +
+        allow_vlan_commands +
+        ["exit"]
+      }}
+  when: tagged_vlans is defined and tagged_vlans | length > 0
+
+- name: Set MTU
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - interface port-channel {{ channel_group }}
+      - shutdown
+      - mtu {{ mtu }}
+      - no shutdown
+      - exit
+  when: mtu != sx6036_facts.interfaces.port_channel[channel_group | string].mtu

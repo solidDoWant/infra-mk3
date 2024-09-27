@@ -7,11 +7,11 @@ env:
 
 tasks:
   run-command:
-    # silent: true
+    silent: true
     vars:
       # 'quote' is used instead of 'shellQuote' because the command _must_ use double quotes instead of single
       COALESCED_COMMANDS:
-        ref: &coalesce_command_inputs_template >-
+        ref: >-
           coalesce
             .COMMANDS
             (coalesce .COMMAND " " | trim | splitList "\n" | compact)
@@ -26,22 +26,7 @@ tasks:
             {{- if (ne $i 0) }} {{end}}{{ $cleanedCommand | quote }}
           {{- end }}
         {{- end }}
-    cmd: sshpass -e ssh {{ .MGMT_IP }} cli -h {{ shellQuote .FORMATTED_COMMANDS }}
-
-  run-command-config:
-    vars:
-      SETUP_COMMANDS:
-        - enable
-        - configure terminal
-      RUN_COMMANDS:
-        ref: *coalesce_command_inputs_template
-      FINALIZE_COMMANDS:
-        - configuration write
-    cmds:
-      - task: run-command
-        vars:
-          COMMANDS:
-            ref: concat .SETUP_COMMANDS .RUN_COMMANDS .FINALIZE_COMMANDS
+    cmd: sshpass -e ssh {{ .SX6036_MGMT_IP }} cli -h {{ shellQuote .FORMATTED_COMMANDS }}
 
   # This requires tricking SSH into thinking that it is in "interactive" mode, as the `_shell` command
   # is not available in non-interactive mode
@@ -61,7 +46,7 @@ tasks:
       COMBINED_COMMANDS:
         ref: concat .SHELL_COMMANDS .COALESCED_PROVIDED_COMMAND
       QUOTED_COMMANDS: "{{ range $i, $command := .COMBINED_COMMANDS }}{{ if (ne $i 0) }} {{end}}{{ shellQuote $command }}{{ end }}"
-    cmd: printf '%s\n' {{ .QUOTED_COMMANDS }} | sshpass -e ssh -T {{ .MGMT_IP }}
+    cmd: printf '%s\n' {{ .QUOTED_COMMANDS }} | sshpass -e ssh -T {{ .SX6036_MGMT_IP }}
 
   wait-online:
     silent: true

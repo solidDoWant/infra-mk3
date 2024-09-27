@@ -1,0 +1,16 @@
+---
+argument_specs:
+  main:
+    options:
+      vlan_id:
+        type: str
+        required: true
+      state:
+        type: str
+        default: present
+        choices:
+          - present
+          - absent
+      vlan_name:
+        type: str
+        required: "{{ state == 'present' }}"

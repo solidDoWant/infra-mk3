@@ -1,0 +1,19 @@
+---
+- name: Check if license is already loaded
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - show license | include {{ sx6036_license_key }}
+    output_var: license_key_line
+  changed_when: false
+  no_log: true
+
+- name: Load license
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - license install {{ sx6036_license_key }}
+  when: license_key_line == ""
+  no_log: true

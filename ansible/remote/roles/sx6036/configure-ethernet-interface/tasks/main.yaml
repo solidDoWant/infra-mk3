@@ -1,0 +1,199 @@
+---
+- name: Get general interface info
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: &addr 1/{{ interface_port }}{{ "/" ~ interface_subport if interface_subport is defined }}
+    sx6036_configure_terminal: false
+    sx6036_commands:
+      - show interfaces ethernet {{ interface_address }} | include Eth{{ interface_address }} next 13
+    output_var: interface_info
+  changed_when: false
+
+- name: Get interface channel _ group info
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_configure_terminal: false
+    sx6036_commands:
+      - show lacp interfaces ethernet {{ interface_address }} | include Channel
+    output_var: interface_channel_group
+  changed_when: false
+
+- name: Set interface facts
+  ansible.builtin.set_fact:
+    sx6036_facts: "{{ full_fact | from_yaml }}"
+  vars:
+    interface_address: *addr
+    info_fact_parts: >-
+      {{
+        (
+          interface_info.splitlines() | list
+        )[1:] |
+        map("trim") |
+        map("regex_replace", " +: ", ":", count=1) |
+        map("split", ":")
+      }}
+    info_fact_yaml: |
+      {% for fact in info_fact_parts %}
+      {{ fact[0] }}: {{ fact[1:] | join(":") | to_yaml }}
+      {% endfor %}
+    info_raw_facts: "{{ info_fact_yaml | from_yaml }}"
+    full_fact: |
+      interfaces:
+        ethernet:
+          "{{ interface_address }}":
+            enabled: {{ info_raw_facts['Admin state'] == 'Enabled' | to_yaml }}
+            description: |-
+              {{ info_raw_facts['Description'] if info_raw_facts['Description'] != "N\A" else '' }}
+            mtu: {{ info_raw_facts['MTU'] | split(' ') | first }}
+            speed: {{ info_raw_facts['Actual speed'] | split(' ') | first }}000
+            switchport_mode: "{{ info_raw_facts['Switchport mode'] }}"
+            channel_group: {{ interface_channel_group | split(': ') | last }}
+  changed_when: false
+
+# Set properties that need changed
+- name: Set description
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - description "{{ description }}"
+      - exit
+  when: description != sx6036_facts.interfaces.ethernet[interface_address].description
+
+- name: Set switchport mode
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    switchport_mode: &spm >-
+      {%- if tagged_vlans is defined and tagged_vlans | length > 0 -%}
+        {%- if untagged_vlan is defined -%}
+          hybrid
+        {%- else -%}
+          trunk
+        {%- endif -%}
+      {%- else -%}
+        access
+      {%- endif -%}
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - switchport mode {{ switchport_mode }}
+      - exit
+  when: switchport_mode != sx6036_facts.interfaces.ethernet[interface_address].switchport_mode
+
+- name: Set untagged VLAN ID
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - switchport access vlan {{ untagged_vlan }}
+      - exit
+  when: untagged_vlan is defined
+
+- name: Set tagged VLAN IDs
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    switchport_mode: *spm
+    allow_vlan_commands: >-
+      {{
+        tagged_vlans |
+        map("regex_replace", "^(.*)$", "switchport " ~ switchport_mode ~ " allowed-vlan add \1") |
+        list
+      }}
+    sx6036_commands: >-
+      {{
+        ["interface ethernet " ~ interface_address] +
+        allow_vlan_commands +
+        ["exit"]
+      }}
+  when: tagged_vlans is defined and tagged_vlans | length > 0
+
+- name: Set MTU
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - shutdown
+      - mtu {{ mtu }}
+      - no shutdown
+      - exit
+  when: mtu != sx6036_facts.interfaces.ethernet[interface_address].mtu
+
+- name: Set speed
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - shutdown
+      - speed {{ speed }}
+      - no shutdown
+      - exit
+  when: >-
+    speed is defined and
+    speed != sx6036_facts.interfaces.ethernet[interface_address].speed
+
+- name: >-
+    {{ "Join" if channel_group is defined else "Leave" }} channel group
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - >-
+        {{ 
+          "channel-group " ~ channel_group ~ " mode active"
+          if channel_group is defined else (
+            "no channel-group"
+            if sx6036_facts.interfaces.ethernet[interface_address].channel_group is not none
+          )
+        }}
+      - exit
+  when: >-
+    (
+      channel_group is not defined and
+      sx6036_facts.interfaces.ethernet[interface_address].channel_group is not none
+    ) or
+    (
+      channel_group is defined and
+      sx6036_facts.interfaces.ethernet[interface_address].channel_group is none
+    ) or (
+      channel_group is defined and
+      channel_group != sx6036_facts.interfaces.ethernet[interface_address].channel_group
+    )
+
+- name: Set LACP rate
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - >-
+        {{ "no" if not fast_lacp }} lacp rate fast
+      - exit
+  when: channel_group is defined
+
+- name: Enable port
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    interface_address: *addr
+    sx6036_commands:
+      - interface ethernet {{ interface_address }}
+      - no shutdown
+      - exit
+  when: not sx6036_facts.interfaces.ethernet[interface_address].enabled

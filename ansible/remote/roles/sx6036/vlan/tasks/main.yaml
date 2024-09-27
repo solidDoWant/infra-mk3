@@ -1,0 +1,19 @@
+---
+- name: Deploy VLAN
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - vlan {{ vlan_id }}
+      - name "{{ vlan_name }}"
+      - exit
+    newline_regex:
+      \n
+
+- name: Destroy VLAN
+  ansible.builtin.import_role:
+    name: ../../../roles/sx6036/run-command
+  vars:
+    sx6036_commands:
+      - no vlan {{ vlan_id }}
+  when: state == "absent"

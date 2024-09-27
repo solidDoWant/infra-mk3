@@ -1,6 +1,6 @@
 ---
 creation_rules:
-  - path_regex: \.taskfiles/sx6036/resources/.*\.sops\..*
+  - path_regex: ansible/.*/group_vars/[^/]*\.sops\..*
     key_groups:
       - age:
           - age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
