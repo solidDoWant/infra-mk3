@@ -1,6 +1,6 @@
 # Brocade ICX custom rear rack mount ears
 
-These is a custom, adjustable-length rack mount solution for Brocade ICX 7250 switches. It probably works for most Brocade ICX 7xxx switches, but has not been tested with them. This is intended as a replacement for Brocade part number XBR-R000295 and XBR-R000296, which are hard to find and extremely expensive for a couple of metal plates.
+This is a custom, adjustable-length rack mount solution for Brocade ICX 7250 switches. It probably works for most Brocade ICX 7xxx switches, but has not been tested with them. This is intended as a replacement for Brocade part number XBR-R000295 and XBR-R000296, which are hard to find and extremely expensive for a couple of metal plates.
 
 ## Manufacturing information
 
