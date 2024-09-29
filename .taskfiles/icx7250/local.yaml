@@ -17,29 +17,27 @@ tasks:
   ssh-switch-config-file:
     internal: true
     dir: "{{ .TASKFILE_DIR }}"
-    vars:
+    vars: &vars
       SSH_CONFIG_DIR: ~/.ssh/config.d
-      SSH_SWITCH_CONFIG_PATH: &SSH_SWITCH_CONFIG_PATH "{{ .SSH_CONFIG_DIR }}/icx7250"
+      SSH_SWITCH_CONFIG_PATH: "{{ .SSH_CONFIG_DIR }}/icx7250"
+      MGMT_IP: '{{ .ICX7250_MGMT_IP | join " " }}'
     cmds:
       - mkdir -pv {{ .SSH_CONFIG_DIR }}
       - sed 's/SWITCH_IP/{{ .MGMT_IP }}/' './resources/ssh_config' > {{ .SSH_SWITCH_CONFIG_PATH }}
       - chmod 644 {{ .SSH_SWITCH_CONFIG_PATH }}
     status:
       - |
-        echo {{ .SSH_SWITCH_CONFIG_PATH }} > /tmp/log
         test -f {{ .SSH_SWITCH_CONFIG_PATH }}
 
   ssh-config-file:
     internal: true
-    vars:
-      SSH_SWITCH_CONFIG_PATH: *SSH_SWITCH_CONFIG_PATH
+    vars: *vars
     cmd: |
-      echo {{ .SSH_SWITCH_CONFIG_PATH }}
-      # FILE_CONTENTS="$(cat ~/.ssh/config)"
-      # cat << EOF > ~/.ssh/config
-      # Include {{ .SSH_SWITCH_CONFIG_PATH }}
-      # ${FILE_CONTENTS}
-      # EOF
+      FILE_CONTENTS="$(cat ~/.ssh/config)"
+      cat << EOF > ~/.ssh/config
+      Include {{ .SSH_SWITCH_CONFIG_PATH }}
+      ${FILE_CONTENTS}
+      EOF
     status:
       - |
         grep "Include {{ .SSH_SWITCH_CONFIG_PATH }}" ~/.ssh/config
@@ -52,4 +50,4 @@ tasks:
       - task: ssh:run-command
     status:
       - |
-        ssh-keygen -F "{{ .MGMT_IP }}"
+        ssh-keygen -F "{{ .ICX7250_MGMT_IP | first }}"

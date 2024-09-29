@@ -101,7 +101,7 @@
   gather_facts: false
   vars:
     vlans: *vlans
-    hostname: switch-2
+    hostname: switch-02
     interface_port: 33
     channel_group: 100
     tagged_vlans: "{{ vlans.keys() | map('int') | list }}"
@@ -121,7 +121,7 @@
         name: ../../roles/sx6036/configure-ethernet-interface
       vars:
         interface_subport: "{{ item }}"
-        description: "{{ hostname }} SFP+ {{ item }}"
+        description: "{{ hostname }} 1/2/{{ item }}"
       loop: "{{ range(1, 5) | list }}"
 
 - name: Configure R730XD ports

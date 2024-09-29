@@ -16,8 +16,8 @@ After first receiving my switch, I reset it to factory defaults by doing the fol
 
    This is a pretty common/standard set of defaults for serial connections.
 4. Press the `RST` button on front of the switch, under the LEDs, for _at least_ 15 seconds.
-1. Wait for reboot. This will take a few minutes.
-1. Log in. The default username/password is `admin` and `admin`. The first login will take several more minutes for initialization.
+5. Wait for reboot. This will take a few minutes.
+6. Log in. The default username/password is `admin` and `admin`. The first login will take several more minutes for initialization.
 
 # Initial management configuration
 
@@ -50,8 +50,7 @@ Note that each individual version update takes 30 minutes to an hour to complete
 # Production configuration
 
 Update the following files with your own values:
-* [Licenses](../.taskfiles/sx6036/resources/license.sops.txt) (one per line)
-* [Account passwords](../.taskfiles/sx6036/resources/passwords.sops.yaml)
+* [Ansible values (licenses and credentials)](../ansible/remote/switches/sx6036/group_vars/sx6036.sops.yaml)
 
 Run `task sx6036:setup:full-configuration` to make the following changes:
 * Load all licenses
@@ -100,10 +99,10 @@ Ports are connected as follows:
 | 1/32/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
 | 1/32/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
 | 1/33   | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/33/1 |       |               | all          | 5          | switch-02          | SFP+ 1               |            | 10 Gbps    |
-| 1/33/2 |       |               | all          | 5          | switch-02          | SFP+ 2               |            | 10 Gbps    |
-| 1/33/3 |       |               | all          | 5          | switch-02          | SFP+ 3               |            | 10 Gbps    |
-| 1/33/4 |       |               | all          | 5          | switch-02          | SFP+ 4               |            | 10 Gbps    |
+| 1/33/1 |       |               | all          | 5          | switch-02          | 1/2/1                |            | 10 Gbps    |
+| 1/33/2 |       |               | all          | 5          | switch-02          | 1/2/2                |            | 10 Gbps    |
+| 1/33/3 |       |               | all          | 5          | switch-02          | 1/2/3                |            | 10 Gbps    |
+| 1/33/4 |       |               | all          | 5          | switch-02          | 1/2/4                |            | 10 Gbps    |
 
 Splitting ports disables others as documented below:
 

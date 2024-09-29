@@ -1,0 +1,303 @@
+---
+- hosts: icx7250
+  connection: ansible.netcommon.network_cli
+  gather_facts: false
+  become: true
+  vars:
+    key_file_path: ~/.ssh/id_rsa.pub.rfc4716
+  tasks:
+    - name: Disable pagination (needed on every session)
+      commscope.icx.icx_command:
+        commands:
+          - skip
+
+    - name: Install licenses
+      commscope.icx.icx_command:
+        commands:
+          - command: "{{ item }}"
+            prompt: ".*y or n.*"
+            answer: 'y'
+            newline: False
+      loop: "{{ icx7250_license_commands }}" 
+      register: license_output
+      no_log: true
+      changed_when: '"already installed" not in license_output.stdout | first'
+
+    ###########################################################################
+    #########                    !!! IMPORTANT !!!                    #########
+    #########                    !!! IMPORTANT !!!                    #########
+    #########                    !!! IMPORTANT !!!                    #########
+    ###########################################################################
+    # SSH keys are SHARED BY ALL ACCOUNTS ON THE SWITCH. This means that if a
+    # key is uploaded for use by a read-only user, the user can then use the
+    # key to authenticate as 'super' or any other user.
+    - name: Load SSH key
+      # Neither SSH backends work for different reasons, so just use SCP instead
+      # Paramiko relies on the SCP binary anyway
+      delegate_to: localhost
+      become: false
+      environment:
+        SSHPASS: "{{ ansible_password }}"
+      ansible.builtin.command: >-
+        sshpass -e scp -O
+        {{ ansible_ssh_common_args if ansible_ssh_common_args is defined }}
+        "{{ key_file_path }}"
+        "{{ ansible_username ~ '@' if ansible_username is defined }}{{ inventory_hostname }}:sshPubKey"
+    - name: Disable insecure SSH encryption options
+      commscope.icx.icx_command:
+        commands:
+          - configure terminal
+          - ip ssh encryption aes-only
+          - ip ssh encryption disable-aes-cbc
+          - exit
+    - name: Update credentials
+      vars:
+        permissions_map:  # Manually pulled from CLI
+          "read-write":     0
+          "port-config":    4
+          "read-only":      5
+          "cloud-user":     6
+          "no-syslog-read": 7
+      commscope.icx.icx_user:
+        name: "{{ item.key }}"
+        configured_password: "{{ item.value.password }}"
+        privilege: "{{ permissions_map[item.value.privilege] }}"
+        state: present
+        update_password: always
+      no_log: true
+      loop: "{{ icx7250_credentials | dict2items }}"
+
+    - name: Update clock
+      block:
+        - name: Load host facts to get the current date/time
+          delegate_to: localhost
+          ansible.builtin.setup:
+            gather_subset:
+              - date_time
+        - name: Set current date/time
+          commscope.icx.icx_command:
+            commands:
+              - >-
+                clock set
+                {{ ansible_date_time.hour }}:{{ ansible_date_time.minute }}:{{ ansible_date_time.second }}
+                {{ ansible_date_time.month }}-{{ ansible_date_time.day }}-{{ ansible_date_time.year }}
+              - configure terminal
+              - clock timezone {{ icx7250_timezone }}
+              - clock summer-time 
+    - name: Set hostname
+      commscope.icx.icx_system:
+        hostname: "{{ hostname }}"
+
+    - name: Configure web management
+      commscope.icx.icx_command:
+        commands:
+          - configure terminal
+          - no web-management http
+          - web-management https
+          - exit
+
+    - name: Check if jumbo frames are already enabled
+      commscope.icx.icx_facts:
+        gather_subset: config
+    - name: Enable jumbo frames
+      block:
+        - name: Reconfigure switch
+          commscope.icx.icx_command:
+            commands:
+              - configure terminal
+              - jumbo
+              - write memory
+              - exit
+              - command: reload
+                prompt: ".*enter 'y' or 'n'.*"
+                answer: 'y'
+                newline: False
+          register: result
+          # Timeout occurs when switch is reloading. Ignore it.
+          failed_when: >-
+            "command timeout triggered" not in result.msg
+        # Enabling jumbo frames requires a reboot
+        - name: Wait for reboot
+          commscope.icx.icx_command:
+            commands:
+              - skip 
+          register: result
+          retries: 100
+          delay: 30
+          until: result.stdout is defined
+          timeout: "{{ 2 * 60 * 60 }}"
+      when: not (ansible_net_config | regex_search("^jumbo$", multiline=true))
+
+    - name: Configure interface ports
+      block:
+        - commscope.icx.icx_interface:
+            name: ethernet 1/{{ item.key }}
+            description: "{{ item.value.description | default(omit) }}"
+            power: "{{ power if item.key is match('^1/') else omit }}"
+            stp: true
+          vars:
+            power:
+              enabled: true
+          loop: "{{ icx7250_interfaces | dict2items }}"
+        - name: Set MTU
+          commscope.icx.icx_command:
+            commands:
+              - configure terminal
+              - interface ethernet 1/{{ item.key }}
+              - ip mtu {{ item.value.mtu | default(9216) }}
+              - end
+          loop: "{{ icx7250_interfaces | dict2items }}"
+
+    # The ansible provider is apparently not idempotent for this resource
+    # Do a rudementary check to prevent the run from failing if the LAGs
+    # already exist
+    - name: Check if LAGs already exist
+      commscope.icx.icx_command:
+        commands:
+          - show lag brief | include lg{{ item.key }}
+      register: icx7250_lags
+      loop: "{{ icx7250_channel_groups | dict2items }}"
+    - name: Configure LAGs
+      become: true
+      vars:
+        become_with: enable
+      commscope.icx.icx_linkagg:
+        group: "{{ item.key }}"
+        mode: dynamic
+        name: "{{ item.value.description | default(omit) }}"
+        members: >-
+          {{
+            item.value.members |
+            map("regex_replace", "^(.*)$", "ethernet 1/" ~ "\1") |
+            list
+          }}
+      loop: "{{ icx7250_channel_groups | dict2items }}"
+      loop_control:
+        extended: true
+      when: icx7250_lags.results[ansible_loop.index0].stdout | first == ""
+    - name: Set LAG MAC and timeout
+      commscope.icx.icx_command:
+        commands:
+          - configure terminal
+          - lag {{ item.value.description }}
+          - lag-mac {{ "2000.0000.%04X" | format(item.key | int) }}
+          - lacp-timeout short
+          - end
+      loop: "{{ icx7250_channel_groups | dict2items }}"
+
+    - name: Configure VLANs
+      block:
+        - name: Set PVLAN types 
+          commscope.icx.icx_command:
+            commands:
+              - configure terminal
+              - vlan {{ item.key }}
+              - pvlan type {{ item.value.pvlan.type }}
+              - end
+          loop: "{{ icx7250_vlans | dict2items }}"
+          when: item.value.pvlan is defined
+          register: result
+          changed_when: >-
+            result.stdout[2] != 'current private vlan type is same as given private vlan type'
+        - name: Add interfaces
+          vars:
+            untagged_interfaces: >-
+              {{
+                item.value.untagged_interfaces.ethernet |
+                default([]) |
+                map('regex_replace', '^(.*)$', 'ethernet 1/\1')
+                +
+                item.value.untagged_interfaces.channel_groups |
+                default([]) |
+                map('regex_replace', '^(.*)$', 'lag \1')
+              }}
+            tagged_interfaces: >-
+              {{
+                item.value.tagged_interfaces.ethernet |
+                default([]) |
+                map('regex_replace', '^(.*)$', 'ethernet 1/\1')
+                +
+                item.value.tagged_interfaces.channel_groups |
+                default([]) |
+                map('regex_replace', '^(.*)$', 'lag \1')
+              }}
+          commscope.icx.icx_vlan:
+            vlan_id: "{{ item.key }}"
+            name: "{{ item.value.description | default(omit) }}"
+            interfaces:
+              name: "{{ untagged_interfaces }}"
+              purge: true
+            tagged: 
+              name: "{{ tagged_interfaces }}"
+              purge: true
+            stp:
+              enabled: true
+          loop: "{{ icx7250_vlans | dict2items }}"
+        - name: Add PVLAN trunks
+          vars:
+            setup_cmds:
+              - configure terminal
+              - vlan {{ item.key }}
+            teardown_cmds:
+              - end
+            interfaces: >-
+              {{
+                item.value.pvlan.trunks.ethernet |
+                default([]) |
+                map('regex_replace', '^(.*)$', 'ethernet 1/\1')
+                +
+                item.value.pvlan.trunks.channel_groups |
+                default([]) |
+                map('regex_replace', '^(.*)$', 'lag \1')
+              }}
+            trunk_cmds: >-
+              {{
+                item.value.pvlan.secondary_pvlans |
+                product(interfaces) |
+                map('join', ' ') |
+                map('regex_replace', '^(.*)$', 'pvlan pvlan-trunk \1')
+              }}
+          commscope.icx.icx_command:
+            commands: "{{ setup_cmds + trunk_cmds + teardown_cmds }}"
+          loop: "{{ icx7250_vlans | dict2items }}"
+          when: item.value.pvlan is defined and item.value.pvlan.type == "primary"
+        - name: Check if management interfaces have already been configured
+          vars:
+            regex: >-
+              {{ 
+                item.value.management_interface.ip_address |
+                regex_replace("/.*", "") |
+                regex_escape()
+              }}.*ve{{
+                item.key 
+              }}
+          commscope.icx.icx_command:
+            commands:
+              - show ip address | include {{ regex }}
+          register: result
+          loop: "{{ icx7250_vlans | dict2items }}"
+          when: item.value.management_interface is defined
+        - name: Add router/switch interface
+          commscope.icx.icx_command:
+            commands:
+              - configure terminal
+              - vlan {{ item.key }}
+              - router-interface ve {{ item.key }}
+              - exit
+              - interface ve {{ item.key }}
+              - ip address {{ item.value.management_interface.ip_address }}
+              - exit
+              - ip route 0.0.0.0/0 {{ item.value.management_interface.gateway }}
+              - exit
+          loop: "{{ icx7250_vlans | dict2items }}"
+          loop_control:
+            extended: true
+          changed_when: true
+          when: >-
+            item.value.management_interface is defined and
+            result.results[ansible_loop.index0].stdout | first == ""
+
+    - name: Save config
+      commscope.icx.icx_command:
+        commands:
+          - write memory

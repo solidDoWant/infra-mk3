@@ -2,14 +2,13 @@
 version: 3
 
 vars:
-  MGMT_IP: 10.0.0.3
+  ICX7250_MGMT_IP:
+    - 10.254.0.3
+    - 10.0.0.3
 
 includes:
   local: local.yaml
-  # routine:
-  #   taskfile: routine.yaml
-  #   flatten: true
-  # ssh:
-  #   taskfile: ssh.yaml
-  #   flatten: true
+  ssh:
+    taskfile: ssh.yaml
+    flatten: true
   setup: setup.yaml

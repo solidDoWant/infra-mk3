@@ -10,8 +10,12 @@ switches:
         ansible_password: admin
     icx7250:
       hosts:
-        10.0.0.3:
+        10.254.0.3:
+          hostname: switch-02
       vars:
         ansible_username: super
         # This won't be used after the SSH key is uploaded - only for bootstraping.
         ansible_password: super
+        ansible_network_os: community.network.icx
+        ansible_connection: ansible.netcommon.network_cli
+        ansible_become_method: enable

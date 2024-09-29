@@ -17,7 +17,7 @@ tasks:
   ssh-switch-config-file:
     internal: true
     dir: "{{ .TASKFILE_DIR }}"
-    vars:
+    vars: &vars
       SSH_CONFIG_DIR: ~/.ssh/config.d
       SSH_SWITCH_CONFIG_PATH: "{{ .SSH_CONFIG_DIR }}/sx6036"
     cmds:
@@ -29,9 +29,7 @@ tasks:
 
   ssh-config-file:
     internal: true
-    vars:
-      SSH_CONFIG_DIR: ~/.ssh/config.d
-      SSH_SWITCH_CONFIG_PATH: "{{ .SSH_CONFIG_DIR }}/sx6036"
+    vars: *vars
     cmd: |
       FILE_CONTENTS="$(cat ~/.ssh/config)"
       cat << EOF > ~/.ssh/config

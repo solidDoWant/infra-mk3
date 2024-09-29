@@ -1,4 +1,4 @@
-# Update and factory reset
+# Update, factory reset, and initial configuration
 
 As with the SX6036, this switch needs to be reset to factory defaults prior to configuration. The firmware may also need to be updated at this stage. To do so:
 
@@ -28,11 +28,11 @@ As with the SX6036, this switch needs to be reset to factory defaults prior to c
 
     ```shell
     # Switch management interface config
-    setenv ipaddr 10.0.0.3
+    setenv ipaddr 10.254.0.3
     setenv netmask 255.255.255.0
 
     # TFTP config
-    setenv serverip 10.0.0.254
+    setenv serverip 10.254.0.254
     setenv image_name SPR08095pufi.bin
     setenv uboot spz10118.bin
 
@@ -70,10 +70,63 @@ As with the SX6036, this switch needs to be reset to factory defaults prior to c
     interface management 1
 
     # Set IP
-    ip address 10.0.0.3/24
-    exit
+    ip address 10.254.0.3/24
+    end
     write memory
     ```
+
+# Production configuration
+
+Update the following files with your own values:
+* [Ansible values (licenses and credentials)](../ansible/remote/switches/icx7250/group_vars/icx7250.sops.yaml)
+
+Run `task icx7250:setup:full-configuration` to make the following changes:
+* Load all licenses
+* Load SSH key (IMPORTANT: THIS IS NOT TIED TO A SPECIFIC ACCOUNT), and disable insecure SSH encryption options
+* Update account passwords
+* Update the clock to current time
+* Enabled HTTPS-only web management
+* Enable jumbo frames
+* Configure all ports (name, VLANs, LAGs, set MTU, etc.)
+
+# Port configuration and VLAN assignment reference
+
+Ports are connected as follows:
+
+| Port   | Untagged VLAN | Tagged VLANs | LAG number | Host name          | Host port | Cable type |
+| ------ | ------------- | ------------ | ---------- | ------------------ | --------- | ---------- |
+| 1/1/1  | Management    |              |            | talos-k8s-mixed-01 |           |            |
+| 1/1/2  | Management    |              |            | talos-k8s-mixed-02 |           |            |
+| 1/1/3  | Management    |              |            | talos-k8s-mixed-03 |           |            |
+| 1/1/4  | Management    |              |            | talos-k8s-mixed-04 |           |            |
+| 1/1/5  | Management    |              |            | proxmox-vm-host-01 |           |            |
+| 1/1/6  | Management    |              |            |                    |           |            |
+| 1/1/7  | Management    |              |            | switch-01          |           |            |
+| 1/1/8  | Management    |              |            | switch-02          |           |            |
+| 1/1/9  | Hosts         |              |            |                    |           |            |
+| 1/1/10 | Hosts         |              |            |                    |           |            |
+| 1/1/11 | Hosts         |              |            |                    |           |            |
+| 1/1/12 | Hosts         |              |            |                    |           |            |
+| 1/1/13 | Infra devices |              |            | pdu-01             |           |            |
+| 1/1/14 | Infra devices |              |            | ups-01             |           |            |
+| 1/1/15 | Infra devices |              |            | tape-library-01    |           |            |
+| 1/1/16 | Infra devices |              |            | kvm-01             |           |            |
+| 1/1/17 | User devices  |              |            |                    |           |            |
+| 1/1/18 | User devices  |              |            |                    |           |            |
+| 1/1/19 | User devices  |              |            |                    |           |            |
+| 1/1/20 | User devices  |              |            |                    |           |            |
+| 1/1/21 | Guest devices | IoT devices  |            | switch-03          |           |            |
+| 1/1/22 | Guest devices | IoT devices  |            | switch-04          |           |            |
+| 1/1/23 | Guest devices | IoT devices  |            | ap-01              |           |            |
+| 1/1/24 | Guest devices | IoT devices  |            | ap-02              |           |            |
+| 1/2/1  |               | all          | 5          | switch-02          | 1/33/1    | DAC SFP+   |
+| 1/2/2  |               | all          | 5          | switch-02          | 1/33/2    | DAC SFP+   |
+| 1/2/3  |               | all          | 5          | switch-02          | 1/33/3    | DAC SFP+   |
+| 1/2/4  |               | all          | 5          | switch-02          | 1/33/4    | DAC SFP+   |
+| 1/2/5  | User devices  |              |            |                    |           | LC fiber   |
+| 1/2/6  | User devices  |              |            |                    |           | LC fiber   |
+| 1/2/7  | User devices  |              |            |                    |           | LC fiber   |
+| 1/2/8  | User devices  |              |            |                    |           | LC fiber   |
 
 # Relevant links
 
