@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  configure-ssh:
+    cmds:
+      - task: hosts-file
+
+  # Unfortunately ssh-keyscan cannot be told to use the old ciphers that the switch uses, so an actual ssh connection is used to load the host key
+  # for the first time
+  hosts-file:
+    internal: true
+    cmd: |
+      ssh-keyscan -H "{{ .R730XD_IDRAC_IP }}" >> ~/.ssh/known_hosts
+    status:
+      - |
+        ssh-keygen -F "{{ .R730XD_IDRAC_IP }}"

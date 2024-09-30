@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+includes:
+  local:
+    taskfile: local.yaml
+    internal: true
+
+tasks:
+  full-configuration:
+    deps:
+      - task: local:configure-ssh
+    dir: "{{ .ROOT_DIR }}/ansible"
+    cmd: |
+      pwd
+      ansible-playbook ./remote/servers/r730xd/idrac/setup.yaml

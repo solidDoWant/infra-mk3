@@ -1,0 +1,15 @@
+---
+- name: Run remote racadm command
+  delegate_to: localhost
+  ansible.builtin.command:
+    cmd: >-
+      racadm
+      --nocertwarn
+      -r "{{ inventory_hostname }}"
+      -u "{{ ansible_username }}"
+      -p "{{ ansible_password }}"
+      {{ command }}
+  register: result
+- name: Set output
+  ansible.builtin.set_fact:
+    "{{ output_var }}": "{{ result.stdout }}" 

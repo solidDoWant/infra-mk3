@@ -1,0 +1,50 @@
+---
+- name: Get user info
+  delegate_to: localhost
+  dellemc.openmanage.idrac_user_info:
+    idrac_ip: "{{ inventory_hostname }}"
+    idrac_user: "{{ ansible_username }}"
+    idrac_password: "{{ ansible_password }}"
+    validate_certs: false
+  register: users_info
+
+- name: Check if user has SSH keys loaded
+  ansible.builtin.import_role:
+    name: racadm
+  vars:
+    user_info: &user_info >-
+      {{
+        users_info.user_info |
+        selectattr('UserName', 'equalto', ansible_username) |
+        first
+      }}
+    command: >-
+      sshpkauth
+      -i {{ user_info.Id }}
+      -v
+      -k all
+  changed_when: false
+
+- name: Upload user SSH key
+  ansible.builtin.import_role:
+    name: racadm
+  vars:
+    user_info: *user_info
+    ssh_keys: >-
+      {{
+        (
+          command_output.splitlines() |
+          map("trim") |
+          select()
+        )[1:] |
+        map("split", ":") |
+        map("map", "trim") |
+        map("last") |
+        flatten
+      }}
+    command: >-
+      sshpkauth
+      -i {{ user_info.Id }}
+      -k {{ lookup('ansible.utils.index_of', ssh_keys, 'eq', '') | first + 1 }}
+      -t "{{ ssh_key }}"
+  when: ssh_key not in ssh_keys

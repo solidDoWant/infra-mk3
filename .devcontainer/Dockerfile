@@ -16,6 +16,9 @@ RUN mkdir -pv /tmp/debs && \
     dpkg -i /tmp/debs/*.deb && \
     rm -rvf /tmp/debs
 
+# Needed for BIOS and iDRAC config
+RUN ./install-racadm.sh
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 

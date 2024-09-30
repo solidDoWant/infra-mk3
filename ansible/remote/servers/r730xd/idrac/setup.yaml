@@ -1,0 +1,68 @@
+---
+- hosts: r730xd_idrac
+  gather_facts: false
+
+  vars:
+    key_file_path: ~/.ssh/id_rsa.pub
+
+  tasks:
+    - name: Upload SSH key
+      ansible.builtin.import_role:
+        name: upload-ssh-key
+      vars:
+        ssh_key: "{{ lookup('ansible.builtin.file', key_file_path) }}"
+
+    - name: Configure iDRAC
+      delegate_to: localhost
+      dellemc.openmanage.idrac_attributes:
+        idrac_ip: "{{ inventory_hostname }}"
+        idrac_user: "{{ ansible_username }}"
+        idrac_password: "{{ ansible_password }}"
+        validate_certs: false
+        idrac_attributes:
+          NIC.1#Selection: Dedicated
+          IPv4Static.1#Address: "{{ inventory_hostname }}"
+          IPv4Static.1#Netmask: "{{ subnet_mask }}"
+          IPv4Static.1#Gateway: "{{ gateway }}"
+          NIC.1#DNSRacName: "{{ hostname }}"
+          NIC.1#DNSRegister: Enabled
+          IPMILan.1#Enable: Enabled
+          IPMILan.1#PrivLimit: Administrator
+          WebServer.1#SSLEncryptionBitLength: "256-bit or higher"
+          WebServer.1#TLSProtocol: "TLS 1.2 Only"
+          ThermalSettings.1#ThermalProfile: "{{ thermal_profile }}"
+          ThermalSettings.1#MinimumFanSpeed: "{{ minimum_fan_speed_percentage }}"
+
+    # Options are available at https://{{ inventory_hostname }}/redfish/v1/Systems/System.Embedded.1/Bios
+    - name: Configure BIOS
+      delegate_to: localhost
+      dellemc.openmanage.idrac_bios:
+        idrac_ip: "{{ inventory_hostname }}"
+        idrac_user: "{{ ansible_username }}"
+        idrac_password: "{{ ansible_password }}"
+        validate_certs: false
+        attributes:
+          AcPwrRcvry: "On"
+          AcPwrRcvryDelay: Random
+          AesNi: Enabled
+          BootMode: Uefi
+          BootSeqRetry: Enabled
+          CorrEccSmi: Enabled
+          EmbSata: AhciMode
+          EnergyEfficientTurbo: Enabled
+          EnergyPerformanceBias: BalancedPerformance
+          InSystemCharacterization: Enabled
+          IntegratedNetwork1: Enabled
+          IntegratedRaid: Enabled
+          InternalSdCard: "On"
+          InternalSdCardPrimaryCard: SdCard1
+          InternalSdCardRedundancy: Mirror
+          InternalUsb: "On"
+          IscsiDev1EnDis: Disabled
+          MemFrequency: MaxPerf
+          MemTest: Disabled
+          NumLock: "On"
+          ProcVirtualization: Enabled
+          # SetBootOrderEn: TODO
+          SriovGlobalEnable: Enabled
+          SysProfile: PerfPerWattOptimizedDapc

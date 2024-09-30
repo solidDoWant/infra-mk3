@@ -2,6 +2,11 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: 3
 
+includes:
+  local:
+    taskfile: local.yaml
+    internal: true
+
 vars:
   FIRMWARE_DIR:
     ref: default "/tmp/host-mounts/brocade-firmware" .FIRMWARE_DIR
@@ -107,3 +112,11 @@ tasks:
       rm -v "${FIRMWARE_ZIP_PATH}"
     status:
       - test -n "$(find {{ shellQuote .FIRMWARE_DIR }} -maxdepth 1 -type f -name '*.bin')"
+
+  full-configuration:
+    deps:
+      - task: local:configure-ssh
+    dir: "{{ .ROOT_DIR }}/ansible"
+    cmd: |
+      pwd
+      ansible-playbook ./remote/switches/icx7250/setup.yaml

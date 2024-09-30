@@ -27,9 +27,9 @@
 	},
 	"mounts": [
 		// Used to for SSH access to hardware
-		"type=bind,source=${localEnv:HOME}/.ssh,target=/vscode/.ssh",
+		"type=bind,source=${localEnv:USERPROFILE}/.ssh,target=/vscode/.ssh",
 		// Used for Docker out of Docker container mounts
-		"type=bind,source=/tmp/host-mounts,target=/tmp/host-mounts"
+		// "type=bind,source=/tmp/host-mounts,target=/tmp/host-mounts"
 	],
 	"containerEnv": {
 		"SOPS_AGE_KEY_FILE": "${containerWorkspaceFolder}/keys/primary.key"

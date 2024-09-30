@@ -19,3 +19,10 @@ switches:
         ansible_network_os: community.network.icx
         ansible_connection: ansible.netcommon.network_cli
         ansible_become_method: enable
+servers:
+  children:
+    r730xd_idrac:
+      hosts:
+        10.0.1.4:
+      vars:
+        ansible_username: root
