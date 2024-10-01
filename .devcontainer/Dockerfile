@@ -2,7 +2,8 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 # Generally helpful tools
 RUN apt update && apt install --no-install-recommends -y \
-    file sshpass minicom age whois yq iputils-ping
+    file sshpass minicom age whois yq iputils-ping p7zip \
+    xorriso
 
 # Install debs from sources that don't provide an apt repo
 RUN mkdir -pv /tmp/debs && \
@@ -17,7 +18,8 @@ RUN mkdir -pv /tmp/debs && \
     rm -rvf /tmp/debs
 
 # Needed for BIOS and iDRAC config
-RUN ./install-racadm.sh
+COPY install-racadm.sh /tmp/install-racadm.sh
+RUN /tmp/install-racadm.sh
 
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key

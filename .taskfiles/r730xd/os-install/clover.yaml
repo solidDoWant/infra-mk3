@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  create-install-iso:
+    silent: true
+    vars:
+      OUTPUT_PATH:
+        ref: default (printf "%s/clover.iso" .USER_WORKING_DIR) .OUTPUT_PATH
+      WORKING_DIR: /tmp/clover
+      CLOVER_RELEASE: "5160"
+      CLOVER_DOWNLOAD_URL:
+        ref: >-
+          printf "https://github.com/CloverHackyColor/CloverBootloader/releases/download/%s/Clover-%s-X64.iso.7z"
+          .CLOVER_RELEASE .CLOVER_RELEASE
+    cmds:
+      - defer: rm -rvf "{{ .WORKING_DIR }}"
+      - cmd: |
+          mkdir -v "{{ .WORKING_DIR }}"
+          cd "{{ .WORKING_DIR }}"
+
+          # Download the latest release
+          CLOVER_DOWNLOAD_FILE_NAME='clover.iso.7z'
+          curl -fsSL -o "${CLOVER_DOWNLOAD_FILE_NAME}" '{{ .CLOVER_DOWNLOAD_URL }}'
+
+          # Extract the ISO from the 7z release archive
+          7za e "${CLOVER_DOWNLOAD_FILE_NAME}"
+          ISO_NAME='clover.iso'
+          mv -v *.iso "${ISO_NAME}"
+
+          # Produce a new ISO with the NVMe driver enabled
+          DRIVER_BASE_PATH='/EFI/CLOVER/DRIVERS/'
+          DRIVER_SOURCE_PATH="${DRIVER_BASE_PATH}/OFF/NVMEXPRESSDXE.EFI"
+          xorriso -dev "${ISO_NAME}" \
+            -return_with SORRY 0 \
+            -clone "${DRIVER_SOURCE_PATH}" "${DRIVER_BASE_PATH}/UEFI/NVMEXPRESSDXE.EFI" \
+            -clone "${DRIVER_SOURCE_PATH}" "${DRIVER_BASE_PATH}/BIOS/NVMEXPRESSDXE.EFI" \
+            -boot_image any replay
+
+          # Copy ISO to the output directory
+          cp -v "${ISO_NAME}" "{{ .OUTPUT_PATH }}"

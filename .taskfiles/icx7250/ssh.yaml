@@ -11,7 +11,7 @@ tasks:
     vars:
       # 'quote' is used instead of 'shellQuote' because the command _must_ use double quotes instead of single
       COALESCED_COMMANDS:
-        ref: &coalesce_command_inputs_template >-
+        ref: >-
           coalesce
             .COMMANDS
             (coalesce .COMMAND " " | trim | splitList "\n" | compact)
