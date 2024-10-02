@@ -21,6 +21,9 @@ RUN mkdir -pv /tmp/debs && \
 COPY install-racadm.sh /tmp/install-racadm.sh
 RUN /tmp/install-racadm.sh
 
+# gomplate
+COPY --from=hairyhenderson/gomplate:stable /gomplate /usr/local/bin/gomplate
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 

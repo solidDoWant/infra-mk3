@@ -156,13 +156,13 @@ My physical network is subdivided into several virtual LANs (VLANs) spreading ac
 
 | ID  | Name          | Description                                                                                                       | IP ranges                                                                   |
 | --- | ------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| 100 | Management    | Out of band management (iDRAC, vPro) and hypervisor access (Proxmox web interface)                                | 10.0.0.0/16                                                                 |
-| 200 | Hosts         | Primary network access for machines that run workloads, used for SSH, WAN access, k8s control plane traffic, etc. | 10.1.0.0/16                                                                 |
-| 300 | Kubernetes    | CNI traffic between k8s pods                                                                                      | 10.2.0.0/16 (BGP), 10.43.0.0/16 (pod to pod), 10.44.0.0/16 (load balancers) |
-| 400 | Infra devices | Infrastructure devices (UPS, PDU, etc.)                                                                           | 10.3.0.0/16                                                                 |
-| 500 | User devices  | End user devices (desktops, laptops, etc.)                                                                        | 10.4.0.0/16                                                                 |
-| 600 | Guest devices | End user guest devices, less trusted with only Internet access and network segregation (PVLAN)                    | 10.5.0.0/16                                                                 |
-| 700 | IoT devices   | Untrusted IoT devices with limited point to point internal access (PVLAN)                                         | 10.6.0.0/16                                                                 |
+| 100 | Management    | Out of band management (iDRAC, vPro) and hypervisor access (Proxmox web interface)                                | 10.1.0.0/16                                                                 |
+| 200 | Hosts         | Primary network access for machines that run workloads, used for SSH, WAN access, k8s control plane traffic, etc. | 10.2.0.0/16                                                                 |
+| 300 | Kubernetes    | CNI traffic between k8s pods                                                                                      | 10.3.0.0/16 (BGP), 10.43.0.0/16 (pod to pod), 10.44.0.0/16 (load balancers) |
+| 400 | Infra devices | Infrastructure devices (UPS, PDU, etc.)                                                                           | 10.4.0.0/16                                                                 |
+| 500 | User devices  | End user devices (desktops, laptops, etc.)                                                                        | 10.5.0.0/16                                                                 |
+| 600 | Guest devices | End user guest devices, less trusted with only Internet access and network segregation (PVLAN)                    | 10.6.0.0/16                                                                 |
+| 700 | IoT devices   | Untrusted IoT devices with limited point to point internal access (PVLAN)                                         | 10.7.0.0/16                                                                 |
 
 All VLANs that don't use a private VLAN (PVLAN) have the first half of their address space dedicated to static IPs, with DHCP handling the second half. The exception is the 10.43/16 and 10.44/16 ranges, which are entirely static.
 
@@ -287,3 +287,7 @@ Bootstrapping is handled via Taskfile scripting where possible, otherwise, it is
   * no kube-vip
 * Renovate
 * gitops -->
+
+TODO:
+* redo IP addresses for switches
+* redo source of truth for switches (to network.yaml)

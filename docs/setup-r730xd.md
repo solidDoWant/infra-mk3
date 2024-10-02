@@ -27,6 +27,23 @@ To configure iDRAC, do the following:
     ```
 6. Run `task r730xd:idrac:setup:full-configuration`.
 
+# Proxmox install
+
+Proxmox is installed automatically via a flash drive installed to the back of the R730XD. This drive is formatted with a custom Proxmox ISO that contains [an "answer" file](https://pve.proxmox.com/wiki/Automated_Installation) detailing the initial configuration.
+
+<!-- TODO switch to HTTPS boot via rEFInd and chain boot managers -->
+
+Unfortunately answer files are fairly limited and restrictive. The answer file is not flexible enough to support the network configuration required. To mitigate this issue, a custom "network config" Debian package is built and injected into the ISO. This package contains a `/etc/networks/interfaces` file that is templated from the configuration file [here](../docs/network.yaml). It also contains a kernel module configuration file for the Mellanox ConnectX-3 NIC, which switches the port type from InfiniBand to Ethernet. The installer automatically unpacks and installs this package, configuring the network.
+
+To install Proxmox:
+1. Attach a USB flash drive into your local computer.
+2. Run `task r730xd:os-install:proxmox:create-install-iso`. This will place a `proxmox.iso` file in your current working directory.
+3. Burn the ISO to the flash drive. This can be done on Linux with `dd bs=512 if=proxmox.iso of=/dev/&lt;YOUR_DEV&gt; status=progress oflag=sync; sync`, or on Windows via [Rufus](https://github.com/pbatard/rufus).
+4. After all writes are complete, remove the flash drive from your local computer and install it into one of the rear USB ports.
+5. Boot the server.
+6. Wait for the OS to install (10 to 15 minutes).
+7. Remove the install flash drive.
+
 # Bootloader setup
 
 The R730XD does not natively support NVMe boot. Supposedly the U.2 enablement kit is supposed to support this, however, this seems to be dependent on what HBA is attached to the SAS backplane, what firmware version it uses, and is extremely finicky. To mitigate this issue, [Clover Bootloader](https://github.com/CloverHackyColor/CloverBootloader) is installed on a Dell Internal Dual SD Module (IDSDM). This bootloader loads NVMe UEFI drivers and boots the OS from U.2 drives. The IDSDM contains two mirrored SD cards, so if one fails, the other can take over. While SD cards are infamous for poor write endurance, however, there should be little to no writing to these cards outside of bootloader updates.

@@ -1,0 +1,148 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+vars:
+  PROXMOX_PACKAGE_NAME: proxmox-network-config
+  PROXMOX_WORKING_DIR: /tmp/proxmox
+
+env:
+  HOSTNAME: proxmox-vm-host-01
+
+tasks:
+  download-iso:
+    internal: true
+    silent: true
+    vars:
+      ISO_URL: https://enterprise.proxmox.com/iso/proxmox-ve_8.2-2.iso
+      OUTPUT_PATH:
+        ref: default (printf "%s/proxmox.iso" .USER_WORKING_DIR) .OUTPUT_PATH
+    cmd: |
+      echo 'Downloading ISO...'
+      mkdir -pv {{ dir .OUTPUT_PATH | shellQuote }}
+      curl -fsSL -o {{ shellQuote .OUTPUT_PATH }} {{ shellQuote .ISO_URL }}
+    status:
+      - test -f {{ shellQuote .OUTPUT_PATH }}
+
+  build-network-config-package:
+    internal: true
+    silent: true
+    vars:
+      WORKING_DIR:
+        ref: joinPath .PROXMOX_WORKING_DIR .PROXMOX_PACKAGE_NAME
+      OUTPUT_PATH:
+        ref: default (printf "%s/%s.deb" .USER_WORKING_DIR .PROXMOX_PACKAGE_NAME) .OUTPUT_PATH
+      PACKAGE_RESOURCES_DIR:
+        ref: joinPath .TASKFILE_DIR "resources" "network-package"
+    cmds:
+      - defer: rm -rf "{{ .WORKING_DIR }}"
+      - cmd: |
+          mkdir -pv {{ shellQuote .WORKING_DIR }}
+          cd {{ shellQuote .WORKING_DIR }}
+
+          # Copy the source files to the working directory and template them
+          gomplate \
+            --input-dir {{ shellQuote .PACKAGE_RESOURCES_DIR }}/rootfs \
+            --datasource hostname=env:HOSTNAME \
+            --datasource network=file://{{ shellQuote .ROOT_DIR }}/docs/network.yaml \
+            --output-map={{ shellQuote (printf "%s/{{ .in | strings.TrimSuffix \".gomplate\" }}" .WORKING_DIR) }}
+
+          # Copy the control data
+          DEBIAN_DIR={{ shellQuote .WORKING_DIR }}/DEBIAN
+          mkdir -pv "${DEBIAN_DIR}"
+          cp -v {{ shellQuote .PACKAGE_RESOURCES_DIR }}/control "${DEBIAN_DIR}"
+
+          # Build the package
+          dpkg-deb -Zxz --build {{ shellQuote .WORKING_DIR }}
+
+          # Move the package to output
+          mv -v {{ printf "%s.deb" .WORKING_DIR | shellQuote }} {{ shellQuote .OUTPUT_PATH }}
+    sources:
+      - >-
+        {{ .PACKAGE_RESOURCES_DIR }}/**
+    status:
+      - test -f {{ shellQuote .OUTPUT_PATH }}
+
+  build-answer-files:
+    internal: true
+    silent: true
+    vars:
+      OUTPUT_PATH:
+        ref: default (printf "%s/answers" .USER_WORKING_DIR) .OUTPUT_PATH
+      ANSWER_RESOURCES_DIR:
+        ref: joinPath .TASKFILE_DIR "resources" "answers"
+    cmd: >-
+      gomplate
+      --input-dir {{ shellQuote .ANSWER_RESOURCES_DIR }}
+      --datasource hostname=env:HOSTNAME
+      --datasource network=file://{{ shellQuote .ROOT_DIR }}/docs/network.yaml
+      --output-map={{ shellQuote (printf "%s/{{ .in | strings.TrimSuffix \".gomplate\" }}" .OUTPUT_PATH) }}
+    sources:
+      - >-
+        {{ .ANSWER_RESOURCES_PATH }}/**
+    status:
+      - test -f {{ shellQuote .OUTPUT_PATH }}/answer.toml
+      - test -f {{ shellQuote .OUTPUT_PATH }}/auto-installer-mode.toml
+
+  build-iso:
+    vars:
+      WORKING_DIR:
+        ref: joinPath .PROXMOX_WORKING_DIR "iso-build"
+      OUTPUT_PATH:
+        ref: default (printf "%s/proxmox.iso" .USER_WORKING_DIR) .OUTPUT_PATH
+      BOOT_ARGS:
+        # Configure ConnectX-3 Pro as ethernet instead of InfiniBand
+        - mlx4_core.port_type_array=2,2
+      ISO_PATH:
+        ref: joinPath .WORKING_DIR "proxmox.iso"
+      PACKAGE_PATH:
+        ref: joinPath .WORKING_DIR (printf "%s.deb" .PROXMOX_PACKAGE_NAME)
+      ANSWERS_PATH:
+        ref: joinPath .WORKING_DIR "answer.toml"
+    cmds:
+      - defer: rm -rvf {{ shellQuote .WORKING_DIR }}
+      - cmd: mkdir -pv {{ shellQuote .WORKING_DIR }}
+      - task: download-iso
+        vars:
+          OUTPUT_PATH:
+            ref: .ISO_PATH
+      - task: build-network-config-package
+        vars:
+          OUTPUT_PATH:
+            ref: .PACKAGE_PATH
+      - task: build-answer-files
+        vars:
+          OUTPUT_PATH:
+            ref: .ANSWERS_PATH
+      - cmd: |
+          GRUB_CONFIG_ISO_PATH='/boot/grub/grub.cfg'
+          GRUB_CONFIG_PATH={{ shellQuote .WORKING_DIR }}/grub.cfg
+
+          # Extract the GRUB config file/script
+          xorriso -dev {{ shellQuote .ISO_PATH }} \
+            -return_with SORRY 0 \
+            -osirrox "on" \
+            -extract "${GRUB_CONFIG_ISO_PATH}" "${GRUB_CONFIG_PATH}"
+
+          # Add the boot args to the Linux cmdline provided by GRUB
+          sed -ri 's~(/boot/linux26)~\1 {{ .BOOT_ARGS | join " " }}~' "${GRUB_CONFIG_PATH}"
+
+          # Get the current ISO UUID
+          VOLUME_DATE="$(
+            xorriso -indev {{ shellQuote .ISO_PATH }} \
+              -report_system_area cmd 2>/dev/null |
+            grep date |
+            cut -d\' -f2
+          )"
+
+          # Rebuild the ISO with new and updated files
+          xorriso -dev {{ shellQuote .ISO_PATH }} \
+            -return_with SORRY 0 \
+            -boot_image any keep \
+            -volume_date uuid "${VOLUME_DATE}" \
+            -map "${GRUB_CONFIG_PATH}" "${GRUB_CONFIG_ISO_PATH}" \
+            -map {{ shellQuote .PACKAGE_PATH }} /proxmox/packages/{{ shellQuote .PROXMOX_PACKAGE_NAME }}.deb \
+            -map {{ shellQuote .ANSWERS_PATH }} /
+
+          # Move the ISO to the output path
+          mv -v {{ shellQuote .ISO_PATH }} "{{ .OUTPUT_PATH }}"

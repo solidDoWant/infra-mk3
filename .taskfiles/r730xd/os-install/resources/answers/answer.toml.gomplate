@@ -1,0 +1,32 @@
+{{- $hostNetworkConfig := coll.Merge (index (datasource "network").devices (datasource "hostname")) (datasource "network").common -}}
+{{- $primaryInterface := "" -}}
+{{- range $vlan := $hostNetworkConfig.vlans -}}
+{{- if has $vlan "local-interface" -}}
+{{- $localInterface := index $vlan "local-interface" -}}
+{{- if has $localInterface "gateway" -}}
+{{- $primaryInterface = $localInterface -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $_ := test.Required $primaryInterface -}}
+[global]
+keyboard = "en-us"
+country = "us"
+# All of these properties will be replaced by Ansible in a later setup step
+fqdn = "replaceme-hostname.local"
+mailto = "replace@me.local"
+timezone = "UTC"
+root_password = "root" # Temp, to be changed with ansible later
+
+[network]
+source = "from-answer"
+cidr = "{{ index $primaryInterface "ip-address" }}"
+dns = "{{ index $primaryInterface "gateway" }}"
+gateway = "{{ index $primaryInterface "gateway" }}"
+filter.INTERFACE = "eno1"   # This is a dummy value. The network config package replaces the network config.
+
+[disk-setup]
+filesystem = "zfs"
+zfs.raid = "raid1"
+zfs.ashift = 12
+filter.ID_PATH = "pci-0000:8[67]:00.0-nvme-1"

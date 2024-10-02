@@ -1,0 +1,55 @@
+---
+common:
+  vlans:
+    "100": &vlan_standard
+      name: Management
+      mtu: 1500
+      trunked: true
+    "200":
+      <<: *vlan_standard
+      name: Hosts
+    "300":
+      <<: *vlan_standard
+      name: Kubernetes
+    "400":
+      <<: *vlan_standard
+      name: Infra devices
+    "500":
+      <<: *vlan_standard
+      name: User devices
+    "600":
+      <<: *vlan_standard
+      name: Guest devices
+    "700":
+      <<: *vlan_standard
+      name: IoT devices
+devices:
+  proxmox-vm-host-01:
+    physical:
+      enp5s0f1:
+        mtu: &jumbo_mtu 9000
+        description: "LAN interface, 56G QSFP+ #1"
+    bonds:
+      bond0:
+        slaves:
+          - enp5s0f1
+        mtu: *jumbo_mtu
+        description: LAN interface bond to switch-01
+    _default_vlan_config: &proxmox_vlan_defaults
+      raw-device: bond0
+      bridge: true
+    vlans:
+      "100":
+        <<: *proxmox_vlan_defaults
+        local-interface:
+          ip-address: 10.1.1.1/16
+          gateway: 10.1.0.1
+      "200":
+        <<: *proxmox_vlan_defaults
+        local-interface:
+          ip-address: 10.2.1.1/16
+      "300": *proxmox_vlan_defaults
+      "400": *proxmox_vlan_defaults
+      "500": *proxmox_vlan_defaults
+      "600": *proxmox_vlan_defaults
+      "700": *proxmox_vlan_defaults

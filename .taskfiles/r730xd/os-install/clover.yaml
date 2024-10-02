@@ -2,6 +2,7 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: 3
 
+# This approach is no longer
 tasks:
   create-install-iso:
     silent: true
@@ -36,7 +37,7 @@ tasks:
             -return_with SORRY 0 \
             -clone "${DRIVER_SOURCE_PATH}" "${DRIVER_BASE_PATH}/UEFI/NVMEXPRESSDXE.EFI" \
             -clone "${DRIVER_SOURCE_PATH}" "${DRIVER_BASE_PATH}/BIOS/NVMEXPRESSDXE.EFI" \
-            -boot_image any replay
+            -boot_image any keep
 
           # Copy ISO to the output directory
           cp -v "${ISO_NAME}" "{{ .OUTPUT_PATH }}"

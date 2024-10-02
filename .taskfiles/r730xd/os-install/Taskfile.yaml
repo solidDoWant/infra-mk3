@@ -2,4 +2,8 @@
 version: 3
 
 includes:
-  clover: ./clover.yaml
+  clover:
+    taskfile: ./clover.yaml
+    internal: true
+  proxmox: ./proxmox.yaml
+  zfsbootmenu: ./zfsbootmenu.yaml
