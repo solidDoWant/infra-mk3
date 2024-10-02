@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  create-install-iso:
+    vars:
+      OUTPUT_PATH:
+        ref: default (printf "%s/zfsbootmenu.iso" .USER_WORKING_DIR) .OUTPUT_PATH
+      WORKING_DIR: /tmp/zfsbootmenu
+      SECTOR_SIZE: 512
+      EFI_SECTOR_START:
+        ref: div (mul 1024 1024) .SECTOR_SIZE | toString # Skip the first 1 MB
+      EFI_PARTITION_SIZE_BYTES:
+        ref: mul 100 1024 1024 # 100 MB
+      EFI_SECTOR_END:
+        ref: add .EFI_SECTOR_START (div .EFI_PARTITION_SIZE_BYTES .SECTOR_SIZE) -1 | toString
+      IMAGE_SIZE_BYTES:
+        ref: mul 1024 1024 1024 | toString # 1 GB
+      ZFSBOOTMANAGER_URL: https://get.zfsbootmenu.org/efi/recovery # TODO pin this
+    cmds:
+      - defer: rm -rfv {{ shellQuote .WORKING_DIR }}
+      - |
+        mkdir -pv {{ shellQuote .WORKING_DIR }}
+
+        # Download zfsbootmanager
+        ZFSBOOTMANAGER_PATH={{ shellQuote .WORKING_DIR }}/BOOTX64.EFI
+        curl -fsSL -o "${ZFSBOOTMANAGER_PATH}" {{ shellQuote .ZFSBOOTMANAGER_URL }}
+
+        # Create the filesystem partition image
+        FILESYSTEM_IMG_PATH={{ shellQuote .WORKING_DIR }}/filesystem.img
+        truncate --size {{ toString .EFI_PARTITION_SIZE_BYTES | shellQuote }} "${FILESYSTEM_IMG_PATH}"
+        mkfs.vfat \
+          -F32 \
+          -n "EFI" \
+          --mbr=no \
+          "${FILESYSTEM_IMG_PATH}"
+        mmd -i "${FILESYSTEM_IMG_PATH}" ::/EFI
+        mmd -i "${FILESYSTEM_IMG_PATH}" ::/EFI/BOOT
+        mcopy -i "${FILESYSTEM_IMG_PATH}" "${ZFSBOOTMANAGER_PATH}" ::/EFI/BOOT/BOOTX64.EFI
+        mdir -i "${FILESYSTEM_IMG_PATH}" ::/EFI/BOOT
+
+        # Create the full image with partition table
+        truncate --size {{ shellQuote .IMAGE_SIZE_BYTES }} {{ shellQuote .OUTPUT_PATH }}
+        parted --script {{ shellQuote .OUTPUT_PATH }} \
+          mklabel gpt \
+          unit s \
+          mkpart primary fat32 {{ shellQuote .EFI_SECTOR_START }} {{ shellQuote .EFI_SECTOR_END }} \
+          set 1 boot on \
+          set 1 esp on \
+          print 2> /dev/null
+
+        # Add in the filesystem image
+        echo "Loading filesystem into image..."
+        dd \
+          if="${FILESYSTEM_IMG_PATH}" \
+          of={{ shellQuote .OUTPUT_PATH }} \
+          seek={{ shellQuote .EFI_SECTOR_START }} \
+          bs={{ toString .SECTOR_SIZE}} \
+          conv=notrunc \
+          status=progress
+        echo "Syncing writes to disk image"
+        sync --file-system {{ shellQuote .OUTPUT_PATH }}

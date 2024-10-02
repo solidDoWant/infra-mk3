@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 # Generally helpful tools
 RUN apt update && apt install --no-install-recommends -y \
     file sshpass minicom age whois yq iputils-ping p7zip \
-    xorriso
+    xorriso parted dosfstools mtools
 
 # Install debs from sources that don't provide an apt repo
 RUN mkdir -pv /tmp/debs && \

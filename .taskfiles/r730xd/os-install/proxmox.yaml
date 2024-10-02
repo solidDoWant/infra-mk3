@@ -84,7 +84,7 @@ tasks:
       - test -f {{ shellQuote .OUTPUT_PATH }}/answer.toml
       - test -f {{ shellQuote .OUTPUT_PATH }}/auto-installer-mode.toml
 
-  build-iso:
+  create-install-iso:
     vars:
       WORKING_DIR:
         ref: joinPath .PROXMOX_WORKING_DIR "iso-build"

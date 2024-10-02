@@ -46,13 +46,22 @@ To install Proxmox:
 
 # Bootloader setup
 
-The R730XD does not natively support NVMe boot. Supposedly the U.2 enablement kit is supposed to support this, however, this seems to be dependent on what HBA is attached to the SAS backplane, what firmware version it uses, and is extremely finicky. To mitigate this issue, [Clover Bootloader](https://github.com/CloverHackyColor/CloverBootloader) is installed on a Dell Internal Dual SD Module (IDSDM). This bootloader loads NVMe UEFI drivers and boots the OS from U.2 drives. The IDSDM contains two mirrored SD cards, so if one fails, the other can take over. While SD cards are infamous for poor write endurance, however, there should be little to no writing to these cards outside of bootloader updates.
+The R730XD does not natively support NVMe boot. Supposedly the U.2 enablement kit is supposed to support this, however, this seems to be dependent on what HBA is attached to the SAS backplane, what firmware version it uses, and is extremely finicky. Previously I have used [Clover Bootloader](https://github.com/CloverHackyColor/CloverBootloader) to boot from NVMe drives, however, it is mainly designed for booting MacOS and has somewhat limited options for booting Linux.
+
+Instead, I'm using [ZFSBootMenu](https://zfsbootmenu.org/). ZFSBootMenu is an EFI program that contains a small Linux kernel, and tools to automatically load a root filesystem from a zpool. Upon finding a root filesystem, ZFSBootMenu bypasses other bootloaders and boot managers (such as GRUB) and uses `kexec` to launch the discovered kernel.
+
+> [!NOTE]
+> This will ignore any Linux `cmdline` changes to GRUB, which may be deployed upon OS update.
+
+Using a boot manager like ZFSBootMenu or Clover requires that the boot manager itself be placed on a drive and filesystem that the UEFI understands. Normally this would be a USB flash drive installed internally. Fortunately, Dell PowerEdge servers support an [Internal Dual SD Module](https://www.dell.com/learn/us/en/04/business~solutions~whitepapers~en/documents~poweredge-idsdm-whitepaper-en.pdf). This is a special SD card reader that supports a mirrored pair of SD cards. SD cards are infamous for poor write endurance, however, there should be little to no writing to these cards outside of bootloader updates. Installing the boot manager to these cards removes the single point of failure (USB flash drive) that would otherwise be needed.
 
 To setup the bootloader:
-1. Attach a SD card to your local computer.
-2. Run `task r730xd:os-install:clover:create-install-iso`. This will place a `clover.iso` file in your current working directory.
-3. Burn the ISO to the SD card. This can be done on Linux with `dd bs=8M if=clover.iso of=/dev/&lt;YOUR_DEV&gt; status=progress oflag=sync; sync`, or on Windows via [Rufus](https://github.com/pbatard/rufus).
-4. After all writes are complete, remove the SD card from your local computer and install it in slot `SD1` in the IDSDM.
-5. Install a blank SD card in the IDSDM `SD2` slot.
-6. Boot the server.
-7. When prompted, press `y` during boot to rebuild the mirror array from `SD1`.
+1. Shut down the server.
+2. Attach a SD card to your local computer.
+3. Run `task r730xd:os-install:zfsbootmenu:create-install-iso`. This will place a `zfsbootmenu.iso` file in your current working directory.
+4. Burn the ISO to the SD card. This can be done on Linux with `dd bs=8M if=clover.iso of=/dev/&lt;YOUR_DEV&gt; status=progress oflag=sync; sync`, or on Windows via [Rufus](https://github.com/pbatard/rufus).
+5. After all writes are complete, remove the SD card from your local computer and install it in slot `SD1` in the IDSDM.
+6. Install a blank SD card in the IDSDM `SD2` slot.
+7. Boot the server.
+8. When prompted, press `y` during boot to rebuild the mirror array from `SD1`.
+9. The server will now automatically boot Proxmox.
