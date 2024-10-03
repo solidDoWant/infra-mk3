@@ -21,8 +21,10 @@ switches:
         ansible_become_method: enable
 servers:
   children:
-    r730xd_idrac:
-      hosts:
-        10.0.1.4:
-      vars:
-        ansible_username: root
+    r730xd:
+      children:
+        idrac:
+          hosts:
+            10.0.1.4:
+          vars:
+            ansible_username: root
