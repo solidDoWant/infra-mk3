@@ -33,23 +33,33 @@ auto {{ $interfaceName }}
 iface {{ $interfaceName }} inet manual
     mtu {{ $details.mtu }}
 # {{ $details.name }} VLAN
-{{ end }}
+{{- end }}
 
 # Bridges
-{{ range $id, $details := $hostNetworkConfig.vlans }}
+{{- $bridges := $hostNetworkConfig.bridges }}
+{{- range $id, $details := $hostNetworkConfig.vlans }}
 {{- if $details.bridge }}
+
 {{- $interfaceName := printf "vmbr%s" $id}}
+{{- $_ := coll.Set "raw-device" (printf "%s.%s" (index $details "raw-device") $id) $details }}
+{{- $_ := coll.Set "description" (printf "%s VLAN bridge" $details.name) $details }}
+
+{{- $_ := coll.Set $interfaceName $details $bridges }}
+{{- end }}
+{{- end }}
+
+{{- range $interfaceName, $details := $bridges }}
+
 auto {{ $interfaceName }}
 iface {{ $interfaceName }} inet {{ if has $details "local-interface" }}static{{ else }}manual{{ end }}
     {{- if has $details "local-interface" }}
     {{- $localInterface := index $details "local-interface" }}
     address {{ index $localInterface "ip-address" }}
-    {{if has $localInterface "gateway" }}gateway {{ index $localInterface "gateway" }}{{ end }}
+    {{- if has $localInterface "gateway" }}gateway {{ index $localInterface "gateway" }}{{ end }}
     {{- end }}
     mtu {{ $details.mtu }}
-    bridge-ports {{ printf "%s.%s" (index $details "raw-device") $id }}
+    bridge-ports {{ index $details "raw-device" }}
     bridge-stp off
     bridge-fd 0
-# {{ $details.name }} VLAN bridge
-{{ end }}
-{{ end }}
+# {{ $details.description }}
+{{- end }}

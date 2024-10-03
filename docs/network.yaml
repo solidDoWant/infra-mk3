@@ -53,3 +53,8 @@ devices:
       "500": *proxmox_vlan_defaults
       "600": *proxmox_vlan_defaults
       "700": *proxmox_vlan_defaults
+    bridges:
+      vmbrWAN:
+        raw-device: # TODO
+        description: WAN to XGS-PON bridge
+        mtu: *standard_mtu
