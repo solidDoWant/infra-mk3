@@ -3,7 +3,7 @@ common:
   vlans:
     "100": &vlan_standard
       name: Management
-      mtu: 1500
+      mtu: &standard_mtu 1500
       trunked: true
     "200":
       <<: *vlan_standard
@@ -29,6 +29,9 @@ devices:
       enp137s0:
         mtu: &jumbo_mtu 9000
         description: "LAN interface, 56G QSFP+ #1"
+      eno1:
+        mtu: *standard_mtu
+        description: XGS-PON WAN
     bonds:
       bond0:
         slaves:
@@ -55,6 +58,142 @@ devices:
       "700": *proxmox_vlan_defaults
     bridges:
       vmbrWAN:
-        raw-device: # TODO
+        raw-device: eno1
         description: WAN to XGS-PON bridge
         mtu: *standard_mtu
+ip-space:
+  10.0.0.0/9:
+    description: Private IP space for home infra
+    10.0.0.0/11:
+      description: Physical devices and virtualized OSs
+      10.0.0.0/16:
+        reserved: true
+      10.1.0.0/16:
+        description: Managment
+        vlan: 100
+        gateway: 10.1.0.254/32
+        10.1.0.0/24:
+          description: Network devices
+          10.1.0.1/32:
+            hostname: switch-01
+          10.1.0.2/32:
+            hostname: switch-02
+          10.1.0.254/32:
+            description: OPNsense VIP
+        10.1.0.0/23:
+          description: Out of band computer management
+          10.1.1.0/24:
+            description: Kubernetes hosts
+            10.1.1.1/32:
+              hostname: talos-k8s-mixed-01
+            10.1.1.2/32:
+              hostname: talos-k8s-mixed-02
+            10.1.1.3/32:
+              hostname: talos-k8s-mixed-03
+            10.1.1.4/32:
+              hostname: talos-k8s-mixed-04
+          10.1.2.0/24:
+            description: VM hosts
+            10.1.2.1/32:
+              hostname: proxmox-vm-host-01
+        10.1.3.0/24:
+          description: Power devices
+          10.1.3.1/32:
+            hostname: ups-01
+          10.1.3.2/32:
+            hostname: pdu-01
+        10.1.4.0/24:
+          description: Storage devices
+          10.1.4.1/32:
+            hostname: tape-library-01
+        10.1.5.0/24:
+          description: KVM consoles
+          10.1.5.1/24:
+            hostname: kvm-01
+      10.2.0.0/16:
+        description: Hosts
+        vlan: 200
+        gateway: 10.2.0.254/32
+        10.2.0.0/24:
+          description: Network devices
+          10.2.0.0/25:
+            description: OPNsense VMs
+            10.2.0.1/32:
+              hostname: opnsense-01
+            10.2.0.2/32:
+              hostname: opnsense-02
+          10.2.0.254/32:
+            description: OPNsense VIP
+        10.2.1.0/24:
+          description: Kubernetes hosts
+          10.2.1.1/32:
+            hostname: talos-k8s-mixed-01
+          10.2.1.2/32:
+            hostname: talos-k8s-mixed-02
+          10.2.1.3/32:
+            hostname: talos-k8s-mixed-03
+          10.2.1.4/32:
+            hostname: talos-k8s-mixed-04
+        10.2.2.0/24:
+          description: VM hosts
+          10.2.2.1/32:
+            hostname: proxmox-vm-host-01
+        10.2.3.0/24:
+          description: VMs
+      10.3.0.0/16:
+        description: Kubernetes
+        vlan: 300
+        gateway: 10.3.0.254/32
+        10.3.0.0/24:
+          description: Network devices
+          10.3.0.254/32:
+            description: OPNsense VIP
+        10.3.1.0/24:
+          description: Kubernetes hosts
+          10.3.1.1/32:
+            hostname: talos-k8s-mixed-01
+          10.3.1.2/32:
+            hostname: talos-k8s-mixed-02
+          10.3.1.3/32:
+            hostname: talos-k8s-mixed-03
+          10.3.1.4/32:
+            hostname: talos-k8s-mixed-04
+      10.4.0.0/16:
+        vlan: 400
+        gateway: 10.4.0.254/32
+        10.4.0.0/24:
+          description: Network devices
+          10.4.0.254/32:
+            description: OPNsense VIP
+      10.5.0.0/16:
+        vlan: 500
+        gateway: 10.5.0.254/32
+        10.5.0.0/24:
+          description: Network devices
+          10.5.0.254/32:
+            description: OPNsense VIP
+      10.6.0.0/16:
+        vlan: 600
+        gateway: 10.6.0.254/32
+        10.6.0.0/24:
+          description: Network devices
+          10.6.0.254/32:
+            description: OPNsense VIP
+      10.7.0.0/16:
+        vlan: 700
+        gateway: 10.7.0.254/32
+        10.7.0.0/24:
+          description: Network devices
+          10.7.0.254/32:
+            description: OPNsense VIP
+    10.32.0.0/11:
+      description: Kubernetes services
+      10.32.0.0/16:
+        description: Pod IPs
+        vlan: 300
+      10.33.0.0/16:
+        description: Cluster IPs
+        vlan: 300
+      10.34.0.0/16:
+        description: External/load balanced IPs
+        vlan: 300
