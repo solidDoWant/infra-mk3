@@ -26,13 +26,13 @@ common:
 devices:
   proxmox-vm-host-01:
     physical:
-      enp5s0f1:
+      enp137s0:
         mtu: &jumbo_mtu 9000
         description: "LAN interface, 56G QSFP+ #1"
     bonds:
       bond0:
         slaves:
-          - enp5s0f1
+          - enp137s0
         mtu: *jumbo_mtu
         description: LAN interface bond to switch-01
     _default_vlan_config: &proxmox_vlan_defaults
