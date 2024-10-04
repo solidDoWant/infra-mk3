@@ -6,7 +6,7 @@
       racadm
       --nocertwarn
       -r "{{ inventory_hostname }}"
-      -u "{{ ansible_username }}"
+      -u "{{ ansible_user }}"
       -p "{{ ansible_password }}"
       {{ command }}
   register: result

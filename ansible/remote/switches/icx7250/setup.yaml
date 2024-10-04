@@ -4,7 +4,7 @@
   gather_facts: false
   become: true
   vars:
-    key_file_path: ~/.ssh/id_rsa.pub.rfc4716
+    ssh_public_key_path: ~/.ssh/id_rsa.pub.rfc4716
   tasks:
     - name: Disable pagination (needed on every session)
       commscope.icx.icx_command:
@@ -16,9 +16,9 @@
         commands:
           - command: "{{ item }}"
             prompt: ".*y or n.*"
-            answer: 'y'
+            answer: "y"
             newline: False
-      loop: "{{ icx7250_license_commands }}" 
+      loop: "{{ icx7250_license_commands }}"
       register: license_output
       no_log: true
       changed_when: '"already installed" not in license_output.stdout | first'
@@ -41,8 +41,8 @@
       ansible.builtin.command: >-
         sshpass -e scp -O
         {{ ansible_ssh_common_args if ansible_ssh_common_args is defined }}
-        "{{ key_file_path }}"
-        "{{ ansible_username ~ '@' if ansible_username is defined }}{{ inventory_hostname }}:sshPubKey"
+        "{{ ssh_public_key_path }}"
+        "{{ ansible_user ~ '@' if ansible_user is defined }}{{ inventory_hostname }}:sshPubKey"
     - name: Disable insecure SSH encryption options
       commscope.icx.icx_command:
         commands:
@@ -52,11 +52,11 @@
           - exit
     - name: Update credentials
       vars:
-        permissions_map:  # Manually pulled from CLI
-          "read-write":     0
-          "port-config":    4
-          "read-only":      5
-          "cloud-user":     6
+        permissions_map: # Manually pulled from CLI
+          "read-write": 0
+          "port-config": 4
+          "read-only": 5
+          "cloud-user": 6
           "no-syslog-read": 7
       commscope.icx.icx_user:
         name: "{{ item.key }}"
@@ -83,7 +83,7 @@
                 {{ ansible_date_time.month }}-{{ ansible_date_time.day }}-{{ ansible_date_time.year }}
               - configure terminal
               - clock timezone {{ icx7250_timezone }}
-              - clock summer-time 
+              - clock summer-time
     - name: Set hostname
       commscope.icx.icx_system:
         hostname: "{{ hostname }}"
@@ -110,7 +110,7 @@
               - exit
               - command: reload
                 prompt: ".*enter 'y' or 'n'.*"
-                answer: 'y'
+                answer: "y"
                 newline: False
           register: result
           # Timeout occurs when switch is reloading. Ignore it.
@@ -120,7 +120,7 @@
         - name: Wait for reboot
           commscope.icx.icx_command:
             commands:
-              - skip 
+              - skip
           register: result
           retries: 100
           delay: 30
@@ -187,7 +187,7 @@
 
     - name: Configure VLANs
       block:
-        - name: Set PVLAN types 
+        - name: Set PVLAN types
           commscope.icx.icx_command:
             commands:
               - configure terminal
@@ -227,7 +227,7 @@
             interfaces:
               name: "{{ untagged_interfaces }}"
               purge: true
-            tagged: 
+            tagged:
               name: "{{ tagged_interfaces }}"
               purge: true
             stp:

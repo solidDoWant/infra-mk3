@@ -3,7 +3,7 @@
   delegate_to: localhost
   dellemc.openmanage.idrac_user_info:
     idrac_ip: "{{ inventory_hostname }}"
-    idrac_user: "{{ ansible_username }}"
+    idrac_user: "{{ ansible_user }}"
     idrac_password: "{{ ansible_password }}"
     validate_certs: false
   register: users_info
@@ -15,7 +15,7 @@
     user_info: &user_info >-
       {{
         users_info.user_info |
-        selectattr('UserName', 'equalto', ansible_username) |
+        selectattr('UserName', 'equalto', ansible_user) |
         first
       }}
     command: >-

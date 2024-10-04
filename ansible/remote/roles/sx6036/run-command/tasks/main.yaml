@@ -18,7 +18,7 @@
   ansible.builtin.shell: >-
     {{ "sshpass -e" if ansible_password is defined }}
     ssh{{ (" " ~ ansible_ssh_common_args) if ansible_ssh_common_args is defined }}
-    {{ ("%s@" | format(ansible_username|string)) if ansible_username is defined }}{{ inventory_hostname }}
+    {{ ("%s@" | format(ansible_user|string)) if ansible_user is defined }}{{ inventory_hostname }}
     cli -h '{{
       (
         (["enable", "configure terminal"] if sx6036_configure_terminal else []) +

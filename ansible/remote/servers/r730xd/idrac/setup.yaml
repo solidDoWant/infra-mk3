@@ -3,20 +3,20 @@
   gather_facts: false
 
   vars:
-    key_file_path: ~/.ssh/id_rsa.pub
+    ssh_public_key_path: ~/.ssh/id_rsa.pub
 
   tasks:
     - name: Upload SSH key
       ansible.builtin.import_role:
         name: upload-ssh-key
       vars:
-        ssh_key: "{{ lookup('ansible.builtin.file', key_file_path) }}"
+        ssh_key: "{{ lookup('ansible.builtin.file', ssh_public_key_path) }}"
 
     - name: Configure iDRAC
       delegate_to: localhost
       dellemc.openmanage.idrac_attributes:
         idrac_ip: "{{ inventory_hostname }}"
-        idrac_user: "{{ ansible_username }}"
+        idrac_user: "{{ ansible_user }}"
         idrac_password: "{{ ansible_password }}"
         validate_certs: false
         idrac_attributes:
@@ -38,7 +38,7 @@
       delegate_to: localhost
       dellemc.openmanage.idrac_bios:
         idrac_ip: "{{ inventory_hostname }}"
-        idrac_user: "{{ ansible_username }}"
+        idrac_user: "{{ ansible_user }}"
         idrac_password: "{{ ansible_password }}"
         validate_certs: false
         attributes:

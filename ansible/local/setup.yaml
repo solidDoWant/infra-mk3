@@ -32,7 +32,7 @@
         mode: u=rw,g=r,o=r
         block: |
           Host {{ inventory_hostname }}
-            User {{ ansible_username }}
+            User {{ ansible_user }}
             KexAlgorithms +diffie-hellman-group14-sha1
             HostKeyAlgorithms +ssh-rsa
             PubkeyAcceptedKeyTypes +ssh-rsa

@@ -15,8 +15,8 @@
   hosts: sx6036
   gather_facts: false
   vars:
-    key_file_path: ~/.ssh/id_rsa.pub
-  
+    ssh_public_key_path: ~/.ssh/id_rsa.pub
+
   roles:
     - name: Set profile
       role: ../../roles/sx6036/set-profile
@@ -27,7 +27,7 @@
       vars:
         username: admin
         public_rsa_key: |-
-          {{ lookup('ansible.builtin.file', key_file_path) }}
+          {{ lookup('ansible.builtin.file', ssh_public_key_path) }}
     - name: Configure miscellaneous settings
       role: ../../roles/sx6036/run-command
       vars:
@@ -202,7 +202,7 @@
       loop: "{{ ports }}"
     - name: Configure the individual ports
       ansible.builtin.include_role:
-        name : ../../roles/sx6036/configure-ethernet-interface
+        name: ../../roles/sx6036/configure-ethernet-interface
       vars:
         interface_port: "{{ item[0] }}"
         interface_subport: "{{ item[1] }}"
