@@ -1,0 +1,24 @@
+---
+- name: Install multipath
+  ansible.builtin.apt:
+    name: multipath-tools
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
+- name: Configure multipath
+  ansible.builtin.copy:
+    src: multipath.conf
+    dest: /etc/multipath.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: multipath_config
+
+- name: Restart multipathd
+  ansible.builtin.service:
+    name: multipathd
+    state: restarted
+  when: multipath_config.changed

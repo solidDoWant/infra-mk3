@@ -1,0 +1,21 @@
+---
+argument_specs:
+  main:
+    options:
+      pool_name:
+        type: str
+        required: true
+      dataset_name:
+        type: str
+        required: true
+      share_with_nfs:
+        type: bool
+        default: false
+      force_sync_writes:
+        type: bool
+        default: false
+      nfs_subnets:
+        type: list
+        elements: str
+        default:
+          - 10.0.0.0/8

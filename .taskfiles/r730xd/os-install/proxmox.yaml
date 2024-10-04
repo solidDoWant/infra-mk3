@@ -146,3 +146,8 @@ tasks:
 
           # Move the ISO to the output path
           mv -v {{ shellQuote .ISO_PATH }} "{{ .OUTPUT_PATH }}"
+
+  full-configuration:
+    dir: "{{ .ROOT_DIR }}/ansible"
+    cmds:
+      - ansible-playbook ./remote/servers/r730xd/proxmox/setup.yaml

@@ -1,0 +1,64 @@
+---
+- name: Install NFS server packages
+  apt:
+    name:
+      - nfs-kernel-server
+      - nfs-common
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
+- name: Create user for NFS
+  user:
+    uid: 2000
+    gid: 2000
+    name: nfs_anon
+
+- name: Check if the pool already exists
+  ansible.builtin.command: "zpool list {{ pool_name }}"
+  ignore_errors: true
+  register: zpool_list
+
+- name: Create the mount folder
+  file:
+    path: "/mnt/{{ pool_name }}"
+    state: directory
+  when: zpool_list.rc != 0
+
+- name: Check if the pool can be imported
+  ansible.builtin.shell: >-
+    zpool import |
+    grep 'pool:' |
+    cut -d':' -f2 |
+    tr -d ' '
+  register: zpool_import_pools
+  when: zpool_list.rc != 0
+
+- name: Import the pool
+  include: import.yaml
+  when: >-
+    zpool_list.rc != 0 &&
+    pool_name in zpool_import_pools.stdout 
+
+- name: Create the pool
+  include: create.yaml
+  when: >-
+    zpool_list.rc != 0 &&
+    pool_name not in zpool_import_pools.stdout 
+
+- name: Check if pool already has a SLOG
+  ansible.builtin.shell: zpool status "{{ pool_name }}" | grep log
+  ignore_errors: true
+  register: slog_status
+  when: drive_wwns | length > 0
+
+- name: Add the SLOG drives
+  ansible.builtin.command: >-
+    zpool add
+    "{{ pool_name }}"
+    log
+    mirror
+    {{ drive_wwns | map("printf", "dm-uuid-mpath-3%s") | join " " }}
+  when: drive_wwns | length > 0 and slog_status.rc != 0

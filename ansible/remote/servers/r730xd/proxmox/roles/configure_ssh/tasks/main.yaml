@@ -1,0 +1,39 @@
+---
+- name: Check if host public key has been imported
+  delegate_to: localhost
+  ansible.builtin.command: ssh-keygen -F {{ inventory_hostname }}
+  ignore_errors: true
+  register: is_host_known
+
+- name: Update local known_hosts
+  delegate_to: localhost
+  ansible.builtin.shell: >-
+    ssh-keyscan "{{ inventory_hostname }}"
+    >> ~/.ssh/known_hosts
+  when: is_host_known.rc != 0
+  
+- name: Configure SSH daemon
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config.d/ansible.conf
+    mode: 0644
+    create: true
+    block: |
+      PubkeyAcceptedKeyTypes +ssh-rsa
+      {% if disable_password_logins %}
+      PasswordAuthentication no
+      {%- endif %}
+  register: sshd_config_changes
+
+- name: Restart sshd service
+  ansible.builtin.service:
+    name: sshd.service
+    daemon_reload: true
+    enabled: true
+    state: restarted
+  when: sshd_config_changes.changed
+
+- name: Load public SSH key
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ lookup('file', ssh_public_key_path) }}"
+    state: present

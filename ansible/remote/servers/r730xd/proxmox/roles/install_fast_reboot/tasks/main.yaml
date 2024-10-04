@@ -1,0 +1,17 @@
+---
+- name: Install kexec for reboots on non-vm hosts
+  ansible.builtin.apt:
+    name: kexec-tools
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
+- name: Copy the fast-reboot script to the server
+  ansible.builtin.copy:
+    src: fast-reboot
+    dest: /usr/local/sbin/fast-reboot
+    owner: root
+    group: root
+    mode: '0755'

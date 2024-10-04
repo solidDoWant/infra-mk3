@@ -1,0 +1,15 @@
+---
+- name: Create the zpool
+  command: >-
+    zpool create
+    -o ashift=12
+    -O acltype=posixacl
+    -O compression=lz4
+    -O dnodesize=auto
+    -O relatime=off
+    -O atime=off
+    -O xattr=sa
+    -O mountpoint=/mnt/{{ pool_name }}
+    {{ pool_name }}
+    raidz2
+    {{ drive_wwns | map("printf", "dm-uuid-mpath-3%s") | join " " }}

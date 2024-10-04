@@ -1,0 +1,15 @@
+---
+argument_specs:
+  main:
+    options:
+      pool_name:
+        type: str
+        required: true
+      drive_wwns:
+        type: list
+        elements: str
+        required: true
+      slog_wwns:
+        type: list
+        elements: str
+        default: []

@@ -5,7 +5,7 @@ switches:
         10.0.0.2:
           hostname: switch-01
       vars:
-        ansible_username: admin
+        ansible_user: admin
         # This won't be used after the SSH key is uploaded - only for bootstraping.
         ansible_password: admin
     icx7250:
@@ -13,7 +13,7 @@ switches:
         10.254.0.3:
           hostname: switch-02
       vars:
-        ansible_username: super
+        ansible_user: super
         # This won't be used after the SSH key is uploaded - only for bootstraping.
         ansible_password: super
         ansible_network_os: community.network.icx
@@ -32,4 +32,23 @@ servers:
           hosts:
             10.0.1.4:
           vars:
-            ansible_username: root
+            ansible_user: root
+        proxmox:
+          hosts:
+            10.1.1.1:
+              hostname: proxmox-vm-host-01
+              bulk_pool_drive_wwns:
+                - 35000039a48092cc1
+                - 35000039a8859fc21
+                - 35000039aa82b3c9d
+                - 35000039a48090cf9
+                - 35000039aa82b269d
+                - 35000039ac819d76d
+                - 35000039ac819d789
+                - 35000039ac81a7285
+          vars:
+            ansible_user: root
+            # This won't be used after the SSH key is uploaded - only for bootstraping.
+            ansible_password: root
+            ansible_python_interpreter: auto_silent
+            internet_interface_name: vmbrWAN

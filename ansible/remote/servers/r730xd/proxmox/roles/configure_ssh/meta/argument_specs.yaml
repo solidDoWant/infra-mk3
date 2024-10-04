@@ -1,0 +1,10 @@
+---
+argument_specs:
+  main:
+    options:
+      ssh_public_key_path:
+        type: str
+        required: true
+      disable_password_logins:
+        type: bool
+        default: true

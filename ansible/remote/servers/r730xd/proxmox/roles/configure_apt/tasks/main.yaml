@@ -1,0 +1,73 @@
+---
+- name: Disable APT recommends and suggestions
+  ansible.builtin.blockinfile:
+    path: /etc/apt/apt.conf.d/02norecommends
+    mode: 0644
+    create: true
+    block: |
+      APT::Install-Recommends "false";
+      APT::Install-Suggests "false";
+      APT::Get::Install-Recommends "false";
+      APT::Get::Install-Suggests "false";
+
+- name: Switch Proxmox sources to OSS repos from enterprise repos
+  block:
+    - name: Remove enterprise repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://enterprise.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-enterprise"
+        state: absent
+        filename: pve-enterprise
+        update_cache: false
+    - name: Add the no subscription repository
+      ansible.builtin.apt_repository:
+        repo: "deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-no-subscription"
+        state: present
+        filename: pve-no-subscription
+        update_cache: false
+    - name: Remove enterprise Ceph repository
+      ansible.builtin.file:
+        path: /etc/apt/sources.list.d/ceph.list
+        state: absent
+
+- name: Setup automatic updates
+  block:
+    - name: Install unattended upgrades package
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: latest
+        update_cache: true
+        cache_valid_time: 600
+        autoclean: true
+        autoremove: true
+    - name: Configure unattended upgrades
+      ansible.builtin.blockinfile:
+        path: /etc/apt/apt.conf.d/52-auto-upgrades
+        mode: 0644
+        create: true
+        block: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Download-Upgradeable-Packages "1";
+          APT::Periodic::AutocleanInterval "7";
+          APT::Periodic::Unattended-Upgrade "1";
+          Unattended-Upgrade::Automatic-Reboot "false";
+          Unattended-Upgrade::Remove-Unused-Dependencies "true";
+          Unattended-Upgrade::Origins-Pattern {
+              origin=Debian;
+              origin=Proxmox,component=pve-no-subscription;
+          };
+      register: unattended_upgrades_changes
+    - name: Restart unattended-upgrades service
+      ansible.builtin.service:
+        name: unattended-upgrades.service
+        daemon_reload: true
+        enabled: true
+        state: restarted
+      when: unattended_upgrades_changes.changed
+
+- name: Update packages
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 600
+    upgrade: dist
+    autoclean: true
+    autoremove: true
