@@ -172,5 +172,4 @@ tasks:
       - task: local:configure-ssh
     dir: "{{ .ROOT_DIR }}/ansible"
     cmd: |
-      pwd
       ansible-playbook ./remote/switches/sx6036/setup.yaml
