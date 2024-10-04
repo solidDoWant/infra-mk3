@@ -61,6 +61,8 @@ devices:
         raw-device: eno1
         description: WAN to XGS-PON bridge
         mtu: *standard_mtu
+        local-interface:
+          ip-address: 192.168.11.254/16
 ip-space:
   10.0.0.0/9:
     description: Private IP space for home infra
@@ -197,3 +199,5 @@ ip-space:
       10.34.0.0/16:
         description: External/load balanced IPs
         vlan: 300
+  192.168.11.0/16:
+    description: XGS-PON subnet

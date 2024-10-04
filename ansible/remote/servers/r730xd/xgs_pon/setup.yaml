@@ -1,0 +1,74 @@
+---
+- hosts: r730xd:&xgs_pon
+  gather_facts: false
+
+  vars:
+    ssh_public_key_path: ~/.ssh/id_rsa.pub
+    connection_string: "{{ ansible_user }}@{{ inventory_hostname }}"
+
+  tasks:
+    - name: Remove existing SSH keys for the host
+      delegate_to: localhost
+      ansible.builtin.command: ssh-keygen -R "{{ inventory_hostname }}"
+    - name: Update the local SSH key
+      delegate_to: localhost
+      ansible.builtin.shell: >-
+        ssh-keyscan "{{ inventory_hostname }}"
+        >> ~/.ssh/known_hosts
+
+    - name: Load public SSH key onto the server
+      delegate_to: localhost
+      ansible.builtin.command: >-
+        sshpass -e
+        ssh-copy-id
+        -i "{{ ssh_public_key_path }}"
+        {{ connection_string }}
+
+    - name: Update the user's password
+      delegate_to: localhost
+      vars:
+        shell_command: >-
+          echo "root:{{ root_password }}" |
+          chpasswd;
+          8311-persist-root-password.sh
+      ansible.builtin.command: >-
+        sshpass -e
+        ssh {{ connection_string }}
+        '{{ shell_command }}'
+      no_log: true
+
+    - name: Set the firmware variables for ISP authentication
+      delegate_to: localhost
+      ansible.builtin.command: >-
+        sshpass -e
+        ssh {{ connection_string }}
+        'fwenv_set -8 {{ item.key }} {{ item.value }}'
+      loop: "{{ firmware_attributes | dict2items }}"
+      no_log: true
+
+    - name: Reboot
+      delegate_to: localhost
+      ansible.builtin.command: >-
+        sshpass -e
+        ssh {{ connection_string }}
+        'reboot'
+      ignore_errors: true
+
+    - name: Wait until devices stops replying to pings
+      delegate_to: localhost
+      ansible.builtin.command: ping -c 1 -n -w 1 "{{ inventory_hostname }}"
+      register: result
+      retries: 100
+      delay: 5
+      until: result.rc != 0
+      timeout: "{{ 2 * 60 * 60 }}"
+      ignore_errors: true
+
+    - name: Wait for reboot
+      delegate_to: localhost
+      ansible.builtin.command: ping -c 1 -n -w 1 "{{ inventory_hostname }}"
+      register: result
+      retries: 100
+      delay: 5
+      until: result.rc == 0
+      timeout: "{{ 2 * 60 * 60 }}"

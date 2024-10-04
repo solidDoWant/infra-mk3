@@ -23,6 +23,11 @@ servers:
   children:
     r730xd:
       children:
+        xgs_pon:
+          hosts:
+            192.168.11.1:
+          vars:
+            ansible_user: root
         idrac:
           hosts:
             10.0.1.4:

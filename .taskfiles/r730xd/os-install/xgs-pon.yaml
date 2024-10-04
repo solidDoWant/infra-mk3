@@ -1,0 +1,122 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  download-firmware:
+    internal: true
+    silent: true
+    vars:
+      FIRMWARE_URL: https://github.com/djGrrr/8311-was-110-firmware-builder/releases/download/v2.6.5/WAS-110_8311_firmware_mod_v2.6.5_basic.7z
+      OUTPUT_PATH:
+        ref: default (printf "%s/xgs-pon-firmware.7z" .USER_WORKING_DIR) .OUTPUT_PATH
+    cmd: |
+      echo 'Downloading firmware...'
+      mkdir -pv {{ dir .OUTPUT_PATH | shellQuote }}
+      curl -fsSL -o {{ shellQuote .OUTPUT_PATH }} {{ shellQuote .FIRMWARE_URL }}
+    status:
+      - test -f {{ shellQuote .OUTPUT_PATH }}
+
+  install-firmware:
+    silent: true
+    vars:
+      WORKING_DIR: /tmp/xgs-pon
+      FIRMWARE_FILE_PATH:
+        ref: joinPath .WORKING_DIR "xgs-pon-firmware.7z"
+      XGS_PON_IP: 192.168.11.1
+      INITIAL_NEW_PASSWORD: root
+    cmds:
+      - defer: rm -rvf "{{ .WORKING_DIR }}"
+      - task: download-firmware
+        vars:
+          OUTPUT_PATH:
+            ref: .FIRMWARE_FILE_PATH
+      - cmd: |
+          mkdir -pv "{{ .WORKING_DIR }}"
+          cd "{{ .WORKING_DIR }}"
+
+          # Start SSH server via exploit
+          curl -fsSL 'http://{{ .XGS_PON_IP }}/cgi-bin/shortcut_telnet.cgi?dropbear'
+
+          # Reset the root user password
+          ## Generate temporary password
+          PASSWORD="$(openssl rand -base64 12)"
+
+          ## Send the reset commands
+          COMMAND="$(
+            printf '{ echo '%s' ; sleep 1; echo '%s'; } | passwd root' "${PASSWORD}" "${PASSWORD}" |
+            jq -sRr '@uri'
+          )"
+          curl -fsSL "http://{{ .XGS_PON_IP }}/cgi-bin/shortcut_telnet.cgi?${COMMAND}"
+
+          # Extract the firmware
+          FIRMWARE_ARCHIVE="local-upgrade.tar"
+          7za e {{ shellQuote .FIRMWARE_FILE_PATH }} "${FIRMWARE_ARCHIVE}"
+
+          # Upload the firmware
+          REMOTE_FIRMWARE_PATH="/tmp/${FIRMWARE_ARCHIVE}"
+          SSHPASS="${PASSWORD}"
+          sshpass -e \
+            scp \
+              -O \
+              -oStrictHostKeyChecking=no \
+              -oHostKeyAlgorithms=+ssh-rsa \
+              -oPubkeyAcceptedKeyTypes=+ssh-rsa \
+              "${FIRMWARE_ARCHIVE}" root@{{ .XGS_PON_IP }}:${REMOTE_FIRMWARE_PATH} || true
+
+          # Verify the archive checksum
+          REMOTE_CHECKSUM=$(
+            sshpass -e \
+              ssh \
+                -oHostKeyAlgorithms=+ssh-rsa \
+                -oPubkeyAcceptedKeyTypes=+ssh-rsa \
+                root@{{ .XGS_PON_IP }} \
+                "sha256sum ${REMOTE_FIRMWARE_PATH} | cut -d' ' -f1"
+          )
+          LOCAL_CHECKSUM=$(sha256sum "${FIRMWARE_ARCHIVE}" | cut -d' ' -f1)
+
+          if [ "${REMOTE_CHECKSUM}" != "${LOCAL_CHECKSUM}" ]; then
+            >&2 echo "CHECKSUMS DO NOT MATCH. Expected '${LOCAL_CHECKSUM}', got '${REMOTE_CHECKSUM}'"
+            exit 1
+          fi
+
+          echo "Checksums match, starting install..."
+
+          # Install the firmware
+          sshpass -e \
+            ssh \
+              -oStrictHostKeyChecking=no \
+              -oHostKeyAlgorithms=+ssh-rsa \
+              -oPubkeyAcceptedKeyTypes=+ssh-rsa \
+              root@{{ .XGS_PON_IP }} \
+              "tar xvf ${REMOTE_FIRMWARE_PATH} -C /tmp/ -- upgrade.sh && /tmp/upgrade.sh -y -r ${REMOTE_FIRMWARE_PATH}"
+
+          echo "Install complete, waiting for reboot..."
+
+          # Wait for reboot
+          while ! ping -c 1 -n -w 1 {{ .XGS_PON_IP }} &> /dev/null; do
+            printf '.'
+            sleep 5
+          done
+
+          sleep 15
+
+          echo "Reboot complete, setting initial password..."
+          UPDATE_PASSWORD_CMD="$(
+            printf '{ echo '%s' ; sleep 1; echo '%s'; } |
+            passwd root' {{ .INITIAL_NEW_PASSWORD }} {{ .INITIAL_NEW_PASSWORD }}
+          )"
+          ssh \
+            -oStrictHostKeyChecking=no \
+            -oHostKeyAlgorithms=+ssh-rsa \
+            -oPubkeyAcceptedKeyTypes=+ssh-rsa \
+            root@{{ .XGS_PON_IP }} \
+            "${UPDATE_PASSWORD_CMD}"
+
+          echo "Setup complete!"
+
+  full-configuration:
+    dir: "{{ .ROOT_DIR }}/ansible"
+    cmds:
+      - task: install-firmware
+      - ansible-playbook ./remote/servers/r730xd/xgs_pon/setup.yaml

@@ -8,6 +8,17 @@ After physically configuring the server, the NVRAM (BIOS settings storage) needs
 5. If needed, disable the BIOS password by moving the `PWRD_EN` jumper from pins 2-4 to pins 4-6.
 6. Close the server up and connect it to power. It is not necessary to press the power button at this time.
 
+# XGS-PON transceiver
+
+The XGS-PON transceiver needs it's firmware replaced, and needs to be configured for the remainder of the setup. To do this:
+1. Plug the transceiver into a SFP+ cage in your local computer or a switch.
+2. Connect your local computer to the same subnet. Set your IP address to 192.168.11.2/24.
+3. Run `task r730xd:os-install:xgs-pon:full-configuration`. This will:
+   * Install the [replacement firmware](https://github.com/djGrrr/8311-was-110-firmware-builder).
+   * Change the root user password and import the SSH key.
+   * Setup to authenticate with the ISP.
+4. Install the transceiver into SFP+ cage 1 in the rear of the R730XD.
+
 # iDRAC and BIOS configuration
 
 To configure iDRAC, do the following:
