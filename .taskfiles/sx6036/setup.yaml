@@ -168,8 +168,8 @@ tasks:
       - test -f "{{ .OUTPUT_FILE_PATH }}"
 
   full-configuration:
-    deps:
-      - task: local:configure-ssh
+    # deps:
+    #   - task: local:configure-ssh
     dir: "{{ .ROOT_DIR }}/ansible"
     cmd: |
       ansible-playbook ./remote/switches/sx6036/setup.yaml

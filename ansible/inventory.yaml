@@ -2,7 +2,7 @@ switches:
   children:
     sx6036:
       hosts:
-        10.0.0.2:
+        10.1.0.1:
           hostname: switch-01
       vars:
         ansible_user: admin
@@ -30,12 +30,12 @@ servers:
             ansible_user: root
         idrac:
           hosts:
-            10.0.1.4:
+            10.1.2.1:
           vars:
             ansible_user: root
         proxmox:
           hosts:
-            10.1.1.1:
+            10.2.2.1:
               hostname: proxmox-vm-host-01
               bulk_pool_drive_wwns:
                 - 35000039a48092cc1

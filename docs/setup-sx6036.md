@@ -33,7 +33,7 @@ configure terminal
 no interface mgmt0 dhcp
 
 # Set a static IP address for the interface
-interface mgmt0 ip address 10.0.0.2 255.255.255.0
+interface mgmt0 ip address 10.1.0.1 255.255.0.0
 
 # Save the config
 configuration write
@@ -73,6 +73,11 @@ Ports are connected as follows:
 | Port   | Split | Untagged VLAN | Tagged VLANs | LAG number | Host name          | Host port            | Cable type | Link speed |
 | ------ | ----- | ------------- | ------------ | ---------- | ------------------ | -------------------- | ---------- | ---------- |
 | 1/2    | No    | 200           | all          |            | proxmox-vm-host-01 | QSFP+ 1              | DAC        | 56 Gbps    |
+| 1/4    | Yes   |               |              |            |                    |                      | DAC        |            |
+| 1/4/1  |       |               | all          | 5          | switch-02          | 1/2/1                |            | 10 Gbps    |
+| 1/4/2  |       |               | all          | 5          | switch-02          | 1/2/2                |            | 10 Gbps    |
+| 1/4/3  |       |               | all          | 5          | switch-02          | 1/2/3                |            | 10 Gbps    |
+| 1/4/4  |       |               | all          | 5          | switch-02          | 1/2/4                |            | 10 Gbps    |
 | 1/9    | Yes   |               |              |            |                    |                      | DAC        |            |
 | 1/9/1  |       | 200           | 300          | 1          | talos-k8s-mixed-01 | SFP+ 1               |            | 10 Gbps    |
 | 1/9/2  |       | 200           | 300          | 2          | talos-k8s-mixed-02 | SFP+ 1               |            | 10 Gbps    |
@@ -98,11 +103,6 @@ Ports are connected as follows:
 | 1/32/2 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
 | 1/32/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
 | 1/32/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/33   | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/33/1 |       |               | all          | 5          | switch-02          | 1/2/1                |            | 10 Gbps    |
-| 1/33/2 |       |               | all          | 5          | switch-02          | 1/2/2                |            | 10 Gbps    |
-| 1/33/3 |       |               | all          | 5          | switch-02          | 1/2/3                |            | 10 Gbps    |
-| 1/33/4 |       |               | all          | 5          | switch-02          | 1/2/4                |            | 10 Gbps    |
 
 Splitting ports disables others as documented below:
 

@@ -1,7 +1,7 @@
 ---
 hostname: idrac-proxmox-vm-host-01
 subnet_mask: 255.255.0.0
-gateway: 10.0.1.1
+gateway: 10.1.0.254
 dns_servers:
   - "{{ gateway }}"
 thermal_profile: "Minimum Power"

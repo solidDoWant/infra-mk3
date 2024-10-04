@@ -28,7 +28,7 @@ As with the SX6036, this switch needs to be reset to factory defaults prior to c
 
     ```shell
     # Switch management interface config
-    setenv ipaddr 10.254.0.3
+    setenv ipaddr 10.254.0.2
     setenv netmask 255.255.255.0
 
     # TFTP config
@@ -70,7 +70,7 @@ As with the SX6036, this switch needs to be reset to factory defaults prior to c
     interface management 1
 
     # Set IP
-    ip address 10.254.0.3/24
+    ip address 10.254.0.2/24
     end
     write memory
     ```
@@ -103,14 +103,14 @@ Ports are connected as follows:
 | 1/1/6  | Management    |              |            |                    |           |            |
 | 1/1/7  | Management    |              |            | switch-01          |           |            |
 | 1/1/8  | Management    |              |            | switch-02          |           |            |
-| 1/1/9  | Hosts         |              |            |                    |           |            |
-| 1/1/10 | Hosts         |              |            |                    |           |            |
-| 1/1/11 | Hosts         |              |            |                    |           |            |
-| 1/1/12 | Hosts         |              |            |                    |           |            |
-| 1/1/13 | Infra devices |              |            | pdu-01             |           |            |
-| 1/1/14 | Infra devices |              |            | ups-01             |           |            |
-| 1/1/15 | Infra devices |              |            | tape-library-01    |           |            |
-| 1/1/16 | Infra devices |              |            | kvm-01             |           |            |
+| 1/1/9  | Management    |              |            | pdu-01             |           |            |
+| 1/1/10 | Management    |              |            | ups-01             |           |            |
+| 1/1/11 | Management    |              |            | tape-library-01    |           |            |
+| 1/1/12 | Management    |              |            | kvm-01             |           |            |
+| 1/1/13 | Hosts         |              |            |                    |           |            |
+| 1/1/14 | Hosts         |              |            |                    |           |            |
+| 1/1/15 | Hosts         |              |            |                    |           |            |
+| 1/1/16 | Hosts         |              |            |                    |           |            |
 | 1/1/17 | User devices  |              |            |                    |           |            |
 | 1/1/18 | User devices  |              |            |                    |           |            |
 | 1/1/19 | User devices  |              |            |                    |           |            |

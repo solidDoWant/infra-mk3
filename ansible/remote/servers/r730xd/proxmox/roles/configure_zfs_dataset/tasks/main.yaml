@@ -11,6 +11,5 @@
     {%- if share_with_nfs %}
     -o sharenfs='all_squash,anonuid=2000,anongid=2000,{{ nfs_subnets | map("printf", "rw=@%s") | join "," }}'
     {%- end %}
-    {{ "-o sharenfs='all_squash,anonuid=2000,anongid=2000,rw=@10.0.0.0/8'" if share_with_nfs }}
     {{ "-o sync=disabled" if force_sync_writes }}
   when: zfs_list.rc != 0

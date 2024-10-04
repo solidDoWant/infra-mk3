@@ -13,14 +13,11 @@ common:
       name: Kubernetes
     "400":
       <<: *vlan_standard
-      name: Infra devices
+      name: User devices
     "500":
       <<: *vlan_standard
-      name: User devices
-    "600":
-      <<: *vlan_standard
       name: Guest devices
-    "700":
+    "600":
       <<: *vlan_standard
       name: IoT devices
 devices:
@@ -44,18 +41,15 @@ devices:
     vlans:
       "100":
         <<: *proxmox_vlan_defaults
-        local-interface:
-          ip-address: 10.1.1.1/16
-          gateway: 10.1.0.1
       "200":
         <<: *proxmox_vlan_defaults
         local-interface:
-          ip-address: 10.2.1.1/16
+          ip-address: 10.2.2.1/16
+          gateway: 10.2.0.254
       "300": *proxmox_vlan_defaults
       "400": *proxmox_vlan_defaults
       "500": *proxmox_vlan_defaults
       "600": *proxmox_vlan_defaults
-      "700": *proxmox_vlan_defaults
     bridges:
       vmbrWAN:
         raw-device: eno1
@@ -63,6 +57,137 @@ devices:
         mtu: *standard_mtu
         local-interface:
           ip-address: 192.168.11.254/16
+  switch-02:
+    physical:
+      "1/1":
+        description: talos-k8s-mixed-01
+      "1/2":
+        description: talos-k8s-mixed-02
+      "1/3":
+        description: talos-k8s-mixed-03
+      "1/4":
+        description: talos-k8s-mixed-04
+      "1/5":
+        description: proxmox-vm-host-01
+      "1/6":
+      "1/7":
+      "1/8":
+      "1/9":
+      "1/10":
+      "1/11":
+      "1/12":
+      "1/13":
+        description: pdu-01
+      "1/14":
+        description: ups-01
+      "1/15":
+        description: tape-library-01
+      "1/16":
+        description: kvm-01
+      "1/17":
+      "1/18":
+      "1/19":
+      "1/20":
+      "1/21":
+      "1/22":
+      "1/23":
+      "1/24":
+      "2/1":
+        description: switch-01 QSFP 1/33/1
+      "2/2":
+        description: switch-01 QSFP 1/33/2
+      "2/3":
+        description: switch-01 QSFP 1/33/3
+      "2/4":
+        description: switch-01 QSFP 1/33/4
+      "2/5":
+      "2/6":
+      "2/7":
+      "2/8":
+    bonds:
+      "5":
+        description: switch-01_QSFP_1/33
+        slaves:
+          - 2/1
+          - 2/2
+          - 2/3
+          - 2/4
+    vlans:
+      "100":
+        tagged_interfaces: &switch_02_trunk
+          channel_groups:
+            - 5
+        untagged_interfaces:
+          ethernet:
+            - 1/1
+            - 1/2
+            - 1/3
+            - 1/4
+            - 1/5
+            - 1/6
+            - 1/7
+            - 1/8
+            - 1/9
+            - 1/10
+            - 1/11
+            - 1/12
+        management_interface:
+          ip_address: 10.1.0.2/24
+          gateway: 10.1.0.254
+      "200":
+        untagged_interfaces:
+          ethernet:
+            - 1/13
+            - 1/14
+            - 1/15
+            - 1/16
+        tagged_interfaces: *switch_02_trunk
+      "300":
+        tagged_interfaces: *switch_02_trunk
+      "400":
+        untagged_interfaces:
+          ethernet:
+            - 1/17
+            - 1/18
+            - 1/19
+            - 1/20
+        tagged_interfaces: *switch_02_trunk
+      "500":
+        tagged_interfaces: *switch_02_trunk
+        pvlan:
+          type: primary
+          trunks: *switch_02_trunk
+          secondary_pvlans:
+            - "510"
+      "510":
+        description: Guest devices isolated
+        untagged_interfaces:
+          ethernet:
+            - 1/21
+            - 1/22
+            - 1/23
+            - 1/24
+        pvlan:
+          type: isolated
+        trunked: false
+      "600":
+        tagged_interfaces: *switch_02_trunk
+        pvlan:
+          type: primary
+          trunks: *switch_02_trunk
+          secondary_pvlans:
+            - "610"
+      "610":
+        description: IoT devices isolated
+        tagged_interfaces:
+          ethernet:
+            - 1/21
+            - 1/22
+            - 1/23
+            - 1/24
+        trunked: false
+        pvlan:
+          type: isolated
 ip-space:
   10.0.0.0/9:
     description: Private IP space for home infra
@@ -82,22 +207,20 @@ ip-space:
             hostname: switch-02
           10.1.0.254/32:
             description: OPNsense VIP
-        10.1.0.0/23:
-          description: Out of band computer management
-          10.1.1.0/24:
-            description: Kubernetes hosts
-            10.1.1.1/32:
-              hostname: talos-k8s-mixed-01
-            10.1.1.2/32:
-              hostname: talos-k8s-mixed-02
-            10.1.1.3/32:
-              hostname: talos-k8s-mixed-03
-            10.1.1.4/32:
-              hostname: talos-k8s-mixed-04
-          10.1.2.0/24:
-            description: VM hosts
-            10.1.2.1/32:
-              hostname: proxmox-vm-host-01
+        10.1.1.0/24:
+          description: Kubernetes hosts OOBM
+          10.1.1.1/32:
+            hostname: talos-k8s-mixed-01
+          10.1.1.2/32:
+            hostname: talos-k8s-mixed-02
+          10.1.1.3/32:
+            hostname: talos-k8s-mixed-03
+          10.1.1.4/32:
+            hostname: talos-k8s-mixed-04
+        10.1.2.0/24:
+          description: VM hosts OOBM
+          10.1.2.1/32:
+            hostname: proxmox-vm-host-01
         10.1.3.0/24:
           description: Power devices
           10.1.3.1/32:
@@ -180,13 +303,6 @@ ip-space:
         10.6.0.0/24:
           description: Network devices
           10.6.0.254/32:
-            description: OPNsense VIP
-      10.7.0.0/16:
-        vlan: 700
-        gateway: 10.7.0.254/32
-        10.7.0.0/24:
-          description: Network devices
-          10.7.0.254/32:
             description: OPNsense VIP
     10.32.0.0/11:
       description: Kubernetes services

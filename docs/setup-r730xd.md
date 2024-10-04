@@ -32,8 +32,8 @@ To configure iDRAC, do the following:
     IPV4 SETTINGS:
       Enable IPv4: Enabled
       Enable DHCP: Disabled
-      Static IP Address: 10.0.1.4
-      Static Gateway: 10.0.1.1
+      Static IP Address: 10.1.2.1
+      Static Gateway: 10.1.0.254
       Static Subnet Mask: 255.255.0.0
     ```
 6. Run `task r730xd:idrac:setup:full-configuration`.

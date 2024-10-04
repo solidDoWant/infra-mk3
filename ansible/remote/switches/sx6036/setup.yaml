@@ -1,4 +1,26 @@
 ---
+- name: Load network information
+  hosts: sx6036
+  gather_facts: false
+
+  tasks:
+    - name: Load network.yaml
+      ansible.builtin.include_vars:
+        file: ../../../../docs/network.yaml
+    - name: Set "network" fact
+      vars:
+        device_specific_facts: >-
+          {{
+            devices[hostname | default("")] |
+            default({})
+          }}
+      ansible.builtin.set_fact:
+        network: >-
+          {{
+            common |
+            ansible.builtin.combine(device_specific_facts, recursive=true)
+          }}
+
 - name: Load licenses
   hosts: sx6036
   gather_facts: false
@@ -68,14 +90,16 @@
       vars:
         vlan_id: "{{ item.key }}"
         vlan_name: "{{ item.value }}"
-        vlans: &vlans
-          "100": Management
-          "200": Hosts
-          "300": Kubernetes
-          "400": Infrastructure devices
-          "500": User devices
-          "600": Guest devices
-          "700": "IoT devices"
+        vlans: &vlans >-
+          {{
+            dict(
+              network.vlans.keys() |
+              zip(
+                network.vlans.values() |
+                map(attribute="name")
+              )
+            )
+          }}
       loop: "{{ vlans | dict2items }}"
 
 - name: Configure management VLAN interface
@@ -93,7 +117,7 @@
           # Routing functionality must be enabled to add an in-band interface to the vlan.
           - ip l3
           - interface vlan 100
-          - ip address {{ inventory_hostname }} /24
+          - ip address {{ inventory_hostname }} /16
           - exit
 
 - name: Configure Brocade ICX 7250 ports
@@ -101,8 +125,7 @@
   gather_facts: false
   vars:
     vlans: *vlans
-    hostname: switch-02
-    interface_port: 33
+    interface_port: 4
     channel_group: 100
     tagged_vlans: "{{ vlans.keys() | map('int') | list }}"
   roles:
