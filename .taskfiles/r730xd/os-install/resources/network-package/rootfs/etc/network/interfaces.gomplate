@@ -1,4 +1,5 @@
 # Loopback
+
 auto lo
 iface lo inet loopback
 # Loopback interface
@@ -7,7 +8,8 @@ iface lo inet loopback
 {{- $hostNetworkConfig := coll.Merge (index (datasource "network").devices (datasource "hostname")) (datasource "network").common }}
 
 # Physical interfaces
-{{ range $name, $details := $hostNetworkConfig.physical }}
+{{- range $name, $details := $hostNetworkConfig.physical }}
+
 auto {{ $name }}
 iface {{ $name }} inet manual
     mtu {{ $details.mtu }}
@@ -15,7 +17,8 @@ iface {{ $name }} inet manual
 {{- end }}
 
 # Bonds
-{{ range $name, $details := $hostNetworkConfig.bonds }}
+{{- range $name, $details := $hostNetworkConfig.bonds }}
+
 auto {{ $name }}
 iface {{ $name }} inet manual
     bond-slaves {{ join $details.slaves " " }}
@@ -27,8 +30,9 @@ iface {{ $name }} inet manual
 {{- end }}
 
 # VLANs
-{{ range $id, $details := $hostNetworkConfig.vlans }}
-{{- $interfaceName := printf "%s.%s" (index $details "raw-device") $id}}
+{{- range $id, $details := $hostNetworkConfig.vlans }}
+{{- $interfaceName := printf "%s.%s" (index $details "raw-device") $id }}
+
 auto {{ $interfaceName }}
 iface {{ $interfaceName }} inet manual
     mtu {{ $details.mtu }}
@@ -55,7 +59,9 @@ iface {{ $interfaceName }} inet {{ if has $details "local-interface" }}static{{ 
     {{- if has $details "local-interface" }}
     {{- $localInterface := index $details "local-interface" }}
     address {{ index $localInterface "ip-address" }}
-    {{- if has $localInterface "gateway" }}gateway {{ index $localInterface "gateway" }}{{ end }}
+    {{- if has $localInterface "gateway" }}
+    gateway {{ index $localInterface "gateway" }}
+    {{- end }}
     {{- end }}
     mtu {{ $details.mtu }}
     bridge-ports {{ index $details "raw-device" }}
