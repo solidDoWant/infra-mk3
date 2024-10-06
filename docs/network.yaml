@@ -75,17 +75,17 @@ devices:
       "1/7":
       "1/8":
       "1/9":
-      "1/10":
-      "1/11":
-      "1/12":
-      "1/13":
         description: pdu-01
-      "1/14":
+      "1/10":
         description: ups-01
-      "1/15":
+      "1/11":
         description: tape-library-01
-      "1/16":
+      "1/12":
         description: kvm-01
+      "1/13":
+      "1/14":
+      "1/15":
+      "1/16":
       "1/17":
       "1/18":
       "1/19":
@@ -95,20 +95,20 @@ devices:
       "1/23":
       "1/24":
       "2/1":
-        description: switch-01 QSFP 1/33/1
+        description: switch-01 QSFP 1/4/1
       "2/2":
-        description: switch-01 QSFP 1/33/2
+        description: switch-01 QSFP 1/4/2
       "2/3":
-        description: switch-01 QSFP 1/33/3
+        description: switch-01 QSFP 1/4/3
       "2/4":
-        description: switch-01 QSFP 1/33/4
+        description: switch-01 QSFP 1/4/4
       "2/5":
       "2/6":
       "2/7":
       "2/8":
     bonds:
-      "5":
-        description: switch-01_QSFP_1/33
+      "100":
+        description: switch-01_QSFP_1/4
         slaves:
           - 2/1
           - 2/2
@@ -118,7 +118,7 @@ devices:
       "100":
         tagged_interfaces: &switch_02_trunk
           channel_groups:
-            - 5
+            - 100
         untagged_interfaces:
           ethernet:
             - 1/1

@@ -10,7 +10,7 @@ switches:
         ansible_password: admin
     icx7250:
       hosts:
-        10.254.0.3:
+        10.254.0.2: # Local management interface version of 10.1.0.2
           hostname: switch-02
       vars:
         ansible_user: super
