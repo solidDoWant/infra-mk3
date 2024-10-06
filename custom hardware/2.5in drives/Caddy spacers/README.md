@@ -13,7 +13,7 @@ These are designed to be 3D printed with PLA. On my [Bambu Labs X1C printer](htt
 ## Materials
 * About 10g of PLA
 * 1x drive caddy
-* 4x M3 x 4 screws
+* 4x M3 x 4mm screws
 
 ## Tools
 * 1x 3D printer
