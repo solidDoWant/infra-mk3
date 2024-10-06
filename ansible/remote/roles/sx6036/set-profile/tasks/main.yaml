@@ -22,6 +22,11 @@
       vars:
         sx6036_commands:
           - system profile {{ sx6036_profile }} force
+        # This is done automatically, and doing it manually can fail
+        sx6036_save: false
+      # Sometimes the switch terminates SSH, sometimes it just times out which
+      # causes Ansible to error
+      ignore_errors: true
 
     - name: Wait for the switch to come back online
       ansible.builtin.import_role:

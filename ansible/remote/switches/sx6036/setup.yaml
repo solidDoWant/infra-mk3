@@ -189,7 +189,7 @@
             name: ../../../roles/sx6036/configure-port-channel-interface
           vars:
             channel_group: "{{ item }}"
-            description: "{{ hostname_prefix ~ '%02d' | format(node_number | int) }}"
+            description: "{{ hostname_prefix ~ '%02d' | format(item | int) }}"
           loop: "{{ range(1, node_count + 1) | list }}"
         - name: Configure the individual ports
           ansible.builtin.include_role:
@@ -214,7 +214,7 @@
       - 27
       - 28
       - 32
-    untagged_vlan: 500
+    untagged_vlan: 400
   tasks:
     - name: Split the ports
       ansible.builtin.include_role:
