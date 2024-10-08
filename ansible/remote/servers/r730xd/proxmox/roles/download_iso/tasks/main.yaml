@@ -1,0 +1,9 @@
+---
+- name: Check if the ISO already exists on the server
+  ansible.builtin.stat:
+    path: "{{ iso_path }}"
+  register: iso_stat
+
+- name: Download the ISO
+  ansible.builtin.include_tasks: download_extract_iso.yaml
+  when: not iso_stat.stat.exists

@@ -1,0 +1,57 @@
+---
+- name: Create remote working directory
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: sendkey-
+  register: temp_dir
+
+- name: Copy the sendkey file
+  ansible.builtin.copy:
+    content: "{{ sendkey_commands }}"
+    dest: "{{ temp_dir.path }}/script.txt"
+    mode: 0400
+  register: copied_file
+
+- name: Run the script
+  environment: "{{ sendkey_vars }}"
+  ansible.builtin.shell:
+    cmd: |
+      SCREEN_TEXT=( $( \
+        cat {{ copied_file.dest }} | \
+        perl -pe 's/ /\\\{spc\}/g;' \
+          -pe 's/(\\\{.+?\}|[^ ])/\1 /g;' \
+          -pe 's/\n/\\\{ret\}/;' \
+          -pe 's/\./dot/g;' \
+          -pe 's/-/minus/g;' \
+          -pe 's/\//slash/g;' \
+          -pe 's/_/shift-minus/g;' \
+      ) )
+      for char in "${SCREEN_TEXT[@]}"; do
+        if (echo $char | egrep "\\\{.+\}" > /dev/null); then
+          key=${char#\\\{}
+          key=${key%\}}
+        else
+          key=$char
+        fi
+
+        if [[ $key =~ "wait" ]]; then
+          sleep_time="$(echo $key | sed 's/wait//')"
+          echo "sleep ${sleep_time}"
+          sleep "${sleep_time}"
+          continue
+        fi
+
+        if [[ "${key}" =~ ^var: ]]; then
+          var_name="${key#var:}"
+          key="${!var_name}"
+        fi
+
+        echo $key
+        pvesh set /nodes/{{ ansible_hostname }}/qemu/{{ id }}/sendkey --key $key
+      done
+    executable: /usr/bin/bash
+
+- name: Cleanup the working directory
+  ansible.builtin.file:
+    state: absent
+    path: "{{ temp_dir.path }}"

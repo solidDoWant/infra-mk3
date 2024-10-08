@@ -1,0 +1,100 @@
+---
+- name: Get a list of current VMs
+  ansible.builtin.command: >-
+    pvesh get /nodes/{{ ansible_hostname }}/qemu -o json
+  register: vm_list
+
+- name: Check if VM already exists
+  vars:
+    query: "length([?name=='{{ name }}'])"
+  ansible.builtin.set_fact:
+    does_vm_exist: >-
+      {{
+        vm_list.stdout |
+        from_json |
+        json_query(query) != 0
+      }}
+
+- name: Deploy a new VM
+  when: not does_vm_exist
+  block:
+    - name: Set the VM ID to the next available VM ID 
+      when: id is undefined or id == ""
+      vars:
+        # Get the last VM ID, defaulting to 100, and add one to it.
+        query: "sum([not_null(([].vmid | sort(@))[-1], `100`), `1`])"
+      ansible.builtin.set_fact:
+        id: >-
+          {{
+            vm_list.stdout |
+            from_json |
+            json_query(query)
+          }}
+      register: set_id_fact
+
+    # The community module requires additional tools on the host (not available
+    # yet), and requires password auth for the API, rather than calling pvesh
+    # locally with SSH keys for auth.
+    - name: Deploy the VM
+      vars:
+        smbios_uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+        vmgenid_uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+      ansible.builtin.command: >-
+        pvesh create /nodes/{{ ansible_hostname }}/qemu
+        --vmid {{ id }}
+        --agent 1,fstrim_cloned_disks=1
+        --balloon {{ memory }}
+        --boot order=virtio1;ide2
+        --cores {{ cores }}
+        --cpu host,flags=+aes
+        --description "{{ description }}"
+        --ide2 "local:iso/{{ iso_name }},media=cdrom"
+        --memory {{ memory }}
+        --name {{ name }}
+        --onboot true
+        --ostype {{ os_type }}
+        --protection false
+        --scsihw virtio-scsi-pci
+        --smbios1 uuid={{ smbios_uuid }}
+        --virtio1 local-zfs:{{ disk_size }}
+        --vmgenid {{ vmgenid_uuid }}
+        {{ extra_args }}
+
+    - name: Start the VM
+      ansible.builtin.include_role:
+        name: change_vm_state
+    
+    - name: Use sendkey to install the OS
+      when: install_sendkey_commands is defined
+      vars:
+        sendkey_commands: "{{ install_sendkey_commands }}"
+      ansible.builtin.include_tasks: sendkey_command.yaml
+
+    - name: Remove the install disk
+      ansible.builtin.command: >-
+        pvesh set /nodes/{{ ansible_hostname }}/qemu/{{ id }}/config
+        --delete ide2
+
+    - name: Restart the VM
+      vars:
+        state: restart
+      ansible.builtin.include_role:
+        name: change_vm_state
+    
+    - name: Use sendkey to configure the OS
+      when: configure_sendkey_commands is defined
+      vars:
+        sendkey_commands: "{{ configure_sendkey_commands }}"
+      ansible.builtin.include_tasks: sendkey_command.yaml
+
+    - name: Restart the VM
+      when: configure_sendkey_commands is defined
+      vars:
+        state: restart
+      ansible.builtin.include_role:
+        name: change_vm_state
+    
+    - name: Un-define 'id' fact
+      ansible.builtin.set_fact:
+        id: null
+      when: set_id_fact is defined

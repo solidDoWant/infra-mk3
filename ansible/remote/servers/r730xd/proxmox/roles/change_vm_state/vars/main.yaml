@@ -1,0 +1,3 @@
+---
+should_stop: '{{ state in ["stop", "restart"] }}'
+should_start: '{{ state in ["start", "restart"] }}'

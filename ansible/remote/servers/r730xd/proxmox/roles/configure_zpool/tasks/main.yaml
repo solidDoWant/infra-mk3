@@ -37,13 +37,13 @@
   when: zpool_list.rc != 0
 
 - name: Import the pool
-  include: import.yaml
+  ansible.builtin.include_tasks: import.yaml
   when: >-
     zpool_list.rc != 0 &&
     pool_name in zpool_import_pools.stdout 
 
 - name: Create the pool
-  include: create.yaml
+  ansible.builtin.include_tasks: create.yaml
   when: >-
     zpool_list.rc != 0 &&
     pool_name not in zpool_import_pools.stdout 

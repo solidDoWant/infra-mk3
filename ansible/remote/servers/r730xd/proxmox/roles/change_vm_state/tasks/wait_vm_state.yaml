@@ -1,0 +1,21 @@
+---
+- name: Wait for VM state
+  ansible.builtin.command: >-
+    pvesh get 
+    /nodes/{{ ansible_hostname }}/qemu/{{ id }}/status/current
+    -o json
+  register: vm_status
+  vars:
+    query: "uptime"
+    uptime: >-
+      {{
+        vm_status.stdout |
+        from_json |
+        json_query(query)
+      }}
+  until: >-
+    (wait_for_state == 'start' and (uptime | int) >= start_timeout)
+    or
+    (wait_for_state == 'stop' and (uptime | int) == 0)
+  delay: "{{ check_delay }}"
+  retries: "{{ (start_timeout / check_delay + 3) | round(0, 'ceil') | int }}"

@@ -1,0 +1,43 @@
+---
+- name: Check if the remote host can reach the Internet
+  ansible.builtin.command: ping -c 1 -n -w 1 1.1.1.1
+  ignore_errors: true
+  register: ping
+
+- name: Download the ISO
+  vars:
+    temp_remote_path: &temp_remote_path "{{ temp_dir.path }}/{{ src_file_name }}"
+  ansible.builtin.get_url:
+    url: "{{ download_url }}"
+    dest: "{{ iso_path if not should_extract else temp_remote_path }}"
+    mode: 0400
+  when: ping.rc == 0
+
+- name: Download the ISO locally and push to the server
+  when: ping.rc != 0
+  vars:
+    temp_local_path: "{{ temp_local_dir.path }}/{{ src_file_name }}"
+    temp_remote_path: *temp_remote_path
+  block:
+    - name: Create a temporary local working directory
+      delegate_to: localhost
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: "{{ iso_name }}_"
+      register: temp_local_dir
+    - name: Download the ISO locally
+      delegate_to: localhost
+      ansible.builtin.get_url:
+        url: "{{ download_url }}"
+        dest: "{{temp_local_path }}"
+        mode: 0400
+    - name: Upload the ISO to the server
+      ansible.builtin.copy:
+        src: "{{ temp_local_path }}"
+        dest: "{{ temp_remote_path }}"
+        mode: 0400
+    - name: Cleanup the temporary local working directory
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ temp_local_dir.path }}"
+        state: absent

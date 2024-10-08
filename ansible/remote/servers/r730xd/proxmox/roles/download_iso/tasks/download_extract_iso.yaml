@@ -1,0 +1,34 @@
+---
+- name: Create a temporary directory for downloading the ISO
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: "{{ iso_name }}_"
+  register: temp_dir
+  when: should_extract
+
+- name: Download the ISO
+  ansible.builtin.include_tasks: download.yaml
+
+- name: Attempt to extract the downloaded file
+  vars:
+    src_file_extension: "{{ src_file_name | splitext | last }}"
+  when: should_extract
+  block:
+    - name: Extract archive
+      ansible.builtin.shell:
+        chdir: "{{ temp_dir.path }}"
+        cmd: |
+          bzip2 -d "{{ src_file_name }}"
+          mv -v *.iso "{{ iso_path }}"
+      register: match
+      when: src_file_extension == '.bz2'
+    # TODO other file types
+    - name: Fail on unsupported file type
+      ansible.builtin.fail:
+        msg: "Extraction of source file {{ src_file_name }} not implemented"
+      when: match is not defined
+
+- name: Cleanup temporary directory
+  ansible.builtin.file:
+    path: "{{ temp_dir.path }}"
+    state: absent

@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    options:
+      id:
+        type: int
+        required: true
+      state:
+        type: str
+        choices:
+          - start
+          - stop
+          - restart
+        default: start
+      start_timeout:
+        type: int
+        default: 240
+      check_delay:
+        type: int
+        default: 5

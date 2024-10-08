@@ -52,3 +52,19 @@ servers:
             ansible_password: root
             ansible_python_interpreter: auto_silent
             internet_interface_name: vmbrWAN
+routers:
+  children:
+    opnsense:
+      children:
+        primary:
+          host:
+            10.2.0.1:
+              hostname: router-01
+        secondary:
+          host:
+            10.2.0.2:
+              hostname: router-02
+      vars:
+        ansible_user: root
+        # This won't be used after the SSH key is uploaded - only for bootstraping.
+        ansible_password: opnsense

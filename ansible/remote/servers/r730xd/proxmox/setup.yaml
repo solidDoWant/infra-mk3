@@ -1,4 +1,26 @@
 ---
+- name: Load network information
+  hosts: r730xd:&proxmox
+  gather_facts: false
+
+  tasks:
+    - name: Load network.yaml
+      ansible.builtin.include_vars:
+        file: ../../../../../docs/network.yaml
+    - name: Set "network" fact
+      vars:
+        device_specific_facts: >-
+          {{
+            devices[hostname | default("")] |
+            default({})
+          }}
+      ansible.builtin.set_fact:
+        network: >-
+          {{
+            common |
+            ansible.builtin.combine(device_specific_facts, recursive=true)
+          }}
+
 # - name: Configure SSH
 #   hosts: r730xd:&proxmox
 #   gather_facts: false
@@ -10,7 +32,6 @@
 #     - role: configure_ssh
 
 - hosts: r730xd:&proxmox
-  gather_facts: false # TODO
 
   tasks:
     # - name: Update the user's password
@@ -139,24 +160,56 @@
     #         - pveproxy
     #         - spiceproxy
 
-    - name: Check if Internet is reachable
-      ansible.builtin.command: ping -c 1 -n -w 1 1.1.1.1
-      ignore_errors: true
-      register: ping
+    # # Needed for snippets storage
+    # - name: Configure Proxmox storage
+    #   ansible.builtin.copy:
+    #     # Note: these are tabs, not spaces
+    #     content: |
+    #       dir: local
+    #       	path /var/lib/vz
+    #       	content iso,vztmpl,backup,snippets
 
-    - name: Configure interface for temporary Internet access
-      ansible.builtin.shell: |
-        # Set the MAC address
-        ip link set dev {{ internet_interface_name }} down
-        ip link set dev {{ internet_interface_name }} address {{ internet_interface_mac_address }}
-        ip link set dev {{ internet_interface_name }} up
+    #       zfspool: local-zfs
+    #       	pool rpool/data
+    #       	sparse
+    #       	content images,rootdir
+    #     dest: /etc/pve/storage.cfg
+    #     owner: root
+    #     group: www-data
+    #     mode: 0640
 
-        # Delete the default route
-        ip route del 0.0.0.0/0
+    - name: Deploy OPNSense
+      vars:
+        vm_domain_name: "{{ local_domain_name }}"
+        xgs_pon_bridge_overlay:
+          vmbrWAN:
+            mac: "{{ internet_interface_mac_address }}"
+            link_down_if_non_primary: true
+        bridges: >-
+          {{
+            network.bridges |
+            ansible.builtin.combine(
+              xgs_pon_bridge_overlay,
+              network.vlans,
+              recursive=true
+            )
+          }}
+        interface_yaml: |
+          {% for name, info in bridges.items() %}
+          {% if name is not match('^vmbr') %}
+          {% set name = "vmbr" + name %}
+          {% endif %}
+          {{ name }}:
+            {% if info.mac is defined %}mac: {{ info.mac }}{% endif %}
 
-        # Get a new (public) IP address
-        dhclient -4  {{ internet_interface_name }}
-      when: ping.rc != 0
+            {% if info.mtu is defined %}mtu: {{ info.mtu }}{% endif %}
+
+            {% if info.link_down_if_non_primary is defined %}link_down_if_non_primary: {{ info.link_down_if_non_primary | to_yaml }}{% endif %}
+          
+          {% endfor %}
+        vm_bridges: "{{ interface_yaml | from_yaml }}"
+      ansible.builtin.include_role:
+        name: deploy_opnsense
 
     # - name: Update APT configuration
     #   ansible.builtin.include_role:

@@ -1,0 +1,151 @@
+---
+- name: Ensure Internet access is available
+  vars:
+    ping_cmd: ping -c 1 -n -w 1 1.1.1.1
+  block:
+    - name: Check if Internet is locally reachable
+      delegate_to: localhost
+      ansible.builtin.command: "{{ ping_cmd }}"
+      ignore_errors: true
+      register: local_ping
+    
+    - name: Check if Internet is remotely reachable
+      when: local_ping.rc != 0
+      ansible.builtin.command: "{{ ping_cmd }}"
+      ignore_errors: true
+      register: remote_ping
+
+    - name: Set reconfigure_internet fact
+      ansible.builtin.set_fact:
+        reconfigure_internet: >-
+          {{ local_ping.rc != 0 and remote_ping.rc != 0 }}
+
+    - name: Reconfigure local bridge for Internet access
+      when: reconfigure_internet
+      block:
+        - name: Configure interface for temporary Internet access
+          ansible.builtin.shell: |
+            # Set the MAC address
+            ip link set dev {{ internet_interface_name }} down
+            ip link set dev {{ internet_interface_name }} address {{ internet_interface_mac_address }}
+            ip link set dev {{ internet_interface_name }} up
+
+            # Delete the default route
+            ip route del 0.0.0.0/0
+
+            # Get a new (public) IP address
+            dhclient -4  {{ internet_interface_name }}
+
+        - name: Verify that the internet is reachable
+          ansible.builtin.command: ping -c 1 -n -w 1 1.1.1.1
+
+- name: Ensure ISO exists
+  vars:
+    download_url: >-
+      https://pkg.opnsense.org/releases/{{ opnsense_version }}/OPNsense-{{ opnsense_version }}-dvd-amd64.iso.bz2
+    iso_name: &iso_name opnsense-{{ opnsense_version }}.iso
+  ansible.builtin.include_role:
+    name: download_iso
+
+- name: Reset network interface configuration
+  when: reconfigure_internet
+  ansible.builtin.command: ifreload -a
+
+- name: Load the sendkey commands
+  ansible.builtin.set_fact:
+    opnsense_install_sendkey_commands: "{{ lookup('ansible.builtin.file', role_path + '/files/install_sendkey.txt') }}"
+    # This does the absolute bare minimum to get the Proxmox node connected to the Internet
+    # TODO network interfaces and IP address is hard coded. Template this file.
+    opnsense_configure_sendkey_commands: "{{ lookup('ansible.builtin.file', role_path + '/files/config_sendkey.txt') }}"
+
+- name: Ensure the VMs exist
+  vars:
+    name: "{{ 'router-%02d.%s' | format(item | int, vm_domain_name) }}"
+    description: "OPNSense instance {{ item }}"
+    memory: "{{ vm_memory }}"
+    cores: "{{ vm_core_count }}"
+    disk_size: "{{ vm_disk_size }}"
+    os_type: other
+    iso_name: opnsense-24.7.iso
+    # iso_name: *iso_name
+    extra_args: >-
+      {% for name, info in vm_bridges.items() %}
+      {% set mac = info.mac if info.mac is defined else "C6:3A:8F:00:{:02X}:{:02X}".format(ansible_loop.index, loop.index0) %}
+      --net{{ loop.index0 }}
+      virtio={{ mac }},bridge={{ name }},firewall=0{% if info.mtu is defined %},mtu={{ info.mtu }}{% endif %}{% if "link_down_if_non_primary" in info and info.link_down_if_non_primary and ansible_loop.index0 != 0 %},link_down=1{% endif %}
+      {% endfor %}
+    install_sendkey_commands: "{{ opnsense_install_sendkey_commands }}"
+    configure_sendkey_commands: "{{ opnsense_configure_sendkey_commands }}"
+    sendkey_vars:
+      routernumber: "{{ ansible_loop.index | string }}"
+  ansible.builtin.include_role:
+    name: deploy_vm
+  loop: &router_loop "{{ query('sequence', 'start=1 end=%d' | format(vm_count) ) }}"
+  loop_control:
+    extended: true
+  
+- name: Verify that the routers can be reached
+  ansible.builtin.command: ping -c 1 -n -w 1 10.2.0.{{ ansible_loop.index }}
+  changed_when: false
+  loop: *router_loop
+  loop_control:
+    extended: true
+
+# The community XML module requires lxml which opnsense doesn't have installed
+# bye default.
+- name: Deploy the VLAN gateway VIP
+  delegate_to: "{{ firewall }}"
+  vars: &xml_vars
+    firewall: 10.2.0.1
+    ansible_user: root
+    ansible_password: opnsense
+    xml_config_path: /conf/config.xml
+  ansible.builtin.replace:
+    path: "{{ xml_config_path }}"
+    regexp: <vip\/>
+    replace: |-
+      <vip uuid="{{ 99999999 | random | to_uuid }}">
+            <interface>lan</interface>
+            <mode>carp</mode>
+            <subnet>10.2.0.254</subnet>
+            <subnet_bits>16</subnet_bits>
+            <gateway/>
+            <noexpand>0</noexpand>
+            <nobind>0</nobind>
+            <password/>
+            <vhid>200</vhid>
+            <advbase>1</advbase>
+            <advskew>0</advskew>
+            <peer/>
+            <peer6/>
+            <descr>Bootstrap VLAN 200 gateway IP</descr>
+          </vip>
+
+- name: Enable SSH (persist)
+  delegate_to: "{{ firewall }}"
+  vars: *xml_vars
+  ansible.builtin.replace:
+    path: "{{ xml_config_path }}"
+    regexp: <\/ssh>
+    replace: |2-
+        <noauto>1</noauto>
+            <interfaces>lan</interfaces>
+            <kex/>
+            <ciphers/>
+            <macs/>
+            <keys/>
+            <enabled>enabled</enabled>
+            <passwordauth>1</passwordauth>
+            <permitrootlogin>1</permitrootlogin>
+          </ssh>
+
+- name: Reload the config
+  delegate_to: "{{ firewall }}"
+  vars: *xml_vars
+  ansible.builtin.shell: |-
+    configctl filter sync
+    configctl service reload all
+    configctl webgui restart
+
+- name: Verify that the internet can be reached
+  ansible.builtin.command: ping -c 1 -n -w 1 1.1.1.1

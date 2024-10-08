@@ -1,0 +1,22 @@
+---
+- name: Stop the VM
+  when: should_stop
+  ansible.builtin.command: >-
+    pvesh create /nodes/{{ ansible_hostname }}/qemu/{{ id }}/status/stop
+
+- name: Wait for the VM to stop
+  when: should_stop
+  vars:
+    wait_for_state: stop
+  ansible.builtin.include_tasks: wait_vm_state.yaml
+
+- name: Start the VM
+  when: should_start
+  ansible.builtin.command: >-
+    pvesh create /nodes/{{ ansible_hostname }}/qemu/{{ id }}/status/start
+
+- name: Wait for the VM to start
+  when: should_start
+  vars:
+    wait_for_state: start
+  ansible.builtin.include_tasks: wait_vm_state.yaml

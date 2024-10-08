@@ -1,0 +1,49 @@
+---
+argument_specs:
+  main:
+    options:
+      name:
+        type: str
+        required: true
+      description:
+        type: str
+        required: true
+      id:
+        type: int
+      memory: # MiB
+        type: int
+        required: true
+      cores:
+        type: int
+        required: true
+      disk_size: # GiB
+        type: int
+        required: true
+      iso_name:
+        type: str
+        required: true
+      os_type:
+        type: str
+        required: true
+        choices:
+          - other
+          - wxp
+          - w2k
+          - w2k3
+          - w2k8
+          - wvista
+          - win7
+          - win8
+          - win10
+          - win11
+          - l24
+          - l26
+          - solaris
+      extra_args:
+        type: str
+      install_sendkey_commands:
+        type: str
+      configure_sendkey_commands:
+        type: str
+      sendkey_vars:
+        type: dict
