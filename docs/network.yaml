@@ -134,7 +134,7 @@ devices:
             - 1/11
             - 1/12
         management_interface:
-          ip_address: 10.1.0.2/24
+          ip_address: 10.1.0.129/16
           gateway: 10.1.0.254
       "200":
         untagged_interfaces:
@@ -203,10 +203,18 @@ ip-space:
         gateway: 10.1.0.254/32
         10.1.0.0/24:
           description: Network devices
-          10.1.0.1/32:
-            hostname: switch-01
-          10.1.0.2/32:
-            hostname: switch-02
+          10.1.0.0/25:
+            description: Routers
+            10.1.0.1/32:
+              hostname: router-01
+            10.1.0.2/32:
+              hostname: router-02
+          10.1.0.128/26:
+            description: Switches
+            10.1.0.128/32:
+              hostname: switch-01
+            10.1.0.129/32:
+              hostname: switch-02
           10.1.0.254/32:
             description: OPNsense VIP
         10.1.1.0/24:

@@ -28,7 +28,7 @@ As with the SX6036, this switch needs to be reset to factory defaults prior to c
 
     ```shell
     # Switch management interface config
-    setenv ipaddr 10.254.0.2
+    setenv ipaddr 10.254.0.129
     setenv netmask 255.255.255.0
 
     # TFTP config
@@ -70,7 +70,7 @@ As with the SX6036, this switch needs to be reset to factory defaults prior to c
     interface management 1
 
     # Set IP
-    ip address 10.254.0.2/24
+    ip address 10.254.0.129/24
     end
     write memory
     ```

@@ -117,8 +117,9 @@
           # Routing functionality must be enabled to add an in-band interface to the vlan.
           - ip l3
           - interface vlan 100
-          - ip address {{ inventory_hostname }} /16
+          - ip address {{ inband_mgmt_ip }} /{{ inband_mgmt_subnet }}
           - exit
+          - ip route 0.0.0.0 0.0.0.0 {{ inband_mgmt_gateway }}
 
 - name: Configure Brocade ICX 7250 ports
   hosts: sx6036

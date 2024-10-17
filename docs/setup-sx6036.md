@@ -33,7 +33,7 @@ configure terminal
 no interface mgmt0 dhcp
 
 # Set a static IP address for the interface
-interface mgmt0 ip address 10.1.0.1 255.255.0.0
+interface mgmt0 ip address 10.254.0.128 255.255.0.0
 
 # Save the config
 configuration write
