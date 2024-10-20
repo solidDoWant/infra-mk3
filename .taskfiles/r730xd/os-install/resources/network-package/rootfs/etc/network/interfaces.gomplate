@@ -64,7 +64,7 @@ iface {{ $interfaceName }} inet {{ if has $details "local-interface" }}static{{ 
     {{- end }}
     {{- end }}
     mtu {{ $details.mtu }}
-    bridge-ports {{ index $details "raw-device" }}
+    bridge-ports {{ if has $details "raw-device" }}{{ index $details "raw-device" }}{{ else }}none{{ end }}
     bridge-stp off
     bridge-fd 0
 # {{ $details.description }}
