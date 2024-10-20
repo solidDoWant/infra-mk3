@@ -76,3 +76,11 @@ routers:
         ansible_user: root
         # This won't be used after the SSH key is uploaded - only for bootstraping.
         ansible_password: opnsense
+power:
+  children:
+    mpr3141:
+      hosts:
+        10.1.3.128:
+          hostname: pdu-01
+      vars:
+        ansible_user: admin

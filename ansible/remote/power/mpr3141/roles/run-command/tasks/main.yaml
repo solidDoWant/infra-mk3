@@ -1,0 +1,23 @@
+---
+# This should really be converted to a plugin at some point
+- name: Run command over SSH # noqa risky-shell-pipe no-changed-when
+  delegate_to: localhost
+  register: command
+  environment:
+    SSHPASS: "{{ ansible_password }}"
+  ansible.builtin.shell: >-
+    {{ "sshpass -e" if ansible_password is defined }}
+    ssh{{ (" " ~ ansible_ssh_common_args) if ansible_ssh_common_args is defined }}
+    {{ ("%s@" | format(ansible_user|string)) if ansible_user is defined }}{{ inventory_hostname }}
+    {{ command | quote }}
+  failed_when: command.rc != 255
+- name: Set output
+  vars:
+  ansible.builtin.set_fact:
+    # Trim any information prior to the first line, like the login banner and last login time
+    "{{ output_var }}": >-
+      {{
+        command.stdout_lines[4:] |
+        default([]) |
+        join("\n")
+      }}

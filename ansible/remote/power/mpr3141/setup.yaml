@@ -1,0 +1,16 @@
+---
+- name: Configure PDU
+  hosts: power:&mpr3141
+  gather_facts: false
+
+  tasks:
+    - name: Run setup commands
+      vars:
+        command: "{{ item }}"
+      ansible.builtin.include_role:
+        name: run-command
+      loop:
+        - network hostname {{ hostname }}
+        - time zone {{ local_timezone_id }}
+        - system name {{ hostname }}
+        # TODO SNMPv3 setup
