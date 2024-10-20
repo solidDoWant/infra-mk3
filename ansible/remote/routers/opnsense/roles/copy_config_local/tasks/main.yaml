@@ -1,0 +1,21 @@
+---
+- name: Make a local directory for the config file
+  delegate_to: localhost
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: opnsense-config-
+  notify:
+    - Cleanup the local directory
+  register: temp_dir
+
+- name: Register local_config_path fact
+  ansible.builtin.set_fact:
+    local_config_path: "{{ temp_dir.path }}/{{ inventory_hostname  }}/config.xml"
+
+- name: Copy the config file to the local host
+  ansible.builtin.fetch:
+    src: "{{ remote_config_path }}"
+    dest: "{{ local_config_path }}"
+    flat: true
+
+

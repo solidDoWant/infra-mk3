@@ -9,7 +9,7 @@
     autoremove: true
 
 - name: Configure multipath
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: multipath.conf
     dest: /etc/multipath.conf
     owner: root

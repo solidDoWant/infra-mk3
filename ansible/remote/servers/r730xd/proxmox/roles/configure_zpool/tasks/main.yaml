@@ -1,6 +1,6 @@
 ---
 - name: Install NFS server packages
-  apt:
+  ansible.builtin.apt:
     name:
       - nfs-kernel-server
       - nfs-common
@@ -10,19 +10,30 @@
     autoclean: true
     autoremove: true
 
-- name: Create user for NFS
-  user:
-    uid: 2000
-    gid: 2000
+# TODO make this zpool-specific
+- name: Set NFS user/group facts
+  ansible.builtin.set_fact:
+    nfs_user_id: 2000
+    nfs_group_id: 2000
+
+- name: Create group for NFS
+  ansible.builtin.group:
     name: nfs_anon
+    gid: "{{ nfs_group_id }}"
+
+- name: Create user for NFS
+  ansible.builtin.user:
+    name: nfs_anon
+    uid: "{{ nfs_user_id }}"
 
 - name: Check if the pool already exists
   ansible.builtin.command: "zpool list {{ pool_name }}"
   ignore_errors: true
+  changed_when: false
   register: zpool_list
 
 - name: Create the mount folder
-  file:
+  ansible.builtin.file:
     path: "/mnt/{{ pool_name }}"
     state: directory
   when: zpool_list.rc != 0
@@ -33,24 +44,38 @@
     grep 'pool:' |
     cut -d':' -f2 |
     tr -d ' '
+  changed_when: false
   register: zpool_import_pools
   when: zpool_list.rc != 0
 
 - name: Import the pool
-  ansible.builtin.include_tasks: import.yaml
+  ansible.builtin.include_tasks: zpool import -f "{{ pool_name }}"
   when: >-
-    zpool_list.rc != 0 &&
+    zpool_list.rc != 0 and
     pool_name in zpool_import_pools.stdout 
 
 - name: Create the pool
-  ansible.builtin.include_tasks: create.yaml
+  ansible.builtin.command: >-
+    zpool create
+    -o ashift=12
+    -O acltype=posixacl
+    -O compression=lz4
+    -O dnodesize=auto
+    -O relatime=off
+    -O atime=off
+    -O xattr=sa
+    -O mountpoint=/mnt/{{ pool_name }}
+    {{ pool_name }}
+    raidz2
+    {{ drive_wwns | map("regex_replace", "^(.*)$", "dm-uuid-mpath-3\1") | join(" ") }}
   when: >-
-    zpool_list.rc != 0 &&
+    zpool_list.rc != 0 and
     pool_name not in zpool_import_pools.stdout 
 
 - name: Check if pool already has a SLOG
   ansible.builtin.shell: zpool status "{{ pool_name }}" | grep log
   ignore_errors: true
+  changed_when: false
   register: slog_status
   when: drive_wwns | length > 0
 
@@ -60,5 +85,5 @@
     "{{ pool_name }}"
     log
     mirror
-    {{ drive_wwns | map("printf", "dm-uuid-mpath-3%s") | join " " }}
-  when: drive_wwns | length > 0 and slog_status.rc != 0
+    {{ slog_euis | map("regex_replace", "^(.*)$", "nvme-eui.\1") | join(" ") }}
+  when: slog_euis | length > 0 and slog_status.rc != 0

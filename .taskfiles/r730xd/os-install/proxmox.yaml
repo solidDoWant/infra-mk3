@@ -151,3 +151,4 @@ tasks:
     dir: "{{ .ROOT_DIR }}/ansible"
     cmds:
       - ansible-playbook ./remote/servers/r730xd/proxmox/setup.yaml
+      - ansible-playbook ./remote/routers/opnsense/setup.yaml

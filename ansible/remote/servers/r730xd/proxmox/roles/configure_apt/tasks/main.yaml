@@ -1,7 +1,7 @@
 ---
 - name: Disable APT recommends and suggestions
   ansible.builtin.blockinfile:
-    path: /etc/apt/apt.conf.d/02norecommends
+    path: "{{ apt_config_dir }}/02-norecommends"
     mode: 0644
     create: true
     block: |
@@ -20,9 +20,9 @@
         update_cache: false
     - name: Add the no subscription repository
       ansible.builtin.apt_repository:
-        repo: "deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-no-subscription"
+        repo: "deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} {{ proxmox_repo_component }}"
         state: present
-        filename: pve-no-subscription
+        filename: "{{ proxmox_repo_component }}"
         update_cache: false
     - name: Remove enterprise Ceph repository
       ansible.builtin.file:
@@ -41,7 +41,7 @@
         autoremove: true
     - name: Configure unattended upgrades
       ansible.builtin.blockinfile:
-        path: /etc/apt/apt.conf.d/52-auto-upgrades
+        path: "{{ apt_config_dir }}/52-auto-upgrades"
         mode: 0644
         create: true
         block: |
@@ -53,7 +53,7 @@
           Unattended-Upgrade::Remove-Unused-Dependencies "true";
           Unattended-Upgrade::Origins-Pattern {
               origin=Debian;
-              origin=Proxmox,component=pve-no-subscription;
+              origin=Proxmox,component={{ proxmox_repo_component }};
           };
       register: unattended_upgrades_changes
     - name: Restart unattended-upgrades service

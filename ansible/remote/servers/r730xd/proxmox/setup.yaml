@@ -21,163 +21,168 @@
             ansible.builtin.combine(device_specific_facts, recursive=true)
           }}
 
-# - name: Configure SSH
-#   hosts: r730xd:&proxmox
-#   gather_facts: false
+- name: Configure SSH
+  hosts: r730xd:&proxmox
+  gather_facts: false
 
-#   vars:
-#     ssh_public_key_path: ~/.ssh/id_rsa.pub
+  vars:
+    ssh_public_key_path: ~/.ssh/id_rsa.pub
 
-#   roles:
-#     - role: configure_ssh
+  roles:
+    - role: configure_ssh
 
-- hosts: r730xd:&proxmox
+- name: Pre-Internet access tasks
+  hosts: r730xd:&proxmox
 
   tasks:
-    # - name: Update the user's password
-    #   ansible.builtin.user:
-    #     name: "{{ ansible_user }}"
-    #     password: "{{ root_password | password_hash }}"
+    - name: Update the user's password
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        password: "{{ root_password | password_hash }}"
 
-    # - name: Update the hostname
-    #   vars:
-    #     fqdn: "{{ hostname }}.{{ local_domain_name }}"
-    #   block:
-    #     - name: Update the hostname file
-    #       ansible.builtin.lineinfile:
-    #         path: /etc/hostname
-    #         regexp: ^.*$
-    #         line: "{{ hostname }}"
-    #     - name: Update the hosts file
-    #       ansible.builtin.lineinfile:
-    #         path: /etc/hosts
-    #         regex: '^(.*) replaceme-hostname\.local .*$'
-    #         line: >-
-    #           \1 {{ fqdn }} {{ hostname }}
-    #         backrefs: true
-    #     - name: Update the postfix file
-    #       ansible.builtin.lineinfile:
-    #         path: /etc/postfix/main.cf
-    #         regex: '^(myhostname=)replaceme-hostname\.local$'
-    #         line: '\1{{ fqdn }}'
-    #         backrefs: true
+    - name: Update the hostname
+      vars:
+        fqdn: "{{ hostname }}.{{ local_domain_name }}"
+      block:
+        - name: Update the hostname file
+          ansible.builtin.lineinfile:
+            path: /etc/hostname
+            regexp: ^.*$
+            line: "{{ hostname }}"
+          register: hostname_file
+        - name: Update the hosts file
+          ansible.builtin.lineinfile:
+            path: /etc/hosts
+            regex: '^(.*) replaceme-hostname\.local .*$'
+            line: >-
+              \1 {{ fqdn }} {{ hostname }}
+            backrefs: true
+          register: hosts_file
+        - name: Update the postfix file
+          ansible.builtin.lineinfile:
+            path: /etc/postfix/main.cf
+            regex: '^(myhostname=)replaceme-hostname\.local$'
+            line: '\1{{ fqdn }}'
+            backrefs: true
+          register: postfix_file
 
-    # - name: Set timezone
-    #   block:
-    #     - name: Update the timezone 
-    #       community.general.timezone:
-    #         name: "{{ timezone }}"
-    #       register: timezone
-    #     - name: Reconfigure tzdata
-    #       ansible.builtin.command: dpkg-reconfigure -f noninteractive tzdata
-    #       when: timezone.changed
+    - name: Set timezone
+      block:
+        - name: Update the timezone 
+          community.general.timezone:
+            name: "{{ timezone }}"
+          register: timezone
+        - name: Reconfigure tzdata
+          ansible.builtin.command: dpkg-reconfigure -f noninteractive tzdata
+          when: timezone.changed
 
-    # - name: Update email address
-    #   ansible.builtin.lineinfile:
-    #     path: /etc/pve/user.cfg
-    #     regexp: ^(.*)replace@me\.local(.*)$
-    #     line: '\1{{ root_email }}\2'
-    #     backrefs: true
+    - name: Update email address
+      ansible.builtin.lineinfile:
+        path: /etc/pve/user.cfg
+        regexp: ^(.*)replace@me\.local(.*)$
+        line: '\1{{ root_email }}\2'
+        backrefs: true
 
-    # - name: Update boot options
-    #   block:
-    #     - name: Get a list of current boot options
-    #       ansible.builtin.command: efibootmgr
-    #       register: efibootmgr
-    #     - debug:
-    #         var: efibootmgr
-    #     - name: Register boot options fact
-    #       ansible.builtin.set_fact:
-    #         efi_boot_options:
-    #           current_option: "{{ efibootmgr.stdout_lines[0] | split(': ') | last }}"
-    #           order: >-
-    #             {{
-    #               efibootmgr.stdout_lines[1] |
-    #               split(': ') |
-    #               last |
-    #               split(',') |
-    #               list
-    #             }}
-    #           options: "{{ options_yaml | from_yaml }}"
-    #           options_to_remove: >-
-    #             {{
-    #               (
-    #                 options_yaml |
-    #                 from_yaml |
-    #                 dict2items |
-    #                 selectattr("value.should_remove") |
-    #                 items2dict
-    #               ).keys()
-    #             }}
-    #       vars:
-    #         options_yaml: >-
-    #           {%- for boot_option in efibootmgr.stdout_lines[2:] %}
-    #           {%- set left, description = boot_option.split(" ", 1) %}
-    #           {%- set name = left.rstrip("*").lstrip("Boot") %}
-    #           {{- "'%s'" | format(name) }}:
-    #             description: >-
-    #               {{ description }}
-    #             should_remove: {{ "USB" not in description and "SD" not in description | to_yaml }} # TODO Verify this
-    #           {% endfor %}
-    #     - name: Remove non-USB or SD card options
-    #       ansible.builtin.command: efibootmgr --bootnum {{ item }} --delete-bootnum
-    #       loop: "{{ efi_boot_options.options_to_remove }}"
-    #     - name: Set boot order
-    #       ansible.builtin.command: efibootmgr --bootorder {{ new_boot_order | join (",") }}
-    #       vars:
-    #         current_option:
-    #           - "{{ efi_boot_options.current_option }}"
-    #         # Set the new boot order to put the current item last, without removed entries
-    #         new_boot_order: >-
-    #           {{
-    #             (
-    #               efi_boot_options.options.keys() |
-    #               difference(current_option + efi_boot_options.options_to_remove)
-    #             ) +
-    #             current_option
-    #           }}
-    #       when: efi_boot_options.order | difference(new_boot_order) | length != 0
+    - name: Update boot options
+      block:
+        - name: Get a list of current boot options
+          ansible.builtin.command: efibootmgr
+          register: efibootmgr
+        - debug:
+            var: efibootmgr
+        - name: Register boot options fact
+          ansible.builtin.set_fact:
+            efi_boot_options:
+              current_option: "{{ efibootmgr.stdout_lines[0] | split(': ') | last }}"
+              order: >-
+                {{
+                  efibootmgr.stdout_lines[1] |
+                  split(': ') |
+                  last |
+                  split(',') |
+                  list
+                }}
+              options: "{{ options_yaml | from_yaml }}"
+              options_to_remove: >-
+                {{
+                  (
+                    options_yaml |
+                    from_yaml |
+                    dict2items |
+                    selectattr("value.should_remove") |
+                    items2dict
+                  ).keys()
+                }}
+          vars:
+            options_yaml: >-
+              {%- for boot_option in efibootmgr.stdout_lines[2:] %}
+              {%- set left, description = boot_option.split(" ", 1) %}
+              {%- set name = left.rstrip("*").lstrip("Boot") %}
+              {{- "'%s'" | format(name) }}:
+                description: >-
+                  {{ description }}
+                should_remove: {{ "USB" not in description | to_yaml }}
+              {% endfor %}
+        - name: Remove non-USB options
+          ansible.builtin.command: efibootmgr --bootnum {{ item }} --delete-bootnum
+          loop: "{{ efi_boot_options.options_to_remove }}"
+        - name: Set boot order
+          ansible.builtin.command: efibootmgr --bootorder {{ new_boot_order | join (",") }}
+          vars:
+            current_option:
+              - "{{ efi_boot_options.current_option }}"
+            # Set the new boot order to put the current item last, without removed entries
+            new_boot_order: >-
+              {{
+                (
+                  efi_boot_options.options.keys() |
+                  difference(current_option + efi_boot_options.options_to_remove)
+                ) +
+                current_option
+              }}
+          when: efi_boot_options.order | difference(new_boot_order) | length != 0
 
-    # - name: Limit web interface access
-    #   block:
-    #     - name: Update the proxy file
-    #       ansible.builtin.blockinfile:
-    #         path: "/etc/default/pveproxy"
-    #         mode: u=rw,g=r,o=r
-    #         block: |
-    #           ALLOW_FROM="10.0.0.0/8"
-    #           DENY_FROM="all"
-    #           POLICY="allow"
-    #         create: true
-    #       register: pveproxy_file
-    #     - name: Restart the dependent services services
-    #       ansible.builtin.service:
-    #         name: "{{ item }}.service"
-    #         daemon_reload: true
-    #         state: restarted
-    #       when: pveproxy_file.changed
-    #       loop:
-    #         - pveproxy
-    #         - spiceproxy
+    - name: Limit web interface access
+      block:
+        - name: Update the proxy file
+          ansible.builtin.blockinfile:
+            path: "/etc/default/pveproxy"
+            mode: u=rw,g=r,o=r
+            block: |
+              ALLOW_FROM="10.0.0.0/8"
+              DENY_FROM="all"
+              POLICY="allow"
+            create: true
+          register: pveproxy_file
 
-    # # Needed for snippets storage
-    # - name: Configure Proxmox storage
-    #   ansible.builtin.copy:
-    #     # Note: these are tabs, not spaces
-    #     content: |
-    #       dir: local
-    #       	path /var/lib/vz
-    #       	content iso,vztmpl,backup,snippets
+    # Needed for snippets storage
+    - name: Configure Proxmox storage
+      ansible.builtin.copy:
+        # Note: these are tabs, not spaces
+        content: |
+          dir: local
+          	path /var/lib/vz
+          	content iso,vztmpl,backup,snippets
 
-    #       zfspool: local-zfs
-    #       	pool rpool/data
-    #       	sparse
-    #       	content images,rootdir
-    #     dest: /etc/pve/storage.cfg
-    #     owner: root
-    #     group: www-data
-    #     mode: 0640
+          zfspool: local-zfs
+          	pool rpool/data
+          	sparse
+          	content images,rootdir
+        dest: /etc/pve/storage.cfg
+        owner: root
+        group: www-data
+        mode: 0640
+    - name: Reboot
+      ansible.builtin.reboot:
+      when: >-
+        hostname_file.changed or
+        hosts_file.changed or
+        postfix_file.changed or
+        pveproxy_file.changed
 
+- name: Router VM setup
+  hosts: r730xd:&proxmox
+  tasks:
     - name: Deploy OPNSense
       vars:
         vm_domain_name: "{{ local_domain_name }}"
@@ -210,68 +215,80 @@
         vm_bridges: "{{ interface_yaml | from_yaml }}"
       ansible.builtin.include_role:
         name: deploy_opnsense
+    - name: Reboot
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ 30 * 60 }}" # 30m
+      when: did_deploy_opnsense_vms
 
-    # - name: Update APT configuration
-    #   ansible.builtin.include_role:
-    #     name: configure_apt
+- name: Post-Internet access tasks
+  hosts: r730xd:&proxmox
+  tasks:
+    - name: Update APT configuration
+      ansible.builtin.include_role:
+        name: configure_apt
 
-    # - name: Install utilities
-    #   ansible.builtin.apt:
-    #     name:
-    #       - curl
-    #       - htop
-    #       - net-tools
-    #       - tree
-    #     state: latest
-    #     update_cache: true
-    #     cache_valid_time: 600
-    #     autoclean: true
-    #     autoremove: true
+    - name: Install utilities
+      ansible.builtin.apt:
+        name:
+          - curl
+          - htop
+          - net-tools
+          - tree
+          - dhcpdump
+        state: latest
+        update_cache: true
+        cache_valid_time: 600
+        autoclean: true
+        autoremove: true
 
-    # - name: Setup multipathd
-    #   ansible.builtin.include_role:
-    #     name: setup_multipathd
-    #   vars:
-    #     drive_wwns: "{{ bulk_pool_drive_wwns }}"
+    - name: Setup multipathd
+      ansible.builtin.include_role:
+        name:  setup_multipathd 
+      vars:
+        drive_wwns: "{{ bulk_pool_drive_wwns }}"
 
-    # - name: Configure ZFS bulk-pool-01
-    #   ansible.builtin.include_role:
-    #     name: configure_zpool
-    #   vars:
-    #     pool_name: &pool bulk-pool-01
-    #     drive_wwns: "{{ bulk_pool_drive_wwns }}"
+    - name: Configure ZFS bulk-pool-01
+      ansible.builtin.include_role:
+        name: configure_zpool
+      vars:
+        pool_name: &pool bulk-pool-01
+        drive_wwns: "{{ bulk_pool.drive_wwns }}"
+        slog_euis: "{{ bulk_pool.slog_euis }}"
 
-    # - name: Deploy datasets
-    #   ansible.builtin.include_role:
-    #     name: configure_zfs_dataset
-    #   vars:
-    #     pool_name: *pool
-    #     dataset_name: "{{ item.name }}"
-    #     share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
-    #   loop:
-    #     - name: media
-    #       share_with_nfs: true
-    #     - name: k8s
-    #     - name: k8s/democratic-csi
-    #     - name: k8s/democratic-csi/pvcs
-    #     - name: k8s/democratic-csi/snapshots
+    - name: Deploy datasets
+      ansible.builtin.include_role:
+        name: configure_zfs_dataset
+      vars:
+        pool_name: *pool
+        dataset_name: "{{ item.name }}"
+        share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
+      loop:
+        - name: media
+          share_with_nfs: true
+        - name: k8s
+        - name: k8s/democratic-csi
+        - name: k8s/democratic-csi/pvcs
+        - name: k8s/democratic-csi/snapshots
 
-    # - name: Remove subscription nag
-    #   ansible.builtin.replace:
-    #     path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
-    #     regexp: "res === null \\|\\| res === undefined \\|\\| \\!res \\|\\| res\\n\\t\\t\\t.data.status.toLowerCase\\(\\) \\!== 'active'"
-    #     replace: "false"
-    #     backup: yes
+    - name: Remove subscription nag
+      ansible.builtin.replace:
+        path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+        regexp: "res === null \\|\\| res === undefined \\|\\| \\!res \\|\\| res\\n\\t\\t\\t.data.status.toLowerCase\\(\\) \\!== 'active'"
+        replace: "false"
+        backup: yes
+      register: web_js
+    - name: Restart the web GUI service
+      ansible.builtin.service:
+        name: pveproxy
+        state: restarted
+      when: web_js.changed
 
-    # - name: Install fast-reboot script
-    #   ansible.builtin.include_role:
-    #     name: install_fast_reboot
-
-    # # TODO opnsense vm deployments
+    - name: Install fast-reboot script
+      ansible.builtin.include_role:
+        name: install_fast_reboot
 
     # # TODO setup democratic-csi access or TLS SSH auth + JIT service access
 
     # # TODO setup mail daemon once relay is setup
 
     # # TODO setup node exporter once monitoring stack is deployed
-

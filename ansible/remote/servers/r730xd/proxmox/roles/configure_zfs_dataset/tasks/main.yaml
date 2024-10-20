@@ -2,6 +2,7 @@
 - name: Check if the dataset already exists
   command: zfs list {{ pool_name }}/{{ dataset_name }}
   ignore_errors: true
+  changed_when: false
   register: zfs_list
 
 - name: Create the dataset
@@ -9,7 +10,7 @@
     zfs create
     {{ pool_name }}/{{ dataset_name }}
     {%- if share_with_nfs %}
-    -o sharenfs='all_squash,anonuid=2000,anongid=2000,{{ nfs_subnets | map("printf", "rw=@%s") | join "," }}'
-    {%- end %}
-    {{ "-o sync=disabled" if force_sync_writes }}
+    -o sharenfs='all_squash,anonuid={{ nfs_user_id }},anongid={{ nfs_group_id }},{{ nfs_subnets | map("regex_replace", "^(.*)$", "rw=@\1") | join(",") }}'
+    {%- endif %}
+    {{ force_sync_writes | ternary("-o sync=disabled", "") }}
   when: zfs_list.rc != 0

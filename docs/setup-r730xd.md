@@ -76,3 +76,19 @@ To setup the bootloader:
 7. Boot the server.
 8. When prompted, press `y` during boot to rebuild the mirror array from `SD1`.
 9. The server will now automatically boot Proxmox.
+
+# OS and VM setup
+
+After the OS and bootloader disk are installed, Proxmox needs to be configured. To configure Proxmox and deploy VMs:
+1. Connect the XGS-PON transceiver to the ISP's ODN.
+2. Connect your local computer to the Hosts VLAN.
+3. Run `task r730xd:os-install:proxmox:full-configuration`.
+4. Log into each of the OPNsense VMs and install the `os-qemu-guest-agent` plugin.
+
+This will:
+* Update the root user password and configure SSH access
+* Remove extra UEFI boot options
+* Update the OS
+* Setup and configure a bulk storage zpool
+* Deploy a pair of OPNsense router VMs with CARP for routing failover
+* Setup DHCP, DNS, and firewall rules

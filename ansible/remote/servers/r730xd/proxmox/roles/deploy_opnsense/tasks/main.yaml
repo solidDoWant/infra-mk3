@@ -7,6 +7,7 @@
       delegate_to: localhost
       ansible.builtin.command: "{{ ping_cmd }}"
       ignore_errors: true
+      changed_when: false
       register: local_ping
     
     - name: Check if Internet is remotely reachable
@@ -66,8 +67,7 @@
     cores: "{{ vm_core_count }}"
     disk_size: "{{ vm_disk_size }}"
     os_type: other
-    iso_name: opnsense-24.7.iso
-    # iso_name: *iso_name
+    iso_name: *iso_name
     extra_args: >-
       {% for name, info in vm_bridges.items() %}
       {% set mac = info.mac if info.mac is defined else "C6:3A:8F:00:{:02X}:{:02X}".format(ansible_loop.index, loop.index0) %}
@@ -78,12 +78,14 @@
     configure_sendkey_commands: "{{ opnsense_configure_sendkey_commands }}"
     sendkey_vars:
       routernumber: "{{ ansible_loop.index | string }}"
+    var_name: "{{ ansible_loop.index }}"
   ansible.builtin.include_role:
     name: deploy_vm
   loop: &router_loop "{{ query('sequence', 'start=1 end=%d' | format(vm_count) ) }}"
   loop_control:
     extended: true
-  
+  register: vms
+
 - name: Verify that the routers can be reached
   ansible.builtin.command: ping -c 1 -n -w 1 10.2.0.{{ ansible_loop.index }}
   changed_when: false
@@ -91,61 +93,57 @@
   loop_control:
     extended: true
 
-# The community XML module requires lxml which opnsense doesn't have installed
-# bye default.
-- name: Deploy the VLAN gateway VIP
-  delegate_to: "{{ firewall }}"
-  vars: &xml_vars
-    firewall: 10.2.0.1
-    ansible_user: root
-    ansible_password: opnsense
-    xml_config_path: /conf/config.xml
-  ansible.builtin.replace:
-    path: "{{ xml_config_path }}"
-    regexp: <vip\/>
-    replace: |-
-      <vip uuid="{{ 99999999 | random | to_uuid }}">
-            <interface>lan</interface>
-            <mode>carp</mode>
-            <subnet>10.2.0.254</subnet>
-            <subnet_bits>16</subnet_bits>
-            <gateway/>
-            <noexpand>0</noexpand>
-            <nobind>0</nobind>
-            <password/>
-            <vhid>200</vhid>
-            <advbase>1</advbase>
-            <advskew>0</advskew>
-            <peer/>
-            <peer6/>
-            <descr>Bootstrap VLAN 200 gateway IP</descr>
-          </vip>
+- name: Do initial configuration of the VM
+  block:
+    - name: Update local known_hosts with firewall public key
+      delegate_to: localhost
+      ansible.builtin.shell: >-
+        ssh-keyscan 10.2.0.1
+        >> ~/.ssh/known_hosts
 
-- name: Enable SSH (persist)
-  delegate_to: "{{ firewall }}"
-  vars: *xml_vars
-  ansible.builtin.replace:
-    path: "{{ xml_config_path }}"
-    regexp: <\/ssh>
-    replace: |2-
-        <noauto>1</noauto>
-            <interfaces>lan</interfaces>
-            <kex/>
-            <ciphers/>
-            <macs/>
-            <keys/>
-            <enabled>enabled</enabled>
-            <passwordauth>1</passwordauth>
-            <permitrootlogin>1</permitrootlogin>
-          </ssh>
+    # The community XML module requires lxml which opnsense doesn't have installed
+    # by default. Use a regexp to match the closing tag and replace it instead.
+    - name: Deploy the VLAN gateway VIP
+      delegate_to: "{{ firewall }}"
+      vars: &xml_vars
+        firewall: 10.2.0.1
+        ansible_user: root
+        ansible_password: opnsense
+        xml_config_path: /conf/config.xml
+      ansible.builtin.replace:
+        path: "{{ xml_config_path }}"
+        regexp: <vip\/>
+        replace: |-
+          <vip uuid="{{ 99999999 | random | to_uuid }}">
+                <interface>lan</interface>
+                <mode>carp</mode>
+                <subnet>10.2.0.254</subnet>
+                <subnet_bits>16</subnet_bits>
+                <gateway/>
+                <noexpand>0</noexpand>
+                <nobind>0</nobind>
+                <password/>
+                <vhid>200</vhid>
+                <advbase>1</advbase>
+                <advskew>0</advskew>
+                <peer/>
+                <peer6/>
+                <descr>Bootstrap VLAN 200 gateway IP</descr>
+              </vip>
 
-- name: Reload the config
-  delegate_to: "{{ firewall }}"
-  vars: *xml_vars
-  ansible.builtin.shell: |-
-    configctl filter sync
-    configctl service reload all
-    configctl webgui restart
+    - name: Reload the config
+      delegate_to: "{{ firewall }}"
+      vars: *xml_vars
+      ansible.builtin.shell: |-
+        configctl filter sync
+        configctl service reload all
+        configctl webgui restart
 
-- name: Verify that the internet can be reached
-  ansible.builtin.command: ping -c 1 -n -w 1 1.1.1.1
+    - name: Verify that the internet can be reached
+      ansible.builtin.command: ping -c 1 -n -w 1 1.1.1.1
+
+  when: did_deploy_vm_1
+
+- name: Register deployment results
+  ansible.builtin.set_fact:
+    did_deploy_opnsense_vms: "{{ did_deploy_vm_1 or did_deploy_vm_2 }}"

@@ -2,15 +2,19 @@ switches:
   children:
     sx6036:
       hosts:
-        10.1.0.1:
+        10.254.0.128: # Local management interface version of 10.1.0.128
           hostname: switch-01
+          # TODO move this to network.yaml
+          inband_mgmt_ip: 10.1.0.128
+          inband_mgmt_subnet: 16
+          inband_mgmt_gateway: 10.1.0.254
       vars:
         ansible_user: admin
         # This won't be used after the SSH key is uploaded - only for bootstraping.
         ansible_password: admin
     icx7250:
       hosts:
-        10.254.0.2: # Local management interface version of 10.1.0.2
+        10.254.0.129: # Local management interface version of 10.1.0.129
           hostname: switch-02
       vars:
         ansible_user: super
@@ -37,15 +41,19 @@ servers:
           hosts:
             10.2.2.1:
               hostname: proxmox-vm-host-01
-              bulk_pool_drive_wwns:
-                - 35000039a48092cc1
-                - 35000039a8859fc21
-                - 35000039aa82b3c9d
-                - 35000039a48090cf9
-                - 35000039aa82b269d
-                - 35000039ac819d76d
-                - 35000039ac819d789
-                - 35000039ac81a7285
+              bulk_pool:
+                drive_wwns:
+                  - 5000039a48092cc1
+                  - 5000039a8859fc21
+                  - 5000039aa82b3c9d
+                  - 5000039a48090cf9
+                  - 5000039aa82b269d
+                  - 5000039ac819d76d
+                  - 5000039ac819d789
+                  - 5000039ac81a7285
+                slog_euis:
+                  - 5cd2e4eef5180100
+                  - 5cd2e4a36c7d0100
           vars:
             ansible_user: root
             # This won't be used after the SSH key is uploaded - only for bootstraping.
@@ -57,11 +65,11 @@ routers:
     opnsense:
       children:
         primary:
-          host:
+          hosts:
             10.2.0.1:
               hostname: router-01
         secondary:
-          host:
+          hosts:
             10.2.0.2:
               hostname: router-02
       vars:

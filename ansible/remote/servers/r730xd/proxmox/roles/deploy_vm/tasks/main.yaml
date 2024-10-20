@@ -2,6 +2,7 @@
 - name: Get a list of current VMs
   ansible.builtin.command: >-
     pvesh get /nodes/{{ ansible_hostname }}/qemu -o json
+  changed_when: false
   register: vm_list
 
 - name: Check if VM already exists
@@ -96,5 +97,9 @@
     
     - name: Un-define 'id' fact
       ansible.builtin.set_fact:
-        id: null
+        id: ""
       when: set_id_fact is defined
+
+- name: Register the deployment results
+  ansible.builtin.set_fact:
+    did_deploy_vm_{{ var_name }}: "{{ not does_vm_exist }}"

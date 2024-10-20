@@ -1,0 +1,10 @@
+---
+- name: Copy the config file to the remote host
+  ansible.builtin.copy:
+    src: "{{ local_config_path }}"
+    dest: "{{ remote_config_path }}"
+
+- name: Reload the config file and services
+  ansible.builtin.shell: |
+    configctl filter sync
+    configctl service reload all

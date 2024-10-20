@@ -1,0 +1,1034 @@
+---
+# This was a PITA to get working. It needs a lot of cleanup and refactoring,
+# some other time.
+- name: Load network information
+  hosts: routers:&opnsense
+  gather_facts: false
+
+  tasks:
+    - name: Load network.yaml
+      ansible.builtin.include_vars:
+        file: ../../../../docs/network.yaml
+    - name: Set network facts
+      vars:
+        device_specific_facts: >-
+          {{
+            devices[hostname | default("")] |
+            default({})
+          }}
+        peer_inventory_hostname: >-
+          {{
+            ('primary' in group_names) |
+            ternary(groups.secondary, groups.primary) |
+            first
+          }}
+        peer_hostname: >-
+          {{
+            hostvars[peer_inventory_hostname]["hostname"] |
+            default("")
+          }}
+        peer_facts: "{{ devices[peer_hostname] | default({}) }}"
+        ip_regex: >-
+          ^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$
+        peer_ips_yaml: |
+          {% for interface, info in peer_facts.physical.items() %}
+          {% if info.ip_address | regex_search(ip_regex) %}
+          {{ interface }}: {{ info.ip_address }}
+          {% endif %}
+          {% endfor %}
+      ansible.builtin.set_fact:
+        network: >-
+          {{
+            common |
+            ansible.builtin.combine(device_specific_facts, recursive=true)
+          }}
+        is_primary: "{{ 'primary' in group_names }}"
+        peer_ips: "{{ peer_ips_yaml | from_yaml }}"
+
+- name: Trust the public key
+  hosts: routers:&opnsense
+  gather_facts: false
+
+  tasks:
+    - name: Check if the key has already been loaded
+      delegate_to: localhost
+      ansible.builtin.command: ssh-keygen -F {{ inventory_hostname }}
+      changed_when: false
+      register: public_key_check
+      ignore_errors: true
+    - name: Trust the public key
+      delegate_to: localhost
+      ansible.builtin.shell: >-
+        ssh-keyscan {{ inventory_hostname }}
+        >> ~/.ssh/known_hosts
+      when: public_key_check.rc != 0
+
+- name: Upload SSH public key
+  hosts: routers:&opnsense
+
+  vars:
+    ssh_public_key_path: ~/.ssh/id_rsa.pub
+
+  tasks:
+    - name: Upload SSH public key
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', ssh_public_key_path) }}"
+
+- name: Update config
+  hosts: routers:&opnsense
+
+  module_defaults:
+    community.general.xml:
+      pretty_print: true
+
+  vars:
+    user_xpath: //opnsense/system/user[name="{{ ansible_user }}"]
+    ssh_public_key_path: ~/.ssh/id_rsa.pub
+
+  tasks:
+    - name: Copy the config file to the local host
+      ansible.builtin.import_role:
+        name: copy_config_local
+
+    # TODO unbound forwarding to coredns
+    # TODO bgp
+
+    - name: Configure system settings
+      delegate_to: localhost
+      vars:
+        system_xpath: //opnsense/system
+      block:
+        - name: Don't trigger initial wizard
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: //opnsense/trigger_initial_wizard
+            state: absent
+        - name: Set hostname
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/hostname"
+            value: "{{ hostname }}"
+        - name: Set domain name
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/domain"
+            value: "{{ local_domain_name }}"
+        - name: Set timezone
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/timezone"
+            value: "{{ timezone }}"
+        - name: Disable DNS setting override from WAN DHCP
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/dnsallowoverride"
+            state: absent
+        - name: Prefer IPv4 over IPv6
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/prefer_ipv4"
+            value: "1"
+        - name: Allow switching between default gateways
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/gw_switch_default"
+            value: "1"
+        - name: Disable IPv6
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/ipv6allow"
+            state: absent
+        - name: Enable SSH (persist)
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ system_xpath }}/ssh"
+            set_children:
+              - interface: lan
+              - enabled: enabled
+              - passwordauth: "1"
+              - permitrootlogin: "1"
+              - group: admins
+
+    # Not currently needed
+    # - name: Add API credentials
+    #   delegate_to: localhost
+    #   block:            
+    #   - name: Set the API key and secret paths
+    #     ansible.builtin.set_fact:
+    #       api_key: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
+    #       api_secret: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
+    #     # no_log: true
+    #   - name: Check if any API keys already exist
+    #     community.general.xml:
+    #       path: "{{ local_config_path }}"
+    #       xpath: "{{ user_xpath }}/apikeys/item"
+    #       count: true
+    #     ignore_errors: true
+    #     register: current_api_credentials
+    #   # This logic adds a new key without overwriting existing ones
+    #   - name: Add the API credentials
+    #     vars:
+    #       should_insert: "{{ current_api_credentials.count > 0 }}"
+    #       insert_children:
+    #         - item:
+    #             _:
+    #               - key: "{{ api_key }}"
+    #               - secret: "{{ api_secret | password_hash }}"
+    #       no_keys_children:
+    #         - apikeys:
+    #             _: "{{ insert_children }}"
+    #     community.general.xml:
+    #       path: "{{ local_config_path }}"
+    #       xpath: >-
+    #         {{ user_xpath }}{{ should_insert | ternary("/apikeys/item", "") }}
+    #       insertafter: "{{ should_insert }}"
+    #       add_children: "{{ should_insert | ternary(insert_children, no_keys_children) }}"
+    
+    - name: Update the user's SSH keys
+      delegate_to: localhost
+      vars:
+        key_contents: "{{ lookup('file', ssh_public_key_path) | trim }}"
+        keys_path: "{{ user_xpath }}/authorizedkeys"
+      block:
+        - name: Get the (encoded) authorized keys
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ keys_path }}"
+            content: text
+          ignore_errors: true
+          register: key_entries
+        - name: Add the public key
+          vars:
+            current_keys: "{{ key_entries.matches[0].authorizedkeys | default('') | b64decode }}"
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ keys_path }}"
+            value: >-
+              {{
+                [ current_keys, key_contents ] |
+                select() |
+                join('\n') |
+                b64encode
+              }}
+          when: key_contents not in current_keys
+    
+    - name: Update the user's password
+      delegate_to: localhost
+      vars:
+        password_path: "{{ user_xpath }}/password"
+      block:
+        - name: Get the current password
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ password_path }}"
+            content: text
+          register: current_password_hash
+        - name: Set the password
+          vars:
+            new_password_hash: "{{ new_password | password_hash('blowfish') }}"
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "{{ password_path }}"
+            value: "{{ new_password_hash }}"
+
+    - name: Configure physical interfaces
+      delegate_to: localhost
+      vars:
+        interface:
+          enable: "{{ (item.value.enable is not defined or item.value.enable) | ternary(1, 0) }}"
+          if: "{{ item.value.physical_name }}"
+          ipaddr: "{{ item.value.ip_address }}"
+          subnet: "{{ item.value.subnet_bits | default('') }}"
+          mtu: "{{ item.value.mtu | default(1500) }}"
+          blockpriv: "{{ item.value.block_private | default(false) | ternary(1, '') }}"
+          blockbogons: "1"
+          descr: "{{ item.value.description }}"
+        children: |
+          {% for key, value in interface.items() %}
+          {% if value != "" %}
+          - {{ key }}: "{{ value }}"
+          {% endif %}
+          {% endfor %}
+      community.general.xml:
+        path: "{{ local_config_path }}"
+        xpath: //opnsense/interfaces/{{ item.key }}
+        set_children: "{{ children | from_yaml }}"
+      loop: "{{ network.physical | dict2items }}"
+
+    - name: Deploy VIPs
+      delegate_to: localhost
+      vars:
+        base_vip_path: //opnsense/virtualip
+      block:
+        - name: Deploy CARP VIPs
+          vars:
+            interfaces: "{{ network.physical | dict2items }}"
+            is_carp_interface: "{{ item.value.gateway is defined }}"
+            specific_vip_path: "{{ base_vip_path }}/vip[interface='{{ item.key }}' and mode='carp']"
+            specific_vip_children:
+              - interface: "{{ item.key }}"
+              - mode: carp
+              - subnet: "{{ item.value.gateway.address }}"
+              - subnet_bits: "{{ item.value.subnet_bits }}"
+              - gateway
+              - noexpand: "0"
+              - nobind: "0"
+              - password: "{{ vip_passwords[item.key] }}"
+              - vhid: "{{ item.value.gateway.vhid }}"
+              - advbase: "1"
+              # Secondary skew value is required by ISC DHCP
+              - advskew: "{{ is_primary | ternary(0, 25) }}"
+              - peer
+              - peer6
+              - descr: "{{ network.physical[item.key].description }} gateway"
+          block:
+            - name: Check for a CARP VIP with the same interface
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ specific_vip_path }}"
+                count: true
+              register: vip_count
+              loop: "{{ interfaces }}"
+              when: is_carp_interface
+            - name: Add the VIP
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ base_vip_path }}"
+                add_children:
+                  - vip:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _: "{{ specific_vip_children }}"
+              loop: "{{ interfaces }}"
+              loop_control:
+                extended: true
+              when: >-
+                is_carp_interface and
+                vip_count.results[ansible_loop.index0].count == 0
+            - name: Configure the VIP
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ specific_vip_path }}"
+                set_children: "{{ specific_vip_children }}"
+              loop: "{{ interfaces }}"
+              loop_control:
+                extended: true
+              when: >-
+                is_carp_interface and
+                vip_count.results[ansible_loop.index0].count != 0
+        - name: Deploy "alias" VIPs
+          vars:
+            alias_vips:
+              - interface: wan
+                ip_address: 192.168.11.{{ is_primary | ternary("2", "3") }}
+                subnet_bits: 24
+                description: XGS-PON subnet
+            specific_vip_path: "{{ base_vip_path }}/vip[interface='{{ item.interface }}' and mode='ipalias']"
+            specific_vip_children:
+              - interface: "{{ item.interface }}"
+              - mode: ipalias
+              - subnet: "{{ item.ip_address }}"
+              - subnet_bits: "{{ item.subnet_bits }}"
+              - gateway
+              - noexpand: "0"
+              - nobind: "0"
+              - password
+              - vhid
+              - advbase: "1"
+              - advskew: "0"
+              - peer
+              - peer6
+              - descr: "{{ item.description }}"
+          block:
+            - name: Check for an ipalias VIP with the same interface
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ specific_vip_path }}"
+                count: true
+              register: vip_count
+              loop: "{{ alias_vips }}"
+            - name: Add the VIP
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ base_vip_path }}"
+                add_children:
+                  - vip:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _: "{{ specific_vip_children }}"
+              loop: "{{ alias_vips }}"
+              loop_control:
+                extended: true
+              when: vip_count.results[ansible_loop.index0].count == 0
+            - name: Configure the VIP
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ specific_vip_path }}"
+                set_children: "{{ specific_vip_children }}"
+              loop: "{{ alias_vips }}"
+              loop_control:
+                extended: true
+              when: vip_count.results[ansible_loop.index0].count != 0
+    # - name: Configure HA
+    #   delegate_to: localhost
+    #   vars:
+    #     ha_xpath: //opnsense/hasync
+    #   block:
+    #     - name: Configure preempt
+    #       community.general.xml:
+    #         path: "{{ local_config_path }}"
+    #         xpath: "{{ ha_xpath }}/disablepreempt"
+    #         value: "{{ ('primary' in group_names) | ternary(0, 1) }}"
+    #     - name: Configure state syncronization
+    #       community.general.xml:
+    #         path: "{{ local_config_path }}"
+    #         xpath: "{{ ha_xpath }}/pfsyncenabled"
+    #         value: "1"
+    #     - name: Set syncronization interface
+    #       community.general.xml:
+    #         path: "{{ local_config_path }}"
+    #         xpath: "{{ ha_xpath }}/pfsyncinterface"
+    #         value: opt1
+
+    - name: Configure DHCP
+      delegate_to: localhost
+      block:
+          # OPNsense adds some entries by default. Remove them.
+        - name: Remove existing DHCP entries
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "//opnsense/dhcpd"
+            set_children: []
+        - name: Add the DHCP entries
+          vars:
+            no_domain_name_option:
+              number: "15"
+              type: string
+              value: '""'
+            dhcp_config:
+              enable: "1"
+              failover_peerip: "{{ peer_ips[item.key] }}"
+              # Make the primary handle all traffic (active/passive). Needed for DNS registration of DHCP hostnames to work.
+              failover_split: "256"
+              defaultleasetime: "{{ item.value.dhcp.default_lease_time | default(60 * 60) }}"
+              maxleasetime: "{{ item.value.dhcp.max_lease_time | default(24 * 60 * 60) }}"
+              gateway: "{{ item.value.gateway.address }}"
+              ignoreuids: "{{ item.value.dhcp.ignore_client_uids | default(false) | ternary(1, 0)  }}"
+              ddnsdomainalgorithm: hmac-md5
+              numberoptions:
+                item: >-
+                  {{
+                    (
+                      item.value.dhcp.propegate_domain_name is defined and 
+                      not item.value.dhcp.propegate_domain_name
+                    ) |
+                    ternary(no_domain_name_option, "empty")
+                  }}
+              range:
+                from: "{{ item.value.dhcp.pool.from }}"
+                to: "{{ item.value.dhcp.pool.to }}"
+              winsserver: empty
+              dnsserver: >-
+                {{
+                  (
+                    item.value.dns.override_servers |
+                    default([]) |
+                    length > 0
+                  ) |
+                  ternary(
+                    item.value.dns.override_servers,
+                    [item.value.gateway.address]
+                  )
+                }}
+              ntpserver: empty
+            children_yaml: |
+              {% macro entry(key, value) -%}
+              {% if value is mapping %}
+              - {{ key }}:
+                  _:
+              {% for subkey, subvalue in value.items() %}
+              {{ entry(subkey, subvalue) | indent(width=6,first=true) }}
+              {% endfor %}
+              {% elif value is sequence and value is not string %}
+              {% for subvalue in value %}
+              {{ entry(key, subvalue) }}
+              {% endfor %}
+              {% elif value == "empty" %}
+              - {{ key }}
+              {% elif value != "" %}
+              - {{ key }}: |-
+              {{ value | indent(first=true) }}
+              {%- endif %}
+              {%- endmacro %}
+              {{ entry(item.key, dhcp_config) }}
+          # ISC DHCP is deprecated, but Kea DHCP hasn't reached feature parity yet.
+          # I will continue to use ISC until Kea supports everything that ISC does.
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: "//opnsense/dhcpd"
+            add_children: "{{ children_yaml | from_yaml }}" 
+          loop: "{{ network.physical | dict2items }}"
+          when: item.value.dhcp is defined
+    
+    - name: Configure DNS
+      delegate_to: localhost
+      vars:
+        unbound_xpath: //opnsense/OPNsense/unboundplus
+      module_defaults:
+        community.general.xml:
+          path: "{{ local_config_path }}"
+          pretty_print: true
+      block:
+        - name: Configure general settings
+          vars:
+            general_xpath: "{{ unbound_xpath }}/general"
+          block:
+            - name: Enable statistics collection
+              community.general.xml:
+                xpath: "{{ general_xpath }}/stats"
+                value: "1"
+            - name: Set interfaces to listen on
+              vars:
+                interfaces: >-
+                  {%- for interface, info in network.physical.items() -%}
+                  {%- if not (info.dns.no_resolver_queries | default(false)) -%}
+                  {{ interface }},
+                  {%- endif -%}
+                  {%- endfor -%}
+              community.general.xml:
+                xpath: "{{ general_xpath }}/active_interface"
+                value: "{{ interfaces | trim(',') }}"
+            - name: Enable DNSSEC
+              community.general.xml:
+                xpath: "{{ general_xpath }}/dnssec"
+                value: "1"
+            - name: Disable DNS64 
+              community.general.xml:
+                xpath: "{{ general_xpath }}/dns64"
+                value: "0"
+            - name: Disable no A records
+              community.general.xml:
+                xpath: "{{ general_xpath }}/noarecords"
+                value: "0"
+            - name: Enable DHCP hostname registration 
+              community.general.xml:
+                xpath: "{{ general_xpath }}/regdhcp"
+                value: "1"
+            - name: Enable static DHCP hostname registration 
+              community.general.xml:
+                xpath: "{{ general_xpath }}/regdhcpstatic"
+                value: "1"
+            - name: Disable registering IPv6 link-local addresses
+              community.general.xml:
+                xpath: "{{ general_xpath }}/noreglladdr6"
+                value: "1"
+            - name: Disable registering system A/AAAA records
+              community.general.xml:
+                xpath: "{{ general_xpath }}/noregrecords"
+                value: "1"
+            - name: Enable TXT comment support
+              community.general.xml:
+                xpath: "{{ general_xpath }}/txtsupport"
+                value: "1"
+            - name: Enable DNS cache flush upon reload
+              community.general.xml:
+                xpath: "{{ general_xpath }}/cacheflush"
+                value: "1"
+            - name: Disable WPAD records
+              community.general.xml:
+                xpath: "{{ general_xpath }}/enable_wpad"
+                value: "0"
+        - name: Configure advanced settings
+          vars:
+            advanced_xpath: "{{ unbound_xpath }}/advanced"
+          block:
+            - name: Hide server identity from queries
+              community.general.xml:
+                xpath: "{{ advanced_xpath }}/hideidentity"
+                value: "1"
+            - name: Hide server version from queries
+              community.general.xml:
+                xpath: "{{ advanced_xpath }}/hideversion"
+                value: "1"
+            - name: Enable prefetching records
+              community.general.xml:
+                xpath: "{{ advanced_xpath }}/prefetch"
+                value: "1"
+            - name: Enable prefetching DNSKEY records
+              community.general.xml:
+                xpath: "{{ advanced_xpath }}/prefetchkey"
+                value: "1"
+            - name: Require validated DNSSEC data for trust-anchored zones
+              community.general.xml:
+                xpath: "{{ advanced_xpath }}/dnssecstripped"
+                value: "1"
+            - name: Disable serving expired DNS records
+              community.general.xml:
+                xpath: "{{ advanced_xpath }}/serveexpired"
+                value: "0"
+            - name: Allow domains to serve records with private addresses
+              community.general.xml:
+                xpath: "{{ advanced_xpath }}/privatedomain"
+                value: >-
+                  {{
+                    (
+                      private_domain_names +
+                      [local_domain_name]
+                    ) |
+                    join(',')
+                  }}
+        - name: Configure DNS blocklists
+          vars:
+            blocklist_xpath: "{{ unbound_xpath }}/dnsbl"
+            blocklists:
+              - oisd1  # General
+              - blt   # Chinese spyware
+          block:
+            - name: Enable DNS blocklists
+              community.general.xml:
+                xpath: "{{ blocklist_xpath }}/enabled"
+                value: "1"
+            - name: Disable required safesearch
+              community.general.xml:
+                xpath: "{{ blocklist_xpath }}/safesearch"
+                value: "0"
+            - name: Add blocklists
+              community.general.xml:
+                xpath: "{{ blocklist_xpath }}/type"
+                value: "{{ blocklists | join(',') }}"
+            - name: Configure blocked domains to use nxdomain responses
+              community.general.xml:
+                xpath: "{{ blocklist_xpath }}/nxdomain"
+                value: "1"
+        - name: Configure DNS over TLS forwarding
+          vars:
+            server: 9.9.9.9
+            port: 853
+            cert_cn: dns.quad9.net
+          community.general.xml:
+            xpath: "{{ unbound_xpath }}/dots"
+            set_children:
+              - dot:
+                  uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                  _:
+                    - enabled: "1"
+                    - type: "dot"
+                    - domain
+                    - server: "{{ server }}"
+                    - port: "{{ port | string }}"
+                    - verify: "{{ cert_cn }}"
+
+    - name: Configure firewall
+      delegate_to: localhost
+      block:
+        - name: Configure firewall categories
+          vars:
+            category_xpath: //opnsense/OPNsense/Firewall/Category/categories
+            category_names:
+              - DNS
+              - Internet outbound
+              - Firewall management
+              - ICMP
+          block:
+            - name: Remove all categories
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ category_xpath }}"
+                set_children: []
+            - name: Add categories
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ category_xpath }}"
+                add_children:
+                  - category:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - name: "{{ item }}"
+                        - auto: "1"
+                        - color
+              loop: "{{ category_names }}"
+        - name: Configure firweall aliases
+          vars:
+            aliases_xpath: //opnsense/OPNsense/Firewall/Alias/aliases
+          block:
+            - name: Remove all categories
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ aliases_xpath }}"
+                set_children: []
+            - name: Add private IP space alias
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ aliases_xpath }}"
+                add_children:
+                  - alias:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - enabled: "1"
+                        - name: private_networks
+                        - type: network
+                        - proto
+                        - interface
+                        - counters: "0"
+                        - updatefreq
+                        - content: |-
+                            10.0.0.0/8
+                            172.16.0.0/12
+                            192.168.0.0/16
+                        - categories
+                        - description: Private IP spaces
+        - name: Configure firewall rules
+          vars:
+            rules_xpath: //opnsense/filter
+          block:
+            - name: Remove all existing rules
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                set_children: []
+            - name: Allow access to Unbound DNS resolver
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow Unbound DNS queries
+                        - direction: in
+                        - category: DNS
+                        - quick: "1"
+                        - protocol: tcp/udp
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+                              - port: "53"
+              loop: "{{ network.physical | dict2items }}"
+              when: not (item.value.dns.no_resolver_queries | default(false))
+            - name: Allow Internet traffic
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow all traffic from the subnet to the Internet
+                        - direction: in
+                        - category: Internet outbound
+                        - quick: "1"
+                        - source:
+                            _:
+                              - any: "1"
+                        - destination:
+                            _:
+                              - address: private_networks
+                              - not: "1"
+              loop: "{{ network.physical | dict2items }}"
+              when: not (item.value.firewall.block_outbound_wan_traffic | default(false))
+            - name: Allow access to firewall management ports
+              vars:
+                ports:
+                  - 443
+                  - 22
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item[0].key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow access to firewall management port {{ item[1] }}
+                        - direction: in
+                        - quick: "1"
+                        - protocol: tcp
+                        - category: Firewall management
+                        - source:
+                            _:
+                              - network: "{{ item[0].key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+                              - port: "{{ item[1] }}"
+              loop: "{{ network.physical | dict2items | product(ports) }}"
+              when: item[0].value.firewall.enable_firewall_access | default(false)
+            - name: Allow pinging the firewall
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow ICMP to firewall
+                        - direction: in
+                        - quick: "1"
+                        - protocol: icmp
+                        - category: ICMP
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+              loop: "{{ network.physical | dict2items }}"
+            - name: Allow access to everything
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow ICMP to firewall
+                        - direction: in
+                        - quick: "1"
+                        - protocol: icmp
+                        - category: ICMP
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+              loop: "{{ network.physical | dict2items }}"
+              when: item.value.firewall.enable_access_all | default(false)
+    - name: Configure WAN failover
+      block:
+        - name: Configure gateways
+          delegate_to: localhost
+          vars:
+            failover_interface: lan
+          community.general.xml:
+            path: "{{ local_config_path }}"
+            xpath: //opnsense/OPNsense/Gateways
+            set_children:
+              - gateway_item:
+                  uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                  _:
+                    - disabled: "0"
+                    - name: WAN_DHCP
+                    - descr: Interface WAN_DHCP Gateway
+                    - interface: wan
+                    - ipprotocol: inet
+                    - gateway
+                    - defaultgw: "1"
+                    - fargw: "0"
+                    - monitor_disable: "0"
+                    - monitor_noroute: "0"
+                    - monitor: 1.1.1.1
+                    - force_down: "0"
+                    - priority: "254"
+                    - weight: "1"
+                    - latencylow
+                    - latencyhigh
+                    - losslow
+                    - losshigh
+                    - interval
+                    - time_period
+                    - loss_interval
+                    - data_length
+              - gateway_item:
+                  uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                  _:
+                    - disabled: "0"
+                    - name: WAN-via-peer
+                    - descr: WAN access for node during CARP backup mode
+                    - interface: "{{ failover_interface }}"
+                    - ipprotocol: inet
+                    - gateway: "{{ peer_ips[failover_interface] }}"
+                    - defaultgw: "1"
+                    - fargw: "0"
+                    - monitor_disable: "0"
+                    - monitor_noroute: "0"
+                    # These must be different IPs or the packet won't be routed out even if WAN is up
+                    - monitor: "{{ is_primary | ternary('4.1.1.1', '4.1.1.2') }}"
+                    - force_down: "0"
+                    - priority: "255"
+                    - weight: "1"
+                    - latencylow
+                    - latencyhigh
+                    - losslow
+                    - losshigh
+                    - interval
+                    - time_period
+                    - loss_interval
+                    - data_length
+              - gateway_item:
+                  uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                  _:
+                    - disabled: "1"
+                    - name: XGS-PON
+                    - descr: XGS-PON subnet gateway
+                    - interface: wan
+                    - ipprotocol: inet
+                    - gateway: 192.168.11.{{ is_primary | ternary("2", "3") }}
+                    - defaultgw: "0"
+                    - fargw: "0"
+                    - monitor_disable: "1"
+                    - monitor_noroute: "0"
+                    - monitor
+                    - force_down: "0"
+                    - priority: "255"
+                    - weight: "1"
+                    - latencylow
+                    - latencyhigh
+                    - losslow
+                    - losshigh
+                    - interval
+                    - time_period
+                    - loss_interval
+                    - data_length
+        - name: Ensure gateway group exists
+          delegate_to: localhost
+          block:
+            - name: Remove any existing gateway groups
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: //opnsense/gateways
+                state: absent
+            - name: Add gateway group
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: //opnsense
+                add_children:
+                  - gateways:
+                      _:
+                        - gateway_group:
+                            _:
+                              - name: failover_group
+                              - item: WAN_DHCP|1
+                              - item: WAN-via-peer|2
+                              - trigger: down
+                              - poolopts
+                              - descr: Failover group
+        - name: Upload the failover script
+          ansible.builtin.copy:
+            src: 10-wancarp
+            dest: /usr/local/etc/rc.syshook.d/carp/10-wancarp
+            mode: 0550
+
+    - name: Copy the config file to the remote host and reload
+      ansible.builtin.import_role:
+        name: copy_config_remote
+
+- name: Enable the WAN interface on the secondary router
+  hosts: r730xd:&proxmox
+
+  tasks:
+    - name: Get VM info
+      ansible.builtin.command: pvesh get /nodes/{{ ansible_hostname }}/qemu -o json
+      register: vm_info
+      changed_when: false
+    - name: Get the VM ID of the secondary node
+      vars:
+        secondary_inventory_hostname: "{{ groups.secondary | first }}"
+        secondary_hostname: "{{ hostvars[secondary_inventory_hostname]['hostname'] }}"
+        query: "[?contains(name, '{{ secondary_hostname }}')] | [0].vmid"
+      ansible.builtin.set_fact:
+        secondary_vmid: >-
+          {{
+            vm_info.stdout |
+            from_json |
+            json_query(query)
+          }}
+    - name: Get the Proxmox VM hardware config
+      ansible.builtin.command: >-
+        pvesh get
+        /nodes/{{ ansible_hostname }}/qemu/{{ secondary_vmid }}/config
+        -o json
+      register: secondary_config
+      changed_when: false
+    - name: Get the Proxmox VM interface info
+      vars:
+        base_query: "[?contains(key, 'net')] | [?contains(value, 'WAN')] | [0]"
+        device_name_query: "{{ base_query }}.key"
+        device_config_query: "{{ base_query }}.value"
+      ansible.builtin.set_fact:
+        device_name: >-
+          {{
+            secondary_config.stdout |
+            from_json |
+            dict2items |
+            json_query(device_name_query)
+          }}
+        device_config: >-
+          {{
+            secondary_config.stdout |
+            from_json |
+            dict2items |
+            json_query(device_config_query)
+          }}
+    - name: Enable the WAN interface
+      vars:
+        modified_device_config: >-
+          {{
+            device_config |
+            regex_replace("link_down=1,?", "")
+          }}
+      ansible.builtin.command: >-
+        pvesh set
+        /nodes/{{ ansible_hostname }}/qemu/{{ secondary_vmid }}/config
+        --{{ device_name }} {{ modified_device_config }}
+      when: device_config != modified_device_config
+
+# This doens't work properly because opnsense won't register the plugins with
+# its internal database when installed via pkg
+# - name: Install packages
+#   hosts: routers:&opnsense
+
+#   vars:
+#     plugins:
+#       - os-qemu-guest-agent
+#       - os-frr
+
+#   tasks:
+#     - name: Wait for the Internet to come up
+#       ansible.builtin.command: ping -c 1 -n -W 1 8.8.8.8
+#       register: result
+#       retries: 100
+#       delay: 5
+#       until: result.rc == 0
+#       timeout: "{{ 2 * 60 }}"
+#     - name: Install plugin
+#       community.general.pkgng:
+#         name: "{{ item }}"
+#         state: latest
+#       loop: "{{ plugins }}"
+    # - name: Register the plugins
+    #   block:
+    #     - name: Download the config file
+    #       ansible.builtin.import_role:
+    #         name: copy_config_local
+    #     - name: Register the plugins
+    #       delegate_to: localhost
+    #       community.general.xml:
+    #         path: "{{ local_config_path }}"
+    #         xpath: //opnsense/system/firmware/plugins
+    #         value: "{{ plugins | join(',') }}"
+    #     - name: Upload the changed config file
+    #       ansible.builtin.import_role:
+    #         name: copy_config_remote

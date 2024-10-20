@@ -19,3 +19,9 @@ argument_specs:
         elements: str
         default:
           - 10.0.0.0/8
+      nfs_user_id:
+        type: int
+        required: true
+      nfs_group_id:
+        type: int
+        required: true

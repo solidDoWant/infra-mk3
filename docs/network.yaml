@@ -202,6 +202,122 @@ devices:
         trunked: false
         pvlan:
           type: isolated
+  router-01:
+    physical:
+      wan: &opnsense_wan
+        physical_name: vtnet0
+        ip_address: dhcp
+        block_private: true
+        description: XGS-PON WAN
+        dns:
+          no_resolver_queries: true
+      opt1: &opnsense_opt1
+        physical_name: vtnet1
+        ip_address: 10.1.0.1
+        subnet_bits: 16
+        description: Management VLAN
+        gateway:
+          address: 10.1.0.254
+          vhid: 10
+        firewall:
+          block_outbound_wan_traffic: true
+      lan: &opnsense_lan
+        physical_name: vtnet2
+        ip_address: 10.2.0.1
+        subnet_bits: 16
+        mtu: *jumbo_mtu
+        description: Hosts VLAN
+        gateway:
+          address: 10.2.0.254
+          vhid: 20
+        dhcp:
+          pool:
+            from: 10.2.4.1
+            to: 10.2.5.254
+          default_lease_time: 21600
+          max_lease_time: 86400
+      opt2: &opnsense_opt2
+        physical_name: vtnet3
+        ip_address: 10.3.0.1
+        subnet_bits: 16
+        mtu: *jumbo_mtu
+        description: Kubernetes VLAN
+        gateway:
+          address: 10.3.0.254
+          vhid: 30
+      opt3: &opnsense_opt3
+        physical_name: vtnet4
+        ip_address: 10.4.0.1
+        subnet_bits: 16
+        description: User devices VLAN
+        gateway:
+          address: 10.4.0.254
+          vhid: 40
+        dhcp:
+          pool:
+            from: 10.4.1.1
+            to: 10.4.1.254
+          default_lease_time: 21600
+          max_lease_time: 86400
+        firewall:
+          enable_firewall_access: true
+          enable_access_all: true
+      opt4: &opnsense_opt4
+        physical_name: vtnet5
+        ip_address: 10.5.0.1
+        subnet_bits: 16
+        description: Guest devices VLAN
+        gateway:
+          address: 10.5.0.254
+          vhid: 50
+        dhcp:
+          pool:
+            from: 10.5.1.1
+            to: 10.5.1.254
+          ignore_client_uids: true
+          default_lease_time: 1800
+          max_lease_time: 3600
+          propegate_domain_name: false
+        dns:
+          override_servers:
+            - 9.9.9.9
+            - 1.1.1.1
+          no_resolver_queries: true
+      opt5: &opnsense_opt5
+        physical_name: vtnet6
+        ip_address: 10.6.0.1
+        subnet_bits: 16
+        description: IoT devices VLAN
+        gateway:
+          address: 10.6.0.254
+          vhid: 60
+        dns:
+          no_resolver_queries: true
+        firewall:
+          block_outbound_wan_traffic: true
+  router-02:
+    physical:
+      wan:
+        <<: *opnsense_wan
+        enable: false
+      lan:
+        <<: *opnsense_lan
+        ip_address: 10.2.0.2
+      opt1:
+        <<: *opnsense_opt1
+        ip_address: 10.1.0.2
+      opt2:
+        <<: *opnsense_opt2
+        ip_address: 10.3.0.2
+      opt3:
+        <<: *opnsense_opt3
+        ip_address: 10.4.0.2
+      opt4:
+        <<: *opnsense_opt4
+        ip_address: 10.5.0.2
+      opt5:
+        <<: *opnsense_opt5
+        ip_address: 10.6.0.2
 ip-space:
   10.0.0.0/9:
     description: Private IP space for home infra
@@ -295,6 +411,8 @@ ip-space:
             hostname: proxmox-vm-host-01
         10.2.3.0/24:
           description: VMs
+        10.2.4.0/23:
+          description: DHCP range
       10.3.0.0/16:
         description: Kubernetes
         vlan: 300
@@ -320,6 +438,8 @@ ip-space:
           description: Network devices
           10.4.0.254/32:
             description: OPNsense VIP
+        10.4.1.0/24:
+          description: DHCP range
       10.5.0.0/16:
         vlan: 500
         gateway: 10.5.0.254/32
@@ -327,6 +447,8 @@ ip-space:
           description: Network devices
           10.5.0.254/32:
             description: OPNsense VIP
+        10.5.1.0/24:
+          description: DHCP range
       10.6.0.0/16:
         vlan: 600
         gateway: 10.6.0.254/32

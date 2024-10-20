@@ -1,0 +1,47 @@
+#!/usr/local/bin/php
+<?php
+
+// Pulled from https://gist.github.com/spali/2da4f23e488219504b2ada12ac59a7dc
+// with some modifications.
+// Note: For some reason, sometimes OPNsense doesn't re-add the WAN default
+// gateway route after a failover event recovery. TODO figure out why and fix
+// it. OPNsense bug?
+
+require_once("config.inc");
+require_once("util.inc");
+require_once("system.inc");
+require_once("interfaces.inc");
+
+$subsystem = !empty($argv[1]) ? $argv[1] : '';
+$type = !empty($argv[2]) ? $argv[2] : '';
+
+if ($type != 'MASTER' && $type != 'BACKUP' && $type != 'INIT') {
+    log_error("Carp '$type' event unknown from source '{$subsystem}'");
+    exit(1);
+}
+
+if (!strstr($subsystem, '@')) {
+    log_error("Carp '$type' event triggered from wrong source '{$subsystem}'");
+    exit(1);
+}
+
+$ifkey = 'wan';
+// $lan_vip = '{{ lan_vip }}';
+
+if ($type === "MASTER") {
+    log_error("Enable interface '$ifkey' due CARP event '$type'");
+
+    $config['interfaces'][$ifkey]['enable'] = '1';
+    write_config("Enable interface '$ifkey' due CARP event '$type'", false);
+    interface_configure(false, $ifkey, false, false);
+} else if ($type === "BACKUP") {
+    log_error("Disable interface '$ifkey' due CARP event '$type'");
+
+    $config['interfaces'][$ifkey]['enable'] = '0';
+    write_config("Disable interface '$ifkey' due CARP event '$type'", false);
+    interface_configure(false, $ifkey, false, false);
+
+    // exec('/sbin/route del default >&1', $ifc, $ret);
+    // exec('/sbin/route add default ' . $lan_vip . ' >&1', $ifc, $ret);
+}
+?>

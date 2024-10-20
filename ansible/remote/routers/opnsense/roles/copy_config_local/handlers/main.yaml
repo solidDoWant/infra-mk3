@@ -1,0 +1,6 @@
+---
+- name: Cleanup the local directory
+  delegate_to: localhost
+  ansible.builtin.file:
+    path: "{{ temp_dir.path }}"
+    state: absent
