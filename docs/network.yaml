@@ -219,6 +219,12 @@ devices:
         gateway:
           address: 10.1.0.254
           vhid: 10
+        dhcp:
+          pool:
+            from: 10.1.4.1
+            to: 10.1.4.254
+          default_lease_time: 86400
+          max_lease_time: 604800
         firewall:
           block_outbound_wan_traffic: true
       lan: &opnsense_lan
