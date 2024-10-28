@@ -1,0 +1,236 @@
+---
+clusterName: infra-mk3
+endpoint: https://10.3.254.1:6443
+nodes:
+  - &talos-k8s-mixed
+    hostname: talos-k8s-mixed-01
+    ipAddress: 10.2.1.1
+    installDiskSelector:
+      # `/*` suffix is needed until
+      # https://github.com/siderolabs/go-blockdevice/issues/114 is fixed
+      busPath: /pci0000:00/0000:00:1d.0/0000:58:00.0/nvme/* # M.2 slot 2
+    controlPlane: true
+    machineSpec:
+      secureboot: true
+    networkInterfaces:
+      - &1g_1
+        interface: enp87s0
+        dummy: true
+      - &1g_2
+        interface: enp89s0
+        dummy: true
+      - &10g_1
+        interface: &10g_1_name enp2s0f0
+        mtu: &jumbo_mtu 9000
+      - &10g_2
+        interface: &10g_2_name enp2s0f1
+        mtu: *jumbo_mtu
+      - &bond_0
+        interface: bond0
+        bond:
+          interfaces:
+            - *10g_1_name
+            - *10g_2_name
+          mode: 802.3ad
+          lacpRate: fast
+          xmitHashPolicy: layer3+4
+        mtu: *jumbo_mtu
+        addresses:
+          - 10.2.1.1/16
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 10.2.1.254
+        vlans:
+          - &vlan_300_config
+            vlanId: 300
+            addresses:
+              - 10.3.1.1/16
+              - 10.3.2.1/16
+            mtu: *jumbo_mtu
+            # HA, but not load balanced API server endpoint
+            vip:
+              ip: 10.3.254.1
+    schematic:
+      customization: &schematic_customization
+        systemExtensions:
+          officialExtensions:
+            # Needed or the node will not boot
+            - siderolabs/i915-ucode
+            - siderolabs/intel-ucode
+            - siderolabs/mei
+            - siderolabs/thunderbolt
+            # For virtualization/isolation
+            - siderolabs/kata-containers
+        extraKernelArgs:
+          - &bond bond=bond0:enp2s0f0,enp2s0f1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
+          - ip=10.2.1.1::10.2.0.254:255.255.0.0:talos-k8s-mixed-01:bond0:off:10.2.0.254::10.2.0.254
+  - <<: *talos-k8s-mixed
+    hostname: talos-k8s-mixed-02
+    ipAddress: 10.2.1.2
+    networkInterfaces:
+      - *1g_1
+      - *1g_2
+      - *10g_1
+      - *10g_2
+      - <<: *bond_0
+        addresses:
+          - 10.2.1.2/16
+        vlans:
+          - <<: *vlan_300_config
+            addresses:
+              - 10.3.1.2/16
+              - 10.3.2.2/16
+    schematic:
+      customization:
+        <<: *schematic_customization
+        extraKernelArgs:
+          - *bond
+          - ip=10.2.1.2::10.2.0.254:255.255.0.0:talos-k8s-mixed-02:bond0:off:10.2.0.254::10.2.0.254
+  - <<: *talos-k8s-mixed
+    hostname: talos-k8s-mixed-03
+    ipAddress: 10.2.1.3
+    networkInterfaces:
+      - *1g_1
+      - *1g_2
+      - *10g_1
+      - *10g_2
+      - <<: *bond_0
+        addresses:
+          - 10.2.1.3/16
+        vlans:
+          - <<: *vlan_300_config
+            addresses:
+              - 10.3.1.3/16
+              - 10.3.2.3/16
+    schematic:
+      customization:
+        <<: *schematic_customization
+        extraKernelArgs:
+          - *bond
+          - ip=10.2.1.3::10.2.0.254:255.255.0.0:talos-k8s-mixed-03:bond0:off:10.2.0.254::10.2.0.254
+talosVersion: v1.8.1
+kubernetesVersion: v1.31.1
+allowSchedulingOnMasters: true
+allowSchedulingOnControlPlanes: true
+additionalApiServerCertSans: &sans
+  - 127.0.0.1 # KubePrism
+  # TODO add kube-vip address
+additionalMachineCertSans: *sans
+# Don't deploy a CNI by default
+cniConfig:
+  name: none
+clusterPodNets:
+  - 10.32.0.0/16
+clusterSvcNets:
+  - 10.33.0.0/16
+patches:
+  # Don't include the kernel args for non-ISO boot. Otherwise the image is
+  # invalidated and secure boot won't load it.
+  - |-
+    - op: remove
+      path: /machine/install/extraKernelArgs
+  # Use NTP server running on the gateway
+  - |-
+    machine:
+      time:
+        servers:
+          - 10.2.0.254
+  # Disable IPv6
+  - |-
+    machine:
+      sysctls:
+        net.ipv6.conf.all.disable_ipv6: "1"
+        net.ipv6.conf.default.disable_ipv6: "1"
+  # Root FS disk encryption
+  # TODO: implement disk encryption. Use a HA KMS server implementation
+  # for the first key, hosted in the cluster. If that isn't available
+  # (such as the case when all nodes are offline), require a HSM to decrypt
+  # the first disk.
+  # - |-
+  #   machine:
+  #     systemDiskEncryption:
+  #       state:
+  #         provider: luks2
+  #         keys:
+  #           - slot: 0
+  #             tpm:
+  #               checkSecurebootStatusOnEnroll: true
+  #           - slot: 1
+  #             static:
+  #               passphrase: ${luks_password}
+  # Enable Talos API access from k8s pods
+  # Needed for OS upgrades
+  - |-
+    machine:
+      features:
+        kubernetesTalosAPIAccess:
+          enabled: true # Enable Talos API access from Kubernetes pods.
+          allowedRoles:
+            - os:reader
+          allowedKubernetesNamespaces:
+            - system-upgrade
+  # Enable KubePrism
+  - |-
+    machine:
+      features:
+        kubePrism:
+          enabled: true
+          port: 7443  # 6443 (API server default) + 1000
+  # Configure DNS resolution
+  - |-
+    machine:
+      features:
+        hostDNS:
+          enabled: true
+          forwardKubeDNSToHost: true
+          resolveMemberNames: true
+  # Remove the exclude-from-external-loadbalancers label
+  - |-
+    - op: remove
+      path: /machine/nodeLabels/node.kubernetes.io~1exclude-from-external-load-balancers
+  # Configure kublet
+  - |-
+    machine:
+      kubelet:
+        extraConfig:
+          # Equivalent of `rotate-server-certificates` arg, but config instead
+          serverTLSBootstrap: true
+          imageMaximumGCAge: 168h # One week
+          imageGCHighThresholdPercent: 50
+          imageGCLowThresholdPercent: 20
+          maxPods: 128  # Probably higher than will realistically be scheduled
+          serializeImagePulls: false
+        nodeIP:
+          validSubnets:
+            - 10.3.1.0/16
+  # Configure etcd
+  - |-
+    cluster:
+      etcd:
+        advertisedSubnets:
+          - 10.3.1.0/16
+  # Configuration for Cilium
+  - |-
+    cluster:
+      # Use Cilium's kube-proxy replacement
+      proxy:
+        disabled: true
+  # Disable talos-installed coredns, and instead install it manually
+  - |-
+    cluster:
+      coreDNS:
+        disabled: true
+  # Enable only local etcd-based discover
+  - |-
+    cluster:
+      discovery:
+        enabled: true
+        registries:
+          kubernetes:
+            disabled: false
+          service:
+            disabled: true
+  # Enable workload scheduling on the control plane nodes
+  - |-
+    cluster:
+      allowSchedulingOnControlPlanes: true
