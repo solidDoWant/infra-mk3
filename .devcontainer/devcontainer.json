@@ -1,4 +1,5 @@
 // For format details, see https://aka.ms/devcontainer.json.
+// cSpell:disable
 {
 	"name": "Ubuntu",
 	"build": {
@@ -17,7 +18,8 @@
 				"redhat.ansible",
 				"tamasfe.even-better-toml",
 				"yzane.markdown-pdf",
-				"ms-kubernetes-tools.vscode-kubernetes-tools"
+				"ms-kubernetes-tools.vscode-kubernetes-tools",
+				"streetsidesoftware.code-spell-checker"
 			]
 		}
 	},
@@ -29,7 +31,7 @@
 	},
 	"mounts": [
 		// Used to for SSH access to hardware
-		"type=bind,source=${localEnv:USERPROFILE}/.ssh,target=/vscode/.ssh",
+		"type=bind,source=${localEnv:USERPROFILE}/.ssh,target=/vscode/.ssh"
 		// Used for Docker out of Docker container mounts
 		// "type=bind,source=/tmp/host-mounts,target=/tmp/host-mounts"
 	],

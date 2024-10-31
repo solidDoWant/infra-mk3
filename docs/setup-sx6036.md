@@ -50,9 +50,11 @@ Note that each individual version update takes 30 minutes to an hour to complete
 # Production configuration
 
 Update the following files with your own values:
+
 * [Ansible values (licenses and credentials)](../ansible/remote/switches/sx6036/group_vars/sx6036.sops.yaml)
 
 Run `task sx6036:setup:full-configuration` to make the following changes:
+
 * Load all licenses
 * Configure the switch for mixed Ethernet/Infiniband mode
 * Remove the bootloader password
@@ -70,39 +72,39 @@ Run `task sx6036:setup:full-configuration` to make the following changes:
 
 Ports are connected as follows:
 
-| Port   | Split | Untagged VLAN | Tagged VLANs | LAG number | Host name          | Host port            | Cable type | Link speed |
-| ------ | ----- | ------------- | ------------ | ---------- | ------------------ | -------------------- | ---------- | ---------- |
-| 1/2    | No    | 200           | all          |            | proxmox-vm-host-01 | QSFP+ 1              | DAC        | 56 Gbps    |
-| 1/4    | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/4/1  |       |               | all          | 5          | switch-02          | 1/2/1                |            | 10 Gbps    |
-| 1/4/2  |       |               | all          | 5          | switch-02          | 1/2/2                |            | 10 Gbps    |
-| 1/4/3  |       |               | all          | 5          | switch-02          | 1/2/3                |            | 10 Gbps    |
-| 1/4/4  |       |               | all          | 5          | switch-02          | 1/2/4                |            | 10 Gbps    |
-| 1/9    | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/9/1  |       | 200           | 300          | 1          | talos-k8s-mixed-01 | SFP+ 1               |            | 10 Gbps    |
-| 1/9/2  |       | 200           | 300          | 2          | talos-k8s-mixed-02 | SFP+ 1               |            | 10 Gbps    |
-| 1/9/3  |       | 200           | 300          | 3          | talos-k8s-mixed-03 | SFP+ 1               |            | 10 Gbps    |
-| 1/9/4  |       | 200           | 300          | 4          | talos-k8s-mixed-04 | SFP+ 1               |            | 10 Gbps    |
-| 1/10   | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/10/1 |       | 200           | 300          | 1          | talos-k8s-mixed-01 | SFP+ 2               |            | 10 Gbps    |
-| 1/10/2 |       | 200           | 300          | 2          | talos-k8s-mixed-02 | SFP+ 2               |            | 10 Gbps    |
-| 1/10/3 |       | 200           | 300          | 3          | talos-k8s-mixed-03 | SFP+ 2               |            | 10 Gbps    |
-| 1/10/4 |       | 200           | 300          | 4          | talos-k8s-mixed-04 | SFP+ 2               |            | 10 Gbps    |
-| 1/27   | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/27/1 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/27/2 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/27/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/27/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/28   | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/28/1 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/28/2 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/28/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/28/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/32   | Yes   |               |              |            |                    |                      | DAC        |            |
-| 1/32/1 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/32/2 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/32/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
-| 1/32/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |            | 10 Gbps    |
+| Port   | Split | Untagged VLAN | Tagged VLANs | LAG number | Host name          | Host port            | Cable type          | Link speed |
+| ------ | ----- | ------------- | ------------ | ---------- | ------------------ | -------------------- | ------------------- | ---------- |
+| 1/2    | No    | 200           | all          |            | proxmox-vm-host-01 | QSFP+ 1              | DAC                 | 56 Gbps    |
+| 1/4    | Yes   |               |              |            |                    |                      | DAC                 |            |
+| 1/4/1  |       |               | all          | 5          | switch-02          | 1/2/1                |                     | 10 Gbps    |
+| 1/4/2  |       |               | all          | 5          | switch-02          | 1/2/2                |                     | 10 Gbps    |
+| 1/4/3  |       |               | all          | 5          | switch-02          | 1/2/3                |                     | 10 Gbps    |
+| 1/4/4  |       |               | all          | 5          | switch-02          | 1/2/4                |                     | 10 Gbps    |
+| 1/9    | Yes   |               |              |            |                    |                      | DAC                 |            |
+| 1/9/1  |       | 200           | 300          | 1          | talos-k8s-mixed-01 | SFP+ 1               |                     | 10 Gbps    |
+| 1/9/2  |       | 200           | 300          | 2          | talos-k8s-mixed-02 | SFP+ 1               |                     | 10 Gbps    |
+| 1/9/3  |       | 200           | 300          | 3          | talos-k8s-mixed-03 | SFP+ 1               |                     | 10 Gbps    |
+| 1/9/4  |       | 200           | 300          | 4          | talos-k8s-mixed-04 | SFP+ 1               |                     | 10 Gbps    |
+| 1/10   | Yes   |               |              |            |                    |                      | DAC                 |            |
+| 1/10/1 |       | 200           | 300          | 1          | talos-k8s-mixed-01 | SFP+ 2               |                     | 10 Gbps    |
+| 1/10/2 |       | 200           | 300          | 2          | talos-k8s-mixed-02 | SFP+ 2               |                     | 10 Gbps    |
+| 1/10/3 |       | 200           | 300          | 3          | talos-k8s-mixed-03 | SFP+ 2               |                     | 10 Gbps    |
+| 1/10/4 |       | 200           | 300          | 4          | talos-k8s-mixed-04 | SFP+ 2               |                     | 10 Gbps    |
+| 1/27   | Yes   |               |              |            |                    |                      | MPO type B to 4x LC |            |
+| 1/27/1 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/27/2 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/27/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/27/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/28   | Yes   |               |              |            |                    |                      | MPO type B to 4x LC |            |
+| 1/28/1 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/28/2 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/28/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/28/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/32   | Yes   |               |              |            |                    |                      | MPO type B to 4x LC |            |
+| 1/32/1 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/32/2 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/32/3 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
+| 1/32/4 |       | 500           |              |            | User devices       | Patch panel LC fiber |                     | 10 Gbps    |
 
 Splitting ports disables others as documented below:
 
@@ -112,4 +114,5 @@ Splitting ports disables others as documented below:
 
 * [Initial setup manual](https://network.nvidia.com/related-docs/user_manuals/1U_HW_UM_SX60XX.pdf)
 * [Full docs](https://delivery04.dhe.ibm.com/sar/CMA/XSA/MLNX-OS_VPI_v3_4_3002_UM.pdf)
+* [Secondary full docs with correct port splitting information](https://www.manualslib.com/manual/924815/Mellanox-Technologies-Sx6005.html?page=35#manual)
 * [Dell EMC branded version to generic Mellanox OS conversion](https://docs.google.com/document/d/1SS0_70PSD5NZDxMy-B---4X1i_2WiLoe)

@@ -9,6 +9,7 @@ Do not update the device. I attempted to update the firmware on one PDU, followi
 # Initial configuration
 
 The device needs some minimal manual configuration. To do so:
+
 1. Connect the device to the Management VLAN.
 2. Assign a static DHCP lease in OPNsense (optional). The PDU does not obey static IPv4 configurations and resets it every few seconds.
 3. SSH into the PDU with a username/password of `admin/admin`.
@@ -27,4 +28,5 @@ The device needs some minimal manual configuration. To do so:
 After the initial manual setup is complete, run `task mpr3141:full-configuration`. This will:
 * Set the device name and hostname
 * Set the time zone
+
 <!-- TODO SNMP -->

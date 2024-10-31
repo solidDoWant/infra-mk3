@@ -10,7 +10,7 @@ These are designed to be produced by [SendCutSend](https://sendcutsend.com). [fa
 
 ### Common configuration
 * 1.88mm/0.074" 1008 steel.
-* Any finish (buyer's preference). Note that SendCutSend will not debur these parts unless you get them powder coated, but fabworks will.
+* Any finish (buyer's preference). Note that SendCutSend will not deburr these parts unless you get them powder coated, but fabworks will.
 
 ### Extension plate
 * The back four screw holes need 8-32 nut hardware inserts added.

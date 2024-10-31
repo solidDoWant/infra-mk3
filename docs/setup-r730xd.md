@@ -1,6 +1,7 @@
 # Factory reset
 
 After physically configuring the server, the NVRAM (BIOS settings storage) needs to be reset. As [documented here](https://www.dell.com/support/kbdoc/en-us/000128677/how-to-reset-the-bios-of-a-dell-poweredge-server), do this by:
+
 1. Turn off the server and remove AC power.
 2. Open the top panel to access the motherboard.
 3. Move the `NVRAM_CLR` jumper from pins 3-5 to pins 1-3. This jumper can be found behind DIMM slot `A1`, near the power supplies.
@@ -11,6 +12,7 @@ After physically configuring the server, the NVRAM (BIOS settings storage) needs
 # XGS-PON transceiver
 
 The XGS-PON transceiver needs it's firmware replaced, and needs to be configured for the remainder of the setup. To do this:
+
 1. Plug the transceiver into a SFP+ cage in your local computer or a switch.
 2. Connect your local computer to the same subnet. Set your IP address to 192.168.11.2/24.
 3. Run `task r730xd:os-install:xgs-pon:full-configuration`. This will:
@@ -47,6 +49,7 @@ Proxmox is installed automatically via a flash drive installed to the back of th
 Unfortunately answer files are fairly limited and restrictive. The answer file is not flexible enough to support the network configuration required. To mitigate this issue, a custom "network config" Debian package is built and injected into the ISO. This package contains a `/etc/networks/interfaces` file that is templated from the configuration file [here](../docs/network.yaml). It also contains a kernel module configuration file for the Mellanox ConnectX-3 NIC, which switches the port type from InfiniBand to Ethernet. The installer automatically unpacks and installs this package, configuring the network.
 
 To install Proxmox:
+
 1. Attach a USB flash drive into your local computer.
 2. Run `task r730xd:os-install:proxmox:create-install-iso`. This will place a `proxmox.iso` file in your current working directory.
 3. Burn the ISO to the flash drive. This can be done on Linux with `dd bs=512 if=proxmox.iso of=/dev/&lt;YOUR_DEV&gt; status=progress oflag=sync; sync`, or on Windows via [Rufus](https://github.com/pbatard/rufus).
@@ -64,9 +67,12 @@ Instead, I'm using [ZFSBootMenu](https://zfsbootmenu.org/). ZFSBootMenu is an EF
 > [!NOTE]
 > This will ignore any Linux `cmdline` changes to GRUB, which may be deployed upon OS update.
 
-Using a boot manager like ZFSBootMenu or Clover requires that the boot manager itself be placed on a drive and filesystem that the UEFI understands. Normally this would be a USB flash drive installed internally. Fortunately, Dell PowerEdge servers support an [Internal Dual SD Module](https://www.dell.com/learn/us/en/04/business~solutions~whitepapers~en/documents~poweredge-idsdm-whitepaper-en.pdf). This is a special SD card reader that supports a mirrored pair of SD cards. SD cards are infamous for poor write endurance, however, there should be little to no writing to these cards outside of bootloader updates. Installing the boot manager to these cards removes the single point of failure (USB flash drive) that would otherwise be needed.
+Using a boot manager like ZFSBootMenu or Clover requires that the boot manager itself be placed on a drive and filesystem that the UEFI understands. Originally, I had planned on using Dell's [Internal Dual SD Module (IDSDM)](https://www.dell.com/learn/us/en/04/business~solutions~whitepapers~en/documents~poweredge-idsdm-whitepaper-en.pdf). This is a special SD card reader that supports a mirrored pair of SD cards. SD cards are infamous for poor write endurance, however, there should be little to no writing to these cards outside of bootloader updates.
+
+Unfortunately, I was not able to get the BIOS to recognize these as bootable. Instead, I've resorted to installing a USB flash drive inside the chassis that is used exclusively for ZFSBootMenu. When this fails, I have a backup stored inside the chassis, ready to be swapped. At some point I might develop a board that mirrors two flash drives, but is seen by the computer as a single drive. This would remove the risk of a single flash drive dying and making the machine unable to boot.
 
 To setup the bootloader:
+
 1. Shut down the server.
 2. Attach a SD card to your local computer.
 3. Run `task r730xd:os-install:zfsbootmenu:create-install-iso`. This will place a `zfsbootmenu.iso` file in your current working directory.
@@ -80,15 +86,17 @@ To setup the bootloader:
 # OS and VM setup
 
 After the OS and bootloader disk are installed, Proxmox needs to be configured. To configure Proxmox and deploy VMs:
+
 1. Connect the XGS-PON transceiver to the ISP's ODN.
 2. Connect your local computer to the Hosts VLAN.
 3. Run `task r730xd:os-install:proxmox:full-configuration`.
 4. Log into each of the OPNsense VMs and install the `os-qemu-guest-agent` plugin.
 
 This will:
-* Update the root user password and configure SSH access
-* Remove extra UEFI boot options
-* Update the OS
-* Setup and configure a bulk storage zpool
-* Deploy a pair of OPNsense router VMs with CARP for routing failover
-* Setup DHCP, DNS, and firewall rules
+
+* Update the root user password and configure SSH access.
+* Remove extra UEFI boot options.
+* Update the OS.
+* Setup and configure a bulk storage zpool.
+* Deploy a pair of OPNsense router VMs with CARP for routing failover.
+* Setup DHCP, DNS, and firewall rules.

@@ -1,6 +1,7 @@
 # Factory reset BIOS
 
 The BIOS can be factory reset by disconnecting the internal battery. To do this:
+
 1. Depress the rear case release button on the chassis.
 2. Slide the electronics assembly out from the chassis.
 3. Use a pair of tweezers to disconnect the battery connector from the motherboard. The connector is located at the front of the case, on the top side of the motherboard, underneath the front bezel.
@@ -10,7 +11,7 @@ The BIOS can be factory reset by disconnecting the internal battery. To do this:
 
 # Re-paste the CPU
 
-It's [fairly well-known](https://forums.servethehome.com/index.php?threads/minisforum-ms-01-heating-problem.43519/) that the MS-01 uses terribly low-quality thermal paste. Replacing it withe decent
+It's [fairly well known](https://forums.servethehome.com/index.php?threads/minisforum-ms-01-heating-problem.43519/) that the MS-01 uses terribly low-quality thermal paste. Replacing it withe decent
 paste consistently results in a 10&deg; C drop in CPU temperatures. Mine dropped around 15&deg; C with [this paste](https://www.amazon.com/gp/product/B00ZJS8Q6S). To repaste the CPU:
 
 1. Depress the rear case release button on the chassis.
@@ -31,10 +32,9 @@ paste consistently results in a 10&deg; C drop in CPU temperatures. Mine dropped
 
 # BIOS upgrade
 
-The BIOS must be upgraded to v1.24 or later to support secure boot with custom keys. Unfortunately, for some reason Minisforum has decided to not make BIOS updates past v1.22 public. To update the
-BIOS:
+The BIOS must be upgraded to v1.24 or later to support secure boot with custom keys. To update the BIOS:
 
-1. Join [this official Minisforum Discord server](https://discord.gg/6bvUjFWJxn) and bug `@Technical Support` until they provide you with a v1.24 or later (v1.25 is currently the latest) update.
+1. Download the v1.26 BIOS update [here](https://www.minisforum.com/new/support?lang=en#/support/page/download/108).
 2. Attach a FAT32 formatted flash drive to your local computer.
 3. Extract the BIOS update zip file to the root of the flash drive.
 4. Attach the flash drive to the MS-01.
@@ -79,13 +79,16 @@ The OS and boot media is entirely controlled by [these files](../talos/). Instal
 > When using Rufus to create flash drives from the ISO, an additional step must be taken until a Talos bug is fixed. After "burning" the ISO to a flash drive, rename the file at
 > `EFI/Linux/Talos-v1.8.1` to `EFI/Linux/Talos-v1.8.1.efi`. Otherwise, the boot loader will fail to find and boot the EFI stub.
 >
+> This should be fixed in v1.9.0 onwards. I worked with the Talos devs and personally verified the fix.
+>
 > Reference issues:
 > * https://github.com/siderolabs/talos/issues/9397
 > * https://github.com/siderolabs/talos/issues/9565
 
 ## Secure boot
 
-To enable secure boot:
+Secure boot is an extra line of defense against certain types of malware (rootkits). To enable secure boot:
+
 1. Open the BIOS configuration during boot (press the `delete` key repeatedly).
 2. Change the following settings:
 	```yaml

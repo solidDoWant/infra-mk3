@@ -69,7 +69,7 @@ As with the SX6036, this switch needs to be reset to factory defaults prior to c
     configure terminal
     interface management 1
 
-    # Set IP
+    # Set management port IP address
     ip address 10.254.0.129/24
     end
     write memory
@@ -95,18 +95,18 @@ Ports are connected as follows:
 
 | Port   | Untagged VLAN | Tagged VLANs                             | LAG number | Host name          | Host port | Cable type |
 | ------ | ------------- | ---------------------------------------- | ---------- | ------------------ | --------- | ---------- |
-| 1/1/1  | Management    |                                          |            | talos-k8s-mixed-01 |           |            |
-| 1/1/2  | Management    |                                          |            | talos-k8s-mixed-02 |           |            |
-| 1/1/3  | Management    |                                          |            | talos-k8s-mixed-03 |           |            |
-| 1/1/4  | Management    |                                          |            | talos-k8s-mixed-04 |           |            |
-| 1/1/5  | Management    |                                          |            | proxmox-vm-host-01 |           |            |
+| 1/1/1  | Management    |                                          |            | talos-k8s-mixed-01 |           | Cat6       |
+| 1/1/2  | Management    |                                          |            | talos-k8s-mixed-02 |           | Cat6       |
+| 1/1/3  | Management    |                                          |            | talos-k8s-mixed-03 |           | Cat6       |
+| 1/1/4  | Management    |                                          |            | talos-k8s-mixed-04 |           | Cat6       |
+| 1/1/5  | Management    |                                          |            | proxmox-vm-host-01 |           | Cat6       |
 | 1/1/6  | Management    |                                          |            |                    |           |            |
-| 1/1/7  | Management    |                                          |            | switch-01          |           |            |
-| 1/1/8  | Management    |                                          |            | switch-02          |           |            |
-| 1/1/9  | Management    |                                          |            | pdu-01             |           |            |
-| 1/1/10 | Management    |                                          |            | ups-01             |           |            |
-| 1/1/11 | Management    |                                          |            | tape-library-01    |           |            |
-| 1/1/12 | Management    |                                          |            | kvm-01             |           |            |
+| 1/1/7  | Management    |                                          |            | switch-01          |           | Cat6       |
+| 1/1/8  | Management    |                                          |            | switch-02          |           | Cat6       |
+| 1/1/9  | Management    |                                          |            | pdu-01             |           | Cat6       |
+| 1/1/10 | Management    |                                          |            | ups-01             |           | Cat6       |
+| 1/1/11 | Management    |                                          |            | tape-library-01    |           | Cat6       |
+| 1/1/12 | Management    |                                          |            | kvm-01             |           | Cat6       |
 | 1/1/13 | Hosts         |                                          |            |                    |           |            |
 | 1/1/14 | Hosts         |                                          |            |                    |           |            |
 | 1/1/15 | Hosts         |                                          |            |                    |           |            |
@@ -115,14 +115,14 @@ Ports are connected as follows:
 | 1/1/18 | User devices  |                                          |            |                    |           |            |
 | 1/1/19 | User devices  |                                          |            |                    |           |            |
 | 1/1/20 | User devices  |                                          |            |                    |           |            |
-| 1/1/21 | Guest devices | IoT devices                              |            | switch-03          |           |            |
-| 1/1/22 | Guest devices | IoT devices                              |            | switch-04          |           |            |
-| 1/1/23 | Management    | User devices, Guest devices, IoT devices | ap-01      |                    |           |            |
-| 1/1/24 | Management    | User devices, Guest devices, IoT devices | ap-02      |                    |           |            |
-| 1/2/1  |               | all                                      | 5          | switch-02          | 1/33/1    | DAC SFP+   |
-| 1/2/2  |               | all                                      | 5          | switch-02          | 1/33/2    | DAC SFP+   |
-| 1/2/3  |               | all                                      | 5          | switch-02          | 1/33/3    | DAC SFP+   |
-| 1/2/4  |               | all                                      | 5          | switch-02          | 1/33/4    | DAC SFP+   |
+| 1/1/21 | Guest devices | IoT devices                              |            | switch-03          |           | Cat6       |
+| 1/1/22 | Guest devices | IoT devices                              |            | switch-04          |           | Cat6       |
+| 1/1/23 | Management    | User devices, Guest devices, IoT devices | ap-01      |                    |           | Cat6       |
+| 1/1/24 | Management    | User devices, Guest devices, IoT devices | ap-02      |                    |           | Cat6       |
+| 1/2/1  |               | all                                      | 5          | switch-01          | 1/33/1    | DAC SFP+   |
+| 1/2/2  |               | all                                      | 5          | switch-01          | 1/33/2    | DAC SFP+   |
+| 1/2/3  |               | all                                      | 5          | switch-01          | 1/33/3    | DAC SFP+   |
+| 1/2/4  |               | all                                      | 5          | switch-01          | 1/33/4    | DAC SFP+   |
 | 1/2/5  | User devices  |                                          |            |                    |           | LC fiber   |
 | 1/2/6  | User devices  |                                          |            |                    |           | LC fiber   |
 | 1/2/7  | User devices  |                                          |            |                    |           | LC fiber   |
