@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+# "Install" flux by re-using the install kustomization, which is copied under ./bootstrap by the git source
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux
+spec:
+  interval: 5m
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  path: /flux-system/flux/app/bootstrap
+  targetNamespace: flux-system
+  dependsOn:
+    - name: flux-sources

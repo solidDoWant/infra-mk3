@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  deploy-flux:
+    dir: "{{ .ROOT_DIR }}/cluster"
+    cmds:
+      # Deploy Flux CRDs, controllers, and misc. resources
+      - kubectl apply --kustomize ./bootstrap
+      # Use the locally-available private key to decrypt the flux private key, and upload it to the cluster
+      - sops --decrypt ./bootstrap/flux-sops-age-key.sops.yaml | kubectl apply -f -
+      # Deploy the flux git source for this repo
+      - kubectl apply -n flux-system -f gitops/flux-system/flux/sources/git/infra-mk3-repo.yaml
+      # Deploy the rest of the bootstrap resources
+      - kubectl apply -n flux-system --kustomize gitops/flux-system/flux

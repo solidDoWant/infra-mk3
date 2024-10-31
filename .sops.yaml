@@ -1,11 +1,22 @@
 ---
 creation_rules:
-  - path_regex: ansible/.*/group_vars/[^/]*\.sops\..*
-    key_groups: &standard_key_groups
+  - &local_apply_files_config
+    path_regex: ^ansible/.*/group_vars/[^/]*\.sops\.[^/]*$
+    key_groups:
       - age:
-          - age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
-  - path_regex: talos/.*\.sops\..*
-    key_groups: *standard_key_groups
+          - &personal_key age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+  - <<: *local_apply_files_config
+    path_regex: ^talos/.*\.sops\.[^/]*$
+  - &flux_apply_files_config
+    path_regex: ^cluster/bootstrap/[^/]*\.sops\.[^/]*$
+    encrypted_regex: ^(data|stringData)$
+    key_groups:
+      - age:
+          - *personal_key
+          - age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+    mac_only_encrypted: true
+  - <<: *flux_apply_files_config
+    path_regex: ^cluster/bootstrap/.*\.sops\.ya?ml$
 
 stores:
   yaml:

@@ -1,0 +1,104 @@
+---
+# This is for flux. Unfortunately, kustomize naming requirements won't allow for 'flux' in the file name.
+#
+# Flux is installed via remote manifests instead of Helm charts. While there is a community-managed Helm
+# chart repo for flux, it is frequently out of date and/or has bugs that don't get patched frequently.
+#
+# Flux will later "adopt" this file via the root flux-system Kustomization, allowing flux to manage
+# itself.
+#
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/fluxcd/flux2//manifests/install/?timeout=120&version=v2.4.0
+patches:
+  # Don't deploy the image automation controller, or the image reflector controller.
+  # Updates will be handled by Renovate.
+  - &delete_patch
+    patch: |-
+      $patch: delete
+      apiVersion: placeholder-value-does-not-matter
+      kind: placeholder-value-does-not-matter
+      metadata:
+        name: placeholder-value-does-not-matter
+    target:
+      labelSelector: app.kubernetes.io/component=image-automation-controller
+  - <<: *delete_patch
+    target:
+      labelSelector: app.kubernetes.io/component=image-reflector-controller
+  # Flux performance tuning patches, see https://fluxcd.io/flux/installation/configuration/vertical-scaling/
+  # Allow more jobs to run in parallel
+  - patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --concurrent=24
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --requeue-dependency=5s
+    target: &performance_controllers_target
+      kind: Deployment
+      name: "(kustomize-controller|helm-controller|source-controller)"
+  # Increase resourse limits
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: all
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                resources:
+                  limits:
+                    memory: 2Gi
+                  requests:
+                    memory: 2Gi
+                    cpu: 100m
+    target: *performance_controllers_target
+  # Remove CPU resource limit
+  - patch: |
+      - op: remove
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+    target: *performance_controllers_target
+  # Run kustomize builds in-memory
+  - patch: |
+      - op: add
+        path: /spec/template/spec/volumes/0/emptyDir
+        value:
+          medium: Memory
+    target:
+      kind: Deployment
+      name: kustomize-controller
+  # Cache Helm repo data
+  # Probably not needed - TODO evaluate
+  # - patch: |
+  #     - op: add
+  #       path: /spec/template/spec/containers/0/args/-
+  #       value: --helm-cache-max-size=10
+  #     - op: add
+  #       path: /spec/template/spec/containers/0/args/-
+  #       value: --helm-cache-ttl=60m
+  #     - op: add
+  #       path: /spec/template/spec/containers/0/args/-
+  #       value: --helm-cache-purge-interval=5m
+  #   target:
+  #     kind: Deployment
+  #     name: source-controller
+  # Gracefully shut down when about to hit memory limit
+  - patch: |
+      # Enable OOM watch feature
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --feature-gates=OOMWatch=true
+      # Threshold at which to trigger a graceful shutdown (optional, default 95%)
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --oom-watch-memory-threshold=95
+      # Interval at which to check memory usage (optional, default 500ms)
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --oom-watch-interval=500ms
+    target:
+      kind: Deployment
+      name: helm-controller

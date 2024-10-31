@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flux-sops-age-key
+  namespace: flux-system
+stringData:
+  age.agekey: ENC[AES256_GCM,data:KjT3eFN/kgJxjDxpIaj4db2Q4qJzKNP+aLzJEaTQAetGDg43CfftPx10vVdwAqP4ixw0li638dyH1aMn8E2v8SDzx/gGiGL26AlPh4J7dY6Xyp61nMC9mJm0MSHvugw1ENcPyHscZYzKv9KFybILMooma0WywXRpO0V9eHK5+DPGTkxCqQCM9jPXueWFB6OD70G3ZwgXzABJBj5X4lcBrDo44P8jIeNQ1/isg1uB36cL5YrUK87yfA==,iv:VCcXgCCjHPL/P1CrghMgfem4d89Kl2Ovdz1GqoUTUNw=,tag:vFP4vM1F4PGfwTsf13RhEw==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBLd2xGVmdPbGttMWZWSzgx
+        MzZiVklXNTlLU2F3OFlNUlRDUVkwRTExclJNCkYrY0NHVGJQdjRlaVpqMTloMVVT
+        cmQySFBWUUJWN0hKd2NjRi9UVU92OTgKLS0tIGQyVGRudm5uRFJoS1ZMSXE1VTha
+        N1dxblFBQ25pQ0FzYTZCQ3JpT2RTUnMKj4Z5Q2MTFW7S3ONglq8HurQKAJQ/D1h5
+        2JKS2/mu8uz+PQjpPsxjqyrkVIJOJ7UCsQO5R54r4xc1u3v+dpndJQ==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBkNGMwM3cvRGpqeDNvWnM1
+        aHArU01jYkhUQkFOZTJFYkNWSzc4WHZESEJBCkp2dkovbHVtTjJnL2JOaFd1SUdF
+        WjNvU0xhUXZLUE9jVDk1WmtWaC9yUncKLS0tIDRXeERBQ3MwSlRsbm0vbDl2UXdF
+        WmlRblNMeXp3clRuYzMySTRwWDNadnMKwVmZbiuNzil7Owhb5yo7ziNCHcPU7huj
+        wvuAO9mPJcX9M4R/a5OBxKETbGmcvBxtqYF5KuBqRvybN+RbVDfDLw==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2024-10-31T06:43:46Z"
+  mac: ENC[AES256_GCM,data:9fmMJpkpDsfpFNJAOvD1ZW62KW0G+t0iGIiiNIiKXTNaCY6jiCmKECTXAvLxbfu2kJIEz2WMpgPqkbtsqLLDFwDfza0AjcQsWmV3jCeFk+jafgVmbMqe5z98c//Mqzos7prMLsVMukV3nb+W8ysyFe7K+UdX7y0tpHd8ocucvpo=,iv:qynGmEm6n03OydVRmo5WBOqtX9ePBbOd0hazjKAtDbs=,tag:sDzB+H8i7fnfZoU1RsnaVg==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0
