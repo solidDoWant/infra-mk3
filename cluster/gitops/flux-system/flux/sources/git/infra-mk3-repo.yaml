@@ -15,9 +15,10 @@ spec:
   #   secretRef:
   #     name:
   ignore: |
-    # Ignore everything except for the cluster gitops directory
+    # Ignore everything except for the cluster gitops directory, and bootstrap kustomization
     /*
     !/cluster/gitops
+    !/cluster/bootstrap/kustomization.yaml
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
 # This is a workaround to shift the "/cluster/gitops" directory to the root path.
