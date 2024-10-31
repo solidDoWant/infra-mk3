@@ -2,6 +2,11 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: 3
 
+vars:
+  TALOS_BOOTSTRAP_NODE_IP: 10.2.1.1
+env:
+  TALOSCONFIG: "{{ .ROOT_DIR }}/talos/talosconfig"
+
 tasks:
   download-iso:
     silent: true
@@ -38,8 +43,6 @@ tasks:
   apply-config:
     silent: true
     desc: Applies talconfig.yaml changes to all nodes
-    env:
-      TALOSCONFIG: ./talosconfig
     dir: "{{ .ROOT_DIR }}/talos"
     cmds:
       - |
@@ -86,7 +89,7 @@ tasks:
           # First attempt with insecure connection (no client cert)
           CMD_OUTPUT="$(apply_config_if_changed "${IP_ADDRESS}" "${FILE_NAME}" -i)" || EC="$?"
 
-          if [[ "${EC}" != 0 ]] && echo "${CMD_OUTPUT}" | grep -q 'certificate required' ; then
+          if [[ "${EC}" != 0 ]] && echo "${CMD_OUTPUT}" | grep -qE '(expired certificate|certificate required)' ; then
             CMD_OUTPUT="$(apply_config_if_changed "${IP_ADDRESS}" "${FILE_NAME}")" \
               && EC='0' || EC="$?"
           fi
@@ -95,22 +98,29 @@ tasks:
           [[ "${EC}" == 0 ]] || exit "${EC}"
         done
 
+  download-kubeconfig:
+    silent: true
+    cmd: talosctl kubeconfig -n {{ shellQuote .TALOS_BOOTSTRAP_NODE_IP }} -f
+
+  apply-helmfile:
+    silent: true
+    dir: "{{ .ROOT_DIR }}/talos"
+    cmd: helmfile apply --file helmfile.yaml --skip-diff-on-install --suppress-diff
+
   bootstrap:
     silent: true
-    vars:
-      BOOTSTRAP_NODE_IP: 10.2.1.1
-    env:
-      TALOSCONFIG: ./talosconfig
     dir: "{{ .ROOT_DIR }}/talos"
     cmds:
       - task: apply-config
       - |
-        talosctl bootstrap --talosconfig=./talosconfig -e {{ .BOOTSTRAP_NODE_IP | shellQuote }} -n {{ .BOOTSTRAP_NODE_IP | shellQuote }}
+        talosctl bootstrap -e {{ shellQuote .TALOS_BOOTSTRAP_NODE_IP }} -n {{ shellQuote .TALOS_BOOTSTRAP_NODE_IP }}
 
         echo "Waiting for node to come back online"
         sleep 10
-        until talosctl get rd -n {{ .BOOTSTRAP_NODE_IP | shellQuote }} 2>&1 > /dev/null; do
+        until talosctl get rd -n {{ shellQuote .TALOS_BOOTSTRAP_NODE_IP }} 2>&1 > /dev/null; do
           printf '.'
         done
         echo
-        echo "Bootstrap complete"
+      - task: download-kubeconfig
+      - task: apply-helmfile
+      - echo "Bootstrap complete"

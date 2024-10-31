@@ -1,0 +1,9 @@
+---
+providerRegex: |
+  ^talos-k8s-mixed-\d{2}$
+ignoreNonSystemNode: true
+providerIpPrefixes:
+  - 10.3.0.0/16
+# TODO figure out some way to get this securely into coredns. Maybe forward to Talos host DNS?
+bypassDnsResolution: true
+# TODO enable service monitor

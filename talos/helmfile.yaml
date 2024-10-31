@@ -1,0 +1,89 @@
+---
+helmDefaults:
+  cleanupOnFail: true
+  wait: true
+  waitForJobs: true
+  force: false
+
+repositories:
+  - name: cilium
+    url: https://helm.cilium.io/
+  - name: coredns
+    url: https://coredns.github.io/helm
+  - name: postfinance
+    url: https://postfinance.github.io/kubelet-csr-approver
+  - name: spegel
+    url: ghcr.io/spegel-org/helm-charts
+    oci: true
+
+releases:
+  - name: cilium
+    atomic: true
+    # Cilium is in it's own namespace because it has security-critical secrets, and because the namespace must be priviliged
+    namespace: cilium
+    createNamespace: false # Handled by hook
+    chart: cilium/cilium
+    version: 1.16.3
+    values:
+      - ../cluster/cilium/cilium/app/values.yaml
+    # Until https://github.com/helm/helm/issues/3503#issuecomment-696712443 is addressed this will be required
+    # Unfortunately Helm maintainers are taking their typical approach of "ignore community, we know best"
+    # Approach pulled from https://stackoverflow.com/a/72586030
+    hooks:
+      # Create the namespace and label it as privileged
+      - events:
+          - presync
+        showlogs: true
+        command: sh
+        args:
+          - -c
+          - &ns_cmd >-
+            kubectl create --dry-run=client -o yaml namespace $0 | kubectl apply -f -;
+            kubectl label --dry-run=client -o yaml --overwrite namespace $0 pod-security.kubernetes.io/enforce=privileged | kubectl apply -f -
+          - cilium
+
+  - name: coredns
+    atomic: true
+    namespace: networking
+    chart: coredns/coredns
+    version: 1.36.1
+    values:
+      - ../cluster/networking/coredns/app/values.yaml
+    needs:
+      - cilium/cilium
+
+  # Pod logs, exec, and other debugging tools will not work until this is deployed
+  - name: kubelet-csr-approver
+    atomic: true
+    namespace: system-controllers
+    chart: postfinance/kubelet-csr-approver
+    version: 1.2.3
+    values:
+      - ../cluster/system-controllers/kubelet-csr-approver/app/values.yaml
+    needs:
+      - cilium/cilium
+      - networking/coredns
+
+  # This is deployed prior to Flux so that image registry load is reduced on initial install
+  # Otherwise it is likely that dockerhub and ghcr limits will be quickly hit
+  - name: spegel
+    atomic: true
+    namespace: spegel
+    createNamespace: false # Handled by hook
+    chart: spegel/spegel
+    version: v0.0.27
+    values:
+      - ../cluster/spegel/spegel/app/values.yaml
+    hooks:
+      # Create the namespace and label it as privileged
+      - events:
+          - presync
+        showlogs: true
+        command: sh
+        args:
+          - -c
+          - *ns_cmd
+          - spegel
+    needs:
+      - cilium/cilium
+      - networking/coredns

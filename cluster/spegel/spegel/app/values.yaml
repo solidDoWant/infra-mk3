@@ -1,0 +1,11 @@
+---
+grafanaDashboard:
+  enabled: true
+spegel:
+  # Needed in case I decide to deploy another registry for mirroring like harbor
+  appendMirrors: true
+  # From https://github.com/spegel-org/spegel/blob/30faf12414e6e192b0614f7725af57f9a64df947/docs/COMPATIBILITY.md#L93
+  containerdRegistryConfigPath: /etc/cri/conf.d/hosts
+service: # Prevent collision with the range of ports that Cilium allocates for NodePort services
+  registry:
+    hostPort: 29999

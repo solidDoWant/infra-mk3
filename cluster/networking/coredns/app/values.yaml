@@ -1,0 +1,76 @@
+---
+replicaCount: 3 # CoreDNS is critical for pretty much everything
+prometheus:
+  service:
+    enabled: true
+service:
+  clusterIP: 10.33.0.10 # By convention, set the last octet to 10
+  trafficDistribution: PreferClose
+  name: kube-dns # Conventional name for the service
+serviceAccount:
+  create: true
+priorityClassName: system-cluster-critical
+# Containerd 2.0 enables binding to port numbers <= 1024 by default, so the
+# NET_BIND_SERVICE capability is not needed
+securityContext:
+  capabilities:
+    add: []
+servers:
+  - zones:
+      - zone: .
+        scheme: dns://
+        use_tcp: true
+    port: 53
+    plugins:
+      - name: errors
+      - name: health
+        configBlock: lameduck 5s
+      - name: ready
+      - name: log
+      - name: prometheus
+        parameters: 0.0.0.0:9253 # Default is localhost only\
+      - name: reload
+      - name: loop
+      - name: loadbalance
+      # Reject requests from public IP space
+      # This shouldn't happen - this config is just a precaution
+      - name: acl
+        configBlock: |-
+          allow net 10.0.0.0/8
+          drop
+      # Reject IPv6 record requests
+      - name: template
+        parameters: ANY AAAA
+        configBlock: rcode REFUSED
+      - name: whoami
+      # # TODO internal domain name
+      # - name: k8s_external
+      - name: kubernetes
+        parameters: cluster.local in-addr.arpa
+        configBlock: |-
+          pods verified
+          fallthrough in-addr.arpa
+      # This may make unbound prom dns metric queries more difficult, or less accurate
+      - name: cache
+        parameters: 30
+      - name: forward
+        parameters: . /etc/resolv.conf
+# Schedule only on control plane nodes
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+# Spread the pods out to mitigate the impact of a host failure
+topologySpreadConstraints:
+  - labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: '{{ template "coredns.name" . }}'
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+    topologyKey: kubernetes.io/hostname
+    maxSkew: 1
+    whenUnsatisfiable: ScheduleAnyway
+# Set so that Cilium Hubble correctly identifies this as a cluster DNS pod
+k8sAppLabelOverride: "kube-dns"

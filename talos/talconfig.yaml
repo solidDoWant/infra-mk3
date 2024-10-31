@@ -64,9 +64,16 @@ nodes:
             - siderolabs/thunderbolt
             # For virtualization/isolation
             - siderolabs/kata-containers
+        # TODO set the following args on the installer only (not ISO):
+        # src: https://cdrdv2-public.intel.com/332464/332464_710_Series_Datasheet_v_4_1.pdf
+        # - intel_iommu=on
+        # - iommu=pt
         extraKernelArgs:
           - &bond bond=bond0:enp2s0f0,enp2s0f1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
           - ip=10.2.1.1::10.2.0.254:255.255.0.0:talos-k8s-mixed-01:bond0:off:10.2.0.254::10.2.0.254
+    # This includes all of the above, except no kernel args
+    # Support for a fix will be in the next release of talhelper
+    talosImageURL: factory.talos.dev/installer-secureboot/54416e4c74096eb53d4f8982e20ba9e45f2eb0d73dc55c27bf8f2f8ef9a588b2
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-02
     ipAddress: 10.2.1.2
@@ -209,6 +216,28 @@ patches:
         nodeIP:
           validSubnets:
             - 10.3.1.0/16
+  # Configure containerd for spegel
+  - |-
+    machine:
+      files:
+        - op: create
+          path: /etc/cri/conf.d/20-customization.part
+          permissions: 0o644
+          content: |
+            [plugins]
+              [plugins.'io.containerd.cri.v1.images']
+                discard_unpacked_layers = false
+  # Configure containerd metrics
+  # Disabled for now, this destroyed my cluster somehow last time it was enabled
+  # - |-
+  #   machine:
+  #     files:
+  #       - op: create
+  #         path: /etc/cri/conf.d/30-metrics.part
+  #         permissions: 0o644
+  #         content: |
+  #           [metrics]
+  #             address = '0.0.0.0:11234'
   # Configure etcd
   # TODO limit this to processes on the each. Will probably require a custom extension, see
   # https://github.com/siderolabs/talos/blob/3e16ab135e2be8c9b652d67f9e7eadbc3691c5ca/internal/app/machined/pkg/controllers/network/nftables_chain_config.go#L162
@@ -226,7 +255,7 @@ patches:
       # Use Cilium's kube-proxy replacement
       proxy:
         disabled: true
-  # Disable talos-installed coredns, and instead install it manually
+  # Disable Talos-installed coredns, and instead install it manually
   - |-
     cluster:
       coreDNS:

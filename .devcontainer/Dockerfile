@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 # Generally helpful tools
 RUN apt update && apt install --no-install-recommends -y \
     file sshpass minicom age whois yq iputils-ping p7zip \
-    xorriso parted dosfstools mtools
+    xorriso parted dosfstools mtools dnsutils
 
 # Install debs from sources that don't provide an apt repo
 RUN mkdir -pv /tmp/debs && \
@@ -40,6 +40,26 @@ COPY --from=ghcr.io/helmfile/helmfile:v1.0.0-rc.7 /usr/local/bin/helmfile /usr/l
 # kubectl
 COPY --from=bitnami/kubectl:1.31.2 /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
 
+# Helm
+ENV HELM_DATA_HOME=/usr/local/share/helm
+COPY --from=alpine/helm:3.16.2 /usr/bin/helm /usr/local/bin/helm
+## Plugins
+### Required for helmfile
+RUN helm plugin install https://github.com/jkroepke/helm-secrets --version v4.6.2 && \
+    helm plugin install https://github.com/databus23/helm-diff --version v3.9.11
+
+# kustomize
+COPY --from=registry.k8s.io/kustomize/kustomize:v5.0.0 /app/kustomize /usr/local/bin/kustomize
+
+# Cilium CLI
+RUN mkdir -pv /tmp/cilium && \
+    # Vars for determining download URLs
+    KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
+    curl -fsSL -o /tmp/cilium/cilium.tar.gz "https://github.com/cilium/cilium-cli/releases/download/v0.16.19/cilium-${KERNEL}-${PRETTY_ARCH}.tar.gz" && \
+    tar -xzvf /tmp/cilium/cilium.tar.gz -C /usr/local/bin cilium && \
+    rm -rvf /tmp/cilium
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 
@@ -55,4 +75,8 @@ ENV ANSIBLE_CONFIG=./ansible.cfg
 RUN \
     talosctl completion bash | sudo tee /etc/bash_completion.d/talosctl.bash > /dev/null && \
     talhelper completion bash | sudo tee /etc/bash_completion.d/talhelper.bash > /dev/null && \
-    helmfile completion bash | sudo tee /etc/bash_completion.d/helmfile.bash > /dev/null
+    helmfile completion bash | sudo tee /etc/bash_completion.d/helmfile.bash > /dev/null && \
+    kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl.bash > /dev/null && \
+    helm completion bash | sudo tee /etc/bash_completion.d/helm.bash > /dev/null && \
+    kustomize completion bash | sudo tee /etc/bash_completion.d/kustomize.bash > /dev/null && \
+    cilium completion bash | sudo tee /etc/bash_completion.d/cilium.bash > /dev/null

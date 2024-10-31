@@ -489,6 +489,8 @@ ip-space:
       10.34.0.0/16:
         description: External/load balanced IPs
         vlan: 300
+        10.34.0.1/16:
+          description: Cilium ingress controller load balancer
       10.35.0.0/16:
         description: kube-vip IPs
         vlan: 300
