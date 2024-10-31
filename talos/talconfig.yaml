@@ -210,11 +210,16 @@ patches:
           validSubnets:
             - 10.3.1.0/16
   # Configure etcd
+  # TODO limit this to processes on the each. Will probably require a custom extension, see
+  # https://github.com/siderolabs/talos/blob/3e16ab135e2be8c9b652d67f9e7eadbc3691c5ca/internal/app/machined/pkg/controllers/network/nftables_chain_config.go#L162
+  # Or maybe just a new address resource + nftableschain resource
   - |-
     cluster:
       etcd:
         advertisedSubnets:
           - 10.3.1.0/16
+        extraArgs:
+          listen-metrics-urls: http://0.0.0.0:2381
   # Configuration for Cilium
   - |-
     cluster:
