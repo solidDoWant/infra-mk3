@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: goxdp
+spec:
+  hostNetwork: true
+  hostPID: true
+  containers:
+    - name: admin
+      image: ahsifer/goxdp:2.1
+      command:
+        - sleep
+        - "999999999999"
+      securityContext:
+        allowPrivilegeEscalation: true
+        capabilities:
+          add:
+            - SYS_ADMIN
+        privileged: true
+      volumeMounts:
+        - name: sys
+          mountPath: /sys
+        - name: dev
+          mountPath: /dev
+        - name: root
+          mountPath: /root
+  volumes:
+    - name: sys
+      hostPath:
+        path: /sys
+    - name: dev
+      hostPath:
+        path: /dev
+    - name: root
+      hostPath:
+        path: /
+  restartPolicy: Always

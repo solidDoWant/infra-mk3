@@ -16,6 +16,7 @@ repositories:
     url: ghcr.io/spegel-org/helm-charts
     oci: true
 
+# These will all eventually be "adopted" by Flux once it is deployed.
 releases:
   - name: cilium
     atomic: true
@@ -25,7 +26,7 @@ releases:
     chart: cilium/cilium
     version: 1.16.3
     values:
-      - ../cluster/cilium/cilium/app/values.yaml
+      - ../gitops/cilium/cilium/app/values.yaml
     # Until https://github.com/helm/helm/issues/3503#issuecomment-696712443 is addressed this will be required
     # Unfortunately Helm maintainers are taking their typical approach of "ignore community, we know best"
     # Approach pulled from https://stackoverflow.com/a/72586030
@@ -48,7 +49,7 @@ releases:
     chart: coredns/coredns
     version: 1.36.1
     values:
-      - ../cluster/networking/coredns/app/values.yaml
+      - ../gitops/networking/coredns/app/values.yaml
     needs:
       - cilium/cilium
 
@@ -59,7 +60,7 @@ releases:
     chart: postfinance/kubelet-csr-approver
     version: 1.2.3
     values:
-      - ../cluster/system-controllers/kubelet-csr-approver/app/values.yaml
+      - ../gitops/system-controllers/kubelet-csr-approver/app/values.yaml
     needs:
       - cilium/cilium
       - networking/coredns
@@ -73,7 +74,7 @@ releases:
     chart: spegel/spegel
     version: v0.0.27
     values:
-      - ../cluster/spegel/spegel/app/values.yaml
+      - ../gitops/spegel/spegel/app/values.yaml
     hooks:
       # Create the namespace and label it as privileged
       - events:

@@ -1,0 +1,109 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "iperf3server"
+  labels:
+    app: iperf3server
+spec:
+  containers:
+    - name: iperf3server1
+      image: &container_image leodotcloud/swiss-army-knife
+      command:
+        - iperf3
+        - -s
+        - -p
+        - "5101"
+      ports:
+        - containerPort: 5101
+    - name: iperf3server2
+      image: *container_image
+      command:
+        - iperf3
+        - -s
+        - -p
+        - "5102"
+      ports:
+        - containerPort: 5102
+    - name: iperf3server3
+      image: *container_image
+      command:
+        - iperf3
+        - -s
+        - -p
+        - "5103"
+      ports:
+        - containerPort: 5103
+    - name: iperf3server4
+      image: *container_image
+      command:
+        - iperf3
+        - -s
+        - -p
+        - "5104"
+      ports:
+        - containerPort: 5104
+  restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iperf3server
+spec:
+  selector:
+    app: iperf3server
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: iperf3server1
+      protocol: TCP
+      port: 5101
+    - name: iperf3server2
+      protocol: TCP
+      port: 5102
+    - name: iperf3server3
+      protocol: TCP
+      port: 5103
+    - name: iperf3server4
+      protocol: TCP
+      port: 5104
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "iperf3client"
+spec:
+  containers:
+    - name: iperf3client1
+      image: &container_image leodotcloud/swiss-army-knife
+      command:
+        - iperf3
+        - -c
+        - iperf3server
+        - -p
+        - "5101"
+    - name: iperf3client2
+      image: *container_image
+      command:
+        - iperf3
+        - -c
+        - iperf3server
+        - -p
+        - "5102"
+    - name: iperf3client3
+      image: *container_image
+      command:
+        - iperf3
+        - -c
+        - iperf3server
+        - -p
+        - "5103"
+    - name: iperf3client4
+      image: *container_image
+      command:
+        - iperf3
+        - -c
+        - iperf3server
+        - -p
+        - "5104"
+  restartPolicy: Always

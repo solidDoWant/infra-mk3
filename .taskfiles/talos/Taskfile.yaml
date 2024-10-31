@@ -104,7 +104,7 @@ tasks:
 
   apply-helmfile:
     silent: true
-    dir: "{{ .ROOT_DIR }}/talos"
+    dir: "{{ .ROOT_DIR }}/cluster/bootstrap"
     cmd: helmfile apply --file helmfile.yaml --skip-diff-on-install --suppress-diff
 
   bootstrap:
