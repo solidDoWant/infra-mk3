@@ -74,6 +74,9 @@ ENV TASK_X_ENV_PRECEDENCE=1
 # This is needed for WSL-backed Docker because the file is world-writable
 ENV ANSIBLE_CONFIG=./ansible.cfg
 
+# Talosctl configuration
+ENV TALOSCONFIG=talos/talosconfig
+
 # Autocomplete
 RUN \
     talosctl completion bash | sudo tee /etc/bash_completion.d/talosctl.bash > /dev/null && \
