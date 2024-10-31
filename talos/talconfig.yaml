@@ -36,6 +36,7 @@ nodes:
           mode: 802.3ad
           lacpRate: fast
           xmitHashPolicy: layer3+4
+          miimon: 100
         mtu: *jumbo_mtu
         addresses:
           - 10.2.1.1/16
