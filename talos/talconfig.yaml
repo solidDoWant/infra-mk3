@@ -12,6 +12,8 @@ nodes:
     controlPlane: true
     machineSpec:
       secureboot: true
+    nameservers:
+      - 10.2.0.254
     networkInterfaces:
       - &1g_1
         interface: enp87s0
