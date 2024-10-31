@@ -185,7 +185,10 @@ patches:
       features:
         hostDNS:
           enabled: true
-          forwardKubeDNSToHost: true
+          # This is broken with Cilium, see 
+          # * https://github.com/cilium/cilium/issues/35153
+          # * https://github.com/siderolabs/talos/pull/9200
+          forwardKubeDNSToHost: false
           resolveMemberNames: true
   # Remove the exclude-from-external-loadbalancers label
   - |-
