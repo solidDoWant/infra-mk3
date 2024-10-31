@@ -35,7 +35,8 @@
 		// "type=bind,source=/tmp/host-mounts,target=/tmp/host-mounts"
 	],
 	"containerEnv": {
-		"SOPS_AGE_KEY_FILE": "${containerWorkspaceFolder}/keys/primary.key"
+		"SOPS_AGE_KEY_FILE": "${containerWorkspaceFolder}/keys/primary.key",
+		"TALOSCONFIG": "${containerWorkspaceFolder}/talos/talosconfig"
 	},
 	"privileged": true,
 	// Features to add to the dev container. More info: https://containers.dev/features.
