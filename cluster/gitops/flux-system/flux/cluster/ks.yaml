@@ -12,7 +12,8 @@ spec:
     kind: GitRepository
     name: infra-mk3
   path: /cluster/gitops
-  targetNamespace: flux-system
+  # This cannot be set when namespace manifests exist, or it'll attempt (and fail) to set their name to flux-system
+  # targetNamespace: flux-system
   dependsOn:
     - name: flux-sources
   patches:
