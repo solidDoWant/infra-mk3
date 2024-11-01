@@ -8,10 +8,4 @@ configMapGenerator:
     files:
       - values.yaml=./helm-bootstrap-values.yaml
 configurations:
-  - |
-    nameReference:
-      - kind: ConfigMap
-        version: v1
-        fieldSpecs:
-          - path: spec/valuesFrom/name
-            kind: HelmRelease
+  - ./hr-values-from-cm-transformer.yaml
