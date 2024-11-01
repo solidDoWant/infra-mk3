@@ -49,7 +49,7 @@ releases:
     chart: coredns/coredns
     version: 1.36.1
     values:
-      - ../gitops/networking/coredns/app/values.yaml
+      - ../gitops/networking/coredns/app/helm-bootstrap-values.yaml
     needs:
       - cilium/cilium
 
