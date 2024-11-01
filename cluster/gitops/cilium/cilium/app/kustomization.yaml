@@ -9,12 +9,8 @@ configMapGenerator:
       - values.yaml=./helm-bootstrap-values.yaml
 transformers:
   - |
-    apiVersion: builtin
-    kind: NameTransformer
-    metadata:
-      name: placeholder-value-does-not-matter
+    kind: ConfigMap
+    version: v1
     fieldSpecs:
-      - kind: ConfigMap
-        fieldSpecs:
-          - path: spec/valuesFrom/name
-            kind: HelmRelease
+      - path: spec/valuesFrom/name
+        kind: HelmRelease
