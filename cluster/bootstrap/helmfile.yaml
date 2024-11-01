@@ -74,7 +74,7 @@ releases:
     chart: spegel/spegel
     version: v0.0.27
     values:
-      - ../gitops/spegel/spegel/app/values.yaml
+      - ../gitops/spegel/spegel/app/helm-bootstrap-values.yaml
     hooks:
       # Create the namespace and label it as privileged
       - events:

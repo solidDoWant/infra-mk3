@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: spegel
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: spegel
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: spegel-charts
+      version: v0.0.27
+  # These values are used for the initial deployment
+  valuesFrom:
+    - kind: ConfigMap
+      name: helm-bootstrap-values
+  # These values are added now that the cluster has been bootstrapped
+  # values:
