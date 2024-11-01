@@ -41,7 +41,8 @@ servers:
       # Reject IPv6 record requests
       - name: template
         parameters: ANY AAAA
-        configBlock: rcode REFUSED
+        # If the A record returns NXDOMAIN and the AAAA record returns refused, the resolver won't try additional domains
+        configBlock: rcode NXDOMAIN
       - name: whoami
       # # TODO internal domain name
       # - name: k8s_external
