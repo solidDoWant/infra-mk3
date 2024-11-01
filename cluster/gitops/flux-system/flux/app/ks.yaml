@@ -15,3 +15,11 @@ spec:
   targetNamespace: flux-system
   dependsOn:
     - name: flux-sources
+  # Temporarily use my own version of the source controller until
+  # https://github.com/fluxcd/source-controller/pull/1659 gets merged
+  # For some dumb reason this won't work directly in the kustomization
+  patches:
+    - patch: |
+        - op: replace
+          path: /spec/template/spec/containers/0/image
+          value: ghcr.io/soliddowant/flux/source-controller:latest@sha256:dd32ca49151cd026e620ff5d89802b20a19ebf84dca48feba196abe73122acc5
