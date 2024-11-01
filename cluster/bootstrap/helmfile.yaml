@@ -26,7 +26,7 @@ releases:
     chart: cilium/cilium
     version: 1.16.3
     values:
-      - ../gitops/cilium/cilium/app/values.yaml
+      - ../gitops/cilium/cilium/app/helm-bootstrap-values.yaml
     # Until https://github.com/helm/helm/issues/3503#issuecomment-696712443 is addressed this will be required
     # Unfortunately Helm maintainers are taking their typical approach of "ignore community, we know best"
     # Approach pulled from https://stackoverflow.com/a/72586030
