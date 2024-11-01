@@ -38,7 +38,9 @@ spec:
   #   mode: HEAD
   #   secretRef:
   #     name:
-  ignore: /* # Ignore everything
+  # Don't ignore anything. This is processed _after_ `include` is processed,
+  # which means that ignoring `/*` will ignore the included files.
+  # ignore: /* # Ignore everything
   include:
     - repository:
         name: infra-mk3-actual

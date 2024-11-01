@@ -11,6 +11,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - https://github.com/fluxcd/flux2//manifests/install/?timeout=120&version=v2.4.0
+# Temporary while PR gets merged
+images:
+  - name: fluxcd/source-controller
+    newName: ghcr.io/soliddowant/flux/source-controller
+    newTag: latest
+    digest: dd32ca49151cd026e620ff5d89802b20a19ebf84dca48feba196abe73122acc5
 patches:
   # Don't deploy the image automation controller, or the image reflector controller.
   # Updates will be handled by Renovate.
