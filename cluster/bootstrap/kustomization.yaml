@@ -44,7 +44,7 @@ patches:
     target: &performance_controllers_target
       kind: Deployment
       name: "(kustomize-controller|helm-controller|source-controller)"
-  # Increase resourse limits
+  # Increase resource limits
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
