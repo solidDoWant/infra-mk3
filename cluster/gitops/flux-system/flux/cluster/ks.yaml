@@ -33,56 +33,57 @@ spec:
         version: v1
         kind: Namespace
         labelSelector: patches.flux.home.arpa/namespace.can-prune = true
-  #   # # Put all fluxtomizations in the flux-system namespace
-  #   # # This seems to apply _after_ a diff, which causes the diff to fail because
-  #   # # the resources cannot be found.
-  #   # - patch: |
-  #   #     - op: add
-  #   #       path: /metadata/namespace
-  #   #       value: flux-system
-  #   #   target: &fluxtomization_target
-  #   #     group: kustomize.toolkit.fluxcd.io
-  #   #     version: v1
-  #   #     kind: Kustomization
-  #   # These are "meta patches". Rather than directly patch HelmReleases, they
-  #   # patch fluxtomizations to add patches that patch HelmReleases.
-  #   # Add a patch that adds default values to HelmReleases
-  #   - patch: |
-  #       apiVersion: placeholder-value-does-not-matter
-  #       kind: placeholder-value-does-not-matter
-  #       metadata:
-  #         name: placeholder-value-does-not-matter
-  #       spec:
-  #         patches:
-  #           - patch: |
-  #               apiVersion: placeholder-value-does-not-matter
-  #               kind: placeholder-value-does-not-matter
-  #               metadata:
-  #                 name: placeholder-value-does-not-matter
-  #               spec:
-  #                 install:
-  #                   remediation:
-  #                     retries: 5
-  #                 upgrade:
-  #                   remediation:
-  #                     retries: 5
-  #                     strategy: rollback
-  #                   cleanupOnFail: true
-  #                 rollback:
-  #                   recreate: true
-  #                 uninstall:
-  #                   deletionPropagation: foreground
-  #                 driftDetection:
-  #                   mode: enabled
-  #             target:
-  #               group: v2
-  #               version: helm.toolkit.fluxcd.io
-  #               kind: HelmRelease
-  #               labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
-  #     target: &fluxtomization_target
-  #       group: kustomize.toolkit.fluxcd.io
-  #       version: v1
-  #       kind: Kustomization
+    # # Put all fluxtomizations in the flux-system namespace
+    # # This seems to apply _after_ a diff, which causes the diff to fail because
+    # # the resources cannot be found.
+    # - patch: |
+    #     - op: add
+    #       path: /metadata/namespace
+    #       value: flux-system
+    #   target: &fluxtomization_target
+    #     group: kustomize.toolkit.fluxcd.io
+    #     version: v1
+    #     kind: Kustomization
+
+    # These are "meta patches". Rather than directly patch HelmReleases, they
+    # patch fluxtomizations to add patches that patch HelmReleases.
+    # Add a patch that adds default values to HelmReleases
+    - patch: |
+        apiVersion: placeholder-value-does-not-matter
+        kind: placeholder-value-does-not-matter
+        metadata:
+          name: placeholder-value-does-not-matter
+        spec:
+          patches:
+            - patch: |
+                apiVersion: placeholder-value-does-not-matter
+                kind: placeholder-value-does-not-matter
+                metadata:
+                  name: placeholder-value-does-not-matter
+                spec:
+                  install:
+                    remediation:
+                      retries: 5
+                  upgrade:
+                    remediation:
+                      retries: 5
+                      strategy: rollback
+                    cleanupOnFail: true
+                  rollback:
+                    recreate: true
+                  uninstall:
+                    deletionPropagation: foreground
+                  driftDetection:
+                    mode: enabled
+              target:
+                group: v2
+                version: helm.toolkit.fluxcd.io
+                kind: HelmRelease
+                labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
+      target: &fluxtomization_target
+        group: kustomize.toolkit.fluxcd.io
+        version: v1
+        kind: Kustomization
   #   - patch: |
   #       apiVersion: placeholder-value-does-not-matter
   #       kind: placeholder-value-does-not-matter
