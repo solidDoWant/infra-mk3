@@ -1,0 +1,7 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: cilium-charts
+spec:
+  url: https://helm.cilium.io
