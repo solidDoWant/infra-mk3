@@ -19,20 +19,20 @@ spec:
   #   # Setting this causes flux and flux-sources to go into an infinite reconciliation loop. Either this
   #   # kustomization can depend on the flux sources, or it can update the flux-sources kustomization, but not both.
   #   - name: flux-sources
-  # patches:
-  #   # Disable pruning of namespaces
-  #   - patch: |
-  #       # Strategic merge patches need these set but the values don't matter at all
-  #       apiVersion: placeholder-value-does-not-matter
-  #       kind: placeholder-value-does-not-matter
-  #       metadata:
-  #         name: placeholder-value-does-not-matter
-  #         labels:
-  #           kustomize.toolkit.fluxcd.io/prune: disabled
-  #     target:
-  #       version: v1
-  #       kind: Namespace
-  #       labelSelector: patches.flux.home.arpa/namespace.can-prune = true
+  patches:
+    # Disable pruning of namespaces
+    - patch: |
+        # Strategic merge patches need these set but the values don't matter at all
+        apiVersion: placeholder-value-does-not-matter
+        kind: placeholder-value-does-not-matter
+        metadata:
+          name: placeholder-value-does-not-matter
+          labels:
+            kustomize.toolkit.fluxcd.io/prune: disabled
+      target:
+        version: v1
+        kind: Namespace
+        labelSelector: patches.flux.home.arpa/namespace.can-prune = true
   #   # # Put all fluxtomizations in the flux-system namespace
   #   # # This seems to apply _after_ a diff, which causes the diff to fail because
   #   # # the resources cannot be found.
