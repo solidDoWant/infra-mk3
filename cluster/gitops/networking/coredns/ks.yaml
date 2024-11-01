@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
   name: &app_name coredns
 spec:
-  targetNamespace: coredns
+  targetNamespace: networking
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
