@@ -51,37 +51,34 @@ spec:
     # patch fluxtomizations to add patches that patch HelmReleases.
     # Add a patch that adds default values to HelmReleases
     - patch: |
-        apiVersion: placeholder-value-does-not-matter
-        kind: placeholder-value-does-not-matter
-        metadata:
-          name: placeholder-value-does-not-matter
-        spec:
-          patches:
-            - patch: |
-                apiVersion: placeholder-value-does-not-matter
-                kind: placeholder-value-does-not-matter
-                metadata:
-                  name: placeholder-value-does-not-matter
-                spec:
-                  install:
-                    remediation:
-                      retries: 5
-                  upgrade:
-                    remediation:
-                      retries: 5
-                      strategy: rollback
-                    cleanupOnFail: true
-                  rollback:
-                    recreate: true
-                  uninstall:
-                    deletionPropagation: foreground
-                  driftDetection:
-                    mode: enabled
-              target:
-                group: v2
-                version: helm.toolkit.fluxcd.io
-                kind: HelmRelease
-                labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: placeholder-value-does-not-matter
+              kind: placeholder-value-does-not-matter
+              metadata:
+                name: placeholder-value-does-not-matter
+              spec:
+                install:
+                  remediation:
+                    retries: 5
+                upgrade:
+                  remediation:
+                    retries: 5
+                    strategy: rollback
+                  cleanupOnFail: true
+                rollback:
+                  recreate: true
+                uninstall:
+                  deletionPropagation: foreground
+                driftDetection:
+                  mode: enabled
+            target:
+              group: v2
+              version: helm.toolkit.fluxcd.io
+              kind: HelmRelease
+              labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
       target: &fluxtomization_target
         group: kustomize.toolkit.fluxcd.io
         version: v1
@@ -89,64 +86,58 @@ spec:
         labelSelector: patches.flux.home.arpa/kustomization.patches != false
     # Set HelmRelease source ref to flux-system namespace
     - patch: |
-        apiVersion: placeholder-value-does-not-matter
-        kind: placeholder-value-does-not-matter
-        metadata:
-          name: placeholder-value-does-not-matter
-        spec:
-          patches:
-            - patch: |
-                apiVersion: placeholder-value-does-not-matter
-                kind: placeholder-value-does-not-matter
-                metadata:
-                  name: placeholder-value-does-not-matter
-                spec:
-                  chart:
-                    spec:
-                      sourceRef:
-                        namespace: flux-system
-              target:
-                group: v2
-                version: helm.toolkit.fluxcd.io
-                kind: HelmRelease
-                labelSelector: patches.flux.home.arpa/helmrelease.default-src-namespace != false
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: placeholder-value-does-not-matter
+              kind: placeholder-value-does-not-matter
+              metadata:
+                name: placeholder-value-does-not-matter
+              spec:
+                chart:
+                  spec:
+                    sourceRef:
+                      namespace: flux-system
+            target:
+              group: v2
+              version: helm.toolkit.fluxcd.io
+              kind: HelmRelease
+              labelSelector: patches.flux.home.arpa/helmrelease.default-src-namespace != false
       target: *fluxtomization_target
     # Add a patch that adds a patch that allows drift detection to ignore the
     # desired number of replicas on deployments and statefulsets
     # This is another level of meta patching
     - patch: |
-        apiVersion: placeholder-value-does-not-matter
-        kind: placeholder-value-does-not-matter
-        metadata:
-          name: placeholder-value-does-not-matter
-        spec:
-          patches:
-            - patch: |
-                apiVersion: placeholder-value-does-not-matter
-                kind: placeholder-value-does-not-matter
-                metadata:
-                  name: placeholder-value-does-not-matter
-                spec:
-                  driftDetection:
-                    ignore:
-                      # Ignore deployment replica counts, opt-in (needed for horizontal autoscaling)
-                      - paths:
-                          - /spec/replicas
-                        target:
-                          group: apps
-                          version: v1
-                          kind: Deployment
-                          labelSelector: patches.flux.home.arpa/deployment.ignore-replicas = true
-                      # Ignore statefulset replica counts, opt-in (needed for horizontal autoscaling)
-                      - paths:
-                          - /spec/replicas
-                        target:
-                          group: apps
-                          version: v1
-                          kind: StatefulSet
-                          labelSelector: patches.flux.home.arpa/statefulset.ignore-replicas = true
-              target:
-                group: v2
-                version: helm.toolkit.fluxcd.io
-                kind: HelmRelease
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: placeholder-value-does-not-matter
+              kind: placeholder-value-does-not-matter
+              metadata:
+                name: placeholder-value-does-not-matter
+              spec:
+                driftDetection:
+                  ignore:
+                    # Ignore deployment replica counts, opt-in (needed for horizontal autoscaling)
+                    - paths:
+                        - /spec/replicas
+                      target:
+                        group: apps
+                        version: v1
+                        kind: Deployment
+                        labelSelector: patches.flux.home.arpa/deployment.ignore-replicas = true
+                    # Ignore statefulset replica counts, opt-in (needed for horizontal autoscaling)
+                    - paths:
+                        - /spec/replicas
+                      target:
+                        group: apps
+                        version: v1
+                        kind: StatefulSet
+                        labelSelector: patches.flux.home.arpa/statefulset.ignore-replicas = true
+            target:
+              group: v2
+              version: helm.toolkit.fluxcd.io
+              kind: HelmRelease
       target: *fluxtomization_target
