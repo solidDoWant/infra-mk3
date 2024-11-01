@@ -1,9 +1,8 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: infra-mk3-actual
+  name: infra-mk3
 spec:
   interval: 1h
   url: https://github.com/solidDoWant/infra-mk3
@@ -19,34 +18,61 @@ spec:
     /*
     !/cluster/gitops
     !/cluster/bootstrap/kustomization.yaml
----
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
-# This is a workaround to shift the "/cluster/gitops" directory to the root path.
-# This makes fluxtomizations a bit less verbose.
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: infra-mk3
-spec:
-  interval: 87600h # Arbitrarily large value (once every ten years)
-  url: https://github.com/solidDoWant/infra-mk3
-  ref:
-    # The branch is an empty, orphaned commit.
-    branch: orphan-no-content
-  # TODO start signing commits (renovate as well)
-  # verify:
-  #   mode: HEAD
-  #   secretRef:
-  #     name:
-  # Don't ignore anything. This is processed _after_ `include` is processed,
-  # which means that ignoring `/*` will ignore the included files.
-  # ignore: /* # Ignore everything
-  include:
-    - repository:
-        name: infra-mk3-actual
-      fromPath: /cluster/gitops
-      toPath: /
-    - repository:
-        name: infra-mk3-actual
-      fromPath: /cluster/bootstrap
-      toPath: /flux-system/flux/app/bootstrap
+
+# This approach does not currently work due to https://github.com/fluxcd/source-controller/issues/522
+# Leaving this here for reference, may revert to it when/if the issue is resolved
+# This could potentially be fixed by using the notification controller + ingress to call itself to
+# trigger the update
+
+# ---
+# # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
+# apiVersion: source.toolkit.fluxcd.io/v1
+# kind: GitRepository
+# metadata:
+#   name: infra-mk3-actual
+# spec:
+#   interval: 1h
+#   url: https://github.com/solidDoWant/infra-mk3
+#   ref:
+#     branch: master
+#   # TODO start signing commits (renovate as well)
+#   # verify:
+#   #   mode: HEAD
+#   #   secretRef:
+#   #     name:
+#   ignore: |
+#     # Ignore everything except for the cluster gitops directory, and bootstrap kustomization
+#     /*
+#     !/cluster/gitops
+#     !/cluster/bootstrap/kustomization.yaml
+# ---
+# # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
+# # This is a workaround to shift the "/cluster/gitops" directory to the root path.
+# # This makes fluxtomizations a bit less verbose.
+# apiVersion: source.toolkit.fluxcd.io/v1
+# kind: GitRepository
+# metadata:
+#   name: infra-mk3
+# spec:
+#   interval: 87600h # Arbitrarily large value (once every ten years)
+#   url: https://github.com/solidDoWant/infra-mk3
+#   ref:
+#     # The branch is an empty, orphaned commit.
+#     branch: orphan-no-content
+#   # TODO start signing commits (renovate as well)
+#   # verify:
+#   #   mode: HEAD
+#   #   secretRef:
+#   #     name:
+#   # Don't ignore anything. This is processed _after_ `include` is processed,
+#   # which means that ignoring `/*` will ignore the included files.
+#   # ignore: /* # Ignore everything
+#   include:
+#     - repository:
+#         name: infra-mk3-actual
+#       fromPath: /cluster/gitops
+#       toPath: /
+#     - repository:
+#         name: infra-mk3-actual
+#       fromPath: /cluster/bootstrap
+#       toPath: /flux-system/flux/app/bootstrap

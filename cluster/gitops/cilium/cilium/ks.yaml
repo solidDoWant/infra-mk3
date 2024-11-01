@@ -9,7 +9,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cilium/cilium/app
+  path: /cluster/gitops/cilium/cilium/app
   prune: true
   sourceRef:
     kind: GitRepository
