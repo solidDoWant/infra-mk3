@@ -15,8 +15,10 @@ spec:
   path: /cluster/gitops
   # This cannot be set when namespace manifests exist, or it'll attempt (and fail) to set their name to flux-system
   # targetNamespace: flux-system
-  dependsOn:
-    - name: flux-sources
+  # dependsOn:
+  #   # Setting this causes flux and flux-sources to go into an infinite reconciliation loop. Either this
+  #   # kustomization can depend on the flux sources, or it can update the flux-sources kustomization, but not both.
+  #   - name: flux-sources
   patches:
     # Disable pruning of namespaces
     - patch: |
