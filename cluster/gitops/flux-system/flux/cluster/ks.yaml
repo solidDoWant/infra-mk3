@@ -6,6 +6,8 @@ kind: Kustomization
 metadata:
   namespace: flux-system
   name: infra-mk3
+  labels:
+    patches.flux.home.arpa/kustomization.patches: "false"
 spec:
   interval: 5m
   prune: true
@@ -84,6 +86,8 @@ spec:
         group: kustomize.toolkit.fluxcd.io
         version: v1
         kind: Kustomization
+        labelSelector: patches.flux.home.arpa/kustomization.patches != false
+
   #   - patch: |
   #       apiVersion: placeholder-value-does-not-matter
   #       kind: placeholder-value-does-not-matter
