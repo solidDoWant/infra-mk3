@@ -1,4 +1,8 @@
 ---
+# Standard kustomization file for releases that were used for bootstrapping.
+# Symlink from app directories.
+
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
