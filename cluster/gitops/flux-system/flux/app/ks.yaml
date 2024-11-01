@@ -23,3 +23,7 @@ spec:
         - op: replace
           path: /spec/template/spec/containers/0/image
           value: ghcr.io/soliddowant/flux/source-controller:latest@sha256:dd32ca49151cd026e620ff5d89802b20a19ebf84dca48feba196abe73122acc5
+      target:
+        group: apps
+        version: v1
+        kind: Deployment
