@@ -12,3 +12,14 @@ spec:
     name: infra-mk3
   path: /flux-system/flux/sources
   targetNamespace: flux-system
+  patches:
+    # Set a default Helm repo metadata polling interval
+    - patch: |
+        - op: add
+          path: /spec/interval
+          value: 1h
+      target:
+        group: source.toolkit.fluxcd.io
+        version: v1
+        kind: HelmRepository
+        labelSelector: patches.flux.home.arpa/helmrepository.interval != false
