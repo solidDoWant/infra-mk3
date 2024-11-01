@@ -60,7 +60,7 @@ releases:
     chart: postfinance/kubelet-csr-approver
     version: 1.2.3
     values:
-      - ../gitops/system-controllers/kubelet-csr-approver/app/values.yaml
+      - ../gitops/system-controllers/kubelet-csr-approver/app/helm-bootstrap-values.yaml
     needs:
       - cilium/cilium
       - networking/coredns

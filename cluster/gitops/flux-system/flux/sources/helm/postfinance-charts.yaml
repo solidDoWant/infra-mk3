@@ -1,0 +1,7 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: postfinance-charts
+spec:
+  url: https://postfinance.github.io/kubelet-csr-approver
