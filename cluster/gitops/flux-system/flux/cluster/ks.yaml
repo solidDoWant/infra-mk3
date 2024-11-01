@@ -14,7 +14,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: infra-mk3
-  path: /cluster/gitops/flux-system
+  path: /cluster/gitops
   # This cannot be set when namespace manifests exist, or it'll attempt (and fail) to set their name to flux-system
   # targetNamespace: flux-system
   # dependsOn:
