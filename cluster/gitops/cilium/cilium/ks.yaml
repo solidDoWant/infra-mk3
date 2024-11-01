@@ -4,7 +4,7 @@ kind: Kustomization
 metadata:
   name: &app_name cilium
 spec:
-  # targetNamespace: cilium # TODO check if this can be enabled with gateway and ingress
+  targetNamespace: cilium # TODO check if this can be enabled with gateway and ingress
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
