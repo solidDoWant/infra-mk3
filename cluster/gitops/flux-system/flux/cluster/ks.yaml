@@ -78,8 +78,8 @@ spec:
                   driftDetection:
                     mode: enabled
               target:
-                group: v2
-                version: helm.toolkit.fluxcd.io
+                group: helm.toolkit.fluxcd.io
+                version: v2
                 kind: HelmRelease
                 labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
             # Set HelmRelease source ref to flux-system namespace
@@ -94,8 +94,8 @@ spec:
                       sourceRef:
                         namespace: flux-system
               target:
-                group: v2
-                version: helm.toolkit.fluxcd.io
+                group: helm.toolkit.fluxcd.io
+                version: v2
                 kind: HelmRelease
                 labelSelector: patches.flux.home.arpa/helmrelease.default-src-namespace != false
             # Add a patch that adds a patch that allows drift detection to ignore the
@@ -126,8 +126,8 @@ spec:
                           kind: StatefulSet
                           labelSelector: patches.flux.home.arpa/statefulset.ignore-replicas = true
               target:
-                group: v2
-                version: helm.toolkit.fluxcd.io
+                group: helm.toolkit.fluxcd.io
+                version: v2
                 kind: HelmRelease
       target:
         group: kustomize.toolkit.fluxcd.io
