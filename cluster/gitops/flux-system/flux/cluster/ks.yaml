@@ -49,6 +49,16 @@ spec:
 
     # These are "meta patches". Rather than directly patch HelmReleases, they
     # patch fluxtomizations to add patches that patch HelmReleases.
+    # Ensure that the 'patches' key exists
+    - patch: |
+        - op: add
+          path: /spec/patches
+          value: []
+      target: &fluxtomization_target
+        group: kustomize.toolkit.fluxcd.io
+        version: v1
+        kind: Kustomization
+        labelSelector: patches.flux.home.arpa/kustomization.patches != false
     # Add a patch that adds default values to HelmReleases
     - patch: |
         - op: add
@@ -79,11 +89,7 @@ spec:
               version: helm.toolkit.fluxcd.io
               kind: HelmRelease
               labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
-      target: &fluxtomization_target
-        group: kustomize.toolkit.fluxcd.io
-        version: v1
-        kind: Kustomization
-        labelSelector: patches.flux.home.arpa/kustomization.patches != false
+      target: *fluxtomization_target
     # Set HelmRelease source ref to flux-system namespace
     - patch: |
         - op: add
