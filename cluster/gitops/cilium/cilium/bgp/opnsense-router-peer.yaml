@@ -1,0 +1,20 @@
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumBGPPeerConfig
+metadata:
+  name: opnsense-router
+spec:
+  timers:
+    connectRetryTimeSeconds: 12
+    holdTimeSeconds: 9
+    keepAliveTimeSeconds: 3
+  authSecretRef: opnsense-bgp-password
+  gracefulRestart:
+    enabled: true
+    restartTimeSeconds: 60
+  families:
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          cilium.home.arpa/bgpadvertisement.opnsense-peer: "true"

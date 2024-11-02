@@ -1,0 +1,27 @@
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumBGPAdvertisement
+metadata:
+  name: bgp-services-advertisement
+  labels:
+    cilium.home.arpa/bgpadvertisement.opnsense-peer: "true"
+spec:
+  advertisements:
+    - advertisementType: Service
+      service:
+        addresses:
+          # Advertise everything and filter traffic on the firewall
+          - ClusterIP
+          - ExternalIP
+          - LoadBalancerIP
+      attributes:
+        communities:
+          wellKnown:
+            # Don't send routes to peers outside of the confederation
+            - no-export
+      selector:
+        matchExpressions:
+          - key: cilium.home.arpa/advertise
+            operator: NotIn
+            values:
+              - "false"

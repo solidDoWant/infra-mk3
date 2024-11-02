@@ -498,3 +498,16 @@ ip-space:
           description: Cluster API endpoint
   192.168.11.0/24:
     description: XGS-PON subnet
+autonomous-systems:
+  64512:
+    description: OPNsense
+    prefixes:
+      - 10.0.0.0/11
+    peer:
+      - 64513
+  64513:
+    description: Kubernetes
+    prefixes:
+      - 10.32.0.0/11
+    peer:
+      - 64512

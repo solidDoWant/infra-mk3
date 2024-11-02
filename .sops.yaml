@@ -17,6 +17,8 @@ creation_rules:
     mac_only_encrypted: true
   - <<: *flux_apply_files_config
     path_regex: ^cluster/bootstrap/.*\.sops\.ya?ml$
+  - <<: *flux_apply_files_config
+    path_regex: ^cluster/gitops/.*\.sops\.ya?ml$
 
 stores:
   yaml:

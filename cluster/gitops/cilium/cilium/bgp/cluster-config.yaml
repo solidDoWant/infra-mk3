@@ -1,0 +1,22 @@
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumBGPClusterConfig
+metadata:
+  name: cilium-bgp
+spec:
+  nodeSelector:
+    matchLabels:
+      cilium.home.arpa/node.bgp-enabled: "true"
+  bgpInstances:
+    - name: opnsense-as
+      localASN: 0xFC01
+      peers:
+        - &opnsense_peer
+          name: router-01
+          peerASN: 0xFC00
+          peerAddress: 10.3.0.1
+          peerConfigRef:
+            name: opnsense-router
+        - <<: *opnsense_peer
+          name: router-02
+          peerAddress: 10.3.0.2
