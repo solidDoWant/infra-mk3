@@ -175,4 +175,7 @@ securityContext:
 socketLB:
   enabled: true
   hostNamespaceOnly: true # Required for kata-containers
-  terminatePodConnections: true
+  # Temporarily disable until my fix PR is merged:
+  # https://github.com/cilium/cilium/pull/35703
+  # This is still enabled even though commented out
+  # terminatePodConnections: true
