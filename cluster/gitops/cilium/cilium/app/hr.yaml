@@ -20,8 +20,9 @@ spec:
       name: helm-bootstrap-values
   # These values are added now that the cluster has been bootstrapped
   values:
-    bgp:
-      announce:
-        loadbalancerIP: true
-        podCIDR: true
-      enabled: true
+    # Move this to CR
+    # bgp:
+    #   announce:
+    #     loadbalancerIP: true
+    #     podCIDR: true
+    #   enabled: true
