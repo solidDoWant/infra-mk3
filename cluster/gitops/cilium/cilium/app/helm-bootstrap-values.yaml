@@ -5,12 +5,6 @@ autoDirectNodeRoutes: true # Without this, requests will go through the firewall
 bandwidthManager:
   bbr: true
   enabled: true
-# TODO enable this via CRs after initial deployment
-# bgp:
-#   announce:
-#     loadbalancerIP: true
-#     podCIDR: true
-#   enabled: true
 bgpControlPlane:
   enabled: true
   secretsNamespace:
