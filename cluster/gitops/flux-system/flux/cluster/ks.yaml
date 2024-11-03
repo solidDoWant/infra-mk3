@@ -47,6 +47,21 @@ spec:
     #     version: v1
     #     kind: Kustomization
 
+    # Patch to make fluxtomizations decrypt secrets
+    - patch: |
+        apiVersion: placeholder-value-does-not-matter
+        kind: placeholder-value-does-not-matter
+        metadata:
+          name: placeholder-value-does-not-matter
+        spec:
+          decryption:
+            provider: sops
+            secretRef:
+              name: flux-sops-age-key
+      target: &fluxtomization_target
+        group: kustomize.toolkit.fluxcd.io
+        version: v1
+        kind: Kustomization
     # These are "meta patches". Rather than directly patch HelmReleases, they
     # patch fluxtomizations to add patches that patch HelmReleases.
     - patch: |
@@ -130,7 +145,5 @@ spec:
                 version: v2
                 kind: HelmRelease
       target:
-        group: kustomize.toolkit.fluxcd.io
-        version: v1
-        kind: Kustomization
+        <<: *fluxtomization_target
         labelSelector: patches.flux.home.arpa/kustomization.patches != false
