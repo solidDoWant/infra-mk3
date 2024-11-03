@@ -14,6 +14,8 @@ spec:
         - &opnsense_peer
           name: router-01
           peerASN: 0xFC00
+          # This currently seems to be ignored due to a Cilium bug. See debug
+          # log when connection fails for evidence
           peerAddress: 10.3.0.1
           peerConfigRef:
             name: opnsense-router

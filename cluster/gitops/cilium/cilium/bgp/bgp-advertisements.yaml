@@ -7,33 +7,21 @@ metadata:
     cilium.home.arpa/bgpadvertisement.opnsense-peer: "true"
 spec:
   advertisements:
-    - advertisementType: "PodCIDR"
-    - advertisementType: "Service"
+    - advertisementType: Service
       service:
         addresses:
+          # Advertise everything and filter traffic on the firewall
           - ClusterIP
           - ExternalIP
           - LoadBalancerIP
+      attributes:
+        communities:
+          wellKnown:
+            # Don't send routes to peers outside of the confederation
+            - no-export
       selector:
         matchExpressions:
-          # All services
-          - { key: somekey, operator: NotIn, values: ["never-used-value"] }
-  # advertisements:
-  #   - advertisementType: Service
-  #     service:
-  #       addresses:
-  #         # Advertise everything and filter traffic on the firewall
-  #         - ClusterIP
-  #         - ExternalIP
-  #         - LoadBalancerIP
-  #     attributes:
-  #       communities:
-  #         wellKnown:
-  #           # Don't send routes to peers outside of the confederation
-  #           - no-export
-  #     selector:
-  #       matchExpressions:
-  #         - key: cilium.home.arpa/advertise
-  #           operator: NotIn
-  #           values:
-  #             - "false"
+          - key: cilium.home.arpa/advertise
+            operator: NotIn
+            values:
+              - "false"
