@@ -1,0 +1,9 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumloadbalancerippool_v2alpha1.json
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: "blue-pool"
+spec:
+  blocks:
+    - cidr: 10.34.0.0/16
