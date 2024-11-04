@@ -1,4 +1,42 @@
 ---
+# Not yet deployed via Ansible:
+# * Plugins installation:
+#   * FRR
+#   * QEMU guest agent
+# * Firewall rule to allow BGP traffic to firewall from k8s net
+# * FRR config including:
+#   * Enable
+#   * ASN: 64512
+#   * Graceful restart
+#   * Log neighbor changes
+#   * Prefix list:
+#     - name: k8s-cilium-service-ip-announcements
+#       description: Allow Kubernetes Cilium cluster IP announcements
+#       network: 10.32.0.0/14 le 32
+#   * Peer group:
+#       - name: Cilium
+#         remote ASN: 64513
+#         Interface: k8s vlan
+#         prefix list in: k8s-cilium-service-ip-announcements
+#   * Neighbors:
+#     # One per node
+#     - name: talos-k8s-mixed-01
+#       peer IP: 10.3.1.1
+#       Remote ASN: 64513
+#       Password: <password>
+#       Weight: 20
+#       Initiator IP: 10.3.0.1
+#       Next-hop-self
+#       keepalive: 3
+#       hold down time: 9
+#       connect timer: 12
+#       peer group: Cilium
+# * Firewall normalization rule to drop "don't fragment" flag on LB packets
+#   - Interfaces: all
+#     Source: 10.34.0.0/16
+#     description: Drop the "don't fragment" flag on load balancer packets
+#     Do not fragment
+
 # This was a PITA to get working. It needs a lot of cleanup and refactoring,
 # some other time.
 - name: Load network information
