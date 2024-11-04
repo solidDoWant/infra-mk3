@@ -34,7 +34,7 @@ spec:
       # defaultSecretName: # TODO set this after cert-manager is installed
       # defaultSecretNamespace: cilium
       enabled: true
-      enforceHttps: true
+      # enforceHttps: true  # TODO set this after cert-manager is installed
       loadbalancerMode: shared
       service:
         loadBalancerIP: 10.34.0.1

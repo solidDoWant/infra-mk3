@@ -121,8 +121,9 @@ loadBalancer:
   algorithm: maglev
   mode: dsr
   serviceTopology: true
-  # l7:
-  #   algorithm: least_request
+  l7:
+    algorithm: least_request
+    backend: envoy
 localRedirectPolicy: true
 prometheus:
   enabled: true
