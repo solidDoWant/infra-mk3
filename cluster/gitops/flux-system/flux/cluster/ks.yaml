@@ -62,6 +62,21 @@ spec:
         group: kustomize.toolkit.fluxcd.io
         version: v1
         kind: Kustomization
+    # Patch to apply cluster-wide post-build substitutions
+    - patch: |
+        apiVersion: placeholder-value-does-not-matter
+        kind: placeholder-value-does-not-matter
+        metadata:
+          name: placeholder-value-does-not-matter
+        spec:
+          postBuild:
+            substituteFrom:
+              - kind: Secret
+                name: cluster-secrets
+      target: &fluxtomization_target
+        group: kustomize.toolkit.fluxcd.io
+        version: v1
+        kind: Kustomization
     # These are "meta patches". Rather than directly patch HelmReleases, they
     # patch fluxtomizations to add patches that patch HelmReleases.
     - patch: |
