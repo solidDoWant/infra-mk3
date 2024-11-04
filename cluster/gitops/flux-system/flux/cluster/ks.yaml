@@ -73,10 +73,9 @@ spec:
             substituteFrom:
               - kind: Secret
                 name: cluster-secrets
-      target: &fluxtomization_target
-        group: kustomize.toolkit.fluxcd.io
-        version: v1
-        kind: Kustomization
+      target: &non_root_fluxtomization_patches
+        <<: *fluxtomization_target
+        labelSelector: patches.flux.home.arpa/kustomization.patches != false
     # These are "meta patches". Rather than directly patch HelmReleases, they
     # patch fluxtomizations to add patches that patch HelmReleases.
     - patch: |
@@ -159,6 +158,4 @@ spec:
                 group: helm.toolkit.fluxcd.io
                 version: v2
                 kind: HelmRelease
-      target:
-        <<: *fluxtomization_target
-        labelSelector: patches.flux.home.arpa/kustomization.patches != false
+      target: *non_root_fluxtomization_patches
