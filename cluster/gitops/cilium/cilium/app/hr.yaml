@@ -35,6 +35,7 @@ spec:
       # defaultSecretNamespace: cilium
       enabled: true
       enforceHttps: true
+      loadbalancerMode: shared
       service:
         loadBalancerIP: 10.34.0.1
     # gatewayAPI:
