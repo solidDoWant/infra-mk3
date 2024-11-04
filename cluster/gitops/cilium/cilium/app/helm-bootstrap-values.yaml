@@ -59,11 +59,6 @@ envoy:
 # TODO monitoring stack: enable service monitors
 externalIPs:
   enabled: true
-# TODO install this after gateway CRDs
-# gatewayAPI:
-#   enableAlpn: true
-#   enableAppProtocol: true
-#   enabled: true
 hubble:
   # TODO mtls
   metrics:
@@ -97,15 +92,6 @@ hubble:
   ui:
     enabled: true
     rollOutPods: true
-# TODO enable after BGP/load balancing is setup
-# ingressController:
-#   default: true
-#   # defaultSecretName: # TODO set this after cert-manager is installed
-#   # defaultSecretNamespace: cilium
-#   enabled: true
-#   enforceHttps: true
-#   service:
-#     loadBalancerIP: 10.34.0.1
 ipMasqAgent:
   enabled: true
   config:

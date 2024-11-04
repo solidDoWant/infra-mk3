@@ -22,3 +22,15 @@ spec:
   values:
     debug:
       enabled: true
+    ingressController:
+      default: true
+      # defaultSecretName: # TODO set this after cert-manager is installed
+      # defaultSecretNamespace: cilium
+      enabled: true
+      enforceHttps: true
+      service:
+        loadBalancerIP: 10.34.0.1
+    # gatewayAPI:
+    #   enableAlpn: true
+    #   enableAppProtocol: true
+    #   enabled: true
