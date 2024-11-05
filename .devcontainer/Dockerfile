@@ -21,6 +21,9 @@ RUN mkdir -pv /tmp/debs && \
 COPY install-racadm.sh /tmp/install-racadm.sh
 RUN /tmp/install-racadm.sh
 
+# yq
+COPY --from=mikefarah/yq:4.44.3 /usr/bin/yq /usr/local/bin/yq
+
 # gomplate
 COPY --from=hairyhenderson/gomplate:stable /gomplate /usr/local/bin/gomplate
 
@@ -79,6 +82,7 @@ ENV TALOSCONFIG=talos/talosconfig
 
 # Autocomplete
 RUN \
+    yq completion bash | sudo tee /etc/bash_completion.d/yq.bash > /dev/null && \
     talosctl completion bash | sudo tee /etc/bash_completion.d/talosctl.bash > /dev/null && \
     talhelper completion bash | sudo tee /etc/bash_completion.d/talhelper.bash > /dev/null && \
     helmfile completion bash | sudo tee /etc/bash_completion.d/helmfile.bash > /dev/null && \
