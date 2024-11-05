@@ -35,6 +35,8 @@ cni:
 dashboards: &dashboards
   enabled: true
   namespace: cilium
+debug:
+  enabled: true
 # Looks like the NIC on the ms-01 nodes does not support GRO :(
 # enableIPv4BIGTCP: true
 # This is a tradeoff between performance (not where you'd think) and security
@@ -92,6 +94,11 @@ hubble:
   ui:
     enabled: true
     rollOutPods: true
+    # TODO maybe move this to gateway API
+    ingress:
+      enabled: true
+      hosts:
+        - hubble.${PUBLIC_DOMAIN_NAME}
 ipMasqAgent:
   enabled: true
   config:

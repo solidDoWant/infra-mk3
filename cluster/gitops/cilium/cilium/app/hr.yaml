@@ -20,16 +20,6 @@ spec:
       name: helm-bootstrap-values
   # These values are added now that the cluster has been bootstrapped
   values:
-    debug:
-      enabled: true
-    hubble:
-      ui:
-        # TODO maybe move this to gateway API
-        ingress:
-          enabled: true
-          hosts:
-            - hubble.${PUBLIC_DOMAIN_NAME}
-
     # The ingress and gateway controllers do not currently work with BPF masquerading enabled.
     # For details, see:
     # * https://github.com/cilium/cilium/issues/28837
