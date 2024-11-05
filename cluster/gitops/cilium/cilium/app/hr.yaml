@@ -29,15 +29,21 @@ spec:
           enabled: true
           hosts:
             - hubble.${PUBLIC_DOMAIN_NAME}
-    ingressController:
-      default: true
-      # defaultSecretName: # TODO set this after cert-manager is installed
-      # defaultSecretNamespace: cilium
-      enabled: true
-      # enforceHttps: true  # TODO set this after cert-manager is installed
-      loadbalancerMode: shared
-      service:
-        loadBalancerIP: 10.34.0.1
+
+    # The ingress and gateway controllers do not currently work with BPF masquerading enabled.
+    # For details, see:
+    # * https://github.com/cilium/cilium/issues/28837
+    # * https://github.com/cilium/cilium/issues/20942
+    # * https://github.com/cilium/cilium/issues/30510
+    # ingressController:
+    #   default: true
+    #   # defaultSecretName: # TODO set this after cert-manager is installed
+    #   # defaultSecretNamespace: cilium
+    #   enabled: true
+    #   # enforceHttps: true  # TODO set this after cert-manager is installed
+    #   loadbalancerMode: shared
+    #   service:
+    #     loadBalancerIP: 10.34.0.1
     # gatewayAPI:
     #   enableAlpn: true
     #   enableAppProtocol: true
