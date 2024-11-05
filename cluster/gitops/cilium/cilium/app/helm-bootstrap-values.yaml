@@ -125,6 +125,10 @@ loadBalancer:
     algorithm: least_request
     backend: envoy
 localRedirectPolicy: true
+nodePort:
+  enabled: true
+  addresses:
+    - 10.3.1.0/24
 prometheus:
   enabled: true
 operator:
