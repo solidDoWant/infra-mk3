@@ -35,21 +35,24 @@ spec:
     #   defaultIssuerKind:
     #   defaultIssuerName:
     # Prefer placing cert-manager pods _of different components_ on the same
-    # node, but with pods _of the same component_ onto separate nodes.
-    affinity:
+    # node, but force pods _of the same component_ onto separate nodes.
+    affinity: &affinity_rules
       podAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
+          - weight: 100
             podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
               labelSelector:
-                app.kubernetes.io/instance: *app_name
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          - topologyKey: kubernetes.io/hostname
-            labelSelector:
-              app.kubernetes.io/instance: *app_name
-              app.kubernetes.io/component: controller
+                matchLabels:
+                  app.kubernetes.io/instance: *app_name
+              topologyKey: kubernetes.io/hostname
+    topologySpreadConstraints:
+      - maxSkew: 1 # Skew of 1 allows for rolling updates
+        topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: controller
+            app.kubernetes.io/instance: *app_name
+        whenUnsatisfiable: DoNotSchedule
     # TODO Monitoring CRDs
     # prometheus:
     #   servicemonitor:
@@ -59,37 +62,27 @@ spec:
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
-      affinity:
-        podAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 10
-              podAffinityTerm:
-                topologyKey: kubernetes.io/hostname
-                labelSelector:
-                  app.kubernetes.io/instance: *app_name
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - topologyKey: kubernetes.io/hostname
-              labelSelector:
-                app.kubernetes.io/instance: *app_name
-                app.kubernetes.io/component: webhook
+      affinity: *affinity_rules
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: webhook
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
     cainjector:
       replicaCount: 3
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
-      affinity:
-        podAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 10
-              podAffinityTerm:
-                topologyKey: kubernetes.io/hostname
-                labelSelector:
-                  app.kubernetes.io/instance: *app_name
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - topologyKey: kubernetes.io/hostname
-              labelSelector:
-                app.kubernetes.io/instance: *app_name
-                app.kubernetes.io/component: cainjector
+      affinity: *affinity_rules
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: cainjector
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
       featureGates: ServerSideApply=true
