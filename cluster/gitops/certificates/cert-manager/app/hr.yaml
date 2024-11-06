@@ -23,6 +23,7 @@ spec:
       priorityClassName: system-cluster-critical
     crds:
       enabled: true
+      keep: true
     replicaCount: 2
     podDisruptionBudget:
       enabled: true
