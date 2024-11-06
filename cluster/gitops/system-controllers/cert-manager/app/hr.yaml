@@ -62,24 +62,38 @@ spec:
         enabled: true
         minAvailable: 1
       affinity:
-        <<: *affinity_rules
+        podAffinity: &affinity_rules
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 10
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  app.kubernetes.io/instance: *app_name
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-            - <<: *anti_affinity_term
-              labelSelector:
-                app.kubernetes.io/instance: *app_name
-                app.kubernetes.io/component: webhook
+            - podAffinityTerm: &anti_affinity_term
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  app.kubernetes.io/instance: *app_name
+                  app.kubernetes.io/component: webhook
     cainjector:
       replicaCount: 3
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
       affinity:
-        <<: *affinity_rules
+        podAffinity: &affinity_rules
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 10
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  app.kubernetes.io/instance: *app_name
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-            - <<: *anti_affinity_term
-              labelSelector:
-                app.kubernetes.io/instance: *app_name
-                app.kubernetes.io/component: cainjector
+            - podAffinityTerm: &anti_affinity_term
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  app.kubernetes.io/instance: *app_name
+                  app.kubernetes.io/component: cainjector
       featureGates: ServerSideApply=true
