@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+# TODO move this to a HSM and generate intermediary certs for in-cluster signing
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: root-ca
+spec:
+  isCA: true
+  commonName: infra-mk3 Root Certificate Authority
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    permitted:
+      dnsDomains:
+        - .cluster.local
+        - .${INTERNAL_DOMAIN_NAME}
+      # Private IP space only
+      ipRanges:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+  duration: 87660h # 10 years
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Never
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: root-ca
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: root-ca
+spec:
+  ca:
+    secretName: root-ca
+    # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
