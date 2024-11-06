@@ -6,12 +6,12 @@ metadata:
   namespace: flux-system
   name: &app_name cert-manager
 spec:
-  targetNamespace: system-controllers
+  targetNamespace: certificates
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/system-controllers/cert-manager/app
+  path: /cluster/gitops/certificates/cert-manager/app
   prune: true
   sourceRef:
     kind: GitRepository
