@@ -1,0 +1,88 @@
+---
+# yaml-language-server: $schema=./schema.json
+# This service needs to be highly available.
+# If cert-manager fails then services that need to generate mTLS certs will fail.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name cert-manager
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: cert-manager
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: jetstack-charts
+      version: 1.16.1
+  values:
+    global:
+      leaderElection:
+        namespace: cert-manager
+      priorityClassName: system-cluster-critical
+    crds:
+      enabled: true
+    replicaCount: 3
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+    featureGates: NameConstraints=true,ServerSideApply=true,UseCertificateRequestBasicConstraints=true,UseDomainQualifiedFinalizer=true,ValidateCAA=true # ,ExperimentalGatewayAPISupport # TODO after gateway CRDs have been installed
+    enableCertificateOwnerRef: true
+    disableAutoApproval: true # approver-policy will be used to handle approvals given specific constraints
+    # ingressShim:  # TODO
+    #   defaultIssuerGroup:
+    #   defaultIssuerKind:
+    #   defaultIssuerName:
+    # Prefer placing cert-manager pods _of different components_ on the same
+    # node, but force pods _of the same component_ onto separate nodes.
+    affinity: &affinity_rules
+      podAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/instance
+                    operator: In
+                    values:
+                      - *app_name
+              topologyKey: kubernetes.io/hostname
+    topologySpreadConstraints:
+      - &tsc
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: controller
+            app.kubernetes.io/instance: *app_name
+        whenUnsatisfiable: ScheduleAnyway
+    # TODO Monitoring CRDs
+    # prometheus:
+    #   servicemonitor:
+    #     enabled: true
+    webhook:
+      replicaCount: 3
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 1
+      affinity: *affinity_rules
+      topologySpreadConstraints:
+        - <<: *tsc
+          labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: webhook
+            app.kubernetes.io/instance: *app_name
+    cainjector:
+      replicaCount: 3
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 1
+      affinity: *affinity_rules
+      topologySpreadConstraints:
+        - <<: *tsc
+          labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: cainjectorwebhook
+            app.kubernetes.io/instance: *app_name
+      featureGates: ServerSideApply=true
