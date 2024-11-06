@@ -45,13 +45,11 @@ spec:
               labelSelector:
                 app.kubernetes.io/instance: *app_name
       podAntiAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 20
-            podAffinityTerm: &anti_affinity_term
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                app.kubernetes.io/instance: *app_name
-                app.kubernetes.io/component: controller
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              app.kubernetes.io/instance: *app_name
+              app.kubernetes.io/component: controller
     # TODO Monitoring CRDs
     # prometheus:
     #   servicemonitor:
@@ -70,13 +68,11 @@ spec:
                 labelSelector:
                   app.kubernetes.io/instance: *app_name
         podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 20
-              podAffinityTerm: &anti_affinity_term
-                topologyKey: kubernetes.io/hostname
-                labelSelector:
-                  app.kubernetes.io/instance: *app_name
-                  app.kubernetes.io/component: webhook
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                app.kubernetes.io/instance: *app_name
+                app.kubernetes.io/component: webhook
     cainjector:
       replicaCount: 3
       podDisruptionBudget:
@@ -91,11 +87,9 @@ spec:
                 labelSelector:
                   app.kubernetes.io/instance: *app_name
         podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 20
-              podAffinityTerm: &anti_affinity_term
-                topologyKey: kubernetes.io/hostname
-                labelSelector:
-                  app.kubernetes.io/instance: *app_name
-                  app.kubernetes.io/component: cainjector
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                app.kubernetes.io/instance: *app_name
+                app.kubernetes.io/component: cainjector
       featureGates: ServerSideApply=true
