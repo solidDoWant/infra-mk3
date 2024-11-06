@@ -37,7 +37,7 @@ spec:
     # Prefer placing cert-manager pods _of different components_ on the same
     # node, but with pods _of the same component_ onto separate nodes.
     affinity:
-      podAffinity: &affinity_rules
+      podAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 10
             podAffinityTerm:
@@ -46,12 +46,12 @@ spec:
                 app.kubernetes.io/instance: *app_name
       podAntiAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm: &anti_affinity_term
+          - weight: 20
+            podAffinityTerm: &anti_affinity_term
               topologyKey: kubernetes.io/hostname
               labelSelector:
                 app.kubernetes.io/instance: *app_name
                 app.kubernetes.io/component: controller
-            weight: 20
     # TODO Monitoring CRDs
     # prometheus:
     #   servicemonitor:
@@ -62,7 +62,7 @@ spec:
         enabled: true
         minAvailable: 1
       affinity:
-        podAffinity: &affinity_rules
+        podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 10
               podAffinityTerm:
@@ -71,7 +71,8 @@ spec:
                   app.kubernetes.io/instance: *app_name
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-            - podAffinityTerm: &anti_affinity_term
+            - weight: 20
+              podAffinityTerm: &anti_affinity_term
                 topologyKey: kubernetes.io/hostname
                 labelSelector:
                   app.kubernetes.io/instance: *app_name
@@ -82,7 +83,7 @@ spec:
         enabled: true
         minAvailable: 1
       affinity:
-        podAffinity: &affinity_rules
+        podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 10
               podAffinityTerm:
@@ -91,7 +92,8 @@ spec:
                   app.kubernetes.io/instance: *app_name
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-            - podAffinityTerm: &anti_affinity_term
+            - weight: 20
+              podAffinityTerm: &anti_affinity_term
                 topologyKey: kubernetes.io/hostname
                 labelSelector:
                   app.kubernetes.io/instance: *app_name
