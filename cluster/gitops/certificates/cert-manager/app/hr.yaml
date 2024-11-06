@@ -59,6 +59,7 @@ spec:
         whenUnsatisfiable: DoNotSchedule
     webhook:
       replicaCount: 2
+      featureGates: NameConstraints=true
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
@@ -73,6 +74,7 @@ spec:
           whenUnsatisfiable: DoNotSchedule
     cainjector:
       replicaCount: 2
+      featureGates: ServerSideApply=true
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
@@ -85,4 +87,3 @@ spec:
               app.kubernetes.io/component: cainjector
               app.kubernetes.io/instance: *app_name
           whenUnsatisfiable: DoNotSchedule
-      featureGates: ServerSideApply=true
