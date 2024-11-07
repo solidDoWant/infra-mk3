@@ -1,0 +1,76 @@
+---
+# yaml-language-server: $schema=./schema.json
+
+# The Istio stack and its dependencies need to be HA
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name istio-csr
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: istio-csr
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: jetstack-charts
+      version: 0.12.0
+  values:
+    replicaCount: 2
+    app:
+      # Monitoring stack TODO
+      #   metrics:
+      #     service:
+      #       servicemonitor:
+      #         enabled: true
+      certmanager:
+        issuer:
+          group: cert-manager.io
+          kind: ClusterIssuer
+          name: root-ca
+      tls:
+        istiodPrivateKeyAlgorithm: ECDSA
+        istiodPrivateKeySize: 384
+      # TODO after switching to HSM for root CA, pin the cert via a secret to
+      # reduce risk of TOFU-based attack:
+      # https://github.com/cert-manager/istio-csr/issues/103
+      #   rootCAFile:
+      server:
+        serving:
+          signatureAlgorithm: ECDSA
+          certificateKeySize: 384
+        caTrustedNodeAccounts: istio-system/ztunnel # Needed for Istio ambient mode
+    # Prefer scheduling on an instance with cert-manager, but
+    # don't schedule all replicas on the same node
+    affinity:
+      podAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: cert-manager
+              namespaces:
+                - istio-system # Current namespace
+                - certificates # Namespace with cert-manager
+              topologyKey: kubernetes.io/hostname
+    topologySpreadConstraints:
+      - maxSkew: 1 # Skew of 1 allows for rolling updates
+        topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: *app_name
+        whenUnsatisfiable: DoNotSchedule
+  postRenderers:
+    # Mark the deployment/its pods as system critical
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/priorityClassName
+                value: system-cluster-critical
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
