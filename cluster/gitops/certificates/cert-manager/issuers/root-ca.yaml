@@ -70,21 +70,27 @@ spec:
   allowed:
     isCA: true
     commonName:
+      required: true
       value: infra-mk3 Istio Intermediary Certificate Authority
     dnsNames:
+      required: true
       values:
         - istio-system.svc
     subject:
       countries:
+        required: true
         values:
           - US
       provinces:
+        required: true
         values:
           - ${SECRET_STATE}
       organizations:
+        required: true
         values:
           - infra-mk3
       organizationalUnits:
+        required: true
         values:
           - istio
     usages:
