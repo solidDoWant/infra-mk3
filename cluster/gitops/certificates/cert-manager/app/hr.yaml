@@ -31,10 +31,10 @@ spec:
     featureGates: NameConstraints=true,ServerSideApply=true,UseCertificateRequestBasicConstraints=true,UseDomainQualifiedFinalizer=true,ValidateCAA=true # ,ExperimentalGatewayAPISupport # TODO after gateway CRDs have been installed
     enableCertificateOwnerRef: true
     disableAutoApproval: true # approver-policy will be used to handle approvals given specific constraints
-    # ingressShim:  # TODO
-    #   defaultIssuerGroup:
-    #   defaultIssuerKind:
-    #   defaultIssuerName:
+    ingressShim:
+      defaultIssuerGroup: cert-manager.io
+      defaultIssuerKind: ClusterIssuer
+      defaultIssuerName: letsencrypt-staging # TODO switch this to prod once everything is stable
     # TODO Monitoring CRDs
     # prometheus:
     #   servicemonitor:
