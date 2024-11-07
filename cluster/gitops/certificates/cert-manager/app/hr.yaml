@@ -28,7 +28,7 @@ spec:
     podDisruptionBudget:
       enabled: true
       minAvailable: 1
-    featureGates: NameConstraints=true,ServerSideApply=true,UseCertificateRequestBasicConstraints=true,UseDomainQualifiedFinalizer=true,ValidateCAA=true # ,ExperimentalGatewayAPISupport # TODO after gateway CRDs have been installed
+    featureGates: NameConstraints=true,ServerSideApply=true,UseCertificateRequestBasicConstraints=true,UseDomainQualifiedFinalizer=true,ValidateCAA=true,ExperimentalGatewayAPISupport=true
     enableCertificateOwnerRef: true
     disableAutoApproval: true # approver-policy will be used to handle approvals given specific constraints
     ingressShim:
