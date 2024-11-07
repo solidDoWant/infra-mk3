@@ -102,5 +102,10 @@ spec:
         - cert-manager-istio-csr.istio-system.svc
     usages:
       - server auth
+    # This is required until https://github.com/istio/istio/issues/53828 is fixed
+    subject:
+      organizations:
+        values:
+          - ""
   constraints:
     maxDuration: 1h
