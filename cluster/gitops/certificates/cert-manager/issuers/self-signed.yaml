@@ -24,3 +24,22 @@ spec:
       group: cert-manager.io
       kind: ClusterIssuer
       name: self-signed
+  allowed:
+    isCA: true
+    commonName: &all_value
+      value: "*"
+    dnsNames: &all_values
+      values:
+        - "*"
+    emailAddresses: *all_values
+    ipAddresses: *all_values
+    subject:
+      countries: *all_values
+      localities: *all_values
+      organizationalUnits: *all_values
+      organizations: *all_values
+      postalCodes: *all_values
+      provinces: *all_values
+      serialNumber: *all_value
+      streetAddresses: *all_values
+    uris: *all_values
