@@ -100,5 +100,7 @@ spec:
       required: true
       values:
         - cert-manager-istio-csr.istio-system.svc
+    usages:
+      - server auth
   constraints:
     maxDuration: 1h
