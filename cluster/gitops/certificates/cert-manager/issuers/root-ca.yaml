@@ -13,7 +13,7 @@ spec:
     countries:
       - US
     provinces:
-      - ${STATE}
+      - ${SECRET_STATE}
     organizations:
       - infra-mk3
   usages:
@@ -24,7 +24,7 @@ spec:
     permitted:
       dnsDomains:
         - .cluster.local
-        - .${INTERNAL_DOMAIN_NAME}
+        - .${SECRET_INTERNAL_DOMAIN_NAME}
       # Private IP space only
       ipRanges:
         - 10.0.0.0/8

@@ -98,7 +98,7 @@ hubble:
     ingress:
       enabled: true
       hosts:
-        - hubble.${PUBLIC_DOMAIN_NAME}
+        - hubble.${SECRET_PUBLIC_DOMAIN_NAME}
 ipMasqAgent:
   enabled: true
   config:
