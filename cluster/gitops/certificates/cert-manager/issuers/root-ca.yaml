@@ -50,3 +50,43 @@ spec:
   ca:
     secretName: root-ca
     # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
+# Approve the Istio intermediary CA cert request. Kubernetes RBAC is what limits access to filing
+# a request for CSRs matching this.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: root-ca-issuer-istio-intermediary-ca
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: root-ca
+    namespace:
+      matchNames:
+        - istio-system
+  allowed:
+    isCA: true
+    commonName:
+      value: infra-mk3 Istio Intermediary Certificate Authority
+    dnsNames:
+      values:
+        - istio-system.svc
+    subject:
+      countries:
+        values:
+          - US
+      provinces:
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        values:
+          - infra-mk3
+      organizationalUnits:
+        values:
+          - istio
+    usages:
+      - cert sign
+      - crl sign

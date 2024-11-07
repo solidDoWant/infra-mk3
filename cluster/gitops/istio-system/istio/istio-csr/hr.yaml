@@ -27,8 +27,8 @@ spec:
       certmanager:
         issuer:
           group: cert-manager.io
-          kind: ClusterIssuer
-          name: root-ca
+          kind: Issuer
+          name: istio-intermediary-ca
       tls:
         certificateDNSNames:
           - cert-manager-istio-csr.istio-system.svc
