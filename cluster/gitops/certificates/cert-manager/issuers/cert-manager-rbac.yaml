@@ -1,0 +1,27 @@
+---
+# Allow checking against all policies
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cert-manager-policy:cert-manager
+rules:
+  - apiGroups:
+      - policy.cert-manager.io
+    resources:
+      - certificaterequestpolicies
+    verbs:
+      - use
+---
+# Allow cert manager to check against all policies
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cert-manager-policy:cert-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cert-manager-policy:cert-manager
+subjects:
+  - kind: ServiceAccount
+    namespace: certificates
+    name: cert-manager
