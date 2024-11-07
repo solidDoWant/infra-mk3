@@ -30,6 +30,8 @@ spec:
           kind: ClusterIssuer
           name: root-ca
       tls:
+        certificateDNSNames:
+          - cert-manager-istio-csr.istio-system.svc
         istiodPrivateKeyAlgorithm: ECDSA
         istiodPrivateKeySize: 384
       # TODO after switching to HSM for root CA, pin the cert via a secret to
