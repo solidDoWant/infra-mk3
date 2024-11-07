@@ -46,3 +46,36 @@ spec:
   ca:
     secretName: istio-intermediary-ca
     # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
+# Approve the the istio-csr serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: istio-intermediary-ca-istio-csr-serving-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: istio-intermediary-ca
+    namespace:
+      matchNames:
+        - istio-system
+  allowed:
+    commonName:
+      required: true
+      value: &svc_name istiod.istio-system.svc
+    dnsNames:
+      required: true
+      values:
+        - *svc_name
+    uris:
+      required: true
+      values:
+        - spiffe://cluster.local/ns/istio-system/sa/istiod-service-account
+    usages:
+      - digital signature
+      - key encipherment
+  constraints:
+    maxDuration: 1h
