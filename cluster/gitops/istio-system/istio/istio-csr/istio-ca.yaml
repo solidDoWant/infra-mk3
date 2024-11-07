@@ -35,7 +35,7 @@ spec:
     name: self-signed
     kind: ClusterIssuer
     group: cert-manager.io
-  secretName: root-ca
+  secretName: istio-intermediary-ca
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
 apiVersion: cert-manager.io/v1
