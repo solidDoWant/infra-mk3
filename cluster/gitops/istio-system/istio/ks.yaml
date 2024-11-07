@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
   name: &app_name istio-base
 spec:
-  targetNamespace: certificates
+  targetNamespace: istio-system
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
