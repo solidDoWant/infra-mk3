@@ -10,7 +10,7 @@ spec:
   interval: 1h
   chart:
     spec:
-      chart: istio-csr
+      chart: cert-manager-istio-csr
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
