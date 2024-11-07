@@ -41,27 +41,6 @@ spec:
           signatureAlgorithm: ECDSA
           certificateKeySize: 384
         caTrustedNodeAccounts: istio-system/ztunnel # Needed for Istio ambient mode
-    # Prefer scheduling on an instance with cert-manager, but
-    # don't schedule all replicas on the same node
-    affinity:
-      podAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/instance: cert-manager
-              namespaces:
-                - istio-system # Current namespace
-                - certificates # Namespace with cert-manager
-              topologyKey: kubernetes.io/hostname
-    topologySpreadConstraints:
-      - maxSkew: 1 # Skew of 1 allows for rolling updates
-        topologyKey: kubernetes.io/hostname
-        labelSelector:
-          matchLabels:
-            app.kubernetes.io/instance: *app_name
-        whenUnsatisfiable: DoNotSchedule
   postRenderers:
     # Mark the deployment/its pods as system critical
     - kustomize:
