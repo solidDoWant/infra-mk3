@@ -66,6 +66,10 @@ RUN mkdir -pv /tmp/cilium && \
     tar -xzvf /tmp/cilium/cilium.tar.gz -C /usr/local/bin cilium && \
     rm -rvf /tmp/cilium
 
+# openspi2jsonschema CRD to schema converter
+RUN curl -fsSL -o /usr/local/bin/openapi2jsonschema https://raw.githubusercontent.com/yannh/kubeconform/refs/tags/v0.6.7/scripts/openapi2jsonschema.py && \
+    chmod +x /usr/local/bin/openapi2jsonschema
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 

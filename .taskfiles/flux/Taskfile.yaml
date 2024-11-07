@@ -20,3 +20,21 @@ tasks:
     dir: "{{ .USER_WORKING_DIR }}"
     cmd: >-
       {{ shellQuote .TASKFILE_DIR }}/gen-hr-schema.sh {{ .CLI_ARGS }}
+  # Not strictly flux related but this is the "best" place to put it
+  gen-crd-schema:
+    silent: true
+    dir: "{{ .ROOT_DIR }}/schemas/crds"
+    cmd: openapi2jsonschema {{ .CLI_ARGS }}
+  gen-crd-schema-cluster:
+    silent: true
+    dir: "{{ .ROOT_DIR }}/schemas/crds"
+    cmd: |
+      SCHEMA_CONTENTS="$(kubectl get -o yaml crd {{ shellQuote .CLI_ARGS }})"
+      WORKING_DIR="$(mktemp -d -p /tmp cluster-crd-schema-gen-XXXXXX)"
+
+      echo "${SCHEMA_CONTENTS}" > "${WORKING_DIR}/crd.yaml"
+      echo $WORKING_DIR
+
+      openapi2jsonschema "${WORKING_DIR}/crd.yaml"
+
+      rm -rf "${WORKING_DIR}"
