@@ -1,0 +1,30 @@
+---
+# Allow checking against the istio-csr policy only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cert-manager-policy:cert-manager-istio-csr
+rules:
+  - apiGroups:
+      - policy.cert-manager.io
+    resources:
+      - certificaterequestpolicies
+    verbs:
+      - use
+    resourceNames:
+      - istio-intermediary-ca-istio-csr-serving-cert
+---
+# Only allow the istio-csr SA able to get certificates approved
+# for istio-csr
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cert-manager-policy:cert-manager-istio-csr
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cert-manager-policy:cert-manager-istio-csr
+subjects:
+  - kind: ServiceAccount
+    namespace: istio-system
+    name: cert-manager-istio-csr
