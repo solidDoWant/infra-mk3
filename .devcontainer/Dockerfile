@@ -70,6 +70,9 @@ RUN mkdir -pv /tmp/cilium && \
 RUN curl -fsSL -o /usr/local/bin/openapi2jsonschema https://raw.githubusercontent.com/yannh/kubeconform/refs/tags/v0.6.7/scripts/openapi2jsonschema.py && \
     chmod +x /usr/local/bin/openapi2jsonschema
 
+# istioctl
+COPY --from=istio/istioctl:1.23.3 /usr/local/bin/istioctl /usr/local/bin/istioctl
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 
