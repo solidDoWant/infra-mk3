@@ -5,6 +5,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: root-ca
+  namespace: certificates
 spec:
   isCA: true
   commonName: infra-mk3 Root Certificate Authority
