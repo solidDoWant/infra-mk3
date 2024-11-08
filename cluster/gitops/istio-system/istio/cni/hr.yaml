@@ -1,0 +1,21 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istio-cni
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: cni
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: istio-charts
+      version: 1.23.3
+  values:
+    profile: ambient
+    cni:
+      repair:
+        deletePods: true
+        repairPods: false
