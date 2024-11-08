@@ -38,12 +38,6 @@ servers:
         configBlock: |-
           allow net 10.0.0.0/8
           drop
-      # Reject IPv6 record requests
-      # Temp disable
-      # - name: template
-      #   parameters: ANY AAAA
-      #   # If the A record returns NXDOMAIN and the AAAA record returns refused, the resolver won't try additional domains
-      #   configBlock: rcode NXDOMAIN
       - name: whoami
       # # TODO internal domain name
       # - name: k8s_external
@@ -52,6 +46,17 @@ servers:
         configBlock: |-
           pods verified
           fallthrough in-addr.arpa
+      # This uses a trick (bug?). CoreDNS doesn't care that `${SECRET_PUBLIC_DOMAIN_NAME}`
+      # is an invalid domain name. This allows helmfile to deploy the directive with a
+      # literal `${SECRET_PUBLIC_DOMAIN_NAME}` value, and flux to later redeploy/adopt
+      # the helm release and update it with the actual secret value.
+      - name: k8s_external
+        parameters: ${SECRET_PUBLIC_DOMAIN_NAME}
+        configBlock: |-
+          ttl 300
+      # Drop the namespace from queries for the external domain name.
+      - name: rewrite
+        parameters: name regex (.+)\.[^.]+\.${SECRET_PUBLIC_DOMAIN_NAME}
       # This may make unbound prom dns metric queries more difficult, or less accurate
       - name: cache
         parameters: 30
