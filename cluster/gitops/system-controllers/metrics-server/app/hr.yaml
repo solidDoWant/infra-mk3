@@ -1,0 +1,39 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name metrics-server
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: metrics-server
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: metrics-server-charts
+      version: 3.12.2
+  values:
+    apiService:
+      insecureSkipTLSVerify: false
+    replicas: 2
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+    # TODO monitoring
+    # serviceMonitor:
+    #   enabled: true
+    topologySpreadConstraints:
+      - maxSkew: 1 # Skew of 1 allows for rolling updates
+        topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: *app_name
+        whenUnsatisfiable: DoNotSchedule
+    tls:
+      type: cert-manager
+      certManager:
+        existingIssuer:
+          enabled: true
+          kind: Issuer
+          name: system-controllers-intermediary-ca
