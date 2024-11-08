@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-system-intermediary-ca
+spec:
+  isCA: true
+  commonName: infra-mk3 istio-system Intermediary Certificate Authority
+  dnsNames:
+    - istio-system
+    - istio-system.svc
+    - istio-system.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+    organizationalUnits:
+      - istio-system
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    permitted:
+      dnsDomains:
+        - .istio-system
+        - .istio-system.svc
+        - .istio-system.svc.cluster.local
+  duration: 8766h # 1 year
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: istio-system-intermediary-ca
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: istio-system-intermediary-ca
+spec:
+  ca:
+    secretName: istio-system-intermediary-ca
+    # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
