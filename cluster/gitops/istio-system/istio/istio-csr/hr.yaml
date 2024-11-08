@@ -30,7 +30,9 @@ spec:
           name: istio-system-intermediary-ca
       tls:
         certificateDNSNames:
+          - cert-manager-istio-csr.istio-system
           - cert-manager-istio-csr.istio-system.svc
+          - cert-manager-istio-csr.istio-system.svc.cluster.local
         istiodPrivateKeyAlgorithm: ECDSA
         istiodPrivateKeySize: 384
       # TODO after switching to HSM for root CA, pin the cert via a secret to
