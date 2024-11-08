@@ -13,3 +13,12 @@ spec:
         kind: HelmRepository
         name: istio-charts
       version: 1.23.3
+  driftDetection:
+    ignore:
+      - paths:
+          - /webhooks/0/failurePolicy
+        target:
+          group: admissionregistration.k8s.io
+          version: v1
+          kind: ValidatingWebhookConfiguration
+          name: istiod-default-validator
