@@ -100,4 +100,5 @@ RUN \
     helm completion bash | sudo tee /etc/bash_completion.d/helm.bash > /dev/null && \
     kustomize completion bash | sudo tee /etc/bash_completion.d/kustomize.bash > /dev/null && \
     cilium completion bash | sudo tee /etc/bash_completion.d/cilium.bash > /dev/null && \
-    flux completion bash | sudo tee /etc/bash_completion.d/flux.bash > /dev/null
+    flux completion bash | sudo tee /etc/bash_completion.d/flux.bash > /dev/null && \
+    istioctl completion bash | sudo tee /etc/bash_completion.d/istioctl.bash > /dev/null
