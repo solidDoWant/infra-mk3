@@ -42,6 +42,16 @@ spec:
           signatureAlgorithm: ECDSA
           certificateKeySize: 384
         caTrustedNodeAccounts: istio-system/ztunnel # Needed for Istio ambient mode
+    affinity:
+      podAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: istio
+                  app.kubernetes.io/component: control-plane
+              topologyKey: kubernetes.io/hostname
   postRenderers:
     # Mark the deployment/its pods as system critical
     - kustomize:
