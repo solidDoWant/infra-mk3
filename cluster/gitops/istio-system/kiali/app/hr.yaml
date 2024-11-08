@@ -18,7 +18,10 @@ spec:
     auth:
       strategy: anonymous
     ingress:
-      class_name: istio
+      enabled: true
+      class_name: ~
+    server:
+      web_fqdn: kiali.${SECRET_PUBLIC_DOMAIN_NAME}
     resources:
       requests:
         cpu: 10m
