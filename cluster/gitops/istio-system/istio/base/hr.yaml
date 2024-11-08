@@ -3,6 +3,8 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: istio-base
+  labels:
+    patches.flux.home.arpa/helmrelease.append-drift-detection: "true"
 spec:
   interval: 1h
   chart:
