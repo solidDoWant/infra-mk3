@@ -3,8 +3,6 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: istio-control-plane
-  labels:
-    patches.flux.home.arpa/deployment.ignore-replicas: "true"
 spec:
   interval: 1h
   chart:
@@ -18,8 +16,38 @@ spec:
   values:
     profile: ambient
     pilot:
+      autoscaleMin: 2
       env:
         ENABLE_CA_SERVER: "false"
+      deploymentLabels:
+        patches.flux.home.arpa/deployment.ignore-replicas: "true"
+      podLabels:
+        app.kubernetes.io/instance: istio
+        app.kubernetes.io/component: control-plane
+      # Try to schedule on nodes that already have istio services running
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 50
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: istio-csr
+                topologyKey: kubernetes.io/hostname
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: istio
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: istio
+              app.kubernetes.io/component: control-plane
+          whenUnsatisfiable: DoNotSchedule
     global:
       caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
       istiod:
