@@ -73,6 +73,9 @@ RUN curl -fsSL -o /usr/local/bin/openapi2jsonschema https://raw.githubuserconten
 # istioctl
 COPY --from=istio/istioctl:1.23.3 /usr/local/bin/istioctl /usr/local/bin/istioctl
 
+# flux-local
+RUN pipx install --include-deps flux-local
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 
