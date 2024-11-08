@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name coredns-k8s_gateway
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: k8s_gateway
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: k8s_gateway-charts
+      version: 2.4.0
+  values:
+    domain: ${SECRET_PUBLIC_DOMAIN_NAME}
+    dnsChallenge:
+      enabled: true
+    service:
+      loadBalancerIP: 10.34.0.11
+    replicaCount: 2
+    topologySpreadConstraints:
+      - maxSkew: 1 # Skew of 1 allows for rolling updates
+        topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: *app_name
+        whenUnsatisfiable: DoNotSchedule
