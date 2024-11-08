@@ -43,7 +43,7 @@ releases:
             kubectl label --dry-run=client -o yaml --overwrite namespace $0 pod-security.kubernetes.io/enforce=privileged | kubectl apply -f -
           - cilium
 
-  - name: coredns
+  - name: coredns-kube-dns
     atomic: true
     namespace: networking
     chart: coredns/coredns
@@ -63,7 +63,7 @@ releases:
       - ../gitops/system-controllers/kubelet-csr-approver/app/helm-bootstrap-values.yaml
     needs:
       - cilium/cilium
-      - networking/coredns
+      - networking/coredns-kube-dns
 
   # This is deployed prior to Flux so that image registry load is reduced on initial install
   # Otherwise it is likely that dockerhub and ghcr limits will be quickly hit
@@ -87,4 +87,4 @@ releases:
           - spegel
     needs:
       - cilium/cilium
-      - networking/coredns
+      - networking/coredns-kube-dns
