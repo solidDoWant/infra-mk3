@@ -139,8 +139,7 @@ spec:
                   driftDetection:
                     ignore:
                       # Ignore deployment replica counts, opt-in (needed for horizontal autoscaling)
-                      - $patch: merge
-                        paths:
+                      - paths:
                           - /spec/replicas
                         target:
                           group: apps
@@ -148,8 +147,7 @@ spec:
                           kind: Deployment
                           labelSelector: patches.flux.home.arpa/deployment.ignore-replicas = true
                       # Ignore statefulset replica counts, opt-in (needed for horizontal autoscaling)
-                      - $patch: merge
-                        paths:
+                      - paths:
                           - /spec/replicas
                         target:
                           group: apps
@@ -160,4 +158,34 @@ spec:
                 group: helm.toolkit.fluxcd.io
                 version: v2
                 kind: HelmRelease
+                labelSelector: patches.flux.home.arpa/helmrelease.append-drift-detection != true
+            # Alternate to the above which appends to existing drift detection list
+            - patch: |
+                - op: add
+                  path: /spec/driftDetection/ignore/-
+                  value:
+                    # Ignore deployment replica counts, opt-in (needed for horizontal autoscaling)
+                    paths:
+                      - /spec/replicas
+                    target:
+                      group: apps
+                      version: v1
+                      kind: Deployment
+                      labelSelector: patches.flux.home.arpa/deployment.ignore-replicas = true
+                - op: add
+                  path: /spec/driftDetection/ignore/-
+                  value:
+                    # Ignore statefulset replica counts, opt-in (needed for horizontal autoscaling)
+                    paths:
+                      - /spec/replicas
+                    target:
+                      group: apps
+                      version: v1
+                      kind: StatefulSet
+                      labelSelector: patches.flux.home.arpa/statefulset.ignore-replicas = true
+              target:
+                group: helm.toolkit.fluxcd.io
+                version: v2
+                kind: HelmRelease
+                labelSelector: patches.flux.home.arpa/helmrelease.append-drift-detection = true
       target: *non_root_fluxtomization_patches
