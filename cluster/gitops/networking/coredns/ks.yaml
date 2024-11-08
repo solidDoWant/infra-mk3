@@ -36,3 +36,5 @@ spec:
     kind: GitRepository
     name: infra-mk3
   wait: true
+  dependsOn:
+    - name: gateway-crds
