@@ -2,7 +2,7 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: &app_name coredns-k8s_gateway
+  name: &app_name coredns-k8s-gateway
   labels:
     app: *app_name
     app.kubernetes.io/instance: *app_name
