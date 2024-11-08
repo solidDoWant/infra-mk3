@@ -2,7 +2,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: istio-control-plane
+  name: istio-istiod
   labels:
     patches.flux.home.arpa/helmrelease.append-drift-detection: "true"
 spec:
