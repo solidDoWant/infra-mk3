@@ -16,7 +16,7 @@ spec:
       - dns01:
           cloudflare:
             apiTokenSecretRef:
-              name: cloudflare-cert-manager-secret
+              name: cloudflare-letsencrypt-acme-secret
               key: api-token
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
@@ -36,7 +36,7 @@ spec:
       - dns01:
           cloudflare:
             apiTokenSecretRef:
-              name: cloudflare-cert-manager-secret
+              name: cloudflare-letsencrypt-acme-secret
               key: api-token
 ---
 # TODO add CRP
