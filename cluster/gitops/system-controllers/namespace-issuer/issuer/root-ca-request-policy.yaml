@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: root-ca-issuer-system-controllers-intermediary-ca
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: root-ca
+    namespace:
+      matchNames:
+        - system-controllers
+  allowed:
+    isCA: true
+    commonName:
+      required: true
+      value: infra-mk3 system-controllers Intermediary Certificate Authority
+    dnsNames:
+      required: true
+      values:
+        - system-controllers
+        - system-controllers.svc
+        - system-controllers.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+      organizationalUnits:
+        required: true
+        values:
+          - system-controllers
+    usages:
+      - cert sign
+      - crl sign

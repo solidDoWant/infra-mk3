@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: system-controllers-intermediary-ca
+spec:
+  isCA: true
+  commonName: infra-mk3 system-controllers Intermediary Certificate Authority
+  dnsNames:
+    - system-controllers
+    - system-controllers.svc
+    - system-controllers.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+    organizationalUnits:
+      - system-controllers
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    permitted:
+      dnsDomains:
+        - .system-controllers
+        - .system-controllers.svc
+        - .system-controllers.svc.cluster.local
+  duration: 8766h # 1 year
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: system-controllers-intermediary-ca
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: system-controllers-intermediary-ca
+spec:
+  ca:
+    secretName: system-controllers-intermediary-ca
+    # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
