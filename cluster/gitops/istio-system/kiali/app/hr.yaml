@@ -23,6 +23,7 @@ spec:
         class_name: ~
     server:
       web_fqdn: kiali.${SECRET_PUBLIC_DOMAIN_NAME}
+      web_root: /
     resources:
       requests:
         cpu: 10m
