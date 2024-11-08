@@ -272,3 +272,11 @@ patches:
   - |-
     cluster:
       allowSchedulingOnControlPlanes: true
+  # Load balance requests to metrics-server and other API server
+  # services/extensions by sending traffic to each endpoint instead of the
+  # service cluster IP
+  - |-
+    cluster:
+      apiServer:
+        extraArgs:
+          enable-aggregator-routing: "true"
