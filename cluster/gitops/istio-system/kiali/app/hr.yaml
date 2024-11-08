@@ -17,9 +17,10 @@ spec:
     # TODO auth
     auth:
       strategy: anonymous
-    ingress:
-      enabled: true
-      class_name: ~
+    deployment:
+      ingress:
+        enabled: true
+        class_name: ~
     server:
       web_fqdn: kiali.${SECRET_PUBLIC_DOMAIN_NAME}
     resources:
