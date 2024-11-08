@@ -1,0 +1,27 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istio-control-plane
+  labels:
+    patches.flux.home.arpa/deployment.ignore-replicas: "true"
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: istiod
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: istio-charts
+      version: 1.23.3
+  values:
+    profile: ambient
+    pilot:
+      env:
+        ENABLE_CA_SERVER: "false"
+    global:
+      caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
+      istiod:
+        enableAnalysis: true
+      priorityClassName: system-cluster-critical
