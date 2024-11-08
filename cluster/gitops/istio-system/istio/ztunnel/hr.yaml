@@ -1,0 +1,18 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istio-ztunnel
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ztunnel
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: istio-charts
+      version: 1.23.3
+  values:
+    profile: ambient
+    caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443

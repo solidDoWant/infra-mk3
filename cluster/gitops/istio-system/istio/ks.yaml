@@ -67,7 +67,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name cni
+  name: &app_name istio-cni
 spec:
   targetNamespace: istio-system
   commonMetadata:
@@ -82,3 +82,24 @@ spec:
   wait: true
   dependsOn:
     - name: istio-istiod
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name istio-ztunnel
+spec:
+  targetNamespace: istio-system
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/istio-system/istio/ztunnel
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: istio-cni
