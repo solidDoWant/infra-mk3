@@ -4,7 +4,7 @@
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: istio-system-intermediary-ca-istio-gateway-cert
+  name: istio-system-intermediary-ca-istio-ingressgateway-cert
 spec:
   selector:
     issuerRef:
@@ -23,7 +23,7 @@ spec:
     uris:
       required: true
       values:
-        - spiffe://cluster.local/ns/istio-system/sa/istio-gateway
+        - spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway
     usages:
       - client auth
       - server auth

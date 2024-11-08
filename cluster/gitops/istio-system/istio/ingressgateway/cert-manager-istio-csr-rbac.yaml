@@ -1,9 +1,9 @@
 ---
-# Allow checking against the istio-gateway policy only
+# Allow checking against the istio-ingressgateway policy only
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: cert-manager-policy:cert-manager-istio-gateway
+  name: cert-manager-policy:cert-manager-istio-ingressgateway
 rules:
   - apiGroups:
       - policy.cert-manager.io
@@ -12,18 +12,18 @@ rules:
     verbs:
       - use
     resourceNames:
-      - istio-system-intermediary-ca-istio-gateway-cert
+      - istio-system-intermediary-ca-istio-ingressgateway-cert
 ---
 # Only allow the istio-csr SA able to get certificates approved
-# for istio-gateway
+# for istio-ingressgateway
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: cert-manager-policy:cert-manager-istio-gateway
+  name: cert-manager-policy:cert-manager-istio-ingressgateway
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: cert-manager-policy:cert-manager-istio-gateway
+  name: cert-manager-policy:cert-manager-istio-ingressgateway
 subjects:
   - kind: ServiceAccount
     namespace: istio-system
