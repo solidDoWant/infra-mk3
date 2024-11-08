@@ -15,7 +15,11 @@ spec:
       version: 3.12.2
   values:
     apiService:
-      insecureSkipTLSVerify: false
+      # This must be disabled until the new TLS feature is released in
+      # (hopefully) 0.8:
+      # https://github.com/kubernetes-sigs/metrics-server/blob/master/charts/metrics-server/values.yaml#L203
+      insecureSkipTLSVerify: true
+      # insecureSkipTLSVerify: false
     replicas: 2
     podDisruptionBudget:
       enabled: true
