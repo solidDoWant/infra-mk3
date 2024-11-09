@@ -19,7 +19,8 @@ spec:
   usages:
     - server auth
   privateKey:
-    algorithm: Ed25519
+    algorithm: ECDSA
+    size: 521
     encoding: PKCS8
     rotationPolicy: Never
   issuerRef:
