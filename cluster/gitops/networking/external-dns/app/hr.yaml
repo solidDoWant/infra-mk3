@@ -28,7 +28,8 @@ spec:
       # Only publish resources with this annotation set
       - --label-filter="external-dns.home.arpa/publish = true"
       # Use <name>.domain.name for services by default
-      - --fqdn-template="{{ .Name }}.${SECRET_PUBLIC_DOMAIN_NAME}"
+      # This is templated by Helm and then external-dns, hence the escaped '{{' and '}}'
+      - --fqdn-template="{{ '{{' }} .Name {{ '}}' }}.${SECRET_PUBLIC_DOMAIN_NAME}"
       # Only watch loadbalancer services
       - --service-type-filter=LoadBalancer
       - --managed-record-types=A,CNAME,SRV
@@ -37,10 +38,10 @@ spec:
       # Ensure internal IP addresses are not published by accident
       - --exclude-target-net=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
       # Encrypt TXT records
-      - --txt-encrypt-enabled=true
+      - --txt-encrypt-enabled
       - --txt-encrypt-aes-key=$(TXT_RECORD_ENCRYPTION_KEY)
       # Proxy traffic by default (can be disabled via annotation)
-      - --cloudflare-proxied=true
+      - --cloudflare-proxied
     env:
       - name: TXT_RECORD_ENCRYPTION_KEY
         valueFrom:
