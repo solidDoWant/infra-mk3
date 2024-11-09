@@ -49,6 +49,7 @@ spec:
       enabled: true
     service:
       loadBalancerIP: 10.34.0.10
+      useTcp: true
     replicaCount: 2
     topologySpreadConstraints:
       - maxSkew: 1 # Skew of 1 allows for rolling updates
