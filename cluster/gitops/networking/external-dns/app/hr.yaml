@@ -24,6 +24,7 @@ spec:
       - istio-gateway
       - crd
     triggerLoopOnEvent: true # Sync any time a supported resource changes
+    policy: sync # Delete records when the resource is deleted
     extraArgs:
       # Only publish resources with this annotation set
       - --label-filter=external-dns.home.arpa/publish=true
@@ -59,7 +60,6 @@ spec:
             name: external-dns-secrets
     domainFilters:
       - ${SECRET_PUBLIC_DOMAIN_NAME}
-    logLevel: debug
     # TODO monitoring
     # serviceMonitor:
     #   enabled: true
