@@ -62,7 +62,7 @@ spec:
               limits:
                 memory: 64Mi
     service:
-      app:
+      cloudflare-ddns:
         controller: *app_name
         ports:
           http:
@@ -72,7 +72,7 @@ spec:
             port: *healthPort
     # TODO monitoring
     # serviceMonitor:
-    #   app:
+    #   cloudflare-ddns:
     #     serviceName: *app_name
     #     endpoints:
     #       - port: health
@@ -81,14 +81,14 @@ spec:
     #         interval: 30s
     #         scrapeTimeout: 30s
     ingress:
-      app:
+      cloudflare-ddns:
         enabled: true
         hosts:
           - host: &domain_name cloudflare-ddns.${SECRET_PUBLIC_DOMAIN_NAME}
             paths:
               - path: /
                 service:
-                  identifier: app
+                  identifier: cloudflare-ddns
         tls:
           - hosts:
               - *domain_name
