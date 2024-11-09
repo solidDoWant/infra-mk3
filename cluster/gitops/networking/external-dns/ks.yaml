@@ -4,14 +4,14 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name external-gateway
+  name: &app_name external-dns
 spec:
   targetNamespace: networking
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/networking/external-gateway/app
+  path: /cluster/gitops/networking/external-dns/app
   prune: true
   sourceRef:
     kind: GitRepository
