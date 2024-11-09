@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=./schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: external-dns
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns-charts
+      version: 1.15.0
+  values:
+    provider:
+      name: cloudflare
+    sources:
+      - service
+      - ingress
+      - gateway-httproute
+      - istio-gateway
+      - crd
+    triggerLoopOnEvent: true # Sync any time a supported resource changes
+    extraArgs:
+      # Only publish resources with this annotation set
+      - --label-filter="external-dns.home.arpa/publish = true"
+      # Use <name>.domain.name for services by default
+      - --fqdn-template="{{ .Name }}.${SECRET_PUBLIC_DOMAIN_NAME}"
+      # Only watch loadbalancer services
+      - --service-type-filter=LoadBalancer
+      - --managed-record-types=A,CNAME,SRV
+      # Point all records (CNAME usually) at this domain name, which will resolve to my WAN IP
+      - --default-targets=public-wan.${SECRET_PUBLIC_DOMAIN_NAME}
+      # Ensure internal IP addresses are not published by accident
+      - --exclude-target-net=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      # Encrypt TXT records
+      - --txt-encrypt-enabled=true
+      - --txt-encrypt-aes-key=$(TXT_RECORD_ENCRYPTION_KEY)
+      # Proxy traffic by default (can be disabled via annotation)
+      - --cloudflare-proxied=true
+    env:
+      - name: TXT_RECORD_ENCRYPTION_KEY
+        valueFrom:
+          secretKeyRef:
+            key: TXT_RECORD_ENCRYPTION_KEY
+            name: external-dns-secrets
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            key: CF_API_TOKEN
+            name: external-dns-secrets
+    # TODO monitoring
+    # serviceMonitor:
+    #   enabled: true
