@@ -63,6 +63,8 @@ servers:
         parameters: 30
       - name: forward
         parameters: . /etc/resolv.conf
+podDisruptionBudget:
+  minAvailable: 1
 # Schedule only on control plane nodes
 affinity:
   nodeAffinity:
