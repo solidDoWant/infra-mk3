@@ -1,0 +1,59 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: external-gateway
+spec:
+  gatewayClassName: istio
+  addresses:
+    - type: IPAddress
+      value: 10.34.0.2
+  listeners:
+    - name: https
+      hostname: &hostname "*.${SECRET_PUBLIC_DOMAIN_NAME}"
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: wildcard-public-domain-name-cert
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http
+      hostname: *hostname
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+# Approve the the external-gateway-istio certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: istio-system-intermediary-ca-external-gateway-istio-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: istio-system-intermediary-ca
+    namespace:
+      matchNames:
+        - istio-system
+  allowed:
+    # This is required until https://github.com/istio/istio/issues/53828 is fixed
+    subject:
+      organizations:
+        values:
+          - ""
+    uris:
+      required: true
+      values:
+        - spiffe://cluster.local/ns/istio-system/sa/external-gateway-istio
+    usages:
+      - client auth
+      - server auth
+  constraints:
+    maxDuration: 1h
