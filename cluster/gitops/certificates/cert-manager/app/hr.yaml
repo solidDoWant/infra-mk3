@@ -35,6 +35,8 @@ spec:
       defaultIssuerGroup: cert-manager.io
       defaultIssuerKind: ClusterIssuer
       defaultIssuerName: letsencrypt-staging # TODO switch this to prod once everything is stable
+    dns01RecursiveNameserversOnly: true
+    dns01RecursiveNameservers: https://dns.quad9.net/dns-query
     # TODO Monitoring CRDs
     # prometheus:
     #   servicemonitor:
