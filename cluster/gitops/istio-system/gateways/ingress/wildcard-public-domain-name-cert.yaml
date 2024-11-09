@@ -20,7 +20,7 @@ spec:
     - server auth
   privateKey:
     algorithm: ECDSA
-    size: 384
+    size: 256 # Istio ingress controller only supports this ECDSA curve
     encoding: PKCS8
     rotationPolicy: Never
   issuerRef:
