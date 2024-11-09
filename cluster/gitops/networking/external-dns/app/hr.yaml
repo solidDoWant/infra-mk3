@@ -55,6 +55,9 @@ spec:
           secretKeyRef:
             key: CF_API_TOKEN
             name: external-dns-secrets
+    domainFilters:
+      - ${SECRET_PUBLIC_DOMAIN_NAME}
+    logLevel: debug
     # TODO monitoring
     # serviceMonitor:
     #   enabled: true
