@@ -36,6 +36,8 @@
 #     Source: 10.34.0.0/16
 #     description: Drop the "don't fragment" flag on load balancer packets
 #     Do not fragment
+# * Internal DNS forwarding for public and internal domains to coredns-k8s-gateway
+# * Internal DNS forwarding for 34.10.in-addr.arpa to coredns-k8s-gateway
 
 # This was a PITA to get working. It needs a lot of cleanup and refactoring,
 # some other time.
