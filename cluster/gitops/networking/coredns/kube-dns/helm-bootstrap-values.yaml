@@ -46,6 +46,18 @@ servers:
         configBlock: |-
           pods verified
           fallthrough in-addr.arpa
+      # Resolve PTR records for services
+      - name: k8s_external
+        parameters: in-addr.arpa
+        configBlock: |-
+          fallthrough in-addr.arpa
+      # Rewrite responses from k8s_external which incorrectly use '.in-addr.arpa' suffix
+      - name: rewrite
+        parameters: stop
+        configBlock: |-
+          name suffix .in-addr.arpa. .in-addr.arpa.
+          answer name auto
+          answer value (.*)\.in-addr\.arpa\. {1}.cluster.local
       # This may make unbound prom dns metric queries more difficult, or less accurate
       - name: cache
         parameters: 30
