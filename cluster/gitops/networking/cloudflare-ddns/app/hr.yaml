@@ -26,7 +26,8 @@ spec:
             args:
               - --zone-name=${SECRET_PUBLIC_DOMAIN_NAME}
               - --record-name=public-wan.${SECRET_PUBLIC_DOMAIN_NAME}
-              - --provider=random
+              # Disabled until v0.0.17 release
+              # - --provider=random
             env:
               ACCOUNT_TOKEN:
                 valueFrom:
