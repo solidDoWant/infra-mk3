@@ -5,7 +5,7 @@ kind: Certificate
 metadata:
   name: wildcard-public-domain-name-cert
 spec:
-  commonName: ${SECRET_PUBLIC_DOMAIN_NAME}
+  commonName: "*.${SECRET_PUBLIC_DOMAIN_NAME}"
   subject:
     countries:
       - US
@@ -42,8 +42,7 @@ spec:
   allowed:
     commonName:
       required: true
-      values:
-        - ${SECRET_PUBLIC_DOMAIN_NAME}
+      value: "*.${SECRET_PUBLIC_DOMAIN_NAME}"
     subject:
       countries:
         required: true
