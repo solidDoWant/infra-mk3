@@ -79,15 +79,14 @@ spec:
     #         path: /metrics
     #         interval: 30s
     #         scrapeTimeout: 30s
-    ingress:
+    route:
       app:
         enabled: true
-        hosts:
-          - host: &domain_name cloudflare-ddns.${SECRET_PUBLIC_DOMAIN_NAME}
-            paths:
-              - path: /
-                service:
-                  identifier: app
-        tls:
-          - hosts:
-              - *domain_name
+        parentRefs:
+          - name: internal-ingress
+            namespace: istio-system
+        hostnames:
+          - cloudflare-ddns.${SECRET_PUBLIC_DOMAIN_NAME}
+        rules:
+          - backendRefs:
+              - name: app
