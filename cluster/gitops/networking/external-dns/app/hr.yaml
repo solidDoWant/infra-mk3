@@ -32,7 +32,9 @@ spec:
       - --fqdn-template={{ "{{" }} .Name {{ "}}" }}.${SECRET_PUBLIC_DOMAIN_NAME}
       # Only watch loadbalancer services
       - --service-type-filter=LoadBalancer
-      - --managed-record-types=A,CNAME,SRV
+      - --managed-record-types=A
+      - --managed-record-types=CNAME
+      - --managed-record-types=SRV
       # Point all records (CNAME usually) at this domain name, which will resolve to my WAN IP
       - --default-targets=public-wan.${SECRET_PUBLIC_DOMAIN_NAME}
       # Ensure internal IP addresses are not published by accident
