@@ -21,6 +21,30 @@ spec:
       registry: ghcr.io
       repository: soliddowant/k8s_gateway
       tag: v0.4.0-37-g9b0bbe7
+    # Chart defaults + rewrite for PTR responses
+    extraZonePlugins:
+      - name: log
+      - name: errors
+      # Serves a /health endpoint on :8080, required for livenessProbe
+      - name: health
+        configBlock: |-
+          lameduck 5s
+      # Serves a /ready endpoint on :8181, required for readinessProbe
+      - name: ready
+      # Serves a /metrics endpoint on :9153, required for serviceMonitor
+      - name: prometheus
+        parameters: 0.0.0.0:9153
+      - name: forward
+        parameters: . /etc/resolv.conf
+      - name: rewrite
+        parameters: stop
+        configBlock: |-
+          name suffix .in-addr.arpa. .in-addr.arpa.
+          answer name auto
+          answer value (.*)\.cluster\.local\. {1}.${SECRET_PUBLIC_DOMAIN_NAME}
+      - name: loop
+      - name: reload
+      - name: loadbalance
     dnsChallenge:
       enabled: true
     service:
