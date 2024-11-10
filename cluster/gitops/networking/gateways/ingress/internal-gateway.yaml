@@ -74,7 +74,7 @@ spec:
       name: istio-intermediary-ca
     namespace:
       matchNames:
-        - networking
+        - istio-system
   allowed:
     # This is required until https://github.com/istio/istio/issues/53828 is fixed
     subject:
