@@ -21,7 +21,7 @@ spec:
   nameConstraints:
     critical: true
     permitted:
-      dnsDomains:
+      dnsDomains: &domains
         - .cluster.local
         - .svc
         - .${SECRET_INTERNAL_DOMAIN_NAME}
@@ -30,6 +30,7 @@ spec:
         - 10.0.0.0/8
         - 172.16.0.0/12
         - 192.168.0.0/16
+      uriDomains: *domains
   duration: 87660h # 10 years
   privateKey:
     algorithm: Ed25519
