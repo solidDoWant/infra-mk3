@@ -170,9 +170,7 @@
       - 9
       - 10
     node_count: 4
-    untagged_vlan: 200
-    tagged_vlans:
-      - 300
+    untagged_vlan: 300
   tasks:
     - name: Split the ports
       ansible.builtin.include_role:

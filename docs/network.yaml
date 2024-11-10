@@ -251,6 +251,10 @@ devices:
         gateway:
           address: 10.3.0.254
           vhid: 30
+        firewall:
+          allow_firewall_ntp_access: true
+          allow_firewall_bgp_access: true
+          allow_firewall_dns_responses: true
       opt3: &opnsense_opt3
         physical_name: vtnet4
         ip_address: 10.4.0.1
@@ -406,15 +410,7 @@ ip-space:
           10.2.0.254/32:
             description: OPNsense VIP
         10.2.1.0/24:
-          description: Kubernetes hosts
-          10.2.1.1/32:
-            hostname: talos-k8s-mixed-01
-          10.2.1.2/32:
-            hostname: talos-k8s-mixed-02
-          10.2.1.3/32:
-            hostname: talos-k8s-mixed-03
-          10.2.1.4/32:
-            hostname: talos-k8s-mixed-04
+          description: Reserved (formerly Kubernetes hosts)
         10.2.2.0/24:
           description: VM hosts
           10.2.2.1/32:

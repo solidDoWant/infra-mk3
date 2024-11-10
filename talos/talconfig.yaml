@@ -4,7 +4,7 @@ endpoint: https://10.3.254.1:6443
 nodes:
   - &talos-k8s-mixed
     hostname: talos-k8s-mixed-01
-    ipAddress: 10.2.1.1
+    ipAddress: 10.3.1.1
     installDiskSelector:
       # `/*` suffix is needed until
       # https://github.com/siderolabs/go-blockdevice/issues/114 is fixed
@@ -12,8 +12,18 @@ nodes:
     controlPlane: true
     machineSpec:
       secureboot: true
+    # Previously, this used separate VLANs for Talos traffic and for
+    # Kubernetes traffic. This worked well for traffic within the same subnet,
+    # but caused problems with traffic from other subnets. Requests would come
+    # in via the Kubernetes VLAN, and responses would be sent out via the
+    # management VLAN. Normally this _could_ work, with the right firewall
+    # rules, however the major issue was ICMP responses for fragmented packets.
+    # With path MTU discovery enabled, ICMP responses would get sent back via
+    # the wrong VLAN, and never make their way back to the correct interface.
+    # This was likely in part due to how Cilium handles network traffic via
+    # eBPF programs attached to specific interfaces.
     nameservers:
-      - 10.2.0.254
+      - 10.3.0.254
     networkInterfaces:
       - &1g_1
         interface: enp87s0
@@ -39,20 +49,13 @@ nodes:
           miimon: 100
         mtu: *jumbo_mtu
         addresses:
-          - 10.2.1.1/16
+          - 10.3.1.1/16
+          - 10.3.2.1/32
+        vip:
+          ip: 10.3.254.1
         routes:
           - network: 0.0.0.0/0
-            gateway: 10.2.0.254
-        vlans:
-          - &vlan_300_config
-            vlanId: 300
-            addresses:
-              - 10.3.1.1/16
-              - 10.3.2.1/16
-            mtu: *jumbo_mtu
-            # HA, but not load balanced API server endpoint
-            vip:
-              ip: 10.3.254.1
+            gateway: 10.3.0.254
     nodeLabels:
       cilium.home.arpa/node.bgp-enabled: "true"
     schematic:
@@ -72,13 +75,13 @@ nodes:
         # - iommu=pt
         extraKernelArgs:
           - &bond bond=bond0:enp2s0f0,enp2s0f1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
-          - ip=10.2.1.1::10.2.0.254:255.255.0.0:talos-k8s-mixed-01:bond0:off:10.2.0.254::10.2.0.254
+          - ip=10.3.1.1::10.3.0.254:255.255.0.0:talos-k8s-mixed-01:bond0:off:10.3.0.254::10.3.0.254
     # This includes all of the above, except no kernel args
     # Support for a fix will be in the next release of talhelper
     talosImageURL: factory.talos.dev/installer-secureboot/54416e4c74096eb53d4f8982e20ba9e45f2eb0d73dc55c27bf8f2f8ef9a588b2
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-02
-    ipAddress: 10.2.1.2
+    ipAddress: 10.3.1.2
     networkInterfaces:
       - *1g_1
       - *1g_2
@@ -86,21 +89,17 @@ nodes:
       - *10g_2
       - <<: *bond_0
         addresses:
-          - 10.2.1.2/16
-        vlans:
-          - <<: *vlan_300_config
-            addresses:
-              - 10.3.1.2/16
-              - 10.3.2.2/16
+          - 10.3.1.2/16
+          - 10.3.2.2/32
     schematic:
       customization:
         <<: *schematic_customization
         extraKernelArgs:
           - *bond
-          - ip=10.2.1.2::10.2.0.254:255.255.0.0:talos-k8s-mixed-02:bond0:off:10.2.0.254::10.2.0.254
+          - ip=10.3.1.2::10.3.0.254:255.255.0.0:talos-k8s-mixed-02:bond0:off:10.3.0.254::10.3.0.254
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-03
-    ipAddress: 10.2.1.3
+    ipAddress: 10.3.1.3
     networkInterfaces:
       - *1g_1
       - *1g_2
@@ -108,18 +107,14 @@ nodes:
       - *10g_2
       - <<: *bond_0
         addresses:
-          - 10.2.1.3/16
-        vlans:
-          - <<: *vlan_300_config
-            addresses:
-              - 10.3.1.3/16
-              - 10.3.2.3/16
+          - 10.3.1.3/16
+          - 10.3.2.3/32
     schematic:
       customization:
         <<: *schematic_customization
         extraKernelArgs:
           - *bond
-          - ip=10.2.1.3::10.2.0.254:255.255.0.0:talos-k8s-mixed-03:bond0:off:10.2.0.254::10.2.0.254
+          - ip=10.3.1.3::10.3.0.254:255.255.0.0:talos-k8s-mixed-03:bond0:off:10.3.0.254::10.3.0.254
 talosVersion: v1.8.1
 kubernetesVersion: v1.31.1
 allowSchedulingOnMasters: true
@@ -146,7 +141,7 @@ patches:
     machine:
       time:
         servers:
-          - 10.2.0.254
+          - 10.3.0.254
   # Disable IPv6
   - |-
     machine:

@@ -3,7 +3,6 @@
 # * Plugins installation:
 #   * FRR
 #   * QEMU guest agent
-# * Firewall rule to allow BGP traffic to firewall from k8s net
 # * FRR config including:
 #   * Enable
 #   * ASN: 64512
@@ -31,11 +30,6 @@
 #       hold down time: 9
 #       connect timer: 12
 #       peer group: Cilium
-# * Firewall normalization rule to drop "don't fragment" flag on LB packets
-#   - Interfaces: all
-#     Source: 10.34.0.0/16
-#     description: Drop the "don't fragment" flag on load balancer packets
-#     Do not fragment
 # * Internal DNS forwarding for public and internal domains to coredns-k8s-gateway
 # * Internal DNS forwarding for 34.10.in-addr.arpa to coredns-k8s-gateway
 
@@ -856,6 +850,112 @@
                               - network: (self)
               loop: "{{ network.physical | dict2items }}"
               when: item.value.firewall.enable_access_all | default(false)
+            - name: Allow access to firewall NTP port
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow access to firewall NTP server
+                        - direction: in
+                        - quick: "1"
+                        - protocol: udp
+                        - category: Firewall management
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+                              - port: "123"
+              loop: "{{ network.physical | dict2items }}"
+              when: item.value.firewall.allow_firewall_ntp_access | default(false)
+            - name: Allow access to firewall BGP port
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow access to firewall for BGP peering
+                        - direction: in
+                        - quick: "1"
+                        - protocol: tcp
+                        - category: Firewall management
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+                              - port: "179"
+              loop: "{{ network.physical | dict2items }}"
+              when: item.value.firewall.allow_firewall_ntp_access | default(false)
+            # There is an automatically generated/managed rule that handles
+            # Unbound to CoreDNS, but not the responses
+            - name: Allow DNS responses to firewall Unbound DNS queries
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow responses to Unbound DNS queries (UDP)
+                        - direction: in
+                        - quick: "1"
+                        - protocol: udp
+                        - category: DNS
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                              - port: "53"
+                        - destination:
+                            _:
+                              - network: (self)
+              loop: "{{ network.physical | dict2items }}"
+              when: item.value.firewall.allow_firewall_dns_responses | default(false)
+            - name: Allow DNS responses to firewall Unbound DNS queries
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow responses to Unbound DNS queries (TCP)
+                        - direction: in
+                        - quick: "1"
+                        - protocol: tcp
+                        - category: DNS
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                              - port: "53"
+                        - destination:
+                            _:
+                              - network: (self)
+              loop: "{{ network.physical | dict2items }}"
+              when: item.value.firewall.allow_firewall_dns_responses | default(false)
     - name: Configure WAN failover
       block:
         - name: Configure gateways
