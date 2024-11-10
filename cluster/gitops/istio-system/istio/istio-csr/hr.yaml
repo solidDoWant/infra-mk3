@@ -35,6 +35,7 @@ spec:
           - cert-manager-istio-csr.istio-system.svc.cluster.local
         istiodPrivateKeyAlgorithm: ECDSA
         istiodPrivateKeySize: 384
+        trustDomain: istio.cluster.local
       # TODO after switching to HSM for root CA, pin the cert via a secret to
       # reduce risk of TOFU-based attack:
       # https://github.com/cert-manager/istio-csr/issues/103
