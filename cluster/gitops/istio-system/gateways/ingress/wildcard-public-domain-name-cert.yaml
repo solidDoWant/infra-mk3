@@ -22,7 +22,7 @@ spec:
     algorithm: RSA # Browsers are having trouble with ECDSA
     size: 2048
     encoding: PKCS8
-    rotationPolicy: Never
+    rotationPolicy: Always
   issuerRef:
     name: letsencrypt-staging
     kind: ClusterIssuer
