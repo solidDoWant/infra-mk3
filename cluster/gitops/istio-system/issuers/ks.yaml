@@ -1,17 +1,39 @@
+# This is disabled until https://github.com/cert-manager/istio-csr/issues/153 is resolved
+# ---
+# # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   namespace: flux-system
+#   name: &app_name istio-system-namespace-issuer
+# spec:
+#   targetNamespace: istio-system
+#   commonMetadata:
+#     labels:
+#       app.kubernetes.io/name: *app_name
+#   interval: 5m
+#   path: /cluster/gitops/istio-system/issuers/namespace
+#   prune: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: infra-mk3
+#   wait: true
+#   dependsOn:
+#     - name: cluster-issuers
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name istio-system-namespace-issuer
+  name: &app_name istio-issuer
 spec:
   targetNamespace: istio-system
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/istio-system/issuers/namespace
+  path: /cluster/gitops/istio-system/issuers/istio
   prune: true
   sourceRef:
     kind: GitRepository

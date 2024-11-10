@@ -27,7 +27,7 @@ spec:
         issuer:
           group: cert-manager.io
           kind: Issuer
-          name: istio-system-intermediary-ca
+          name: istio-intermediary-ca
       tls:
         certificateDNSNames:
           - cert-manager-istio-csr.istio-system

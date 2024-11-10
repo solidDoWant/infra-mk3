@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+# This CA will issue certs for istio services across multiple namespaces. The requests will only come
+# from istio-csr within the istio-system namespace.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-intermediary-ca
+spec:
+  isCA: true
+  commonName: infra-mk3 Istio Intermediary Certificate Authority
+  # The issuer cert must also have these, see
+  # https://github.com/cert-manager/istio-csr/issues/153
+  dnsNames:
+    - istio-system
+    - istio-system.svc
+    - istio-system.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+    organizationalUnits:
+      - Istio
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    permitted:
+      uriDomains:
+        - istio.cluster.local
+      # The issuer cert must also have these, see
+      # https://github.com/cert-manager/istio-csr/issues/153
+      dnsDomains:
+        - .istio-system
+        - .istio-system.svc
+        - .istio-system.svc.cluster.local
+  duration: 8766h # 1 year
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: istio-intermediary-ca
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: istio-intermediary-ca
+spec:
+  ca:
+    secretName: istio-intermediary-ca
+    # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
