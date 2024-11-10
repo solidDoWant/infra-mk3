@@ -11,7 +11,7 @@ spec:
     - kiali.${SECRET_PUBLIC_DOMAIN_NAME}
   parentRefs:
     - name: internal-gateway
-      namespace: istio-system
+      namespace: networking
   rules:
     - backendRefs:
         - name: *app_name
