@@ -94,11 +94,8 @@ hubble:
   ui:
     enabled: true
     rollOutPods: true
-    # TODO maybe move this to gateway API
     ingress:
-      enabled: true
-      hosts:
-        - hubble.${SECRET_PUBLIC_DOMAIN_NAME}
+      enabled: false
 ipMasqAgent:
   enabled: true
   config:
