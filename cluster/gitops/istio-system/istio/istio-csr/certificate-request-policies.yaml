@@ -63,3 +63,38 @@ spec:
           - ""
   constraints:
     maxDuration: 1h
+---
+# Approve namespace-specific certificate for the service mesh.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: istio-intermediary-ca-namespace-certs
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: istio-intermediary-ca
+    namespace:
+      matchNames:
+        - istio-system
+  allowed:
+    # This is required until https://github.com/istio/istio/issues/53828 is fixed
+    subject:
+      organizations:
+        values:
+          - ""
+    uris:
+      required: true
+      values:
+        # Move of the validation is handled via CEL
+        - spiffe://istio.cluster.local/ns/*
+      validations:
+        # Match names like 'spiffe://istio.cluster.local/ns/networking/sa/default'
+        - rule: matches(self, "^spiffe://istio\.cluster\.local/ns/[[:alpha:]][[:alpha:]-]{0,251}[[:alpha:]]?/sa/default$")
+          message: "Validation for namespace default service account failed"
+    usages:
+      - client auth
+      - server auth
+  constraints:
+    maxDuration: 1h

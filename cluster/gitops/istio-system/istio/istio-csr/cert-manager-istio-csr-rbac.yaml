@@ -1,5 +1,5 @@
 ---
-# Allow checking against the istio-csr policy only
+# Allow checking against the baseline istio-csr policies
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -13,9 +13,10 @@ rules:
       - use
     resourceNames:
       - istio-intermediary-ca-istio-csr-serving-cert
+      - istio-system-intermediary-ca-istiod-cert
+      - istio-intermediary-ca-namespace-certs
 ---
-# Only allow the istio-csr SA able to get certificates approved
-# for istio-csr
+# Only allow the istio-csr SA able to get baseline policy certs approved
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
