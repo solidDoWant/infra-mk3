@@ -15,7 +15,7 @@ spec:
   rules:
     - backendRefs:
         - name: *app_name
-          port: 80
+          port: 20001
       matches:
         - path:
             type: PathPrefix

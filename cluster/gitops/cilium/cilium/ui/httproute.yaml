@@ -10,11 +10,8 @@ spec:
   hostnames:
     - hubble.${SECRET_PUBLIC_DOMAIN_NAME}
   parentRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: internal-gateway
+    - name: internal-gateway
       namespace: istio-system
-      sectionName: https
   rules:
     - backendRefs:
         - name: *app_name
