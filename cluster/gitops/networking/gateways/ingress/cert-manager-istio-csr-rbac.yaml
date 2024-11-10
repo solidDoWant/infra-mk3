@@ -12,8 +12,8 @@ rules:
     verbs:
       - use
     resourceNames:
-      - istio-system-intermediary-ca-external-gateway-istio-cert
-      - istio-system-intermediary-ca-internal-gateway-istio-cert
+      - istio-intermediary-ca-external-gateway-istio-cert
+      - istio-intermediary-ca-internal-gateway-istio-cert
 ---
 # Only allow the istio-csr SA able to get certificates approved
 # for the istio gateways

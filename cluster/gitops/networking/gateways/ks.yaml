@@ -6,12 +6,12 @@ metadata:
   namespace: flux-system
   name: &app_name ingress-gateways
 spec:
-  targetNamespace: istio-system
+  targetNamespace: networking
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/istio-system/gateways/ingress
+  path: /cluster/gitops/networking/gateways/ingress
   prune: true
   sourceRef:
     kind: GitRepository

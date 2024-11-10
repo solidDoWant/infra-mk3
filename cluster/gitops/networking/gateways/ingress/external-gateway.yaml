@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: internal-gateway
+  name: external-gateway
   labels:
     app.kubernetes.io/name: ingress-gateways
     app.kubernetes.io/component: internal
@@ -10,7 +10,7 @@ spec:
   gatewayClassName: istio
   addresses:
     - type: IPAddress
-      value: 10.34.0.1
+      value: 10.34.0.2
   listeners:
     - name: https
       hostname: &hostname "*.${SECRET_PUBLIC_DOMAIN_NAME}"
@@ -34,14 +34,14 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: internal-gateway
+  name: external-gateway
 spec:
   minReplicas: 2
   maxReplicas: 5
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: internal-gateway-istio
+    name: external-gateway-istio
   metrics:
     - type: Resource
       resource:
@@ -53,25 +53,25 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: internal-gateway
+  name: external-gateway
 spec:
   minAvailable: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: ingress-gateways
-      gateway.networking.k8s.io/gateway-name: internal-gateway
+      gateway.networking.k8s.io/gateway-name: external-gateway
 ---
-# Approve the the internal-gateway-istio certificate specifically.
+# Approve the the external-gateway-istio certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: istio-system-intermediary-ca-internal-gateway-istio-cert
+  name: istio-intermediary-ca-external-gateway-istio-cert
 spec:
   selector:
     issuerRef:
       group: cert-manager.io
       kind: Issuer
-      name: istio-system-intermediary-ca
+      name: istio-intermediary-ca
     namespace:
       matchNames:
         - istio-system
@@ -84,7 +84,7 @@ spec:
     uris:
       required: true
       values:
-        - spiffe://cluster.local/ns/istio-system/sa/internal-gateway-istio
+        - spiffe://cluster.local/ns/networking/sa/external-gateway-istio
     usages:
       - client auth
       - server auth
