@@ -31,7 +31,7 @@ spec:
     critical: true
     permitted:
       uriDomains:
-        - istio.cluster.local
+        - spiffe://istio.cluster.local
       # The issuer cert must also have these, see
       # https://github.com/cert-manager/istio-csr/issues/153
       dnsDomains:
