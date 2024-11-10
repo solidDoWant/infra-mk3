@@ -3,6 +3,9 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: external-gateway
+  labels:
+    app.kubernetes.io/name: ingress-gateways
+    app.kubernetes.io/component: internal
 spec:
   gatewayClassName: istio
   addresses:
