@@ -91,8 +91,10 @@ spec:
         - spiffe://istio.cluster.local/ns/*
       validations:
         # Match names like 'spiffe://istio.cluster.local/ns/networking/sa/default'
-        - rule: matches(self, "^spiffe://istio\.cluster\.local/ns/[[:alpha:]][[:alpha:]-]{0,251}[[:alpha:]]?/sa/default$")
+        - rule: matches(self, "^spiffe://istio\\.cluster\\.local/ns/[[:alpha:]][[:alpha:]-]{0,251}[[:alpha:]]?/sa/default$")
           message: "Validation for namespace default service account failed"
+        # For testing:
+        # https://playcel.undistro.io/?content=H4sIAAAAAAAAA1WPQQrCMBBFr1KCC4VqVHCTjeueoa0wpBMbnCalM8VF6d1NBWmd1YcP7%2F2ZlEVSRnUgtkXeM5LLs0o9uPfOodHas%2FhYpTtZGllw%2BGaKFkgH1mVpgPoWTF2v8VhP5%2Fx6u8yb9q4ZdIMORpJdpQ4qVw0IFKEfJQ1YxCb7t%2F6Mqy2gvOPw8uG5oSVSFxtMkOWX%2BQNNwI8b0wAAAA%3D%3D
     usages:
       - client auth
       - server auth
