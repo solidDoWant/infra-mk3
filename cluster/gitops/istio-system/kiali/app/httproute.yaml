@@ -2,19 +2,16 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: &app_name hubble-ui
+  name: &app_name kiali
   labels:
-    k8s-app: *app_name
-    app.kubernetes.io/part-of: cilium
+    app.kubernetes.io/instance: *app_name
+    app.kubernetes.io/part-of: *app_name
 spec:
   hostnames:
-    - hubble.${SECRET_PUBLIC_DOMAIN_NAME}
+    - kiali.${SECRET_PUBLIC_DOMAIN_NAME}
   parentRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: internal-gateway
+    - name: internal-gateway
       namespace: istio-system
-      sectionName: https
   rules:
     - backendRefs:
         - name: *app_name
