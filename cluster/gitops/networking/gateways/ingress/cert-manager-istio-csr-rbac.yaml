@@ -1,7 +1,7 @@
 ---
 # Allow checking against the istio gateway policies only
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: cert-manager-policy:cert-manager-istio-gateways
 rules:
@@ -18,12 +18,12 @@ rules:
 # Only allow the istio-csr SA able to get certificates approved
 # for the istio gateways
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: cert-manager-policy:cert-manager-istio-gateways
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: cert-manager-policy:cert-manager-istio-gateways
 subjects:
   - kind: ServiceAccount
