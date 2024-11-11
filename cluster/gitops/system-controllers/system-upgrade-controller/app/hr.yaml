@@ -56,7 +56,9 @@ spec:
         system-upgrade-controller:
           type: ClusterRole
           rules:
-            - resources:
+            - apiGroup:
+                - ""
+              resources:
                 - namespaces
               verbs:
                 - get
