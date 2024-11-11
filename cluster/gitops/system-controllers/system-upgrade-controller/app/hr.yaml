@@ -59,7 +59,7 @@ spec:
                 - ""
               resources:
                 - namespaces
-              verbs: &read_verbs
+              verbs:
                 - get
                 - list
             - apiGroups:
@@ -89,13 +89,7 @@ spec:
           subjects:
             - identifier: default
               namespace: "{{ .Release.Namespace }}"
-    persistence:
-      talos-credentials:
-        type: secret
-        name: talos-credentials
-        globalMounts:
-          - path: /var/run/secrets/talos.dev
-            readOnly: true
+    # persistence:
     #   tmp:
     #     type: emptyDir
     #   etc-ssl:

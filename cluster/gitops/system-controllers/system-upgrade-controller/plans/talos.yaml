@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/plan_v1.json
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: talos-upgrade
+spec:
+  concurrency: 1
+  # Match Talos nodes with an out of date version only
+  nodeSelector:
+    matchLabels:
+      feature.node.kubernetes.io/system-os_release.ID: talos
+    matchExpressions:
+      - key: feature.node.kubernetes.io/system-os_release.VERSION_ID
+        operator: NotIn
+        values:
+          - ${TALOS_VERSION}
+  version: ${TALOS_VERSION}
+  secrets:
+    - name: talos-credentials
+      path: /var/run/secrets/talos.dev
+    # If the Plan CRD ever adds support for configmaps, this should be
+    # converted
+    - name: upgrade-scripts
+      path: /scripts
+  exclusive: true
+  # TODO enable this after next controller/crd release
+  # window:
+  prepare: &prepare
+    image: alpine/k8s:1.31.2
+    envs:
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+      - name: TALOS_VERSION
+        value: ${TALOS_VERSION}
+      # This must be kept in sync with /talos/talconfig.yaml
+      # TODO automate this
+      - name: INSTALLER_IMAGE
+        value: factory.talos.dev/installer-secureboot/54416e4c74096eb53d4f8982e20ba9e45f2eb0d73dc55c27bf8f2f8ef9a588b2
+    command:
+      - /scripts/talos.sh
+    args:
+      - plan
+  upgrade:
+    <<: *prepare
+    args:
+      - upgrade

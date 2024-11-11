@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./kubernetes.yaml
+  - ./lib.sh
+  - ./talos.yaml
+# The _only_ reason why this is a secret generator is because the Plan CRD does
+# not have support for configmaps
+secretGenerator:
+  - name: upgrade-scripts
+    files:
+      - upgrade-scripts/talos.sh
+generatorOptions:
+  disableNameSuffixHash: true
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled

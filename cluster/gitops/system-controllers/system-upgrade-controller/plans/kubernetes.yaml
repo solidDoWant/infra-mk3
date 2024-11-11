@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/plan_v1.json
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: kubernetes-upgrade
+spec:
+  concurrency: 1
+  # Match Talos nodes that are a part of the k8s control plane only
+  nodeSelector:
+    matchLabels:
+      feature.node.kubernetes.io/system-os_release.ID: talos
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+  version: ${KUBERNETES_VERSION}
+  secrets:
+    - name: talos-credentials
+      path: /var/run/secrets/talos.dev
+    # If the Plan CRD ever adds support for configmaps, this should be
+    # converted
+    - name: upgrade-scripts
+      path: /scripts
+  exclusive: true
+  # TODO enable this after next controller/crd release
+  # window:
+  prepare: &prepare
+    image: alpine/k8s:1.31.2
+    envs:
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+      - name: TALOS_VERSION
+        value: ${TALOS_VERSION}
+      - name: KUBERNETES_VERSION
+        value: ${KUBERNETES_VERSION}
+    command:
+      - /scripts/kubernetes.sh
+    args:
+      - plan
+  upgrade:
+    <<: *prepare
+    args:
+      - upgrade

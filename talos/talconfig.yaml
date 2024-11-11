@@ -78,6 +78,8 @@ nodes:
           - ip=10.3.1.1::10.3.0.254:255.255.0.0:talos-k8s-mixed-01:bond0:off:10.3.0.254::10.3.0.254
     # This includes all of the above, except no kernel args
     # Support for a fix will be in the next release of talhelper
+    # This must be kept in sync with cluster/gitops/system-controllers/system-upgrade-controller/plans/talos-upgrade.yaml
+    # TODO automate this
     talosImageURL: factory.talos.dev/installer-secureboot/54416e4c74096eb53d4f8982e20ba9e45f2eb0d73dc55c27bf8f2f8ef9a588b2
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-02

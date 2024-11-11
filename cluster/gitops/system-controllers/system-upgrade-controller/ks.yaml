@@ -38,3 +38,28 @@ spec:
   wait: true
   dependsOn:
     - name: system-upgrade-controller-crds
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name system-upgrade-controller-plans
+spec:
+  targetNamespace: system-controllers
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/system-controllers/system-upgrade-controller/plans
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  postBuild:
+    substitute:
+      TALOS_VERSION: v1.8.1
+      KUBERNETES_VERSION: 1.31.1
+  dependsOn:
+    - name: system-upgrade-controller-crds

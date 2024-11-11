@@ -33,7 +33,6 @@ tasks:
       WORKING_DIR="$(mktemp -d -p /tmp cluster-crd-schema-gen-XXXXXX)"
 
       echo "${SCHEMA_CONTENTS}" > "${WORKING_DIR}/crd.yaml"
-      echo $WORKING_DIR
 
       openapi2jsonschema "${WORKING_DIR}/crd.yaml"
 
