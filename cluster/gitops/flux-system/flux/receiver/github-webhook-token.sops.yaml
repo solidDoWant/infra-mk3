@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-webhook-token
+type: Opaque
+stringData:
+  token: ENC[AES256_GCM,data:y4orqvqdNizitZzkudSprTruM91q40ZZriNSJKTH/5IsMUqUtoQx3Ph50D66xWYSRFsOyetDWSh+sd8Pg9Bdtg==,iv:VKQ0+tBXiz1e2wZw2Ak78NzHPEwJX4GZi6DruTAs2y8=,tag:M/b1L63zDJ8KJk6EoUl+uw==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBnZG9zUEVFVnFVNUt3d0ZC
+        Z3ZRSzRac2p3S2M3L3hnNk0zdG5rL0wvbVVjCjExaG5kUHA2bjZPTmZsMklJMStS
+        R2ZlS01DYmpEYjZ2QlVQeVJjZWt4QjQKLS0tIFg5cjU1R296WGxJUFBRUXhjc20y
+        dHpJZkhpN2VhU2p6em1ZR0xtaGFFUDgKJXeaI37PdxhN4C5LC0APXIOQa4OmYGBY
+        ULHX8yLLwQwg4UdNm96qEfaFbrFdedeuNFU8sMJ8MpPwQJgYohUBVw==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBIb0hqRHh2VkVtaHBKSjlR
+        d203VXhhU01WZitsNEQ4TEdiK0RaSXdVaDBvCnRzNU4rVFRrVkZFREtCMGJtZ1FI
+        Q3FBSlJqMWpnTjhIV2ZRbmd4ZFIyeVEKLS0tIHpOU0RndWtMZCtLQVhaZUFQZXNh
+        RWR0ZVZOMEtRWnJMdXNJYSsweCs0SUUKDhhRNHPdAGsPoSrUlvlbBYJhX6Np5xqP
+        l5vH5ZVf71aO6QB9Ff/r0xV3xBTXZghwdszZz6QPYo0nUbSokjZcOg==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2024-11-11T05:15:34Z"
+  mac: ENC[AES256_GCM,data:Np40CyMv14J0OETPH45pimqCkio0YOiDhBQC2Zgj/S6s3ZjCWSNcdp0J+RzP7/vwJ4U3Uf1fW5OikpYU2P9UcYILo7ZsfhuzeSjX5XoIz6EZxgbaC0eWiyc4mJwVt4/6CN2JUENp9BPXJ4wlapvwBUEa2hI+KMj0+0/uiIgvHDI=,iv:isGUhE9ZfNjwWXMAcy2MwZ+jQEg0jrf/hzh3lFUb650=,tag:uOaXK8c5woAUadLu6W2AbA==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0
