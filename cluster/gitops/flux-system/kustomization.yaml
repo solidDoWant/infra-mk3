@@ -3,4 +3,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./namespace.yaml
-  - ./flux/
+  - ./flux/ # This covers resources deployed during bootstrapping
+  - ./flux/ks.yaml # This covers flux resources deployed after bootstrapping
