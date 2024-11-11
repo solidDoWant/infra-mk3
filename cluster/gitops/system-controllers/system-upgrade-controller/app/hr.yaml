@@ -59,20 +59,28 @@ spec:
                 - ""
               resources:
                 - namespaces
-                - nodes
+                - secrets
               verbs: &read_verbs
                 - get
                 - list
             - apiGroups:
+                - ""
+              resources:
+                - nodes
+              verbs: &read_and_watch_verbs
+                - get
+                - list
+                - watch
+            - apiGroups:
                 - upgrade.cattle.io
               resources:
                 - plans
-              verbs: *read_verbs
+              verbs: *read_and_watch_verbs
             - apiGroups:
                 - batch
               resources:
                 - jobs
-              verbs: *read_verbs
+              verbs: *read_and_watch_verbs
       bindings:
         system-upgrade-role:
           type: ClusterRoleBinding
