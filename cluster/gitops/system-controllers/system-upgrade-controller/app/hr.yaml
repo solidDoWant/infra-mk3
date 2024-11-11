@@ -50,7 +50,24 @@ spec:
                 type: RuntimeDefault
     serviceAccount:
       create: true
-      name: system-upgrade
+      name: *app_name
+    rbac:
+      roles:
+        system-upgrade-controller:
+          type: ClusterRole
+          rules:
+            - resources:
+                - namespaces
+              verbs:
+                - get
+                - list
+      bindings:
+        system-upgrade-role:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: *app_name
+          subjects:
+            - identifier: *app_name
     persistence:
       talos-credentials:
         type: secret
