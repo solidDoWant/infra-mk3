@@ -50,7 +50,6 @@ spec:
                 type: RuntimeDefault
     serviceAccount:
       create: true
-      name: *app_name
     rbac:
       roles:
         system-upgrade-controller:
@@ -69,7 +68,7 @@ spec:
           roleRef:
             identifier: *app_name
           subjects:
-            - identifier: *app_name
+            - identifier: default
               namespace: "{{ .Release.Namespace }}"
     persistence:
       talos-credentials:
