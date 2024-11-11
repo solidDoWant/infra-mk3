@@ -31,8 +31,7 @@ COPY --from=hairyhenderson/gomplate:stable /gomplate /usr/local/bin/gomplate
 COPY --from=wagoodman/dive:v0.12.0 /usr/local/bin/dive /usr/local/bin/dive
 
 # talosctl
-RUN curl -fsSL -o /usr/local/bin/talosctl https://github.com/siderolabs/talos/releases/download/v1.8.1/talosctl-linux-amd64 && \
-    chmod +x /usr/local/bin/talosctl
+COPY --from=ghcr.io/siderolabs/talosctl:v1.8.1 /talosctl /usr/local/bin/talosctl
 
 # talhelper
 COPY --from=ghcr.io/budimanjojo/talhelper:v3.0.7 /bin/talhelper /usr/local/bin/talhelper
@@ -41,7 +40,7 @@ COPY --from=ghcr.io/budimanjojo/talhelper:v3.0.7 /bin/talhelper /usr/local/bin/t
 COPY --from=ghcr.io/helmfile/helmfile:v1.0.0-rc.7 /usr/local/bin/helmfile /usr/local/bin/helmfile
 
 # kubectl
-COPY --from=bitnami/kubectl:1.31.2 /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
+COPY --from=registry.k8s.io/kubectl:1.31.2 /bin/kubectl /usr/local/bin/kubectl
 
 # flux
 COPY --from=ghcr.io/fluxcd/flux-cli:v2.4.0 /usr/local/bin/flux /usr/local/bin/flux
