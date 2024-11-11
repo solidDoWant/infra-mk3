@@ -55,13 +55,24 @@ spec:
         system-upgrade-controller:
           type: ClusterRole
           rules:
-            - apiGroup:
+            - apiGroups:
                 - ""
               resources:
                 - namespaces
-              verbs:
+                - nodes
+              verbs: &read_verbs
                 - get
                 - list
+            - apiGroups:
+                - upgrade.cattle.io
+              resources:
+                - plans
+              verbs: *read_verbs
+            - apiGroups:
+                - batch
+              resources:
+                - jobs
+              verbs: *read_verbs
       bindings:
         system-upgrade-role:
           type: ClusterRoleBinding
