@@ -81,11 +81,18 @@ spec:
                 - update
                 - watch
             - apiGroups:
+                - upgrade.cattle.io
+              resources:
+                - plans/status
+              verbs:
+                - update
+            - apiGroups:
                 - batch
               resources:
                 - jobs
               verbs:
                 - create
+                - delete
                 - get
                 - list
                 - watch
