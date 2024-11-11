@@ -64,11 +64,14 @@ spec:
   constraints:
     maxDuration: 1h
 ---
-# Approve namespace-specific certificate for the service mesh.
+# Approve certificates for the service mesh.
+# This should be low risk, as istiod will verify that all clients are
+# authenticated and authorized prior to requesting a certificate. For details,
+# see https://istio.io/latest/docs/ops/deployment/security-model/#certificate-authority.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: istio-intermediary-ca-namespace-certs
+  name: istio-intermediary-ca-workload-certs
 spec:
   selector:
     issuerRef:
@@ -87,14 +90,14 @@ spec:
     uris:
       required: true
       values:
-        # Move of the validation is handled via CEL
+        # Most of the validation is handled via CEL
         - spiffe://istio.cluster.local/ns/*
       validations:
-        # Match names like 'spiffe://istio.cluster.local/ns/networking/sa/default'
-        - rule: matches(self, "^spiffe://istio\\.cluster\\.local/ns/[[:alpha:]][[:alpha:]-]{0,251}[[:alpha:]]?/sa/default$")
-          message: "Validation for namespace default service account failed"
+        # Match names like 'spiffe://istio.cluster.local/ns/networking/sa/external-dns'
+        - rule: matches(self, "^spiffe://istio\\.cluster\\.local/ns/[[:alpha:]][[:alpha:]-]{0,251}[[:alpha:]]?/sa/[[:alpha:]][[:alpha:]-]{0,251}[[:alpha:]]?$")
+          message: "Validation for service account failed"
         # For testing:
-        # https://playcel.undistro.io/?content=H4sIAAAAAAAAA1WPQQrCMBBFr1KCC4VqVHCTjeueoa0wpBMbnCalM8VF6d1NBWmd1YcP7%2F2ZlEVSRnUgtkXeM5LLs0o9uPfOodHas%2FhYpTtZGllw%2BGaKFkgH1mVpgPoWTF2v8VhP5%2Fx6u8yb9q4ZdIMORpJdpQ4qVw0IFKEfJQ1YxCb7t%2F6Mqy2gvOPw8uG5oSVSFxtMkOWX%2BQNNwI8b0wAAAA%3D%3D
+        # https://playcel.undistro.io/?content=H4sIAAAAAAAAA5WPwQrCMBBEf6UsHhSqUcFLLp77DW2FJd3aYJqE7hYPpf9uKkj16J4Gdph5M4EhBxp6FNMRb5lcm2cV3DjatiWtlGWxoUp3MG5koeGtXTDolGdVlhpd7FDX9Sr39XTMz5fT%2FPW9KsY%2F3JsKdpBDg4KFj6MkxoVNZ79gH6gVyJM8w%2FCw%2Fr4UCrGkmD40lBKWrfML0sK7XvMAAAA%3D
     usages:
       - client auth
       - server auth

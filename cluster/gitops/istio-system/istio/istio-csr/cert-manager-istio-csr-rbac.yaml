@@ -14,7 +14,7 @@ rules:
     resourceNames:
       - istio-intermediary-ca-istio-csr-serving-cert
       - istio-system-intermediary-ca-istiod-cert
-      - istio-intermediary-ca-namespace-certs
+      - istio-intermediary-ca-workload-certs
 ---
 # Only allow the istio-csr SA able to get baseline policy certs approved
 apiVersion: rbac.authorization.k8s.io/v1
