@@ -174,8 +174,9 @@ patches:
           enabled: true # Enable Talos API access from Kubernetes pods.
           allowedRoles:
             - os:reader
+            - os:admin
           allowedKubernetesNamespaces:
-            - system-upgrade
+            - system-controllers
   # Enable KubePrism
   - |-
     machine:
