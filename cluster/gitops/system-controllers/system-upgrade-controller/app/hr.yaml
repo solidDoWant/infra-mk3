@@ -59,7 +59,6 @@ spec:
                 - ""
               resources:
                 - namespaces
-                - secrets
               verbs: &read_verbs
                 - get
                 - list
@@ -67,6 +66,7 @@ spec:
                 - ""
               resources:
                 - nodes
+                - secrets
               verbs: &read_and_watch_verbs
                 - get
                 - list
