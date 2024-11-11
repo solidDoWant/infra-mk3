@@ -14,7 +14,12 @@ bpf:
   # TODO build custom image with CONFIG_NETKIT kernel config set
   # datapathMode: netkit
   lbExternalClusterIP: true
-  masquerade: true # Enable eBPF for IP masquerading (SNAT)
+  # This has caused multiple problems with:
+  # * Path MTU discovery
+  # * Talos host DNS caching
+  # * Istio liveness probes (https://github.com/istio/istio/issues/52208)
+  masquerade: false
+  # masquerade: true # Enable eBPF for IP masquerading (SNAT)
   preallocateMaps: true # Trade increased memory usage for latency reduction
   tproxy: true
 cgroup:
@@ -97,7 +102,8 @@ hubble:
     ingress:
       enabled: false
 ipMasqAgent:
-  enabled: true
+  enabled: false # TODO enable after bpf is re-enabled
+  # enabled: true
   config:
     # masqLinkLocal: true # Required for forwarding to Talos host DNS, once fixed
     nonMasqueradeCIDRs:
