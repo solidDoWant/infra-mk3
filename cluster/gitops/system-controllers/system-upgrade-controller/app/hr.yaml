@@ -70,6 +70,7 @@ spec:
             identifier: *app_name
           subjects:
             - identifier: *app_name
+              namespace: "{{ .Release.Namespace }}"
     persistence:
       talos-credentials:
         type: secret
