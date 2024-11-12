@@ -106,6 +106,12 @@ spec:
                 - patch
                 - update
                 - watch
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+              verbs:
+                - list
       bindings:
         system-upgrade-role:
           type: ClusterRoleBinding
