@@ -1,0 +1,30 @@
+---
+# Allow checking against the k8tz policy only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cert-manager-policy:cert-manager-k8tz
+rules:
+  - apiGroups:
+      - policy.cert-manager.io
+    resources:
+      - certificaterequestpolicies
+    verbs:
+      - use
+    resourceNames:
+      - system-controllers-intermediary-ca-k8tz-webhook-cert
+---
+# Only allow the cert-manager SA able to get certificates approved
+# for k8tz
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cert-manager-policy:cert-manager-k8tz
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cert-manager-policy:cert-manager-k8tz
+subjects:
+  - kind: ServiceAccount
+    namespace: certificates
+    name: cert-manager

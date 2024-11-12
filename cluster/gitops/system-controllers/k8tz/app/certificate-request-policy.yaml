@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
+# Approve the the k8tz webhook certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: system-controllers-intermediary-ca-k8tz-webhook-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: system-controllers-intermediary-ca
+    namespace:
+      matchNames:
+        - system-controllers
+  allowed:
+    dnsNames:
+      required: true
+      values:
+        - k8tz.system-controllers.svc
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 1h

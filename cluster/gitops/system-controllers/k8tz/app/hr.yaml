@@ -35,3 +35,8 @@ spec:
         issuerRef:
           kind: Issuer
           name: system-controllers-intermediary-ca
+        secretTemplate:
+          privateKey:
+            algorithm: ECDSA
+            rotationPolicy: Always
+            size: 384
