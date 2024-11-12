@@ -1,7 +1,7 @@
 #!/bin/bash
 
 upgrade_command() {
-    talosctl -n 127.0.0.1 upgrade-k8s --to "${KUBERNETES_VERSION}" "$@"
+    node_talosctl upgrade-k8s --to "${KUBERNETES_VERSION}" "$@"
 }
 
 extra_usage_args() {

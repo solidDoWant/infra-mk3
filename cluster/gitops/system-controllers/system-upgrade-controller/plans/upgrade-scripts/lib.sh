@@ -16,7 +16,7 @@ set -euo pipefail
 
 usage() {
     cat <<- EOF
-	Usage: ${0} {plan|upgrade} <node name> <talos version> $(extra_usage_args)
+	Usage: ${0} {plan|upgrade} <node name> <node ip> <talos version> $(extra_usage_args)
 	EOF
     exit 1
 }
@@ -27,6 +27,10 @@ set_arch() {
         x86_64) ARCH='amd64' ;;
         *) ARCH="${MACHINE_ARCH}" ;;
     esac
+}
+
+node_talosctl() {
+    talosctl -n "${NODE_IP}" -e "${NODE_IP}" "$@"
 }
 
 # TODO create an image with these tools pre-installed
@@ -67,7 +71,7 @@ install_deps() {
 check_if_healthy() {
     echo 'Checking current node health...'
 
-    talosctl -n 127.0.0.1 health --server=false || FAILED='true'
+    node_talosctl health --server=false || FAILED='true'
 
     if [[ "${FAILED:-false}" != 'true' ]]; then
         echo 'Health check passed'
@@ -103,7 +107,10 @@ extra_inputs_set "${@:4}"
 NODE_NAME="${2:-"${NODE_NAME}"}"
 [[ -n "${NODE_NAME}" ]] || usage
 
-TALOS_VERSION="${3:-"${TALOS_VERSION}"}"
+NODE_IP="${3:-"${NODE_IP}"}"
+[[ -n "${NODE_IP}" ]] || usage
+
+TALOS_VERSION="${4:-"${TALOS_VERSION}"}"
 [[ -n "${TALOS_VERSION}" ]] || usage
 
 

@@ -38,6 +38,10 @@ spec:
         valueFrom:
           fieldRef:
             fieldPath: spec.nodeName
+      - name: NODE_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.hostIP
       - name: TALOS_VERSION
         value: ${TALOS_VERSION}
     # Needed until https://github.com/rancher/system-upgrade-controller/pull/337 is merged
@@ -49,6 +53,7 @@ spec:
         cp -rv /scripts /tmp/scripts &&
         chmod -R 500 /tmp/scripts &&
         /tmp/scripts/talos.sh prepare
+  drain: {}
   upgrade:
     <<: *prepare
     args:

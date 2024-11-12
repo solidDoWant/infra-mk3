@@ -14,7 +14,8 @@ check_if_image_exists() {
 
     # shellcheck disable=SC2016
     curl -fsSL "${MANIFEST_URL}" | \
-        jq -e --arg ARCH "${ARCH}" '.manifests[] | select(.platform.architecture == $ARCH)'
+    jq -e --arg ARCH "${ARCH}" '.manifests[] | select(.platform.architecture == $ARCH)' \
+    > /dev/null
 }
 
 extra_usage_args() {
@@ -31,7 +32,7 @@ extra_inputs_set() {
 
 upgrade() {
     echo "Beginning upgrade..."
-    talosctl -n 127.0.0.1 upgrade \
+    node_talosctl upgrade \
       "--image=$(get_installer_image):${TALOS_VERSION}" \
       --stage \
       --preserve=true \

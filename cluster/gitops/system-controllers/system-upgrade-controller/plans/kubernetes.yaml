@@ -31,6 +31,10 @@ spec:
         valueFrom:
           fieldRef:
             fieldPath: spec.nodeName
+      - name: NODE_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.hostIP
       - name: TALOS_VERSION
         value: ${TALOS_VERSION}
       - name: KUBERNETES_VERSION
@@ -44,6 +48,7 @@ spec:
         cp -rv /scripts /tmp/scripts &&
         chmod -R 500 /tmp/scripts &&
         /tmp/scripts/kubernetes.sh prepare
+  drain: {}
   upgrade:
     <<: *prepare
     args:
