@@ -10,7 +10,6 @@ spec:
   nodeSelector:
     matchLabels:
       feature.node.kubernetes.io/system-os_release.ID: talos
-      kubernetes.io/hostname: talos-k8s-mixed-01
     matchExpressions:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
