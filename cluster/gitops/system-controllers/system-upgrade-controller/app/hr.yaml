@@ -65,11 +65,19 @@ spec:
             - apiGroups:
                 - ""
               resources:
-                - nodes
                 - secrets
               verbs:
                 - get
                 - list
+                - watch
+            - apiGroups:
+                - ""
+              resources:
+                - nodes
+              verbs:
+                - get
+                - list
+                - update
                 - watch
             - apiGroups:
                 - upgrade.cattle.io
@@ -95,6 +103,8 @@ spec:
                 - delete
                 - get
                 - list
+                - patch
+                - update
                 - watch
       bindings:
         system-upgrade-role:
