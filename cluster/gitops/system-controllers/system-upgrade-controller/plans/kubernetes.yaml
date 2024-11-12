@@ -35,11 +35,16 @@ spec:
         value: ${TALOS_VERSION}
       - name: KUBERNETES_VERSION
         value: ${KUBERNETES_VERSION}
+    # Needed until https://github.com/rancher/system-upgrade-controller/pull/337 is merged
     command:
-      - /scripts/kubernetes.sh
+      - bash
     args:
-      - plan
+      - -c
+      - >-
+        chmod -R 500 /scripts && /scripts/kubernetes.sh
   upgrade:
     <<: *prepare
     args:
-      - upgrade
+      - -c
+      - >-
+        chmod -R 500 /scripts && /scripts/kubernetes.sh
