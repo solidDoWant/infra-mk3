@@ -13,7 +13,7 @@ check_if_image_exists() {
     MANIFEST_URL="https://${DOMAIN_NAME}/v2/${IMAGE_NAME}/manifests/${TALOS_VERSION}"
 
     # shellcheck disable=SC2016
-    curl -fsSL "${MANIFEST_URL}" \
+    curl -fsSL "${MANIFEST_URL}" | \
         jq -e --arg ARCH "${ARCH}" '.manifests[] | select(.platform.architecture == $ARCH)'
 }
 
