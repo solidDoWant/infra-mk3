@@ -78,6 +78,7 @@ spec:
                 - get
                 - list
                 - update
+                - patch
                 - watch
             - apiGroups:
                 - upgrade.cattle.io
@@ -112,6 +113,12 @@ spec:
                 - pods
               verbs:
                 - list
+            - apiGroups:
+                - apps
+              resources:
+                - daemonsets
+              verbs:
+                - get
       bindings:
         system-upgrade-role:
           type: ClusterRoleBinding
