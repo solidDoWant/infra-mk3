@@ -126,6 +126,12 @@ spec:
                 - pods/eviction
               verbs:
                 - create
+            - apiGroups:
+                - batch
+              resources:
+                - jobs/status
+              verbs:
+                - get
       bindings:
         system-upgrade-role:
           type: ClusterRoleBinding
