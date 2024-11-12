@@ -119,6 +119,12 @@ spec:
                 - daemonsets
               verbs:
                 - get
+            - apiGroups:
+                - ""
+              resources:
+                - pods/eviction
+              verbs:
+                - create
       bindings:
         system-upgrade-role:
           type: ClusterRoleBinding
