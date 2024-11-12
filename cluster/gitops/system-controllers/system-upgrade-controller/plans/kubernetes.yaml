@@ -13,6 +13,10 @@ spec:
     matchExpressions:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
+  # The pod will already have enough access to the node and talos to compromise
+  # the whole cluster. Reusing the account should have a minimal risk and means
+  # that I don't have to debug more RBAC issues.
+  serviceAccountName: system-upgrade-controller
   version: ${KUBERNETES_VERSION}
   secrets:
     - name: talos-credentials
