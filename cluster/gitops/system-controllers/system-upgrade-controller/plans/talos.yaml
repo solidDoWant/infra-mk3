@@ -45,10 +45,14 @@ spec:
     args:
       - -c
       - >-
-        chmod -R 500 /scripts && /scripts/talos.sh
+        cp -rv /scripts /tmp/scripts &&
+        chmod -R 500 /tmp/scripts &&
+        /tmp/scripts/talos.sh prepare
   upgrade:
     <<: *prepare
     args:
       - -c
       - >-
-        chmod -R 500 /scripts && /scripts/talos.sh
+        cp -rv /scripts /tmp/scripts &&
+        chmod -R 500 /tmp/scripts &&
+        /tmp/scripts/talos.sh upgrade

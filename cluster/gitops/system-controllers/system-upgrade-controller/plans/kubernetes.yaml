@@ -41,10 +41,14 @@ spec:
     args:
       - -c
       - >-
-        chmod -R 500 /scripts && /scripts/kubernetes.sh
+        cp -rv /scripts /tmp/scripts &&
+        chmod -R 500 /tmp/scripts &&
+        /tmp/scripts/kubernetes.sh prepare
   upgrade:
     <<: *prepare
     args:
       - -c
       - >-
-        chmod -R 500 /scripts && /scripts/kubernetes.sh
+        cp -rv /scripts /tmp/scripts &&
+        chmod -R 500 /tmp/scripts &&
+        /tmp/scripts/kubernetes.sh upgrade

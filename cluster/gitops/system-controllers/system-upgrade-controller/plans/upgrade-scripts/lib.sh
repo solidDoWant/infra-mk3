@@ -36,40 +36,40 @@ install_deps() {
     chmod +x /usr/local/bin/talosctl
 }
 
-check_if_drained() {
-    echo 'Checking if node has been drained...'
+# Not currently needed
+# check_if_drained() {
+#     echo 'Checking if node has been drained...'
 
-    DRAIN_OUTPUT="$(
-        kubectl drain "${NODE_NAME}" \
-            --delete-emptydir-data \
-            --ignore-daemonsets \
-            --dry-run=server \
-        2>/dev/null
-    )"
+#     DRAIN_OUTPUT="$(
+#         kubectl drain "${NODE_NAME}" \
+#             --delete-emptydir-data \
+#             --ignore-daemonsets \
+#             --dry-run=server
+#     )"
 
-    if echo "${DRAIN_OUTPUT}" | grep -q "^node/${NODE_NAME} cordoned"; then
-        >&2 echo "Node has not yet been cordoned, failing"
-        exit 1
-    fi
+#     if echo "${DRAIN_OUTPUT}" | grep -q "^node/${NODE_NAME} cordoned"; then
+#         >&2 echo "Node has not yet been cordoned, failing"
+#         exit 1
+#     fi
 
-    if [[ "$(echo "${DRAIN_OUTPUT}" | wc -l)" != 2 ]]; then
-        >&2 cat <<- EOF
-		Node has not yet been drained, failing
-		Remaining pods:
-		$(echo "${DRAIN_OUTPUT}" | awk 'NR>2 {print last} {last=$3}')
-		EOF
-        exit 1
-    fi
+#     if [[ "$(echo "${DRAIN_OUTPUT}" | wc -l)" != 2 ]]; then
+#         >&2 cat <<- EOF
+# 		Node has not yet been drained, failing
+# 		Remaining pods:
+# 		$(echo "${DRAIN_OUTPUT}" | awk 'NR>2 {print last} {last=$3}')
+# 		EOF
+#         exit 1
+#     fi
 
-    echo 'Node has been drained'
-}
+#     echo 'Node has been drained'
+# }
 
 check_if_healthy() {
     echo 'Checking current node health...'
 
     talosctl -n 127.0.0.1 health --server=false || FAILED='true'
 
-    if [[ "${FAILED}" != 'true' ]]; then
+    if [[ "${FAILED:-false}" != 'true' ]]; then
         echo 'Health check passed'
         return
     fi
@@ -99,7 +99,7 @@ plan() {
 
     set_arch
     install_deps
-    check_if_drained
+    check_if_healthy
     extra_plan_checks
 
     echo "All checks passed"
