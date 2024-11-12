@@ -10,11 +10,16 @@ spec:
   nodeSelector:
     matchLabels:
       feature.node.kubernetes.io/system-os_release.ID: talos
+      kubernetes.io/hostname: talos-k8s-mixed-01
     matchExpressions:
       - key: feature.node.kubernetes.io/system-os_release.VERSION_ID
         operator: NotIn
         values:
           - ${TALOS_VERSION}
+  # The pod will already have enough access to the node and talos to compromise
+  # the whole cluster. Reusing the account should have a minimal risk and means
+  # that I don't have to debug more RBAC issues.
+  serviceAccountName: system-upgrade-controller
   version: ${TALOS_VERSION}
   secrets:
     - name: talos-credentials
@@ -35,10 +40,6 @@ spec:
             fieldPath: spec.nodeName
       - name: TALOS_VERSION
         value: ${TALOS_VERSION}
-      - name: INSTALLER_IMAGE
-        valueFrom:
-          fieldRef:
-            fieldPath: metadata.annotations['talos.home.arpa/installer-image']
     # Needed until https://github.com/rancher/system-upgrade-controller/pull/337 is merged
     command:
       - bash

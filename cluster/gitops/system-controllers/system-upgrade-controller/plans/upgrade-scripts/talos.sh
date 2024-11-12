@@ -1,7 +1,13 @@
 #!/bin/bash
 
+get_installer_image() {
+    kubectl get node "${NODE_NAME}" -o yaml | \
+    yq '.metadata.annotations["talos.home.arpa/installer-image"]'
+}
+
 # shellcheck disable=SC2317
 check_if_image_exists() {
+    INSTALLER_IMAGE="$(get_installer_image)"
     DOMAIN_NAME="${INSTALLER_IMAGE%%/*}"
     IMAGE_NAME="${INSTALLER_IMAGE#*/}"
     MANIFEST_URL="https://${DOMAIN_NAME}/v2/${IMAGE_NAME}/manifests/${TALOS_VERSION}"
@@ -12,7 +18,7 @@ check_if_image_exists() {
 }
 
 extra_usage_args() {
-    echo '<installer image> <talos version>'
+   :
 }
 
 extra_plan_checks() {
@@ -21,16 +27,12 @@ extra_plan_checks() {
 
 extra_inputs_set() {
     TALOS_VERSION="${TALOS_VERSION:-"${SYSTEM_UPGRADE_PLAN_LATEST_VERSION}"}"
-
-
-    INSTALLER_IMAGE="${1:-"${INSTALLER_IMAGE}"}"
-    [[ -n "${INSTALLER_IMAGE}" ]] || usage
 }
 
 upgrade() {
     echo "Beginning upgrade..."
     talosctl -n 127.0.0.1 upgrade \
-      "--image=${INSTALLER_IMAGE}:${TALOS_VERSION}" \
+      "--image=$(get_installer_image):${TALOS_VERSION}" \
       --stage \
       --preserve=true \
       --wait=false
