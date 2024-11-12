@@ -35,10 +35,10 @@ spec:
             fieldPath: spec.nodeName
       - name: TALOS_VERSION
         value: ${TALOS_VERSION}
-      # This must be kept in sync with /talos/talconfig.yaml
-      # TODO automate this
       - name: INSTALLER_IMAGE
-        value: factory.talos.dev/installer-secureboot/54416e4c74096eb53d4f8982e20ba9e45f2eb0d73dc55c27bf8f2f8ef9a588b2
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['talos.home.arpa/installer-image']
     # Needed until https://github.com/rancher/system-upgrade-controller/pull/337 is merged
     command:
       - bash
