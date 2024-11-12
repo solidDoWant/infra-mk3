@@ -17,10 +17,5 @@ extra_inputs_set() {
     [[ -n "${KUBERNETES_VERSION}" ]] || usage
 }
 
-upgrade() {
-    echo "Beginning upgrade..."
-    upgrade_command
-}
-
 # shellcheck source=lib.sh
 . "$(dirname "${0}")/lib.sh"

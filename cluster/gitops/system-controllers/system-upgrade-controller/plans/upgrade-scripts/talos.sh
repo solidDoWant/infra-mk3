@@ -30,8 +30,7 @@ extra_inputs_set() {
     TALOS_VERSION="${TALOS_VERSION:-"${SYSTEM_UPGRADE_PLAN_LATEST_VERSION}"}"
 }
 
-upgrade() {
-    echo "Beginning upgrade..."
+upgrade_command() {
     node_talosctl upgrade \
       "--image=$(get_installer_image):${TALOS_VERSION}" \
       --stage \

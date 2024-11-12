@@ -6,7 +6,7 @@
 # extra_plan_checks() { }
 # extra_usage_args() { }
 # extra_inputs_set() { }
-# upgrade() { }
+# upgrade_command() { }
 # 
 # # shellcheck source=lib.sh
 # . "$(dirname "${0}")/lib.sh"
@@ -97,6 +97,16 @@ plan() {
     extra_plan_checks
 
     echo "All checks passed"
+}
+
+upgrade() {
+    echo "Beginning upgrade..."
+
+    set_arch
+    install_deps
+    upgrade_command
+
+    echo "Upgrade complete!"
 }
 
 OPERATION="${1}"
