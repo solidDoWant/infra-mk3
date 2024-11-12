@@ -116,6 +116,6 @@ TALOS_VERSION="${4:-"${TALOS_VERSION}"}"
 
 case "${OPERATION}" in
     prepare) plan ;;
-    upgrade) plan && upgrade ;;
+    upgrade) upgrade ;;
     *) usage ;;
 esac
