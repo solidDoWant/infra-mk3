@@ -28,6 +28,7 @@ spec:
             app.kubernetes.io/instance: *app_name
         whenUnsatisfiable: DoNotSchedule
     webhook:
+      failurePolicy: Ignore # Don't grind the cluster to a halt when the service fails
       certManager:
         enabled: true
         duration: 1h
@@ -41,9 +42,22 @@ spec:
           algorithm: ECDSA
           rotationPolicy: Always
           size: 384
-  # Should be remove after https://github.com/k8tz/k8tz/pull/111 merges
   postRenderers:
-    # Add topology spread constraints
+    # Configure the mutating webhook to target the release's namespace. This
+    # only works because the failurepolicy is set to "Ignore". Otherwise, there
+    # is a circular dependency that would cause all pods to fail to be
+    # scheduled.
+    - kustomize:
+        patches:
+          - patch: |
+              - op: remove
+                path: /webhooks/0/namespaceSelector/matchExpressions/1/values/0
+                value: system-cluster-critical
+            target:
+              group: admissionregistration.k8s.io
+              version: v1
+              kind: MutatingWebhookConfiguration
+    # Should be remove after https://github.com/k8tz/k8tz/pull/111 merges
     - kustomize:
         patches:
           - patch: |
