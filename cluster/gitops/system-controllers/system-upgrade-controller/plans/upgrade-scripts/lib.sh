@@ -80,7 +80,7 @@ check_if_healthy() {
 
     >&2 printf 'Health check failed, '
 
-    if [[ "${IGNORE_UNHEALTH}" == 'true' ]]; then
+    if [[ "${IGNORE_UNHEALTH:-false}" == 'true' ]]; then
         >&2 echo 'continuing due to IGNORE_UNHEALTHY=true'
     else
         >&2 echo 'failing'
