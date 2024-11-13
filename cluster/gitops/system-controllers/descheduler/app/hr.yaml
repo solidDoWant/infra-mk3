@@ -1,0 +1,37 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name descheduler
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: descheduler
+      sourceRef:
+        kind: HelmRepository
+        name: descheduler-charts
+      version: 0.31.0
+  values:
+    kind: Deployment
+    replicas: 2
+    leaderElection:
+      enabled: true
+    deschedulerPolicy:
+      ignorePvcPods: false
+      evictLocalStoragePods: true
+      evictDaemonSetPods: true
+      # TODO tracing
+      # tracing:
+    service:
+      enabled: true
+    # TODO monitoring
+    # serviceMonitor:
+    #   enabled: true
+    topologySpreadConstraints:
+      - maxSkew: 1 # Skew of 1 allows for rolling updates
+        topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: *app_name
+        whenUnsatisfiable: DoNotSchedule
