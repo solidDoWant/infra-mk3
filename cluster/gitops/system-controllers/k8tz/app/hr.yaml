@@ -33,10 +33,32 @@ spec:
         duration: 1h
         renewBefore: 30m
         issuerRef:
+          group: cert-manager.io
           kind: Issuer
           name: system-controllers-intermediary-ca
-        secretTemplate:
-          privateKey:
-            algorithm: ECDSA
-            rotationPolicy: Always
-            size: 384
+        # Requires https://github.com/k8tz/k8tz/pull/111
+        privateKey:
+          algorithm: ECDSA
+          rotationPolicy: Always
+          size: 384
+  # Should be remove after https://github.com/k8tz/k8tz/pull/111 merges
+  postRenderers:
+    # Add topology spread constraints
+    - kustomize:
+        patches:
+          - patch: |
+              # Strategic merge patches need these set but the values don't matter at all
+              apiVersion: placeholder-value-does-not-matter
+              kind: placeholder-value-does-not-matter
+              metadata:
+                name: placeholder-value-does-not-matter
+              spec:
+                privateKey:
+                  algorithm: ECDSA
+                  rotationPolicy: Always
+                  size: 384
+            target:
+              group: cert-manager.io
+              version: v1
+              kind: Certificate
+              name: k8tz-tls
