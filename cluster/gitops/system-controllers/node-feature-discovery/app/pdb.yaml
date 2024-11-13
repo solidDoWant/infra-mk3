@@ -2,13 +2,11 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: &app_name node-feature-discovery-master
-  labels:
-    app.kubernetes.io/instance: *app_name
+  name: node-feature-discovery-master
+  labels: &labels
+    app.kubernetes.io/instance: node-feature-discovery
     role: master
 spec:
   minAvailable: 1
   selector:
-    matchLabels:
-      app.kubernetes.io/instance: *app_name
-    role: master
+    matchLabels: *labels
