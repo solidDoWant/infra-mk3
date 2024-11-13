@@ -27,6 +27,7 @@ spec:
           matchLabels:
             app.kubernetes.io/instance: *app_name
         whenUnsatisfiable: DoNotSchedule
+    injectedInitContainerName: k8tz-init
     webhook:
       failurePolicy: Ignore # Don't grind the cluster to a halt when the service fails
       certManager:
