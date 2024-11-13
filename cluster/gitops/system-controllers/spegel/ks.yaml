@@ -6,12 +6,12 @@ metadata:
   namespace: flux-system
   name: &app_name spegel
 spec:
-  targetNamespace: spegel
+  targetNamespace: system-controllers
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/spegel/spegel/app
+  path: /cluster/gitops/system-controllers/spegel/app
   prune: true
   sourceRef:
     kind: GitRepository

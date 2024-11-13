@@ -69,12 +69,12 @@ releases:
   # Otherwise it is likely that dockerhub and ghcr limits will be quickly hit
   - name: spegel
     atomic: true
-    namespace: spegel
+    namespace: system-controllers
     createNamespace: false # Handled by hook
     chart: spegel/spegel
     version: v0.0.27
     values:
-      - ../gitops/spegel/spegel/app/helm-bootstrap-values.yaml
+      - ../gitops/system-controllers/spegel/app/helm-bootstrap-values.yaml
     hooks:
       # Create the namespace and label it as privileged
       - events:
