@@ -97,8 +97,12 @@ spec:
               args:
                 thresholds:
                   cpu: 20
+                  memory: 0
+                  pods: 0
                 targetThresholds:
                   cpu: 50
+                  memory: 100
+                  pods: 100
             # Get pods placed optimally
             - name: RemovePodsViolatingInterPodAntiAffinity
             - name: RemovePodsViolatingNodeAffinity
