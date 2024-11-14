@@ -88,7 +88,8 @@ spec:
                 # topologyspreadconstraints.
                 nodeFit: true
                 minReplicas: 1
-                ignorePodsWithoutPDB: true
+                # TODO enable this upon 1.32 release
+                # ignorePodsWithoutPDB: true
             - name: RemoveDuplicates
             # Spread out workloads. There's no autoscaling, so all resources
             # might as well be used
