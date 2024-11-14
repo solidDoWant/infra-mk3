@@ -2,7 +2,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: &app_name rook-ceph
+  name: rook-ceph
 spec:
   interval: 5m
   chart:
@@ -15,7 +15,6 @@ spec:
   values:
     resources:
       limits:
-        cpu: ~
         memory: 256Mi
       requests:
         memory: 256Mi
