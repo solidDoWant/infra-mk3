@@ -69,16 +69,15 @@ spec:
             primary: true
           health:
             port: *healthPort
-    # TODO monitoring
-    # serviceMonitor:
-    #   app:
-    #     serviceName: *app_name
-    #     endpoints:
-    #       - port: health
-    #         scheme: http
-    #         path: /metrics
-    #         interval: 30s
-    #         scrapeTimeout: 30s
+    serviceMonitor:
+      app:
+        serviceName: *app_name
+        endpoints:
+          - port: health
+            scheme: http
+            path: /metrics
+            interval: 30s
+            scrapeTimeout: 30s
     route:
       app:
         enabled: true

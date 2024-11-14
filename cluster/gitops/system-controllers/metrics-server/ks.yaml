@@ -18,4 +18,5 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: prometheus-crds
     - name: system-controllers-namespace-issuer

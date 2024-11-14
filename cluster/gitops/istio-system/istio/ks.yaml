@@ -37,7 +37,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
-    # - name: istio-system-namespace-issuer
+    - name: prometheus-crds
     - name: istio-issuer
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json

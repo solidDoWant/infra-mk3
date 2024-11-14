@@ -24,12 +24,11 @@ spec:
     podDisruptionBudget:
       enabled: true
       minAvailable: 1
-    # app:
-    #   # TODO monitoring
-    #   metrics:
-    #     service:
-    #       servicemonitor:
-    #         enabled: true
+    app:
+      metrics:
+        service:
+          servicemonitor:
+            enabled: true
     # Prefer scheduling on an instance with cert-manager, but
     # don't schedule all replicas on the same node
     affinity:

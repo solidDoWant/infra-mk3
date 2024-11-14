@@ -118,9 +118,8 @@ spec:
       v: 4
     service:
       enabled: true
-    # TODO monitoring
-    # serviceMonitor:
-    #   enabled: true
+    serviceMonitor:
+      enabled: true
     topologySpreadConstraints:
       - maxSkew: 1 # Skew of 1 allows for rolling updates
         topologyKey: kubernetes.io/hostname

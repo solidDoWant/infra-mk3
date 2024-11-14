@@ -37,10 +37,9 @@ spec:
       defaultIssuerName: letsencrypt-staging # TODO switch this to prod once everything is stable
     dns01RecursiveNameserversOnly: true
     dns01RecursiveNameservers: https://dns.quad9.net/dns-query
-    # TODO Monitoring CRDs
-    # prometheus:
-    #   servicemonitor:
-    #     enabled: true
+    prometheus:
+      servicemonitor:
+        enabled: true
     # Prefer placing cert-manager pods _of different components_ on the same
     # node, but force pods _of the same component_ onto separate nodes.
     affinity: &affinity_rules

@@ -16,9 +16,8 @@ spec:
   values:
     featureGates:
       NodeFeatureGroupAPI: true
-    # TODO monitoring
-    # prometheus:
-    #   enable: true
+    prometheus:
+      enable: true
     master:
       replicaCount: 2
       resources:

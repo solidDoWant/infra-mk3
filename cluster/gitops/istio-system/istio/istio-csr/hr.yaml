@@ -18,11 +18,10 @@ spec:
   values:
     replicaCount: 2
     app:
-      # Monitoring stack TODO
-      #   metrics:
-      #     service:
-      #       servicemonitor:
-      #         enabled: true
+      metrics:
+        service:
+          servicemonitor:
+            enabled: true
       certmanager:
         issuer:
           group: cert-manager.io

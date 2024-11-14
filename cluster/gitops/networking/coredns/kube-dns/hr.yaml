@@ -19,4 +19,7 @@ spec:
     - kind: ConfigMap
       name: helm-bootstrap-values
   # These values are added now that the cluster has been bootstrapped
-  # values:
+  values:
+    prometheus:
+      monitor:
+        enabled: true

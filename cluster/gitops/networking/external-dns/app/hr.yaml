@@ -60,6 +60,5 @@ spec:
             name: external-dns-secrets
     domainFilters:
       - ${SECRET_PUBLIC_DOMAIN_NAME}
-    # TODO monitoring
-    # serviceMonitor:
-    #   enabled: true
+    serviceMonitor:
+      enabled: true
