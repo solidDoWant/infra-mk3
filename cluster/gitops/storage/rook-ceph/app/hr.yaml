@@ -1,0 +1,33 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name rook-ceph
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: rook-ceph
+      sourceRef:
+        kind: HelmRepository
+        name: rook-ceph-charts
+      version: v1.15.5
+  values:
+    resources:
+      limits:
+        cpu: ~
+        memory: 256Mi
+      requests:
+        memory: 256Mi
+    # nodeSelector:
+    #   root-ceph.flux.home.arpa/node.cluster-enabled: "true"
+    currentNamespaceOnly: true
+    pspEnable: false
+    priorityClassName: system-cluster-critical
+    csi:
+      enableCSIHostNetwork: false
+      # TODO figure out whether I should encrypt volumes (tradeoffs)
+      # enableCSIEncryption: true
+      enableLiveness: true
+    monitoring:
+      enabled: true
