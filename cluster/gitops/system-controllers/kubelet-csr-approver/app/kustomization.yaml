@@ -3,6 +3,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./hr.yaml
+  - ./pdb.yaml
 configMapGenerator:
   - name: helm-bootstrap-values
     files:
