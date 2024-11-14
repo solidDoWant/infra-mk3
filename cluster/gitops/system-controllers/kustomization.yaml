@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - ./namespace.yaml
   - ./descheduler/ks.yaml
+  - ./fstrim/ks.yaml
   - ./issuers/ks.yaml
   - ./k8tz/ks.yaml
   - ./kubelet-csr-approver/ks.yaml
