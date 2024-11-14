@@ -96,9 +96,9 @@ spec:
             - name: LowNodeUtilization
               args:
                 thresholds:
-                  cpu: 50
-                targetThresholds:
                   cpu: 20
+                targetThresholds:
+                  cpu: 50
             # Get pods placed optimally
             - name: RemovePodsViolatingInterPodAntiAffinity
             - name: RemovePodsViolatingNodeAffinity
