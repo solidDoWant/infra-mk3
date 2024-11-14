@@ -46,13 +46,7 @@ spec:
                 # exitCodes:
                 #   - 1234
                 includingInitContainers: true
-                minPodLIfetimeSeconds: 86400 # One day
-                labelSelector:
-                  matchExpressions:
-                    - key: TODO
-                      operator: NotIn
-                      values:
-                        - "true"
+                minPodLifetimeSeconds: 86400 # One day
             - name: RemovePodsViolatingNodeTaints
               args:
                 includePreferNoSchedule: true
