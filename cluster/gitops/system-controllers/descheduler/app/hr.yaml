@@ -18,11 +18,99 @@ spec:
     leaderElection:
       enabled: true
     deschedulerPolicy:
-      ignorePvcPods: false
-      evictLocalStoragePods: true
-      evictDaemonSetPods: true
       # TODO tracing
       # tracing:
+      # For some dumb reason this doesn't use a CRD, but a config file
+      # templated as multiple instances of CRD-conformant YAML files
+      profiles:
+        # Default configuration that should apply to everything
+        - name: default
+          plugins:
+            deschedule:
+              enabled:
+                - RemoveFailedPods
+                - RemovePodsViolatingNodeTaints
+                - RemovePodsHavingTooManyRestarts
+                - PodLifeTime
+          pluginConfig:
+            - name: DefaultEvictor
+              args:
+                evictLocalStoragePods: true
+                evictSystemCriticalPods: true
+                evictFailedBarePods: true
+            - name: RemoveFailedPods
+              args:
+                # TODO
+                # reasons:
+                #   - TODO
+                # exitCodes:
+                #   - 1234
+                includingInitContainers: true
+                minPodLIfetimeSeconds: 86400 # One day
+                labelSelector:
+                  matchExpressions:
+                    - key: TODO
+                      operator: NotIn
+                      values:
+                        - "true"
+            - name: RemovePodsViolatingNodeTaints
+              args:
+                includePreferNoSchedule: true
+            - name: RemovePodsHavingTooManyRestarts
+              args:
+                podRestartThreshold: 10
+                includingInitContainers: true
+            - name: PodLifeTime
+              args:
+                includingInitContainers: true
+                includingEphemeralContainers: true
+                maxPodLifeTimeSeconds: 604800 # One week
+                labelSelector:
+                  matchExpressions:
+                    - key: descheduler.home.arpa/enable-lifetime-eviction
+                      operator: NotIn
+                      values:
+                        - "false"
+        # Policy for services with multiple instances
+        - name: replicated-pods
+          plugins:
+            deschedule:
+              enabled:
+                - RemovePodsViolatingInterPodAntiAffinity
+                - RemovePodsViolatingNodeAffinity
+                - RemovePodsViolatingNodeTaints
+            balance:
+              enabled:
+                - RemoveDuplicates
+                - LowNodeUtilization
+                - RemovePodsViolatingTopologySpreadConstraint
+          pluginConfig:
+            - name: DefaultEvictor
+              args:
+                evictLocalStoragePods: true
+                evictSystemCriticalPods: true
+                evictFailedBarePods: true
+                # Docs imply that this doesn't take into account
+                # topologyspreadconstraints.
+                nodeFit: true
+                minReplicas: 1
+                ignorePodsWithoutPDB: true
+            - name: RemoveDuplicates
+            # Spread out workloads. There's no autoscaling, so all resources
+            # might as well be used
+            - name: LowNodeUtilization
+              args:
+                thresholds:
+                  cpu: 50
+                targetThresholds:
+                  cpu: 20
+            # Get pods placed optimally
+            - name: RemovePodsViolatingInterPodAntiAffinity
+            - name: RemovePodsViolatingNodeAffinity
+            - name: RemovePodsViolatingNodeTaints
+            - name: RemovePodsViolatingTopologySpreadConstraint
+              args:
+                topologyBalanceNodeFit: true
     service:
       enabled: true
     # TODO monitoring
