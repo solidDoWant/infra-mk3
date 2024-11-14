@@ -114,6 +114,8 @@ spec:
             - name: RemovePodsViolatingTopologySpreadConstraint
               args:
                 topologyBalanceNodeFit: true
+    cmdOptions:
+      v: 4
     service:
       enabled: true
     # TODO monitoring
