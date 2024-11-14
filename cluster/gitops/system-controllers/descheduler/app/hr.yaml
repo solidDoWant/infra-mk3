@@ -106,6 +106,10 @@ spec:
             # Get pods placed optimally
             - name: RemovePodsViolatingInterPodAntiAffinity
             - name: RemovePodsViolatingNodeAffinity
+              args:
+                nodeAffinityType:
+                  - preferredDuringSchedulingIgnoredDuringExecution
+                  - requiredDuringSchedulingIgnoredDuringExecution
             - name: RemovePodsViolatingNodeTaints
             - name: RemovePodsViolatingTopologySpreadConstraint
               args:
