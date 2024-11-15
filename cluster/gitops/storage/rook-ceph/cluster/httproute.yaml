@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: &app_name rook-ceph-mgr-dashboard
+  labels:
+    app.kubernetes.io/part-of: rook-ceph-cluster
+spec:
+  hostnames:
+    - rook.${SECRET_PUBLIC_DOMAIN_NAME}
+  parentRefs:
+    - name: internal-gateway
+      namespace: networking
+  rules:
+    - backendRefs:
+        - name: *app_name
+          port: 7000
