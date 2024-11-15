@@ -36,7 +36,9 @@ spec:
       # TODO
       # mgr:
       #   modules:
-      # TODO dashboard httproute
+      dashboard:
+        # encryption in transit will be handled by istio
+        ssl: false
       network:
         connection:
           encryption:
