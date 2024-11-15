@@ -1,0 +1,112 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph-cluster
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: rook-ceph-cluster
+      sourceRef:
+        kind: HelmRepository
+        name: rook-ceph-charts
+      version: v1.15.5
+  values:
+    operatorNamespace: storage
+    configOverride: |
+      [global]
+      osd_pool_default_min_size = 2
+      # Enable TRIM support, see https://github.com/rook/rook/issues/6964
+      bdev_enable_discard = true
+      bdev_async_discard = true
+    toolbox:
+      enabled: true
+      resources:
+        requests:
+          memory: 256Mi
+        limits:
+          memory: 256Mi
+    monitoring:
+      enabled: true
+      createPrometheusRules: true
+    pspEnable: false
+    cephClusterSpec:
+      # TODO
+      # mgr:
+      #   modules:
+      # TODO dashboard httproute
+      network:
+        connection:
+          encryption:
+            # TODO consider "offloading" this to istio
+            enabled: true
+          compression:
+            enabled: true
+      placement:
+        all:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: root-ceph.flux.home.arpa/node.cluster-enabled
+                      operator: In
+                      values:
+                        - "true"
+          # TODO pod affinity to schedule different components on the same nodes
+          # podAffinity:
+          # TODO TSC per component to force them to separate nodes
+          # topologySpreadConstraints:
+      # TODO measure actual usage and set this
+      # resources:
+      storage:
+        useAllNodes: true
+        useAllDevices: false
+        # TODO talos 1.9.0 will replace eudev with systemd-udev, which includes
+        # udev rules for `/disk/by-path`. Use this instead once supported.
+        # Alternatively, if https://github.com/rook/rook/issues/15010 is
+        # implemented, use node annotations instead.
+        deviceFilter: /dev/disk/by-id/nvme-SAMSUNG_MZQL21T9HCJR-.* # cspell:disable-line
+      csi:
+        # Prefer reading from the same node
+        # If more Ceph nodes are ever added to another "domain" (such as a separate switch),
+        # then the label list will need to be updated
+        readAffinity:
+          enabled: true
+          crushLocationLabels:
+            - topology.rook.io/chassis
+    cephBlockPools:
+      - name: ssd-replicated-3x
+        spec:
+          failureDomain: chassis
+          replicated:
+            size: 3
+        storageClass:
+          enabled: true
+          name: ssd-replicated-3x
+          isDefault: true
+          reclaimPolicy: Delete
+          allowVolumeExpansion: true
+          mountOptions: []
+          parameters:
+            compression_mode: aggressive
+            # Docs specifically say that this performs poorly, but there are no recent benchmarks, so I'm trying it anyway.
+            compression_algorithm: zstd
+            # abort_on_full: if the cluster or device is full, fail writes.
+            # ms_mode=secure: require encrypted network connections
+            mapOptions: abort_on_full,ms_mode=secure
+            imageFormat: "2"
+            imageFeatures: layering,striping,exclusive-lock,object-map,fast-diff,deep-flatten,journaling,data-pool
+            # Default values for the chart
+            csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
+            csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph
+            csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+            csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
+            csi.storage.k8s.io/fstype: ext4
+    cephFileSystems: []
+    cephObjectStores: []
+    # TODO volume snapshotter CRDs
+    # cephBlockPoolsVolumeSnapshotClass:
+    #   enabled: true

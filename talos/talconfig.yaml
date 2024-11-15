@@ -56,9 +56,10 @@ nodes:
         routes:
           - network: 0.0.0.0/0
             gateway: 10.3.0.254
-    nodeLabels:
+    nodeLabels: &node_labels
       cilium.home.arpa/node.bgp-enabled: "true"
       root-ceph.flux.home.arpa/node.cluster-enabled: "true"
+      topology.rook.io/chassis: talos-k8s-mixed-01 # TODO set this to template on next release
     nodeAnnotations:
       talos.home.arpa/installer-image: &installer_image >-
         factory.talos.dev/installer-secureboot/54416e4c74096eb53d4f8982e20ba9e45f2eb0d73dc55c27bf8f2f8ef9a588b2
@@ -96,6 +97,9 @@ nodes:
         addresses:
           - 10.3.1.2/16
           - 10.3.2.2/32
+    nodeLabels:
+      <<: *node_labels
+      topology.rook.io/chassis: talos-k8s-mixed-02 # TODO set this to template on next release
     schematic:
       customization:
         <<: *schematic_customization
@@ -114,6 +118,9 @@ nodes:
         addresses:
           - 10.3.1.3/16
           - 10.3.2.3/32
+    nodeLabels:
+      <<: *node_labels
+      topology.rook.io/chassis: talos-k8s-mixed-02 # TODO set this to template on next release
     schematic:
       customization:
         <<: *schematic_customization
