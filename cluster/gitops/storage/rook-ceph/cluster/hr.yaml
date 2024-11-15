@@ -17,10 +17,15 @@ spec:
     clusterName: *app_name
     configOverride: |
       [global]
+      # Allow the pool to operate when one node is offline
       osd_pool_default_min_size = 2
       # Enable TRIM support, see https://github.com/rook/rook/issues/6964
       bdev_enable_discard = true
       bdev_async_discard = true
+      # Quit trying to mark nvme drives as SSDs upon OSD pod startup
+      osd_class_update_on_start = false
+      # Configuration for disk predictor module
+      device_failure_prediction_mode = local
     toolbox:
       enabled: true
       resources:
@@ -33,12 +38,19 @@ spec:
       createPrometheusRules: true
     pspEnable: false
     cephClusterSpec:
-      # TODO
-      # mgr:
-      #   modules:
+      mgr:
+        modules:
+          - name: rook
+            enabled: true
+          - name: diskprediction_local
+            enabled: true
+          - name: insights
+            enabled: true
       dashboard:
         # encryption in transit will be handled by istio
         ssl: false
+        # TODO prom deployment
+        # prometheusEndpoint:
       network:
         connection:
           encryption:
