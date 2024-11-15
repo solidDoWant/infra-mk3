@@ -66,7 +66,7 @@ spec:
         # udev rules for `/disk/by-path`. Use this instead once supported.
         # Alternatively, if https://github.com/rook/rook/issues/15010 is
         # implemented, use node annotations instead.
-        deviceFilter: /dev/disk/by-id/nvme-SAMSUNG_MZQL21T9HCJR-.* # cspell:disable-line
+        devicePathFilter: /dev/disk/by-id/nvme-SAMSUNG_MZQL21T9HCJR-.* # cspell:disable-line
       csi:
         # Prefer reading from the same node
         # If more Ceph nodes are ever added to another "domain" (such as a separate switch),
