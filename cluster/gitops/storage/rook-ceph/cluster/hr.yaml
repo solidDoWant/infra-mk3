@@ -112,6 +112,7 @@ spec:
             mapOptions: abort_on_full,ms_mode=secure
             imageFormat: "2"
             imageFeatures: layering,exclusive-lock,object-map,fast-diff,deep-flatten,journaling,data-pool
+            mounter: rbd-nbd # Required for journaling
             # Default values for the chart
             csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
             csi.storage.k8s.io/provisioner-secret-namespace: &secret_namespace storage
