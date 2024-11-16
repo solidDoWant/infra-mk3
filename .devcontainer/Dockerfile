@@ -28,7 +28,8 @@ COPY --from=mikefarah/yq:4.44.3 /usr/bin/yq /usr/local/bin/yq
 COPY --from=hairyhenderson/gomplate:stable /gomplate /usr/local/bin/gomplate
 
 # dive
-COPY --from=wagoodman/dive:v0.12.0 /usr/local/bin/dive /usr/local/bin/dive
+# "temporary" until https://github.com/wagoodman/dive/pull/511 is merged
+COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6 /usr/local/bin/dive /usr/local/bin/dive
 
 # talosctl
 COPY --from=ghcr.io/siderolabs/talosctl:v1.8.1 /talosctl /usr/local/bin/talosctl
