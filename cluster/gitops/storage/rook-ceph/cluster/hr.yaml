@@ -122,6 +122,5 @@ spec:
             csi.storage.k8s.io/fstype: ext4
     cephFileSystems: []
     cephObjectStores: []
-    # TODO volume snapshotter CRDs
-    # cephBlockPoolsVolumeSnapshotClass:
-    #   enabled: true
+    cephBlockPoolsVolumeSnapshotClass:
+      enabled: true
