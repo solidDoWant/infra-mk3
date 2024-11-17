@@ -1,0 +1,35 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name dragonfly-operator
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: dragonfly-operator-charts
+      sourceRef:
+        kind: HelmRepository
+        name: dragonfly-operator
+      version: v1.1.8
+  values:
+    replicaCount: 2
+    rbacProxy:
+      resources:
+        limits:
+          cpu: ~
+          memory: 96Mi
+        requests:
+          memory: 96Mi
+    manager:
+      topologySpreadConstraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
+    serviceManager:
+      enabled: true
+    grafanaDashboard:
+      enabled: true
