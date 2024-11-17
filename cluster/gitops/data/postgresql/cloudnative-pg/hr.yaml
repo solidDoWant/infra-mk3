@@ -29,3 +29,21 @@ spec:
       podMonitorEnabled: true
       grafanaDashboard:
         create: true
+  postRenderers:
+    # Add topology spread constraints
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/topologySpreadConstraints
+                value:
+                  - maxSkew: 1 # Skew of 1 allows for rolling updates
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: cloudnative-pg
+                    whenUnsatisfiable: DoNotSchedule
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
