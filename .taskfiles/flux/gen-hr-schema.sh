@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+shopt -s extdebug
 
 fatal() {
     [[ -z "${1}" ]] || >&2 echo "${@}"
@@ -58,8 +59,8 @@ get_artifact_hub_schema_url() {
 
 get_chart_url() {
     # Use the arg-provided value if there is one
-    if [[ -n "${BASH_ARGV[2]}" ]]; then
-        echo "${BASH_ARGV[2]}"
+    if [[ -n "${BASH_ARGV[0]}" ]]; then
+        echo "${BASH_ARGV[0]}"
         return
     fi
 
