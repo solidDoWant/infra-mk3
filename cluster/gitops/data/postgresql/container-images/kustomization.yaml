@@ -2,4 +2,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/cloudnative-pg/postgres-containers//Debian/ClusterImageCatalog.yaml?timeout=120&version=c7b22b79fbc39f393f4e859c8a1fd36bb5558981
+  # TODO renovate
+  - https://raw.githubusercontent.com/cloudnative-pg/postgres-containers/c7b22b79fbc39f393f4e859c8a1fd36bb5558981/Debian/ClusterImageCatalog.yaml
