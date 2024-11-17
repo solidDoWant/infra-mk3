@@ -4,14 +4,16 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name cnpg-operator
+  name: &app_name cloudnative-pg
 spec:
   targetNamespace: data
   commonMetadata:
     labels:
+      # This _must_ be cloudnative-pg or the operator will fail to deploy. See
+      # https://github.com/cloudnative-pg/cloudnative-pg/blob/bfc966caa27c08b34a372eb6c0f7fb0a0d31d2ef/internal/cmd/manager/controller/controller.go#L391
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/data/postgresql/cnpg-operator
+  path: /cluster/gitops/data/postgresql/cloudnative-pg
   prune: true
   sourceRef:
     kind: GitRepository
@@ -19,3 +21,4 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
+    - name: volume-snapshot-crds
