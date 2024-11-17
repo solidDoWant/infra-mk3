@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=./schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name cnpg-operator
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: cloudnative-pg
+      sourceRef:
+        kind: HelmRepository
+        name: cnpg-charts
+      version: 0.22.1
+  values:
+    # If the operator fails, then instance failover will also fail.
+    replicaCount: 2
+    nameOverride: *app_name
+    fullnameOverride: *app_name
+    # TODO set if needed
+    # config:
+    #   data:
+    #     INHERITED_ANNOTATIONS:
+    #     INHERITED_LABELS:
+    # TODO create a new class for this. Below critical, higher than normal pods
+    priorityClassName: system-cluster-critical
+    monitoring:
+      podMonitorEnabled: true
+      grafanaDashboard:
+        create: true
