@@ -7,10 +7,10 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: dragonfly-operator-charts
+      chart: dragonfly-operator
       sourceRef:
         kind: HelmRepository
-        name: dragonfly-operator
+        name: dragonfly-operator-charts
       version: v1.1.8
   values:
     replicaCount: 2
