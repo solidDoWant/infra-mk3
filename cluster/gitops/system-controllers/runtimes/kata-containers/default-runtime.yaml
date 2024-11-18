@@ -1,0 +1,14 @@
+---
+# TODO figure out how to load other VM runtimes (i.e. firecracker)
+kind: RuntimeClass
+apiVersion: node.k8s.io/v1
+metadata:
+  name: kata
+handler: kata
+overhead:
+  podFixed:
+    memory: 160Mi
+    cpu: 250m
+scheduling:
+  nodeSelector:
+    katacontainers.io/kata-runtime: "true"

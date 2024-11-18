@@ -59,6 +59,7 @@ nodes:
     nodeLabels: &node_labels
       cilium.home.arpa/node.bgp-enabled: "true"
       root-ceph.flux.home.arpa/node.cluster-enabled: "true"
+      katacontainers.io/kata-runtime: "true"
       # Topology labels should contain the label name in the value to ensure
       # that the value itself is unique
       topology.rook.io/chassis: chassis-talos-k8s-mixed-01 # TODO set this to template on next release
