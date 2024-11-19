@@ -15,3 +15,7 @@ Basic deployment of [goxdp](https://github.com/ahsifer/goxdp). Used only as a te
 ### iperf3
 
 Runs four [iperf3](https://github.com/esnet/iperf) servers and clients to test network throughput. Different ports are used to test bonded link traffic sharing. This will eat all bandwidth if left running.
+
+### request-logger
+
+Log all HTTP requests (internal and external) to stdout and return a 200 response.
