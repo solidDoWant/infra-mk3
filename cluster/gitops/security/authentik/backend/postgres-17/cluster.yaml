@@ -1,0 +1,45 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: authentik-postgres-17
+spec:
+  instances: 2
+  bootstrap:
+    initdb:
+      database: authentik
+      owner: authentik
+      # secret:
+      #   name: app-secret
+      postInitSQL:
+        # Remove the app user password. TLS auth will be enforce instead.
+        - ALTER ROLE authentik PASSWORD NULL;
+  postgresql:
+    parameters:
+      shared_buffers: 256MB # 25% per docs
+    pg_hba:
+      - hostssl authentik all all cert # Require TLS auth
+  storage:
+    size: 5Gi
+    # storageClass:  # TODO
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  primaryUpdateMethod: switchover
+  # TODO backups after stash.run deployment
+  # backup:
+  #   target: prefer-standby
+  #   retentionPolicy:
+  #   volumeSnapshot:
+  #     online: true
+  #     snapshotOwnerReference: none
+  #     className:
+  monitoring:
+    enablePodMonitor: true
+  certificates:
+    serverTLSSecret: authentik-postgres-17-serving-cert
+    serverCASecret: # TODO add Teleport database CA, will require trust-manager
+    clientCASecret: # TODO

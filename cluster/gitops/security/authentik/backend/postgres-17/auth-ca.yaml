@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+# This should be "detached" from the root CA as it's used for a p2p connection
+# No other workloads should have access to this
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-auth-ca
+spec:
+  isCA: true
+  commonName: infra-mk3 Authentik Postgres authentication Certificate Authority
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - cert sign
+    - crl sign
+  # nameConstraints:
+  #   critical: true
+  #   permitted:
+  #     dnsDomains: &domains
+  #       - .cluster.local
+  #       - .svc
+  #       - .${SECRET_INTERNAL_DOMAIN_NAME}
+  #     # Private IP space only
+  #     ipRanges:
+  #       - 10.0.0.0/8
+  #       - 172.16.0.0/12
+  #       - 192.168.0.0/16
+  #     uriDomains: *domains
+  duration: 87660h # 10 years
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Never
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: postgres-auth-ca
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: postgres-auth-ca
+spec:
+  ca:
+    secretName: postgres-auth-ca
+    # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
