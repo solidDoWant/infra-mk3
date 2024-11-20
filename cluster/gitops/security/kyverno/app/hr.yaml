@@ -1,0 +1,64 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyverno
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: kyverno
+      sourceRef:
+        kind: HelmRepository
+        name: kyverno-charts
+      version: 3.3.3
+  values:
+    grafana:
+      enabled: true
+    admissionController: &controller_config
+      replicas: 2
+      priorityClassName: system-cluster-critical
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: admission-controller
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
+      podDisruptionBudget:
+        enabled: true
+      serviceMonitor:
+        enabled: true
+    backgroundController: 
+      <<: *controller_config
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: background-controller
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
+    cleanupController: 
+      <<: *controller_config
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: cleanup-controller
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
+    reportsController: 
+      <<: *controller_config
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: reports-controller
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
+
+
