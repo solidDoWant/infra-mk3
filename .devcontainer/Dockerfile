@@ -94,6 +94,11 @@ ENV PATH="${KREW_ROOT}/bin:${PATH}"
 ## Krew plugins
 RUN kubectl krew install kyverno cnpg
 
+RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
+    curl -fsSL -o /usr/local/bin/diffoci "https://github.com/reproducible-containers/diffoci/releases/download/v0.1.5/diffoci-v0.1.5.${KERNEL}-${PRETTY_ARCH}" && \
+    chmod +x /usr/local/bin/diffoci
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 
@@ -119,4 +124,5 @@ RUN \
     kustomize completion bash | sudo tee /etc/bash_completion.d/kustomize.bash > /dev/null && \
     cilium completion bash | sudo tee /etc/bash_completion.d/cilium.bash > /dev/null && \
     flux completion bash | sudo tee /etc/bash_completion.d/flux.bash > /dev/null && \
-    istioctl completion bash | sudo tee /etc/bash_completion.d/istioctl.bash > /dev/null
+    istioctl completion bash | sudo tee /etc/bash_completion.d/istioctl.bash > /dev/null && \
+    diffoci completion bash | sudo tee /etc/bash_completion.d/diffoci.bash > /dev/null
