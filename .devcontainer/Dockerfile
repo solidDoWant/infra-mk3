@@ -76,6 +76,24 @@ COPY --from=istio/istioctl:1.23.3 /usr/local/bin/istioctl /usr/local/bin/istioct
 # flux-local
 # RUN pipx install --include-deps flux-local
 
+# krew
+ENV KREW_ROOT=/usr/local/krew
+RUN mkdir -pv /tmp/krew && \
+    # Vars for determining download URLs
+    KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
+    KREW_FILE_NAME="krew-${KERNEL}_${PRETTY_ARCH}" && \
+    curl -fsSL -o /tmp/krew/krew.tar.gz "https://github.com/kubernetes-sigs/krew/releases/download/v0.4.4/krew-${KERNEL}_${PRETTY_ARCH}.tar.gz" && \
+    tar -xzvf /tmp/krew/krew.tar.gz -C /tmp/krew "./${KREW_FILE_NAME}" && \
+    "/tmp/krew/${KREW_FILE_NAME}" install krew && \
+    rm -rvf /tmp/krew && \
+    find /usr/local/krew -type d -exec chmod 777 {} \; && \
+    find /usr/local/krew -type f -exec chmod ugo+w {} \;
+ENV PATH="${KREW_ROOT}/bin:${PATH}"
+
+## Krew plugins
+RUN kubectl krew install kyverno cnpg
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 
