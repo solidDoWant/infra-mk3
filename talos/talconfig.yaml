@@ -8,7 +8,7 @@ nodes:
     installDiskSelector:
       # `/*` suffix is needed until
       # https://github.com/siderolabs/go-blockdevice/issues/114 is fixed
-      busPath: /pci0000:00/0000:00:1d.0/0000:58:00.0/nvme/* # M.2 slot 2
+      busPath: /pci0000:00/0000:00:1d.0/0000:59:00.0/nvme/* # M.2 slot 2
     controlPlane: true
     machineSpec:
       secureboot: true
