@@ -56,16 +56,22 @@ nodes:
         routes:
           - network: 0.0.0.0/0
             gateway: 10.3.0.254
-    nodeLabels: &node_labels
+    nodeLabels:
       cilium.home.arpa/node.bgp-enabled: "true"
       root-ceph.flux.home.arpa/node.cluster-enabled: "true"
       katacontainers.io/kata-runtime: "true"
       # Topology labels should contain the label name in the value to ensure
       # that the value itself is unique
-      topology.rook.io/chassis: chassis-talos-k8s-mixed-01 # TODO set this to template on next release
+      topology.rook.io/chassis: chassis-{{ .MachineConfig.MachineNetwork.NetworkHostname }}
+      zfs.home.arpa/node.local-storage-enabled: "true"
     nodeAnnotations:
-      talos.home.arpa/installer-image: &installer_image >-
-        factory.talos.dev/installer-secureboot/54416e4c74096eb53d4f8982e20ba9e45f2eb0d73dc55c27bf8f2f8ef9a588b2
+      zfs.home.arpa/node.pool-drive-matcher: "/dev/disk/by-id/nvme-KINGSTON_SKC3000D2048G_*"
+      talos.home.arpa/installer-image: >-
+        {{
+          .MachineConfig.MachineInstall.InstallImage |
+          splitList ":" |
+          first
+        }}
     schematic:
       customization: &schematic_customization
         systemExtensions:
@@ -77,17 +83,20 @@ nodes:
             - siderolabs/thunderbolt
             # For virtualization/isolation
             - siderolabs/kata-containers
+            # Local storage
+            - siderolabs/zfs
         # TODO set the following args on the installer only (not ISO):
         # src: https://cdrdv2-public.intel.com/332464/332464_710_Series_Datasheet_v_4_1.pdf
         # - intel_iommu=on
         # - iommu=pt
+    isoSchematic:
+      customization:
+        <<: *schematic_customization
         extraKernelArgs:
           - &bond bond=bond0:enp2s0f0,enp2s0f1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
           - ip=10.3.1.1::10.3.0.254:255.255.0.0:talos-k8s-mixed-01:bond0:off:10.3.0.254::10.3.0.254
-    # This includes all of the above, except no kernel args
-    # Support for a fix will be in the next release of talhelper
-    # TODO need merge of https://github.com/budimanjojo/talhelper/pull/701 before switching
-    talosImageURL: *installer_image
+    kernelModules:
+      - name: zfs
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-02
     ipAddress: 10.3.1.2
@@ -100,10 +109,7 @@ nodes:
         addresses:
           - 10.3.1.2/16
           - 10.3.2.2/32
-    nodeLabels:
-      <<: *node_labels
-      topology.rook.io/chassis: chassis-talos-k8s-mixed-02 # TODO set this to template on next release
-    schematic:
+    isoSchematic:
       customization:
         <<: *schematic_customization
         extraKernelArgs:
@@ -121,10 +127,7 @@ nodes:
         addresses:
           - 10.3.1.3/16
           - 10.3.2.3/32
-    nodeLabels:
-      <<: *node_labels
-      topology.rook.io/chassis: chassis-talos-k8s-mixed-03 # TODO set this to template on next release
-    schematic:
+    isoSchematic:
       customization:
         <<: *schematic_customization
         extraKernelArgs:
@@ -146,11 +149,6 @@ clusterPodNets:
 clusterSvcNets:
   - 10.33.0.0/16
 patches:
-  # Don't include the kernel args for non-ISO boot. Otherwise the image is
-  # invalidated and secure boot won't load it.
-  - |-
-    - op: remove
-      path: /machine/install/extraKernelArgs
   # Use NTP server running on the gateway
   - |-
     machine:
