@@ -125,4 +125,5 @@ RUN \
     cilium completion bash | sudo tee /etc/bash_completion.d/cilium.bash > /dev/null && \
     flux completion bash | sudo tee /etc/bash_completion.d/flux.bash > /dev/null && \
     istioctl completion bash | sudo tee /etc/bash_completion.d/istioctl.bash > /dev/null && \
-    diffoci completion bash | sudo tee /etc/bash_completion.d/diffoci.bash > /dev/null
+    diffoci completion bash | sudo tee /etc/bash_completion.d/diffoci.bash > /dev/null && \
+    docker completion bash | sudo tee /etc/bash_completion.d/docker.bash > /dev/null
