@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zfs-pool-scrubber
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: zfs-pool-scrubber
+rules:
+  - apiGroups:
+      -
+    resources:
+      - nodes
+    verbs:
+      # Needed to get nodes with the
+      # `zfs.home.arpa/node.local-storage-deployed=true` label
+      - get
+      - list
+      # Needed to manage the
+      # `zfs.home.arpa/node.local-storage-scrub` label
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: zfs-pool-scrubber
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: zfs-pool-scrubber
+subjects:
+  - kind: ServiceAccount
+    namespace: storage
+    name: zfs-pool-scrubber

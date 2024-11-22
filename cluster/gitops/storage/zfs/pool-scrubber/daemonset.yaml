@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: &app_name zfs-pool-provisioner
+  name: &app_name zfs-pool-scrubber
   labels: &labels
     app.kubernetes.io/name: *app_name
 spec:
@@ -14,21 +14,12 @@ spec:
     spec:
       hostPID: true
       nodeSelector:
-        zfs.home.arpa/node.local-storage-enabled: "true"
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: zfs.home.arpa/node.local-storage-deployed
-                    operator: NotIn
-                    values:
-                      - "true"
+        zfs.home.arpa/node.local-storage-scrub: "true"
       containers:
         - name: *app_name
           image: ubuntu:22.04
           command:
-            - /scripts/provision-zfs-pool.sh
+            - /scripts/scrub-zfs-pool.sh
           env:
             - name: POOL_NAME
               value: ${LOCAL_ZFS_POOL_NAME}
@@ -53,6 +44,6 @@ spec:
             path: /
         - name: scripts
           configMap:
-            name: zfs-pool-provisioner-scripts
+            name: zfs-pool-scrubber-scripts
             defaultMode: 0500
       serviceAccountName: *app_name

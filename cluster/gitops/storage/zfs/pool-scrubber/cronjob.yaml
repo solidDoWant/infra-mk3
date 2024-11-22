@@ -1,0 +1,18 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: zfs-pool-scrubber-labeler
+spec:
+  schedule: "@weekly"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: ubuntu
+              image: ubuntu:22.04
+              command:
+                - /scripts/label-zpool-nodes.sh
+          serviceAccountName: zfs-pool-scrubber
+          restartPolicy: OnFailure
