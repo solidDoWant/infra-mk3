@@ -1,0 +1,9 @@
+---
+# Kyverno must be installed in it's own namespace as it is unable to apply
+# policies to its own namespace due to the k8s webhook circular dependency
+# problem
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./namespace.yaml
+  - ./kyverno/ks.yaml

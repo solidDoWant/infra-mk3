@@ -6,12 +6,12 @@ metadata:
   namespace: flux-system
   name: &app_name kyverno-app
 spec:
-  targetNamespace: security
+  targetNamespace: kyverno
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/security/kyverno/app
+  path: /cluster/gitops/kyverno/kyverno/app
   prune: true
   sourceRef:
     kind: GitRepository
