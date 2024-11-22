@@ -1,0 +1,24 @@
+---
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  name: authentik-dragonfly
+spec:
+  replicas: 2
+  authentication:
+    clientCaCertSecret:
+      key: ca.crt
+      name: authentik-dragonfly-auth-ca-cert
+  tlsSecretRef:
+    name: authentik-dragonfly-serving-cert
+  # TODO
+  # topologySpreadConstraints:
+  #   - maxSkew:
+  #     topologyKey:
+  #     whenUnsatisfiable:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 500Mi
+    limits:
+      memory: 500Mi

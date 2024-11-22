@@ -7,9 +7,6 @@ metadata:
     app.kubernetes.io/part-of: kiali
     app.kubernetes.io/component: monitoring
 spec:
-  namespaceSelector:
-    matchNames:
-      - istio-system
   selector:
     matchExpressions:
       - key: app

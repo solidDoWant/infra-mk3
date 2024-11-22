@@ -2,9 +2,9 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: authentik-postgres-authentik-user
+  name: authentik-dragonfly-authentik-user
 spec:
-  secretName: authentik-postgres-authentik-user
+  secretName: authentik-dragonfly-authentik-user
   usages:
     - client auth
   commonName: authentik
@@ -14,20 +14,20 @@ spec:
       cnpg.io/reload: "true"
   issuerRef:
     group: cert-manager.io
-    name: authentik-postgres-auth-ca
+    name: authentik-dragonfly-auth-ca
     kind: Issuer
 ---
-# Approve the the postgres authentik user certificate specifically.
+# Approve the the dragonfly authentik user certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: authentik-postgres-auth-ca-authentik-user
+  name: authentik-dragonfly-auth-ca-authentik-user
 spec:
   selector:
     issuerRef:
       group: cert-manager.io
       kind: Issuer
-      name: authentik-postgres-auth-ca
+      name: authentik-dragonfly-auth-ca
     namespace:
       matchNames:
         - security

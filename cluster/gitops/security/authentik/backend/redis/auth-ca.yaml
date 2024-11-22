@@ -1,0 +1,48 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+# This should be "detached" from the root CA as it's used for a p2p connection
+# No other workloads should have access to this
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authentik-dragonfly-auth-ca
+spec:
+  isCA: true
+  commonName: Authentik Dragonfly authentication Certificate Authority
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    # Exclude everything. Only the CN may be set.
+    permitted: {}
+  duration: 87660h # 10 years
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Never
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: authentik-dragonfly-auth-ca
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: authentik-dragonfly-auth-ca
+spec:
+  ca:
+    secretName: authentik-dragonfly-auth-ca
+    # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name
