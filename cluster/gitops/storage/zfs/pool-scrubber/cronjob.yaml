@@ -14,5 +14,14 @@ spec:
               image: ubuntu:22.04
               command:
                 - /scripts/label-zpool-nodes.sh
+              volumeMounts:
+                - name: scripts
+                  readOnly: true
+                  mountPath: /scripts
+          volumes:
+            - name: scripts
+              configMap:
+                name: zfs-pool-scrubber-scripts
+                defaultMode: 0500
           serviceAccountName: zfs-pool-scrubber
           restartPolicy: OnFailure
