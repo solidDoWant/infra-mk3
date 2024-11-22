@@ -32,17 +32,18 @@ spec:
         enabled: true
     backgroundController:
       <<: *controller_config
-      clusterRole:
-        extraResources:
-          - apiGroups:
-              - ""
-            resources:
-              - secrets
-            verbs:
-              - create
-              - update
-              - patch
-              - delete
+      rbac:
+        clusterRole:
+          extraResources:
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              verbs:
+                - create
+                - update
+                - patch
+                - delete
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
