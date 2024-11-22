@@ -22,6 +22,9 @@ spec:
         requests:
           memory: 96Mi
     manager:
+      image:
+        repository: ghcr.io/soliddowant/dragonfly-operator:v1.24.0-hc.fix.1
+        tag: v1.1.8-hc.fix.1
       topologySpreadConstraints:
         - maxSkew: 1 # Skew of 1 allows for rolling updates
           topologyKey: kubernetes.io/hostname
