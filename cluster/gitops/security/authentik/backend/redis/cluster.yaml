@@ -21,6 +21,7 @@ spec:
   resources:
     requests:
       cpu: 100m
-      memory: 512Mi
+      # Needs (thread_count * 256Mi) / 0.8
+      memory: 640Mi
     limits:
-      memory: 512Mi
+      memory: 640Mi
