@@ -1,0 +1,78 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: openebs
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: openebs
+      sourceRef:
+        kind: HelmRepository
+        name: openebs-charts
+      version: 4.1.1
+  values:
+    # Disable openebs-installed volume snapshot CRDs entirely
+    openebs-crds: &crds
+      csi:
+        # Handled via volume-snapshot-crds
+        volumeSnapshots:
+          enabled: false
+    # Disable localpv provisioner entirely
+    localpv-provisioner:
+      rbac:
+        create: false
+      localpv:
+        enabled: false
+      serviceAccount:
+        create: false
+      hostpathClass:
+        enabled: false
+    # Disable everything but zfs-localpv
+    engines:
+      local:
+        lvm:
+          enabled: false
+      replicated:
+        mayastor:
+          enabled: false
+    zfs-localpv:
+      zfsNode:
+        resources: &resources
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 32Mi
+        # cspell:words encr
+        encrKeysDir: /var/zfs/encryption-keys
+        nodeSelector: &node_selector
+          matchLabels:
+            zfs.home.arpa/node.local-storage-deployed: "true"
+      zfsController:
+        replicas: 2
+        resources: *resources
+        nodeSelector: *node_selector
+      # Disable zfs-localpv-installed volume snapshot CRDs entirely
+      crds: *crds
+  postRenderers:
+    # Add topology spread constraints
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/topologySpreadConstraints
+                value:
+                  - maxSkew: 1 # Skew of 1 allows for rolling updates
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: openebs
+                        app.kubernetes.io/component: openebs-zfs-controller
+                    whenUnsatisfiable: DoNotSchedule
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              labelSelector: app.kubernetes.io/component = openebs-zfs-controller
