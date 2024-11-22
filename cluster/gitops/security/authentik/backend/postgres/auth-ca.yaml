@@ -28,6 +28,9 @@ spec:
     algorithm: Ed25519
     encoding: PKCS8
     rotationPolicy: Never
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
   issuerRef:
     name: self-signed
     kind: ClusterIssuer
