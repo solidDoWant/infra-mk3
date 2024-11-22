@@ -31,7 +31,7 @@ spec:
             - /scripts/provision-zfs-pool.sh
           env:
             - name: POOL_NAME
-              value: local-storage
+              value: ${LOCAL_ZFS_POOL_NAME}
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
