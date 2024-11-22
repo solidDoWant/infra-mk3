@@ -8,3 +8,6 @@ configMapGenerator:
   - name: scripts
     files:
       - provision-zfs-pool.sh
+    options:
+      labels:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
