@@ -18,7 +18,8 @@ spec:
       shared_buffers: 256MB # 25% per docs
       # Not needed, backing storage (ZFS) uses CoW:
       # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#setting-full_page_writesoff
-      full_page_writes: off
+      # This cannot be set or the cluster will fail to restart
+      # full_page_writes: off
       # Not needed on ZFS:
       # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#tune-wal_init_zero--wal_recycle
       wal_init_zero: off
