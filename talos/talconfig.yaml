@@ -89,6 +89,10 @@ nodes:
         # src: https://cdrdv2-public.intel.com/332464/332464_710_Series_Datasheet_v_4_1.pdf
         # - intel_iommu=on
         # - iommu=pt
+        extraKernelArgs:
+          # Make ZFS flush to disk more frequently on async writes:
+          # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#controversial-zfs_txg_timeout1--synchronous_commitoff--logbiasthroughput
+          - zfs.zfs_txg_timeout=1
     isoSchematic:
       customization:
         <<: *schematic_customization
@@ -149,6 +153,11 @@ clusterPodNets:
 clusterSvcNets:
   - 10.33.0.0/16
 patches:
+  # Don't include the kernel args for non-ISO boot. Otherwise the image is
+  # invalidated and secure boot won't load it.
+  - |-
+    - op: remove
+      path: /machine/install/extraKernelArgs
   # Use NTP server running on the gateway
   - |-
     machine:
