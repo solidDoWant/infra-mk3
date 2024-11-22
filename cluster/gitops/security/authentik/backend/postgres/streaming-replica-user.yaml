@@ -2,9 +2,9 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: postgres-streaming_replica-user
+  name: postgres-streaming-replica-user
 spec:
-  secretName: postgres-streaming_replica-user
+  secretName: postgres-streaming-replica-user
   usages:
     - client auth
   commonName: streaming_replica
@@ -21,7 +21,7 @@ spec:
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: postgres-auth-ca-postgres-streaming_replica-user
+  name: postgres-auth-ca-postgres-postgres-streaming-replica-user
 spec:
   selector:
     issuerRef:
