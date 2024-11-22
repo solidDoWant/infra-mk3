@@ -19,19 +19,8 @@ spec:
   usages:
     - cert sign
     - crl sign
-  # nameConstraints:
-  #   critical: true
-  #   permitted:
-  #     dnsDomains: &domains
-  #       - .cluster.local
-  #       - .svc
-  #       - .${SECRET_INTERNAL_DOMAIN_NAME}
-  #     # Private IP space only
-  #     ipRanges:
-  #       - 10.0.0.0/8
-  #       - 172.16.0.0/12
-  #       - 192.168.0.0/16
-  #     uriDomains: *domains
+  nameConstraints:
+    critical: true
   duration: 87660h # 10 years
   privateKey:
     algorithm: Ed25519

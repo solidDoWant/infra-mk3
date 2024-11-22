@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kyverno.io/policy_v1.json
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: extract-auth-ca-certificate
+spec:
+  rules:
+    - # Trigger on change of any of these resources
+      name: extract-auth-ca-certificate
+      match:
+        any:
+          - resources:
+              kinds:
+                - Secret
+              name: postgres-auth-ca
+      skipBackgroundRequests: true
+      context:
+        - name: postgresAuthCa
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/security/secrets/postgres-auth-ca
+            jmesPath: data."ca.crt"
+      # TODO add Teleport root CA
+      # Create a new "secret" with only the CA certificate
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: postgres-auth-ca-cert
+        data:
+          type: kubernetes.io/tls
+          stringData:
+            ca.crt: |-
+              "{{ postgresAuthCa | base64_decode(@) }}"

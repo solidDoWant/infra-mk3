@@ -9,19 +9,30 @@ spec:
     initdb:
       database: authentik
       owner: authentik
-      # secret:
-      #   name: app-secret
       postInitSQL:
         # Remove the app user password. TLS auth will be enforce instead.
         - ALTER ROLE authentik PASSWORD NULL;
   postgresql:
     parameters:
       shared_buffers: 256MB # 25% per docs
+      # Not needed, backing storage (ZFS) uses CoW:
+      # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#setting-full_page_writesoff
+      full_page_writes: off
+      # Not needed on ZFS:
+      # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#tune-wal_init_zero--wal_recycle
+      wal_init_zero: off
+      wal_recycle: off
+      # Needs OpenZFS 2.3.0 to be effective, which will likely require Talos 1.9 or 1.10
+      # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#alternative-wal_sync_methodopen_datasync
+      wal_sync_method: open_datasync
+      # This is per connection. However, because the cluster will be used by one application, the number of individual connections
+      # should be low.
+      work_mem: 16MB
     pg_hba:
       - hostssl authentik all all cert # Require TLS auth
   storage:
     size: 5Gi
-    # storageClass:  # TODO
+    storageClass: postgres
   resources:
     requests:
       cpu: 100m
@@ -41,5 +52,5 @@ spec:
     enablePodMonitor: true
   certificates:
     serverTLSSecret: authentik-postgres-17-serving-cert
-    serverCASecret: # TODO add Teleport database CA, will require trust-manager
-    clientCASecret: # TODO
+    serverCASecret: authentik-postgres-17-serving-cert
+    clientCASecret: postgres-auth-ca-cert
