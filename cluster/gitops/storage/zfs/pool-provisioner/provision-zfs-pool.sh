@@ -101,6 +101,8 @@ run_rootfs_cmd zpool create \
     -O "mountpoint=/var/mnt/${POOL_NAME}" \
     "${POOL_NAME}" \
     "${POOL_DRIVE_PATH[@]#${ROOTFS_PATH}}"
+run_rootfs_cmd zfs create "${POOL_NAME}/openebs"
 label_node
 echo "Provisioning complete"
 run_rootfs_cmd zpool list
+run_rootfs_cmd zfs list
