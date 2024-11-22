@@ -16,7 +16,6 @@ install_kubectl() {
     echo "Installed kubectl ${VERSION}"
 }
 
-check_env_vars
 install_kubectl
 
 for NODE_NAME in $(kubectl get nodes -o name -l 'zfs.home.arpa/node.local-storage-deployed=true'); do
