@@ -9,6 +9,7 @@ configMapGenerator:
   - name: zfs-pool-scrubber-scripts
     files:
       - scrub-zfs-pool.sh
+      - label-zpool-nodes.sh
     options:
       labels:
         kustomize.toolkit.fluxcd.io/substitute: disabled
