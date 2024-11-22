@@ -5,7 +5,7 @@ resources:
   - daemonset.yaml
   - rbac.yaml
 configMapGenerator:
-  - name: scripts
+  - name: pool-provisioner-scripts
     files:
       - provision-zfs-pool.sh
     options:

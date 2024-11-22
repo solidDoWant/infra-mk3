@@ -61,7 +61,7 @@ run_rootfs_cmd() {
 
 label_node() {
     # Prevent the pool from being re-initialized
-    kubectl label node "${NODE_NAME}" 'zfs.home.arpa/node.local-storage-deployed=true'
+    kubectl label --overwrite node "${NODE_NAME}" 'zfs.home.arpa/node.local-storage-deployed=true'
 }
 
 check_pool() {

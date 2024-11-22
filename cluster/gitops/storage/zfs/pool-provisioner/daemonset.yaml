@@ -53,6 +53,6 @@ spec:
             path: /
         - name: scripts
           configMap:
-            name: scripts
+            name: pool-provisioner-scripts
             defaultMode: 0500
       serviceAccountName: *app_name
