@@ -48,8 +48,7 @@ spec:
         # cspell:words encr
         encrKeysDir: /var/zfs/encryption-keys
         nodeSelector: &node_selector
-          matchLabels:
-            zfs.home.arpa/node.local-storage-deployed: "true"
+          zfs.home.arpa/node.local-storage-deployed: "true"
       zfsController:
         replicas: 2
         resources: *resources
