@@ -52,6 +52,9 @@ spec:
       matchNames:
         - security
   allowed:
+    commonName:
+      required: true
+      value: authentik-postgres-17
     dnsNames:
       required: true
       values:
@@ -64,6 +67,19 @@ spec:
         - authentik-postgres-17-rw.security.svc.cluster.local
         - authentik-postgres-17-ro.security.svc.cluster.local
         - authentik-postgres-17-r.security.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
     usages:
       - server auth
   constraints:
