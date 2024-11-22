@@ -5,6 +5,8 @@ metadata:
   name: authentik-dragonfly
 spec:
   replicas: 2
+  args:
+    - --proactor_threads=2 # Dragonfly requires 256MB of RAM per core
   authentication:
     clientCaCertSecret:
       key: ca.crt

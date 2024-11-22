@@ -18,6 +18,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: prometheus-crds
     - name: security-namespace-issuer
     - name: kyverno-app
 # ---
