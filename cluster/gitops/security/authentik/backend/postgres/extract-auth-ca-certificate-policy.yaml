@@ -14,8 +14,6 @@ spec:
               kinds:
                 - Secret
               name: postgres-auth-ca
-              namespaces:
-                - security
       skipBackgroundRequests: true
       context:
         - name: postgresAuthCa
