@@ -18,20 +18,7 @@ usage() {
     fatal "${USAGE_MSG}"
 }
 
-install_kubectl() {
-    echo "Installing kubectl..."
-    apt update
-    apt install --no-install-recommends -y curl ca-certificates
-    KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')"
-    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)"
-    VERSION="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
-    curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${VERSION}/bin/${KERNEL}/${PRETTY_ARCH}/kubectl"
-    chmod +x /usr/local/bin/kubectl
-    echo "Installed kubectl ${VERSION}"
-}
-
 load_annotation_vars() {
-    install_kubectl
     POOL_DRIVE_MATCHER="$(
         kubectl get node "${NODE_NAME}" -o \
             jsonpath='{.metadata.annotations.zfs\.home\.arpa/node\.pool-drive-matcher}'
