@@ -17,6 +17,20 @@ spec:
       enabled: true
     admissionController: &controller_config
       replicas: 2
+      rbac:
+        clusterRole:
+          extraResources:
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              verbs:
+                - list
+                - get
+                - create
+                - update
+                - patch
+                - delete
       priorityClassName: system-cluster-critical
       topologySpreadConstraints:
         - maxSkew: 1
@@ -32,18 +46,6 @@ spec:
         enabled: true
     backgroundController:
       <<: *controller_config
-      rbac:
-        clusterRole:
-          extraResources:
-            - apiGroups:
-                - ""
-              resources:
-                - secrets
-              verbs:
-                - create
-                - update
-                - patch
-                - delete
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
