@@ -1,0 +1,35 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zfs-pool-provisioner
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: zfs-pool-provisioner
+rules:
+  - apiGroups:
+      -
+    resources:
+      - nodes
+    verbs:
+      # Needed to get the `zfs.home.arpa/node.pool-drive-matcher` annotation
+      - get
+      - list
+      # Needed to label nodes with
+      # `zfs.home.arpa/node.local-storage-deployed=true` when completed
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: zfs-pool-provisioner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: zfs-pool-provisioner
+subjects:
+  - kind: ServiceAccount
+    namespace: storage
+    name: zfs-pool-provisioner

@@ -19,3 +19,14 @@ The following labels are used across multiple applications in the cluster:
 | `patches.flux.home.arpa`   | `namespace.can-prune`                | `true`  | Namespace              | No       | Opt-in to allow a namespace to be pruned if Flux thinks that it should be deleted.                |
 | `patches.flux.home.arpa`   | `statefulset.ignore-replicas`        | `true`  | StatefulSet            | No       | Opt-in to allow the HelmRelease owning a statefulset from reverting changes to the replica count. |
 | `root-ceph.flux.home.arpa` | `node.cluster-enabled`               | `true`  | StatefulSet            | No       | Opt-in to allow the using the node for a Rook-Ceph cluster, including OSDs.                       |
+| `zfs.home.arpa`            | `node.local-storage-enabled`         | `true`  | Node                   | No       | Opt-in to allow using the node for local ZFS-based storage                                        |
+| `zfs.home.arpa`            | `node.local-storage-deployed`        | `true`  | Node                   | No       | Indicates if the node local storage zpool has been deployed                                       |
+
+# Kubernetes resource annotations
+
+The following annotations are used across multiple applications in the cluster:
+
+| Key prefix        | Key name                  | Values | Valid resources | Required | Description                                                        |
+| ----------------- | ------------------------- | ------ | --------------- | -------- | ------------------------------------------------------------------ |
+| `zfs.home.arpa`   | `node.pool-drive-matcher` | String | Node            | No       | File path matcher for drives that should be included in a ZFS pool |
+| `talos.home.arpa` | `installer-image`         | String | Node            | Yes      | Full image name (without tag) for auto updates                     |

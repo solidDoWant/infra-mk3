@@ -1,0 +1,58 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: &app_name zfs-pool-provisioner
+  labels: &labels
+    app.kubernetes.io/name: *app_name
+spec:
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      hostPID: true
+      nodeSelector:
+        zfs.home.arpa/node.local-storage-enabled: "true"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: zfs.home.arpa/node.local-storage-deployed
+                    operator: NotIn
+                    values:
+                      - "true"
+      containers:
+        - name: *app_name
+          image: ubuntu:22.04
+          command:
+            - /scripts/provision-zfs-pool.sh
+          env:
+            - name: POOL_NAME
+              value: local-storage
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: ROOTFS_PATH
+              value: &rootfs_path /rootfs
+          securityContext:
+            # Needed for zpool creation
+            privileged: true
+          volumeMounts:
+            - name: rootfs
+              mountPath: *rootfs_path
+            - name: scripts
+              readOnly: true
+              mountPath: /scripts
+      volumes:
+        - name: rootfs
+          hostPath:
+            path: /
+        - name: scripts
+          configMap:
+            name: scripts
+            defaultMode: 0500
+      serviceAccountName: *app_name

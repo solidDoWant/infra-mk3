@@ -4,7 +4,10 @@ kind: Pod
 metadata:
   name: admin2
 spec:
-  runtimeClassName: kata
+  # runtimeClassName: kata
+  hostPID: true
+  nodeName: talos-k8s-mixed-03
+  # hostNetwork: true
   containers:
     - name: admin
       image: ubuntu:22.04
@@ -18,19 +21,24 @@ spec:
             - SYS_ADMIN
         privileged: true
       volumeMounts:
-        - name: sys
-          mountPath: /sys
-        - name: dev
-          mountPath: /dev
+        # - name: sys
+        #   mountPath: /sys
+        # - name: dev
+        #   mountPath: /dev
         - name: root
           mountPath: /rootfs
+        # - name: proc
+        #   mountPath: /proc
   volumes:
-    - name: sys
-      hostPath:
-        path: /sys
-    - name: dev
-      hostPath:
-        path: /dev
+    # - name: proc
+    #   hostPath:
+    #     path: /proc
+    # - name: sys
+    #   hostPath:
+    #     path: /sys
+    # - name: dev
+    #   hostPath:
+    #     path: /dev
     - name: root
       hostPath:
         path: /
