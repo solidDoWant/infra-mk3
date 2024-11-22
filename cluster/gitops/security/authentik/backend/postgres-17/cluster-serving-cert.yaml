@@ -5,11 +5,8 @@ kind: Certificate
 metadata:
   name: authentik-postgres-17-serving-cert
 spec:
-  commonName: authentik-postgres-17
+  commonName: Authentik Postgres 17
   dnsNames:
-    - authentik-postgres-17-rw.security
-    - authentik-postgres-17-ro.security
-    - authentik-postgres-17-r.security
     - authentik-postgres-17-rw.security.svc
     - authentik-postgres-17-ro.security.svc
     - authentik-postgres-17-r.security.svc
@@ -54,13 +51,10 @@ spec:
   allowed:
     commonName:
       required: true
-      value: authentik-postgres-17
+      value: Authentik Postgres 17
     dnsNames:
       required: true
       values:
-        - authentik-postgres-17-rw.security
-        - authentik-postgres-17-ro.security
-        - authentik-postgres-17-r.security
         - authentik-postgres-17-rw.security.svc
         - authentik-postgres-17-ro.security.svc
         - authentik-postgres-17-r.security.svc

@@ -8,7 +8,6 @@ spec:
   isCA: true
   commonName: infra-mk3 system-controllers Intermediary Certificate Authority
   dnsNames:
-    - system-controllers
     - system-controllers.svc
     - system-controllers.svc.cluster.local
   subject:
@@ -27,7 +26,6 @@ spec:
     critical: true
     permitted:
       dnsDomains:
-        - .system-controllers
         - .system-controllers.svc
         - .system-controllers.svc.cluster.local
   duration: 8766h # 1 year
