@@ -35,4 +35,4 @@ spec:
           type: Opaque
           stringData:
             ca.crt: |-
-              "{{ postgresAuthCa | base64_decode(@) }}"
+              {{ postgresAuthCa | base64_decode(@) }}
