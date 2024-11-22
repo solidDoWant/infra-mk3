@@ -32,7 +32,7 @@ spec:
         name: postgres-auth-ca-cert
         namespace: security
         data:
-          type: kubernetes.io/tls
+          type: Opaque
           stringData:
             ca.crt: |-
               "{{ postgresAuthCa | base64_decode(@) }}"
