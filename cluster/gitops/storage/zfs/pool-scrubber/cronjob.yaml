@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: zfs-pool-scrubber-labeler
+  name: &app_name zfs-pool-scrubber-labeler
 spec:
   schedule: "@weekly"
   jobTemplate:
@@ -10,7 +10,7 @@ spec:
       template:
         spec:
           containers:
-            - name: ubuntu
+            - name: *app_name
               image: ubuntu:22.04
               command:
                 - /scripts/label-zpool-nodes.sh
