@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - cronjob.yaml
   - daemonset.yaml
+  - rbac.yaml
 configMapGenerator:
   - name: zfs-pool-scrubber-scripts
     files:
