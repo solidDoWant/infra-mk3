@@ -1,0 +1,14 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: postgres
+parameters:
+  poolname: ${LOCAL_ZFS_POOL_NAME}/openebs/postgres
+  fstype: zfs
+  # Match postgres page size:
+  # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#setting-recordsize-to-8k
+  recordsize: 8k
+  compression: zstd
+  dedup: off
+provisioner: zfs.csi.openebs.io

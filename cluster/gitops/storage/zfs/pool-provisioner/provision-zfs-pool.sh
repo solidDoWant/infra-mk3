@@ -101,7 +101,14 @@ run_rootfs_cmd zpool create \
     -O "mountpoint=/var/mnt/${POOL_NAME}" \
     "${POOL_NAME}" \
     "${POOL_DRIVE_PATH[@]#${ROOTFS_PATH}}"
+
+# OpenEBS + database dataset provisioning
+# This cross-cutting logic isn't great, but I'm not sure where else to put it
 run_rootfs_cmd zfs create "${POOL_NAME}/openebs"
+run_rootfs_cmd zfs create "${POOL_NAME}/openebs/postgres"
+# Rely on postgres cache for actual data
+run_rootfs_cmd zfs set primarycache=metadata "${POOL_NAME}/openebs/postgres"
+
 label_node
 echo "Provisioning complete"
 run_rootfs_cmd zpool list
