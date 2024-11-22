@@ -36,7 +36,7 @@ spec:
     encoding: PKCS8
     rotationPolicy: Always
   issuerRef:
-    name: self-signed
+    name: root-ca
     kind: ClusterIssuer
     group: cert-manager.io
   secretName: istio-system-intermediary-ca
