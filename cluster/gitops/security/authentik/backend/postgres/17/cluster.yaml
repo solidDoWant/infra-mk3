@@ -1,8 +1,9 @@
 ---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/cluster_v1.json
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: authentik-postgres-17
+  name: &cluster_name authentik-postgres-17
 spec:
   instances: 2
   bootstrap:
@@ -55,3 +56,11 @@ spec:
     serverCASecret: authentik-postgres-17-serving-cert
     clientCASecret: postgres-auth-ca-cert
     replicationTLSSecret: postgres-streaming-replica-user
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: *cluster_name
+          cnpg.io/podRole: instance
+      whenUnsatisfiable: DoNotSchedule
