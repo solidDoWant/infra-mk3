@@ -54,8 +54,8 @@ spec:
   certificates:
     serverTLSSecret: authentik-postgres-17-serving-cert
     serverCASecret: authentik-postgres-17-serving-cert
-    clientCASecret: postgres-auth-ca-cert
-    replicationTLSSecret: postgres-streaming-replica-user
+    clientCASecret: authentik-postgres-auth-ca-cert
+    replicationTLSSecret: authentik-postgres-streaming-replica-user
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname

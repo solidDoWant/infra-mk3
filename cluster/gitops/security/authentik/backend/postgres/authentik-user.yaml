@@ -2,12 +2,12 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: authentik-postgres-streaming-replica-user
+  name: authentik-postgres-authentik-user
 spec:
-  secretName: authentik-postgres-streaming-replica-user
+  secretName: authentik-postgres-authentik-user
   usages:
     - client auth
-  commonName: streaming_replica
+  commonName: authentik
   duration: 1h
   secretTemplate:
     labels:
@@ -21,7 +21,7 @@ spec:
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: authentik-postgres-auth-ca-streaming-replica-user
+  name: authentik-postgres-auth-ca-authentik-user
 spec:
   selector:
     issuerRef:
@@ -34,7 +34,7 @@ spec:
   allowed:
     commonName:
       required: true
-      value: streaming_replica
+      value: authentik
     usages:
       - client auth
   constraints:

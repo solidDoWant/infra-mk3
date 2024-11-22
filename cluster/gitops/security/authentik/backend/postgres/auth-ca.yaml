@@ -5,7 +5,7 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: postgres-auth-ca
+  name: authentik-postgres-auth-ca
 spec:
   isCA: true
   commonName: Authentik Postgres authentication Certificate Authority
@@ -35,14 +35,14 @@ spec:
     name: self-signed
     kind: ClusterIssuer
     group: cert-manager.io
-  secretName: postgres-auth-ca
+  secretName: authentik-postgres-auth-ca
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: postgres-auth-ca
+  name: authentik-postgres-auth-ca
 spec:
   ca:
-    secretName: postgres-auth-ca
+    secretName: authentik-postgres-auth-ca
     # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name

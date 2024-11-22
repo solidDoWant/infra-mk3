@@ -3,32 +3,32 @@
 apiVersion: kyverno.io/v1
 kind: Policy
 metadata:
-  name: extract-auth-ca-certificate
+  name: extract-postgres-auth-ca-certificate
 spec:
   rules:
     - # Trigger on change of any of these resources
-      name: extract-auth-ca-certificate
+      name: extract-postgres-auth-ca-certificate
       match:
         any:
           - resources:
               kinds:
                 - Secret
-              name: postgres-auth-ca
+              name: authentik-postgres-auth-ca
       skipBackgroundRequests: true
       context:
         - name: postgresAuthCa
           apiCall:
             method: GET
-            urlPath: /api/v1/namespaces/security/secrets/postgres-auth-ca
+            urlPath: /api/v1/namespaces/security/secrets/authentik-postgres-auth-ca
             jmesPath: data."ca.crt"
       # TODO add Teleport root CA
-      # Create a new "secret" with only the CA certificate
+      # Create a new "secret" with only the CA certificates
       generate:
         generateExisting: true
         synchronize: true
         apiVersion: v1
         kind: Secret
-        name: postgres-auth-ca-cert
+        name: authentik-postgres-auth-ca-cert
         namespace: security
         data:
           metadata:
