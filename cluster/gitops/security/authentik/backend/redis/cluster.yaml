@@ -6,13 +6,12 @@ metadata:
   name: authentik-dragonfly
 spec:
   replicas: 2
-  image: ghcr.io/soliddowant/dragonfly:v1.24.0-hc.fix.1
+  # image: ghcr.io/soliddowant/dragonfly:v1.24.0-hc.fix.1
   args:
     - --proactor_threads=2 # Dragonfly requires 256MB of RAM per core
-    - --no_tls_on_admin_port=false
   authentication:
     clientCaCertSecret:
-      key: ca.crt
+      key: client-ca.crt
       name: authentik-dragonfly-auth-ca-cert
   tlsSecretRef:
     name: authentik-dragonfly-serving-cert
