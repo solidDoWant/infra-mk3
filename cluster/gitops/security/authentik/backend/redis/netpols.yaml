@@ -1,0 +1,36 @@
+---
+# TODO allow metrics to connect to this port
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: authentik-dragonfly-admin-port
+spec:
+  podSelector:
+    matchLabels:
+      app: authentik-dragonfly
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: authentik-dragonfly
+      ports:
+        - protocol: TCP
+          port: 9999
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: dragonfly-operator
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: data
+      ports:
+        - protocol: TCP
+          port: 9999
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: authentik-dragonfly
+      ports:
+        - protocol: TCP
+          port: 9999

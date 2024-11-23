@@ -1,0 +1,14 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: authentik-dragonfly
+spec:
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - authentik-dragonfly
+  endpoints:
+    - port: admin
