@@ -36,5 +36,5 @@ spec:
               cnpg.io/reload: "true"
           type: Opaque
           stringData:
-            client-ca.crt: |-
+            ca.crt: |-
               {{ dragonflyAuthCa | base64_decode(@) }}
