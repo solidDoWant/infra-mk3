@@ -106,7 +106,7 @@ spec:
         - secretRef:
             name: authentik-media
         - secretRef:
-            name: env-values
+            name: authentik-env-values
       volumes:
         - name: root-ca-cert
           secret:
