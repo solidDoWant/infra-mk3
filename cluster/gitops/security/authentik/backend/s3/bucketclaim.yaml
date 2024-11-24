@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/objectbucket.io/objectbucketclaim_v1alpha1.json
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: authentik-media
+spec:
+  generateBucketName: authentik-media
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    maxObjects: 1000
+    maxSize: 10G
