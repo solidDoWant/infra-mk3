@@ -125,7 +125,6 @@ spec:
     cephFileSystems: []
     cephObjectStores:
       - name: ssd-replicated
-        # see https://github.com/rook/rook/blob/master/Documentation/CRDs/Object-Storage/ceph-object-store-crd.md#object-store-settings for available configuration
         spec:
           metadataPool:
             failureDomain: chassis
@@ -139,7 +138,8 @@ spec:
           allowUsersInNamespaces:
             - "*"
           gateway:
-            port: 8080
+            port: 80
+            # Required until https://github.com/rook/rook/issues/15048 is fixed
             securePort: 443
             sslCertificateRef: s3-public-domain-name-cert
             resources:
