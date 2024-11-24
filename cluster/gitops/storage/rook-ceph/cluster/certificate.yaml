@@ -27,3 +27,41 @@ spec:
     kind: ClusterIssuer
     group: cert-manager.io
   secretName: s3-public-domain-name-cert
+---
+# Approve the the s3-public-domain-name-cert certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: letsencrypt-production-s3-public-domain-name-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: letsencrypt-production
+    namespace:
+      matchNames:
+        - storage
+  allowed:
+    commonName:
+      required: true
+      value: s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    dnsNames:
+      required: true
+      values:
+        - s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
