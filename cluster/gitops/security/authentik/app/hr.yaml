@@ -102,11 +102,11 @@ spec:
           value: "true"
       envFrom:
         - configMapRef:
-          name: authentik-media
+            name: authentik-media
         - secretRef:
-          name: authentik-media
+            name: authentik-media
         - secretRef:
-          name: env-values
+            name: env-values
       volumes:
         - name: root-ca-cert
           secret:
