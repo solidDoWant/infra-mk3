@@ -21,26 +21,25 @@ spec:
     - name: prometheus-crds
     - name: security-namespace-issuer
     - name: kyverno-app
-# ---
-# # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
-# apiVersion: kustomize.toolkit.fluxcd.io/v1
-# kind: Kustomization
-# metadata:
-#   namespace: flux-system
-#   name: &app_name authentik-app
-# spec:
-#   targetNamespace: security
-#   commonMetadata:
-#     labels:
-#       app.kubernetes.io/name: *app_name
-#   interval: 5m
-#   path: /cluster/gitops/security/authentik/app
-#   prune: true
-#   sourceRef:
-#     kind: GitRepository
-#     name: infra-mk3
-#   wait: true
-#   dependsOn:
-#     - name: authentik-app
-#   #   - name: prometheus-crds
-#   #   - name: volume-snapshot-crds
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name authentik-app
+spec:
+  targetNamespace: security
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/security/authentik/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: authentik-backend
+    - name: rook-ceph-cluster
