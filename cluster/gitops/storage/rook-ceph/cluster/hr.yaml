@@ -141,14 +141,13 @@ spec:
           gateway:
             port: 8080
             securePort: 443
+            sslCertificateRef: s3-public-domain-name-cert
             resources:
               limits:
                 memory: 1Gi
               requests:
                 cpu: 1000m
                 memory: 1Gi
-            # securePort: 443 # TODO
-            # sslCertificateRef:
             instances: 2
             placement:
               topologySpreadConstraints:

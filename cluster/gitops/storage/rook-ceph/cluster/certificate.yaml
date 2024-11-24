@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: s3-public-domain-name-cert
+spec:
+  commonName: s3.${SECRET_PUBLIC_DOMAIN_NAME}
+  dnsNames:
+    - s3.${SECRET_PUBLIC_DOMAIN_NAME}
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  privateKey:
+    algorithm: RSA # Browsers are having trouble with ECDSA
+    size: 2048
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: letsencrypt-production
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: s3-public-domain-name-cert
