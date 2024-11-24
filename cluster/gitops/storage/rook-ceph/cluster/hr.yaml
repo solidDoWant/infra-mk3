@@ -147,9 +147,17 @@ spec:
             # securePort: 443 # TODO
             # sslCertificateRef:
             instances: 2
-            # placement:
-            # TODO
-            # topologySpreadConstraints:
+            placement:
+              topologySpreadConstraints:
+                - maxSkew: 1
+                  topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      # cspell:words cephobjectstores
+                      app.kubernetes.io/component: cephobjectstores.ceph.rook.io
+                      app.kubernetes.io/name: ceph-rgw
+                      app.kubernetes.io/instance: ssd-replicated
+                  whenUnsatisfiable: DoNotSchedule
             priorityClassName: system-cluster-critical
           hosting:
             advertiseEndpoint:
