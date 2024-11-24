@@ -154,8 +154,10 @@ spec:
           hosting:
             advertiseEndpoint:
               dnsName: s3.${SECRET_PUBLIC_DOMAIN_NAME}
+              port: 443
+              useTls: true
             dnsNames:
-              - dnsName: s3.${SECRET_PUBLIC_DOMAIN_NAME}
+              - s3.${SECRET_PUBLIC_DOMAIN_NAME}
         storageClass:
           enabled: true
           name: ceph-bucket
