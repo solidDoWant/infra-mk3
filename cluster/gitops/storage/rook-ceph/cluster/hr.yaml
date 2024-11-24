@@ -170,22 +170,9 @@ spec:
               - s3.${SECRET_PUBLIC_DOMAIN_NAME}
         storageClass:
           enabled: true
-          name: ceph-bucket
+          name: ssd-replicated-object
           reclaimPolicy: Delete
-          volumeBindingMode: WaitForFirstConsumer
-        # TODO httproute
-        # ingress:
-        # Enable an ingress for the ceph-objectstore
-        # enabled: false
-        # annotations: {}
-        # host:
-        #   name: objectstore.example.com
-        #   path: /
-        # tls:
-        # - hosts:
-        #     - objectstore.example.com
-        #   secretName: ceph-objectstore-tls
-        # ingressClassName: nginx
+          volumeBindingMode: Immediate
     cephBlockPoolsVolumeSnapshotClass:
       enabled: true
       name: ssd-replicated-3x-block
