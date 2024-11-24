@@ -18,53 +18,88 @@ spec:
       env:
         # Postgres
         ## RW endpoint
-        AUTHENTIK_POSTGRESQL__HOST: authentik-postgres-17-rw.security.svc.cluster.local.
-        AUTHENTIK_POSTGRESQL__NAME: authentik
-        AUTHENTIK_POSTGRESQL__USER: authentik
-        AUTHENTIK_POSTGRESQL__PORT: "5432"
-        AUTHENTIK_POSTGRESQL__SSLMODE: verify-full
-        AUTHENTIK_POSTGRESQL__SSLROOTCERT: /etc/authentic/secrets/root-ca-cert/ca.crt
-        AUTHENTIK_POSTGRESQL__SSLCERT: /etc/authentic/secrets/postgres-authentik-user/tls.crt
-        AUTHENTIK_POSTGRESQL__SSLKEY: /etc/authentic/secrets/postgres-authentik-user/tls.key
+        - name: AUTHENTIK_POSTGRESQL__HOST
+          value: authentik-postgres-17-rw.security.svc.cluster.local.
+        - name: AUTHENTIK_POSTGRESQL__NAME
+          value: authentik
+        - name: AUTHENTIK_POSTGRESQL__USER
+          value: authentik
+        - name: AUTHENTIK_POSTGRESQL__PORT
+          value: "5432"
+        - name: AUTHENTIK_POSTGRESQL__SSLMODE
+          value: verify-full
+        - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
+          value: /etc/authentic/secrets/root-ca-cert/ca.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLCERT
+          value: /etc/authentic/secrets/postgres-authentik-user/tls.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLKEY
+          value: /etc/authentic/secrets/postgres-authentik-user/tls.key
         ## RO endpoint
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: authentik-postgres-17-ro.security.svc.cluster.local.
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: authentik
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: authentik
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT: "5432"
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLMODE: verify-full
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLROOTCERT: /etc/authentic/secrets/root-ca-cert/ca.crt
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLCERT: /etc/authentic/secrets/postgres-authentik-user/tls.crt
-        AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLKEY: /etc/authentic/secrets/postgres-authentik-user/tls.key
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST
+          value: authentik-postgres-17-ro.security.svc.cluster.local.
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME
+          value: authentik
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER
+          value: authentik
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT
+          value: "5432"
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLMODE
+          value: verify-full
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLROOTCERT
+          value: /etc/authentic/secrets/root-ca-cert/ca.crt
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLCERT
+          value: /etc/authentic/secrets/postgres-authentik-user/tls.crt
+        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLKEY
+          value: /etc/authentic/secrets/postgres-authentik-user/tls.key
         # Redis
-        AUTHENTIK_REDIS__HOST: authentik-dragonfly.security.svc.cluster.local.
-        AUTHENTIK_REDIS__PORT: "6379"
-        AUTHENTIK_REDIS__TLS: "true"
-        AUTHENTIK_REDIS__TLS_REQS: "required"
+        - name: AUTHENTIK_REDIS__HOST
+          value: authentik-dragonfly.security.svc.cluster.local.
+        - name: AUTHENTIK_REDIS__PORT
+          value: "6379"
+        - name: AUTHENTIK_REDIS__TLS
+          value: "true"
+        - name: AUTHENTIK_REDIS__TLS_REQS
+          value: "required"
         # Workaround to provide client auth certs, see https://github.com/goauthentik/authentik/issues/12041
-        AUTHENTIK_REDIS__TLS_CA_CERT: "
-          /etc/authentic/secrets/root-ca-cert/ca.crt&\
-          ssl_certfile=/etc/authentic/secrets/dragonfly-authentik-user/tls.crt&\
-          ssl_keyfile=/etc/authentic/secrets/dragonfly-authentik-user/tls.key\
-          "
+        - name: AUTHENTIK_REDIS__TLS_CA_CERT
+          value: "
+            /etc/authentic/secrets/root-ca-cert/ca.crt&\
+            ssl_certfile=/etc/authentic/secrets/dragonfly-authentik-user/tls.crt&\
+            ssl_keyfile=/etc/authentic/secrets/dragonfly-authentik-user/tls.key\
+            "
         # Use the right source IP
         # TODO netpol to limit traffic to gateway pods
-        AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS: 10.32.0.0/16
+        - name: AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS
+          value: 10.32.0.0/16
         # Media file storage
-        AUTHENTIK_STORAGE__MEDIA__BACKEND: s3
-        AUTHENTIK_STORAGE__MEDIA__S3__USE_SSL: "true"
-        AUTHENTIK_STORAGE__MEDIA__S3__SECURE_URLS: "true"
-        AUTHENTIK_STORAGE__MEDIA__S3__ENDPOINT: https://$(BUCKET_HOST).
-        AUTHENTIK_STORAGE__MEDIA__S3__ACCESS_KEY: $(AWS_ACCESS_KEY_ID)
-        AUTHENTIK_STORAGE__MEDIA__S3__SECRET_KEY: $(AWS_SECRET_ACCESS_KEY)
-        AUTHENTIK_STORAGE__MEDIA__S3__BUCKET_NAME: $(BUCKET_NAME)
-        AUTHENTIK_STORAGE__MEDIA__S3__CUSTOM_DOMAIN: $(BUCKET_HOST).:$(BUCKET_PORT)/$(BUCKET_NAME)
+        - name: AUTHENTIK_STORAGE__MEDIA__BACKEND
+          value: s3
+        - name: AUTHENTIK_STORAGE__MEDIA__S3__USE_SSL
+          value: "true"
+        - name: AUTHENTIK_STORAGE__MEDIA__S3__SECURE_URLS
+          value: "true"
+        - name: AUTHENTIK_STORAGE__MEDIA__S3__ENDPOINT
+          value: https://$(BUCKET_HOST).
+        - name: AUTHENTIK_STORAGE__MEDIA__S3__ACCESS_KEY
+          value: $(AWS_ACCESS_KEY_ID)
+        - name: AUTHENTIK_STORAGE__MEDIA__S3__SECRET_KEY
+          value: $(AWS_SECRET_ACCESS_KEY)
+        - name: AUTHENTIK_STORAGE__MEDIA__S3__BUCKET_NAME
+          value: $(BUCKET_NAME)
+        - name: AUTHENTIK_STORAGE__MEDIA__S3__CUSTOM_DOMAIN
+          value: $(BUCKET_HOST).:$(BUCKET_PORT)/$(BUCKET_NAME)
         # Email
-        AUTHENTIK_EMAIL__HOST: docker-postfix-mail.email.svc.cluster.local.
-        AUTHENTIK_EMAIL__PORT: "587"
-        AUTHENTIK_EMAIL__USE_TLS: "true"
-        AUTHENTIK_EMAIL__FROM: Authentik <no-reply-authentik@${SECRET_PUBLIC_DOMAIN_NAME}>
+        - name: AUTHENTIK_EMAIL__HOST
+          value: docker-postfix-mail.email.svc.cluster.local.
+        - name: AUTHENTIK_EMAIL__PORT
+          value: "587"
+        - name: AUTHENTIK_EMAIL__USE_TLS
+          value: "true"
+        - name: AUTHENTIK_EMAIL__FROM
+          value: Authentik <no-reply-authentik@${SECRET_PUBLIC_DOMAIN_NAME}>
         # Authentik
-        AUTHENTIK_DISABLE_UPDATE_CHECK: "true"
+        - name: AUTHENTIK_DISABLE_UPDATE_CHECK
+          value: "true"
       envFrom:
         - configMapRef:
           name: authentik-media
