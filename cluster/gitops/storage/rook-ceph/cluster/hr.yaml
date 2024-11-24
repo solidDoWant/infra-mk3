@@ -121,7 +121,59 @@ spec:
             csi.storage.k8s.io/node-stage-secret-namespace: *secret_namespace
             csi.storage.k8s.io/fstype: ext4
     cephFileSystems: []
-    cephObjectStores: []
+    cephObjectStores:
+      - name: ssd-replicated
+        # see https://github.com/rook/rook/blob/master/Documentation/CRDs/Object-Storage/ceph-object-store-crd.md#object-store-settings for available configuration
+        spec:
+          metadataPool:
+            failureDomain: chassis
+            replicated:
+              size: 3
+          dataPool:
+            failureDomain: chassis
+            erasureCoded:
+              dataChunks: 2
+              codingChunks: 1
+          allowUsersInNamespaces:
+            - "*"
+          gateway:
+            port: 80
+            resources:
+              limits:
+                memory: 1Gi
+              requests:
+                cpu: 1000m
+                memory: 1Gi
+            # securePort: 443 # TODO
+            # sslCertificateRef:
+            instances: 2
+            # placement:
+            # TODO
+            # topologySpreadConstraints:
+            priorityClassName: system-cluster-critical
+          hosting:
+            advertiseEndpoint:
+              dnsName: s3.${SECRET_PUBLIC_DOMAIN_NAME}
+            dnsNames:
+              - dnsName: s3.${SECRET_PUBLIC_DOMAIN_NAME}
+        storageClass:
+          enabled: true
+          name: ceph-bucket
+          reclaimPolicy: Delete
+          volumeBindingMode: WaitForFirstConsumer
+        # TODO httproute
+        # ingress:
+        # Enable an ingress for the ceph-objectstore
+        # enabled: false
+        # annotations: {}
+        # host:
+        #   name: objectstore.example.com
+        #   path: /
+        # tls:
+        # - hosts:
+        #     - objectstore.example.com
+        #   secretName: ceph-objectstore-tls
+        # ingressClassName: nginx
     cephBlockPoolsVolumeSnapshotClass:
       enabled: true
       name: ssd-replicated-3x-block
