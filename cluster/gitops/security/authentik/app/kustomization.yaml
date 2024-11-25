@@ -6,6 +6,7 @@ resources:
   - ./geoip-credentials.sops.yaml
   - ./hr.yaml
   - ./httproute.yaml
+  - ./k8s-sidecar-rbac.yaml
 configMapGenerator:
   - name: authentik-python-user-settings
     files:
