@@ -7,8 +7,8 @@ metadata:
 spec:
   commonName: Authentik Dragonfly
   dnsNames:
-    - authentik-postgres-17-rw.security.svc
-    - authentik-postgres-17-rw.security.svc.cluster.local
+    - authentik-dragonfly.security.svc
+    - authentik-dragonfly.security.svc.cluster.local
   subject:
     countries:
       - US
@@ -51,8 +51,8 @@ spec:
     dnsNames:
       required: true
       values:
-        - authentik-postgres-17-rw.security.svc
-        - authentik-postgres-17-rw.security.svc.cluster.local
+        - authentik-dragonfly.security.svc
+        - authentik-dragonfly.security.svc.cluster.local
     subject:
       countries:
         required: true
