@@ -190,6 +190,26 @@ spec:
               app.kubernetes.io/instance: *app_name
               app.kubernetes.io/component: worker
           whenUnsatisfiable: DoNotSchedule
+      extraContainers:
+        - name: k8s-sidecar
+          image: ghcr.io/kiwigrid/k8s-sidecar:1.28.0
+          env:
+            - name: LABEL
+              value: k8s-sidecar.home.arpa/application
+            - name: LABEL_VALUE
+              value: authentik
+            - name: FOLDER
+              value: /blueprints
+            - name: NAMESPACE
+              value: ALL
+            - name: RESOURCE
+              value: both
+            - name: METHOD
+              value: LIST
+            - name: UNIQUE_FILENAMES
+              value: "true"
+            - name: DEFAULT_FILE_MODE
+              value: "440"
     geoip:
       enabled: false
       existingSecret:
