@@ -19,7 +19,7 @@ spec:
         # Postgres
         ## RW endpoint
         - name: AUTHENTIK_POSTGRESQL__HOST
-          value: authentik-postgres-17-rw.security.svc.cluster.local.
+          value: authentik-postgres-17-rw.security.svc.cluster.local
         - name: AUTHENTIK_POSTGRESQL__NAME
           value: authentik
         - name: AUTHENTIK_POSTGRESQL__USER
@@ -36,7 +36,7 @@ spec:
           value: /etc/authentic/secrets/postgres-authentik-user/tls.key
         ## RO endpoint
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST
-          value: authentik-postgres-17-ro.security.svc.cluster.local.
+          value: authentik-postgres-17-ro.security.svc.cluster.local
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME
           value: authentik
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER
@@ -53,7 +53,7 @@ spec:
           value: /etc/authentic/secrets/postgres-authentik-user/tls.key
         # Redis
         - name: AUTHENTIK_REDIS__HOST
-          value: authentik-dragonfly.security.svc.cluster.local.
+          value: authentik-dragonfly.security.svc.cluster.local
         - name: AUTHENTIK_REDIS__PORT
           value: "6379"
         - name: AUTHENTIK_REDIS__TLS
@@ -90,7 +90,7 @@ spec:
           value: $(BUCKET_HOST).:$(BUCKET_PORT)/$(BUCKET_NAME)
         # Email
         - name: AUTHENTIK_EMAIL__HOST
-          value: docker-postfix-mail.email.svc.cluster.local.
+          value: docker-postfix-mail.email.svc.cluster.local
         - name: AUTHENTIK_EMAIL__PORT
           value: "587"
         - name: AUTHENTIK_EMAIL__USE_TLS
