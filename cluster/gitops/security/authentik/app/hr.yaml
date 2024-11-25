@@ -166,6 +166,7 @@ spec:
       replicas: 2
       pdb:
         enabled: true
+        minAvailable: 1
       topologySpreadConstraints:
         - maxSkew: 1 # Skew of 1 allows for rolling updates
           topologyKey: kubernetes.io/hostname
@@ -182,6 +183,7 @@ spec:
       replicas: 2
       pdb:
         enabled: true
+        minAvailable: 1
       topologySpreadConstraints:
         - maxSkew: 1 # Skew of 1 allows for rolling updates
           topologyKey: kubernetes.io/hostname
