@@ -1,4 +1,5 @@
-from authentik.lib.CONFIG import __CONFIG
+from authentik.lib.config import CONFIG as __CONFIG
+import json
 
 
 DATABASES = {
@@ -12,8 +13,8 @@ DATABASES = {
         # Diff: Move these under `OPTIONS` key where they belong
         "OPTIONS": {
             "sslmode": __CONFIG.get("postgresql.sslmode"),
-            "sslcert": __CONFIG.get("postgresql.sslrootcert"),
-            "sslrootcert": __CONFIG.get("postgresql.sslcert"),
+            "sslrootcert": __CONFIG.get("postgresql.sslrootcert"),
+            "sslcert": __CONFIG.get("postgresql.sslcert"),
             "sslkey": __CONFIG.get("postgresql.sslkey"),
         },
         "TEST": {
@@ -43,3 +44,6 @@ for replica in __CONFIG.get_keys("postgresql.read_replicas"):
         if override is not default:
             _database[setting] = override
     DATABASES[f"replica_{replica}"] = _database
+
+print("Successfully loaded config:")
+print(json.dumps(DATABASES, indent=4))
