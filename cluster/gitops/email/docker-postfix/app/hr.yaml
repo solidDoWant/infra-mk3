@@ -14,6 +14,9 @@ spec:
       version: v4.3.0
   values:
     replicaCount: 2
+    service:
+      # Chart defaults to 587, but doesn't use TLS
+      port: 25
     metrics:
       enabled: true
       serviceMonitor:

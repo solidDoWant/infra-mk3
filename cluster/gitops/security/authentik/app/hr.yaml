@@ -105,9 +105,9 @@ spec:
         - name: AUTHENTIK_EMAIL__HOST
           value: docker-postfix-mail.email.svc.cluster.local
         - name: AUTHENTIK_EMAIL__PORT
-          value: "587"
+          value: "25"
         - name: AUTHENTIK_EMAIL__USE_TLS
-          value: "true"
+          value: "false"
         - name: AUTHENTIK_EMAIL__FROM
           value: Authentik <no-reply-authentik@${SECRET_PUBLIC_DOMAIN_NAME}>
         # Authentik
