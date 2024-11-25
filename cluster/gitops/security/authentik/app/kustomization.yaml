@@ -1,0 +1,13 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./env-values.sops.yaml
+  - ./geoip-credentials.sops.yaml
+  - ./hr.yaml
+configMapGenerator:
+  - name: authentik-python-user-settings
+    files:
+      - user_settings.py
+configurations:
+  - ./vol-mount-from-cm-transformer.yaml
