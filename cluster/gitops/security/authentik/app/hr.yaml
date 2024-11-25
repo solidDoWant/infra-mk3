@@ -29,11 +29,11 @@ spec:
         - name: AUTHENTIK_POSTGRESQL__SSLMODE
           value: verify-full
         - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
-          value: /etc/authentic/secrets/root-ca-cert/ca.crt
+          value: /etc/authentik/secrets/root-ca-cert/ca.crt
         - name: AUTHENTIK_POSTGRESQL__SSLCERT
-          value: /etc/authentic/secrets/postgres-authentik-user/tls.crt
+          value: /etc/authentik/secrets/postgres-authentik-user/tls.crt
         - name: AUTHENTIK_POSTGRESQL__SSLKEY
-          value: /etc/authentic/secrets/postgres-authentik-user/tls.key
+          value: /etc/authentik/secrets/postgres-authentik-user/tls.key
         ## RO endpoint
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST
           value: authentik-postgres-17-ro.security.svc.cluster.local
@@ -46,11 +46,11 @@ spec:
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLMODE
           value: verify-full
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLROOTCERT
-          value: /etc/authentic/secrets/root-ca-cert/ca.crt
+          value: /etc/authentik/secrets/root-ca-cert/ca.crt
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLCERT
-          value: /etc/authentic/secrets/postgres-authentik-user/tls.crt
+          value: /etc/authentik/secrets/postgres-authentik-user/tls.crt
         - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLKEY
-          value: /etc/authentic/secrets/postgres-authentik-user/tls.key
+          value: /etc/authentik/secrets/postgres-authentik-user/tls.key
         # Redis
         - name: AUTHENTIK_REDIS__HOST
           value: authentik-dragonfly.security.svc.cluster.local
@@ -63,9 +63,9 @@ spec:
         # Workaround to provide client auth certs, see https://github.com/goauthentik/authentik/issues/12041
         - name: AUTHENTIK_REDIS__TLS_CA_CERT
           value: "
-            /etc/authentic/secrets/root-ca-cert/ca.crt&\
-            ssl_certfile=/etc/authentic/secrets/dragonfly-authentik-user/tls.crt&\
-            ssl_keyfile=/etc/authentic/secrets/dragonfly-authentik-user/tls.key\
+            /etc/authentik/secrets/root-ca-cert/ca.crt&\
+            ssl_certfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.crt&\
+            ssl_keyfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.key\
             "
         # Use the right source IP
         # TODO netpol to limit traffic to gateway pods
@@ -135,11 +135,11 @@ spec:
                 path: tls.key
       volumeMounts:
         - name: root-ca-cert
-          mountPath: /etc/authentic/secrets/root-ca-cert
+          mountPath: /etc/authentik/secrets/root-ca-cert
         - name: postgres-authentik-user
-          mountPath: /etc/authentic/secrets/postgres-authentik-user
+          mountPath: /etc/authentik/secrets/postgres-authentik-user
         - name: dragonfly-authentik-user
-          mountPath: /etc/authentic/secrets/dragonfly-authentik-user
+          mountPath: /etc/authentik/secrets/dragonfly-authentik-user
       securityContext:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
