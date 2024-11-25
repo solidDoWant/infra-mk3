@@ -1,5 +1,5 @@
 ---
-# cspell:words SSLMODE SSLROOTCERT SSLCERT SSLKEY REQS certfile
+# cspell:words SSLMODE SSLROOTCERT SSLCERT SSLKEY REQS certfile rediss
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -56,17 +56,30 @@ spec:
           value: authentik-dragonfly.security.svc.cluster.local
         - name: AUTHENTIK_REDIS__PORT
           value: "6379"
+        - name: AUTHENTIK_REDIS__DB
+          value: "0"
         - name: AUTHENTIK_REDIS__TLS
           value: "true"
         - name: AUTHENTIK_REDIS__TLS_REQS
           value: "required"
         # Workaround to provide client auth certs, see https://github.com/goauthentik/authentik/issues/12041
         - name: AUTHENTIK_REDIS__TLS_CA_CERT
-          value: "\
-            /etc/authentik/secrets/root-ca-cert/ca.crt&\
+          value: /etc/authentik/secrets/root-ca-cert/ca.crt
+        - name: AUTHENTIK_RESULT_BACKEND__URL
+          value: &redis_connection_url "\
+            rediss://\
+            $(AUTHENTIK_REDIS__HOST):$(AUTHENTIK_REDIS__PORT)/$(AUTHENTIK_REDIS__DB)&\
+            ssl_keyfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.key&\
             ssl_certfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.crt&\
-            ssl_keyfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.key\
+            ssl_cert_reqs=$(AUTHENTIK_REDIS__TLS_REQS)&\
+            ssl_ca_certs=$(AUTHENTIK_REDIS__TLS_CA_CERT)\
             "
+        - name: AUTHENTIK_CACHE__URL
+          value: *redis_connection_url
+        - name: AUTHENTIK_CHANNEL__URL
+          value: *redis_connection_url
+        - name: AUTHENTIK_BROKER__URL
+          value: *redis_connection_url
         # Use the right source IP
         # TODO netpol to limit traffic to gateway pods
         - name: AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS
