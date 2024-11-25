@@ -111,14 +111,14 @@ spec:
         - name: root-ca-cert
           secret:
             secretName: security-intermediary-ca
-            defaultMode: 0400
+            defaultMode: 0440
             items:
               - key: ca.crt
                 path: ca.crt
         - name: postgres-authentik-user
           secret:
             secretName: authentik-postgres-authentik-user
-            defaultMode: 0400
+            defaultMode: 0440
             items:
               - key: tls.crt
                 path: tls.crt
@@ -127,7 +127,7 @@ spec:
         - name: dragonfly-authentik-user
           secret:
             secretName: authentik-dragonfly-authentik-user
-            defaultMode: 0400
+            defaultMode: 0440
             items:
               - key: tls.crt
                 path: tls.crt
@@ -140,6 +140,9 @@ spec:
           mountPath: /etc/authentic/secrets/postgres-authentik-user
         - name: dragonfly-authentik-user
           mountPath: /etc/authentic/secrets/dragonfly-authentik-user
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
     # authentik:
     #   secret_key:
     # email:
