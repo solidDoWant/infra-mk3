@@ -68,7 +68,7 @@ spec:
         - name: AUTHENTIK_RESULT_BACKEND__URL
           value: &redis_connection_url "\
             rediss://\
-            $(AUTHENTIK_REDIS__HOST):$(AUTHENTIK_REDIS__PORT)/$(AUTHENTIK_REDIS__DB)&\
+            $(AUTHENTIK_REDIS__HOST):$(AUTHENTIK_REDIS__PORT)/$(AUTHENTIK_REDIS__DB)?\
             ssl_keyfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.key&\
             ssl_certfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.crt&\
             ssl_cert_reqs=$(AUTHENTIK_REDIS__TLS_REQS)&\
@@ -92,7 +92,7 @@ spec:
         - name: AUTHENTIK_STORAGE__MEDIA__S3__SECURE_URLS
           value: "true"
         - name: AUTHENTIK_STORAGE__MEDIA__S3__ENDPOINT
-          value: https://$(BUCKET_HOST).
+          value: https://$(BUCKET_HOST)
         - name: AUTHENTIK_STORAGE__MEDIA__S3__ACCESS_KEY
           value: $(AWS_ACCESS_KEY_ID)
         - name: AUTHENTIK_STORAGE__MEDIA__S3__SECRET_KEY
