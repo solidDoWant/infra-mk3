@@ -62,7 +62,7 @@ spec:
           value: "required"
         # Workaround to provide client auth certs, see https://github.com/goauthentik/authentik/issues/12041
         - name: AUTHENTIK_REDIS__TLS_CA_CERT
-          value: "
+          value: "\
             /etc/authentik/secrets/root-ca-cert/ca.crt&\
             ssl_certfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.crt&\
             ssl_keyfile=/etc/authentik/secrets/dragonfly-authentik-user/tls.key\
