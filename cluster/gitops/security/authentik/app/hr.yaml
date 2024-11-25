@@ -170,7 +170,7 @@ spec:
         enabled: true
       # topologySpreadConstraints:
     geoip:
-      enabled: true
+      enabled: false
       existingSecret:
         secretName: authentik-geoip-credentials
     prometheus:
