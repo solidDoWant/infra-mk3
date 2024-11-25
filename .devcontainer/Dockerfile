@@ -94,10 +94,17 @@ ENV PATH="${KREW_ROOT}/bin:${PATH}"
 ## Krew plugins
 RUN kubectl krew install kyverno cnpg sniff
 
+# diffoci
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     curl -fsSL -o /usr/local/bin/diffoci "https://github.com/reproducible-containers/diffoci/releases/download/v0.1.5/diffoci-v0.1.5.${KERNEL}-${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/diffoci
+
+# cmtool
+RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
+    curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
+    chmod +x /usr/local/bin/cmtool
 
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
@@ -126,4 +133,5 @@ RUN \
     flux completion bash | sudo tee /etc/bash_completion.d/flux.bash > /dev/null && \
     istioctl completion bash | sudo tee /etc/bash_completion.d/istioctl.bash > /dev/null && \
     diffoci completion bash | sudo tee /etc/bash_completion.d/diffoci.bash > /dev/null && \
-    docker completion bash | sudo tee /etc/bash_completion.d/docker.bash > /dev/null
+    docker completion bash | sudo tee /etc/bash_completion.d/docker.bash > /dev/null && \
+    cmtool completion bash | sudo tee /etc/bash_completion.d/cmtool.bash > /dev/null
