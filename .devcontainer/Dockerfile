@@ -86,13 +86,15 @@ RUN mkdir -pv /tmp/krew && \
     curl -fsSL -o /tmp/krew/krew.tar.gz "https://github.com/kubernetes-sigs/krew/releases/download/v0.4.4/krew-${KERNEL}_${PRETTY_ARCH}.tar.gz" && \
     tar -xzvf /tmp/krew/krew.tar.gz -C /tmp/krew "./${KREW_FILE_NAME}" && \
     "/tmp/krew/${KREW_FILE_NAME}" install krew && \
-    rm -rvf /tmp/krew && \
-    find /usr/local/krew -type d -exec chmod 777 {} \; && \
-    find /usr/local/krew -type f -exec chmod ugo+w {} \;
+    rm -rvf /tmp/krew
 ENV PATH="${KREW_ROOT}/bin:${PATH}"
 
 ## Krew plugins
 RUN kubectl krew install kyverno cnpg sniff
+
+## Krew ownership fix
+RUN find /usr/local/krew -type d -exec chmod 777 {} \; && \
+    find /usr/local/krew -type f -exec chmod ugo+w {} \;
 
 # diffoci
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
