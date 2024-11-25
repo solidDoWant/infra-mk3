@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 # Generally helpful tools
 RUN apt update && apt install --no-install-recommends -y \
     file sshpass minicom age whois yq iputils-ping p7zip \
-    xorriso parted dosfstools mtools dnsutils
+    xorriso parted dosfstools mtools dnsutils redis-tools
 
 # Install debs from sources that don't provide an apt repo
 RUN mkdir -pv /tmp/debs && \
@@ -92,7 +92,7 @@ RUN mkdir -pv /tmp/krew && \
 ENV PATH="${KREW_ROOT}/bin:${PATH}"
 
 ## Krew plugins
-RUN kubectl krew install kyverno cnpg
+RUN kubectl krew install kyverno cnpg sniff
 
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
