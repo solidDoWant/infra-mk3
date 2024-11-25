@@ -5,6 +5,7 @@ resources:
   - ./env-values.sops.yaml
   - ./geoip-credentials.sops.yaml
   - ./hr.yaml
+  - ./httproute.yaml
 configMapGenerator:
   - name: authentik-python-user-settings
     files:

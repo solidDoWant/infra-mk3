@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: &app_name authentik
+  labels:
+    app.kubernetes.io/part-of: authentik
+spec:
+  hostnames:
+    - authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+  parentRefs:
+    - name: internal-gateway
+      namespace: networking
+  rules:
+    - backendRefs:
+        - name: authentik-server
+          port: 80
