@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: authentik
+  name: &app_name authentik
 spec:
   interval: 5m
   chart:
@@ -162,32 +162,34 @@ spec:
       securityContext:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
-    # authentik:
-    #   secret_key:
-    # email:
-    #   host:
-    #   use_tls: true
-    #   from: no-reply-authentik@${SECRET_PUBLIC_DOMAIN_NAME}
-    # postgresql:
-    #   host:
-    # redis:
-    #   host:
     server:
       replicas: 2
       pdb:
         enabled: true
-      # env:
-      # topologySpreadConstraints:
+      topologySpreadConstraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: *app_name
+              app.kubernetes.io/component: server
+          whenUnsatisfiable: DoNotSchedule
       metrics:
         enabled: true
         serviceMonitor:
           enabled: true
-      # ingress:  # TODO httproute
     worker:
       replicas: 2
       pdb:
         enabled: true
-      # topologySpreadConstraints:
+      topologySpreadConstraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: *app_name
+              app.kubernetes.io/component: worker
+          whenUnsatisfiable: DoNotSchedule
     geoip:
       enabled: false
       existingSecret:
