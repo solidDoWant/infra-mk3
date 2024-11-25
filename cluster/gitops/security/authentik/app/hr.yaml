@@ -192,6 +192,12 @@ spec:
               app.kubernetes.io/instance: *app_name
               app.kubernetes.io/component: worker
           whenUnsatisfiable: DoNotSchedule
+      volumes:
+        - name: sidecar-blueprints
+          emptyDir: {}
+      volumeMounts: &blueprints_mount
+        - name: sidecar-blueprints
+          mountPath: &sidecar_blueprints_dir /blueprints/k8s-sidecar
       extraContainers:
         - name: k8s-sidecar
           image: ghcr.io/kiwigrid/k8s-sidecar:1.28.0
@@ -201,7 +207,7 @@ spec:
             - name: LABEL_VALUE
               value: authentik
             - name: FOLDER
-              value: /blueprints
+              value: *sidecar_blueprints_dir
             - name: NAMESPACE
               value: ALL
             - name: RESOURCE
@@ -212,6 +218,7 @@ spec:
               value: "true"
             - name: DEFAULT_FILE_MODE
               value: "440"
+          volumeMounts: *blueprints_mount
     geoip:
       enabled: false
       existingSecret:
