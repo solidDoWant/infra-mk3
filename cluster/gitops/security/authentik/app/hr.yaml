@@ -37,6 +37,8 @@ spec:
         ## RO endpoint
         # Disable read replica configuration. This seems to cause a bug with !KeyOf
         # YAML tags, which causes blueprints to valid to install.
+        # For details, see https://github.com/goauthentik/authentik/issues/12186 and
+        # https://discord.com/channels/673534664354430999/1152393369687965736/1311410413090373694
         # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST
         #   value: authentik-postgres-17-ro.security.svc.cluster.local
         # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME
@@ -228,3 +230,16 @@ spec:
     prometheus:
       rules:
         enabled: true
+  postRenderers:
+    # Allow pods to be evicted when unhealthy
+    # This occurs during postgres failover, which and is required for node draining
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/unhealthyPodEvictionPolicy
+                value: AlwaysAllow
+            target:
+              group: policy
+              version: v1
+              kind: PodDisruptionBudget
