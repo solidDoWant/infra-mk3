@@ -1,42 +1,4 @@
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: authentik-postgres-17-serving-cert
-spec:
-  commonName: Authentik Postgres 17
-  dnsNames:
-    - authentik-postgres-17-rw.security.svc
-    - authentik-postgres-17-ro.security.svc
-    - authentik-postgres-17-r.security.svc
-    - authentik-postgres-17-rw.security.svc.cluster.local
-    - authentik-postgres-17-ro.security.svc.cluster.local
-    - authentik-postgres-17-r.security.svc.cluster.local
-  subject:
-    countries:
-      - US
-    provinces:
-      - ${SECRET_STATE}
-    organizations:
-      - infra-mk3
-  usages:
-    - server auth
-  duration: 720h # One month
-  privateKey:
-    algorithm: Ed25519
-    encoding: PKCS8
-    rotationPolicy: Always
-  secretTemplate:
-    labels:
-      cnpg.io/reload: "true"
-  issuerRef:
-    name: security-intermediary-ca
-    kind: Issuer
-    group: cert-manager.io
-
-  secretName: authentik-postgres-17-serving-cert
----
 # yaml-language-server: $schema=../../../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
 # Approve the the authentik postgres 17 serving certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
@@ -82,3 +44,41 @@ spec:
       - server auth
   constraints:
     maxDuration: 720h # One month
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authentik-postgres-17-serving-cert
+spec:
+  commonName: Authentik Postgres 17
+  dnsNames:
+    - authentik-postgres-17-rw.security.svc
+    - authentik-postgres-17-ro.security.svc
+    - authentik-postgres-17-r.security.svc
+    - authentik-postgres-17-rw.security.svc.cluster.local
+    - authentik-postgres-17-ro.security.svc.cluster.local
+    - authentik-postgres-17-r.security.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  duration: 720h # One month
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  issuerRef:
+    name: security-intermediary-ca
+    kind: Issuer
+    group: cert-manager.io
+
+  secretName: authentik-postgres-17-serving-cert

@@ -1,23 +1,5 @@
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: authentik-postgres-streaming-replica-user
-spec:
-  secretName: authentik-postgres-streaming-replica-user
-  usages:
-    - client auth
-  commonName: streaming_replica
-  duration: 1h
-  secretTemplate:
-    labels:
-      cnpg.io/reload: "true"
-  issuerRef:
-    group: cert-manager.io
-    name: authentik-postgres-auth-ca
-    kind: Issuer
----
-# Approve the the internal-gateway-istio certificate specifically.
+# Approve the the postgres streaming replica user auth certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
@@ -39,3 +21,21 @@ spec:
       - client auth
   constraints:
     maxDuration: 1h
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authentik-postgres-streaming-replica-user
+spec:
+  secretName: authentik-postgres-streaming-replica-user
+  usages:
+    - client auth
+  commonName: streaming_replica
+  duration: 1h
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  issuerRef:
+    group: cert-manager.io
+    name: authentik-postgres-auth-ca
+    kind: Issuer

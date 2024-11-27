@@ -35,22 +35,24 @@ spec:
         - name: AUTHENTIK_POSTGRESQL__SSLKEY
           value: /etc/authentik/secrets/postgres-authentik-user/tls.key
         ## RO endpoint
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST
-          value: authentik-postgres-17-ro.security.svc.cluster.local
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME
-          value: authentik
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER
-          value: authentik
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT
-          value: "5432"
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLMODE
-          value: verify-full
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLROOTCERT
-          value: /etc/authentik/secrets/root-ca-cert/ca.crt
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLCERT
-          value: /etc/authentik/secrets/postgres-authentik-user/tls.crt
-        - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLKEY
-          value: /etc/authentik/secrets/postgres-authentik-user/tls.key
+        # Disable read replica configuration. This seems to cause a bug with !KeyOf
+        # YAML tags, which causes blueprints to valid to install.
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST
+        #   value: authentik-postgres-17-ro.security.svc.cluster.local
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME
+        #   value: authentik
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER
+        #   value: authentik
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT
+        #   value: "5432"
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLMODE
+        #   value: verify-full
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLROOTCERT
+        #   value: /etc/authentik/secrets/root-ca-cert/ca.crt
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLCERT
+        #   value: /etc/authentik/secrets/postgres-authentik-user/tls.crt
+        # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__SSLKEY
+        #   value: /etc/authentik/secrets/postgres-authentik-user/tls.key
         # Redis
         - name: AUTHENTIK_REDIS__HOST
           value: authentik-dragonfly.security.svc.cluster.local
@@ -100,7 +102,7 @@ spec:
         - name: AUTHENTIK_STORAGE__MEDIA__S3__BUCKET_NAME
           value: $(BUCKET_NAME)
         - name: AUTHENTIK_STORAGE__MEDIA__S3__CUSTOM_DOMAIN
-          value: $(BUCKET_HOST).:$(BUCKET_PORT)/$(BUCKET_NAME)
+          value: $(BUCKET_HOST):$(BUCKET_PORT)/$(BUCKET_NAME)
         # Email
         - name: AUTHENTIK_EMAIL__HOST
           value: docker-postfix-mail.email.svc.cluster.local

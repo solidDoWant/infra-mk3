@@ -6,9 +6,9 @@ type: Opaque
 stringData:
     #ENC[AES256_GCM,data:eTKRWKZUVrmbRzdbYrt7uQ==,iv:fHmGvIW2TrEb0fKjZx7VQAIjfzBPszvgl9qgPEkPnk0=,tag:bJVhRnJyQI6dkeQ+L83SOw==,type:comment]
     AUTHENTIK_SECRET_KEY: ENC[AES256_GCM,data:gdn7ZwGUCbshvVKrehDAronCLGacS6zI0edpIL37T2DNE7VCVB7gd2HzJrJ1ZUCR0NAcVFm3qxXrBxPnVFiLSQ==,iv:Wa5Js4jez6COq9NM3sz2hhhsHNC5LTw95AkiEiJsiLE=,tag:4Bk0bMNHont6dv7wMdZuJQ==,type:str]
-    #ENC[AES256_GCM,data:palG0zSJk4J52NGvOx2rMmoarMHaa6R79tyNsJchCAX7uvCTFznxxJyQvyw39ioR6vkWPaBIMD45ep9dTXhzxo75mfcXgZ4cwGEYDlp5uVAMpdE+K+42pWXCMjhbFi0=,iv:SIvIHx7qso1XaN2pakHH6aoBY/aAK4Ll7F29PfTVVCk=,tag:5bwl1xkxixq7b1q0fxACtA==,type:comment]
-    #ENC[AES256_GCM,data:AeyVztlhdTeI3p9zKwG3URF1bhNzDl+D8qhhbGXkd4yMBlf/ZuCC/QWNCa2ZEq9RiVN2ge1zEEYwqY1g+fRP7kBvta61QKz80x/014+6nAMdLBlhV8Ctcle22iE=,iv:RVrO5KxxxePEbtbnJBHP3nSxIolz/0izDY49DpyjFWM=,tag:ISM7tZOZ9NuCm6Ho/6eE7Q==,type:comment]
-    #ENC[AES256_GCM,data:rTdxooj1MC/DHhTjESxs3RtNL8EvWiahiMlEWEKfBcAmL/n190isw0iYLvsIorUCjWg=,iv:2MfSKLELTYPVffovtIB9H8SVbTg/NqXYH/IUsd6KQxQ=,tag:6+SoUNXVMLZRjSQvxO34Fw==,type:comment]
+    AUTHENTIK_BOOTSTRAP_PASSWORD: ENC[AES256_GCM,data:dQC+n6Ipw1AqlFHMNyQvZVIWavWQhWB0JzL9HhN794/Q6GYsgX4DQOt7358miMbcGy/70bYKEEfZPBQS5fxKEg==,iv:Z/+8woKUlQowejYwJF1sv7sHUS4PUurx8sCUiCQD2Nk=,tag:w+6ahV+VyDrNOIaOWLgIiw==,type:str]
+    AUTHENTIK_BOOTSTRAP_TOKEN: ENC[AES256_GCM,data:yDplW/sx4h3XyOKNpeeEiPq1bnGAFxTjMfCkEQTGKJUl6Ft/ZAccvCPZUgFYk9DAw2qq0kJgv4tRcGFraKkiwg==,iv:3NQsMklY7IT983AzTVFk4xYkamM2TZQYRTsswwKD9r4=,tag:iDE+p4QHOwfWgmarNnQm1A==,type:str]
+    AUTHENTIK_BOOTSTRAP_EMAIL: ENC[AES256_GCM,data:SykjdfkDk8mXpntL/WchaIZ9p38fZg==,iv:+NoO8AKyKhSu1wgdn2UcYGnJsiH0XnQBn2VEjHE32q0=,tag:SmghWAwvXVxUlqPv+n/7SQ==,type:str]
 sops:
     kms: []
     gcp_kms: []
@@ -33,8 +33,8 @@ sops:
             R3pJMEdJR1BsRTFaL09DWG9VdHRVVDgKPm0o5KBFbi8m1/3hJTAu2hd8zUk5b05j
             cgzaW1hzkQaWAwY9PgOOvg0ZcXa6M8u3nZyKhxQZYN4fYx0cRpOt3Q==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2024-11-25T19:35:12Z"
-    mac: ENC[AES256_GCM,data:obcpFVdsM3MVm62Z7fr8Zy7oOvWHrhE+wpLKfoUagxtgmBQsPcrlGwfutko4MubXl7tpKAXPn8lVWwJ+zM47JAo4MCy8ATIpPcKnwFJKPxMWGl0+wLFPweh/YWHiXg9F2E+vWg9Ruway6qvQXmpA8G2R7amsXZOJHQ5EfdCSOaw=,iv:6JqkzRm1G84Iq71rYIwVIcHVKwqKxpGWQI2rbJ7SQDw=,tag:U/MvtrBbKBUAmgVKDCRpzQ==,type:str]
+    lastmodified: "2024-11-27T19:32:52Z"
+    mac: ENC[AES256_GCM,data:EtuFeUxfoyHfcXem3gDCZPgUwN82hJ3GePBHd8MoasQihKWyu/ZLEFKkIohQBPB9eDg+pXAOb1oO0sh3xPwuGW2QO3NpPK2qSXFCKsvr1+gPGzKGRc511ysIQhBVkp8kvuRpziyQXaUVJTcqX25yuPxYjgvFsH8r2YNHDWN8c3U=,iv:1ceoFB4karGiz0c2Qw2d8Ds9BeWi9ZN7nwedGrTv7qU=,tag:afSxdlj/d6ABwOuUk92Bmw==,type:str]
     pgp: []
     encrypted_regex: ^(data|stringData)$
     mac_only_encrypted: true

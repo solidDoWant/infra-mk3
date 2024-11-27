@@ -1,34 +1,4 @@
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: authentik-dragonfly-serving-cert
-spec:
-  commonName: Authentik Dragonfly
-  dnsNames:
-    - authentik-dragonfly.security.svc
-    - authentik-dragonfly.security.svc.cluster.local
-  subject:
-    countries:
-      - US
-    provinces:
-      - ${SECRET_STATE}
-    organizations:
-      - infra-mk3
-  usages:
-    - server auth
-  duration: 720h # One month
-  privateKey:
-    algorithm: Ed25519
-    encoding: PKCS8
-    rotationPolicy: Always
-  issuerRef:
-    name: security-intermediary-ca
-    kind: Issuer
-    group: cert-manager.io
-  secretName: authentik-dragonfly-serving-cert
----
 # yaml-language-server: $schema=../../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
 # Approve the the authentik dragonfly serving certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
@@ -70,3 +40,33 @@ spec:
       - server auth
   constraints:
     maxDuration: 720h # One month
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authentik-dragonfly-serving-cert
+spec:
+  commonName: Authentik Dragonfly
+  dnsNames:
+    - authentik-dragonfly.security.svc
+    - authentik-dragonfly.security.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  duration: 720h # One month
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: security-intermediary-ca
+    kind: Issuer
+    group: cert-manager.io
+  secretName: authentik-dragonfly-serving-cert
