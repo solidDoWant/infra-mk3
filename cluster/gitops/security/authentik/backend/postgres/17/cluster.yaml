@@ -5,7 +5,8 @@ kind: Cluster
 metadata:
   name: &cluster_name authentik-postgres-17
 spec:
-  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.0
+  instances: 1
   bootstrap:
     initdb:
       database: authentik
