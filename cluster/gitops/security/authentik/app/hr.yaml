@@ -221,7 +221,7 @@ spec:
             - name: UNIQUE_FILENAMES
               value: "true"
             - name: DEFAULT_FILE_MODE
-              value: "440"
+              value: "660" # Write permissions are required so that the files can be updated
           volumeMounts: *blueprints_mount
     geoip:
       enabled: false
