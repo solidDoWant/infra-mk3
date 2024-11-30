@@ -1,0 +1,9 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  get-task-errors:
+    silent: true
+    cmd: >-
+      {{ shellQuote .TASKFILE_DIR }}/get-task-errors.sh
