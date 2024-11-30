@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
+shopt -s extglob
 
 # Get the SQL service name from one of the pods
 JQ_QUERY="$(cat <<EOF
@@ -18,9 +19,17 @@ SQL_CLUSTER_NAME="$(
 # cspell:words systemtask psql
 SQL_QUERY="select json_agg(j) from (select name,uid,description,task_call_module,messages from authentik_events_systemtask where status = 'error') j;"
 ERRORS="$(kubectl cnpg psql -n security "${SQL_CLUSTER_NAME}" -t=false -i=false -- 'authentik' -t -c "${SQL_QUERY}")"
+# Trim leading and trailing whitespace
+ERRORS="${ERRORS##+([[:space:]])}"
+ERRORS="${ERRORS%%+([[:space:]])}"
+
+if [[ -z "${ERRORS}" ]]; then
+    echo "No errors found"
+    exit
+fi
 
 # Log the errors
-echo "Found $(echo "${ERRORS}" | jq -c 'length') errors"
+echo "Found $(echo "${ERRORS}" | jq -c 'length // 0') errors"
 echo "${ERRORS}" | jq -c '.[]' | while read -r error ; do
     echo "Task: $(echo "${error}" | jq -r '.name + "." + .task_call_module + "/" + .uid + ": " + .description')"
     echo 'Errors:'
