@@ -17,7 +17,7 @@ SQL_CLUSTER_NAME="$(
 
 # Get a list of errors
 # cspell:words systemtask psql
-SQL_QUERY="select json_agg(j) from (select name,uid,description,task_call_module,messages from authentik_events_systemtask where status = 'error') j;"
+SQL_QUERY="select jsonb_agg(j) from (select name,uid,description,task_call_module,messages from authentik_events_systemtask where status = 'error') j;"
 ERRORS="$(kubectl cnpg psql -n security "${SQL_CLUSTER_NAME}" -t=false -i=false -- 'authentik' -t -c "${SQL_QUERY}")"
 # Trim leading and trailing whitespace
 ERRORS="${ERRORS##+([[:space:]])}"
