@@ -11,5 +11,10 @@ configMapGenerator:
   - name: authentik-python-user-settings
     files:
       - user_settings.py
+  # Unfortunately because this needs to be mounted in the server pods, it
+  # cannot live in the "configuration" fluxtomization
+  - name: authentik-css
+    files:
+      - custom.css
 configurations:
   - ./vol-mount-from-cm-transformer.yaml
