@@ -154,6 +154,10 @@ spec:
           configMap:
             name: authentik-python-user-settings
             defaultMode: 0440
+        - name: authentik-css
+          configMap:
+            name: authentik-css
+            defaultMode: 0440
       volumeMounts:
         - name: root-ca-cert
           mountPath: /etc/authentik/secrets/root-ca-cert
@@ -163,6 +167,9 @@ spec:
           mountPath: /etc/authentik/secrets/dragonfly-authentik-user
         - name: authentik-python-user-settings
           mountPath: /data
+        - name: authentik-css
+          mountPath: /web/dist/custom.css
+          subPath: custom.css
       securityContext:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
