@@ -45,7 +45,7 @@ entries:
     identifiers:
       name: mfa-totp-flow-setup-stage
     attrs:
-      friendly_name: Static MFA tokens
+      friendly_name: TOTP authenticator device
       digits: 6
       configure_flow: !KeyOf mfa-totp-flow
   - model: authentik_flows.flowstagebinding
