@@ -44,7 +44,7 @@ entries:
             },
         )
         guild_member_info = guild_member_request.json()
-        ak_create_event("discord_member_info", member_info=guild_member_info)
+        # ak_create_event("discord_member_info", member_info=guild_member_info)
 
         # Ensure we are not being rate limited
         if guild_member_request.status_code == 429:
@@ -90,7 +90,7 @@ entries:
             },
         )
         guild_member_info = guild_member_request.json()
-        ak_create_event("discord_member_info", member_info=guild_member_info)
+        # ak_create_event("discord_member_info", member_info=guild_member_info)
 
         # Ensure we are not being rate limited
         if guild_member_request.status_code == 429:
