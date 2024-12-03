@@ -15,7 +15,7 @@ entries:
       designation: invalidation
       name: Logout/invalidate session
       title: Logout
-      authentication: require_authenticated
+      authentication: none
   - model: authentik_stages_user_logout.userlogoutstage
     id: invalidation-flow-logout-stage
     identifiers:
