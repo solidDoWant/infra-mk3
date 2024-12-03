@@ -206,9 +206,18 @@ spec:
       volumes:
         - name: sidecar-blueprints
           emptyDir: {}
-      volumeMounts: &blueprints_mount
-        - name: sidecar-blueprints
+        - name: mask-blueprints
+          emptyDir: {}
+      volumeMounts:
+        - &blueprints_mount
+          name: sidecar-blueprints
           mountPath: &sidecar_blueprints_dir /blueprints/k8s-sidecar
+        # Don't load these blueprints. This means that Authentik will not be
+        # accessible until the customization fluxtomization loads.
+        - name: mask-blueprints
+          mountPath: /blueprints/default
+        - name: mask-blueprints
+          mountPath: /blueprints/example
       extraContainers:
         - name: k8s-sidecar
           image: ghcr.io/kiwigrid/k8s-sidecar:1.28.0
@@ -229,7 +238,8 @@ spec:
               value: "true"
             - name: DEFAULT_FILE_MODE
               value: "660" # Write permissions are required so that the files can be updated
-          volumeMounts: *blueprints_mount
+          volumeMounts:
+            - *blueprints_mount
     geoip:
       enabled: false
       existingSecret:
