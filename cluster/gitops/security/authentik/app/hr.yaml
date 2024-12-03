@@ -231,7 +231,7 @@ spec:
               value: "660" # Write permissions are required so that the files can be updated
           volumeMounts: *blueprints_mount
     geoip:
-      enabled: true
+      enabled: false
       existingSecret:
         secretName: authentik-geoip-credentials
     prometheus:
