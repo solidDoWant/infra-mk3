@@ -1,0 +1,41 @@
+---
+# Approve the the postgres teleport user certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: teleport-postgres-auth-ca-teleport-user
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: teleport-postgres-auth-ca
+    namespace:
+      matchNames:
+        - security
+  allowed:
+    commonName:
+      required: true
+      value: teleport
+    usages:
+      - client auth
+  constraints:
+    maxDuration: 720h # 1 month
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: teleport-postgres-teleport-user
+spec:
+  secretName: teleport-postgres-teleport-user
+  usages:
+    - client auth
+  commonName: teleport
+  duration: 720h # 1 month
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  issuerRef:
+    group: cert-manager.io
+    name: teleport-postgres-auth-ca
+    kind: Issuer
