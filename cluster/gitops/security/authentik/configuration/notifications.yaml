@@ -12,7 +12,8 @@ entries:
     identifiers:
       name: Notification users
     attrs:
-      discord_role_id: "${SECRET_AUTHENTIK_NOTIFICATIONS_DISCORD_ROLE_ID}"
+      attributes:
+        discord_role_id: "${SECRET_AUTHENTIK_NOTIFICATIONS_DISCORD_ROLE_ID}"
   # Notification methods
   - model: authentik_events.notificationtransport
     id: authentik-notifications
