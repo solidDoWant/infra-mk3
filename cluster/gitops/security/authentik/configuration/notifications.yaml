@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: Notifications
+  labels:
+    blueprints.goauthentik.io/description: Flows for adding user MFA methods
+entries:
+  # Notification group
+  - model: authentik_core.group
+    id: notification-group
+    identifiers:
+      name: Notification users
+    attrs:
+      discord_role_id: "${SECRET_AUTHENTIK_NOTIFICATIONS_DISCORD_ROLE_ID}"
+  # Notification methods
+  - model: authentik_events.notificationtransport
+    id: authentik-notifications
+    identifiers:
+      name: Authentik notifications
+    attrs:
+      mode: local
+  - model: authentik_events.notificationtransport
+    id: discord-webhook
+    identifiers:
+      name: Discord webhook
+    attrs:
+      mode: webhook_slack
+      send_once: true
+      webhook_url: "${SECRET_AUTHENTIK_NOTIFICATIONS_DISCORD_WEBHOOK_URL}"
+  # Notification rules
+  - model: authentik_policies_event_matcher.eventmatcherpolicy
+    id: match-configuration-errors
+    identifiers:
+      name: match-configuration-errors
+    attrs:
+      action: configuration_error
+  - model: authentik_policies_event_matcher.eventmatcherpolicy
+    id: match-policy-exceptions
+    identifiers:
+      name: match-policy-exceptions
+    attrs:
+      action: policy_exception
+  - model: authentik_policies_event_matcher.eventmatcherpolicy
+    id: match-property-mapping-exceptions
+    identifiers:
+      name: match-property-mapping-exceptions
+    attrs:
+      action: property_mapping_exception
+  - model: authentik_events.notificationrule
+    id: notify-subscribers
+    identifiers:
+      name: notify-subscribers
+    attrs:
+      severity: alert
+      group: !KeyOf notification-group
+      transports:
+        - !KeyOf authentik-notifications
+        - !KeyOf discord-webhook
+  - model: authentik_policies.policybinding
+    identifiers:
+      order: 0
+      policy: !KeyOf match-configuration-errors
+      target: !KeyOf notify-subscribers
+  - model: authentik_policies.policybinding
+    identifiers:
+      order: 10
+      policy: !KeyOf match-policy-exceptions
+      target: !KeyOf notify-subscribers
+  - model: authentik_policies.policybinding
+    identifiers:
+      order: 20
+      policy: !KeyOf match-property-mapping-exceptions
+      target: !KeyOf notify-subscribers

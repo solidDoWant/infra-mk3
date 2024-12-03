@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: Discord source
+  labels:
+    blueprints.goauthentik.io/description: Login and registration for Discord users
+entries:
+  # Dependencies
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Discord authentication flow
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Discord enrollment flow
+      required: true
+  # Source
+  - model: authentik_sources_oauth.oauthsource
+    id: Discord
+    identifiers:
+      name: Discord
+    attrs:
+      # Required to verify membership and roles
+      additional_scopes: guilds guilds.members.read
+      authentication_flow:
+        !Find [authentik_flows.flow, [slug, discord-authentication-flow]]
+      consumer_key: "${SECRET_AUTHENTIK_DISCORD_CLIENT_ID}"
+      consumer_secret: "${SECRET_AUTHENTIK_DISCORD_CLIENT_SECRET}"
+      enabled: true
+      enrollment_flow:
+        !Find [authentik_flows.flow, [slug, discord-enrollment-flow]]
+      group_matching_mode: identifier
+      name: Discord
+      provider_type: discord
+      slug: discord
+      user_matching_mode: identifier
+      user_path_template: goauthentik.io/sources/%(slug)s

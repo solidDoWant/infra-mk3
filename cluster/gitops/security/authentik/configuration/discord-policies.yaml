@@ -1,0 +1,223 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: Discord policies
+  labels:
+    blueprints.goauthentik.io/description: Shared policies for Discord source
+entries:
+  - model: authentik_policies_expression.expressionpolicy
+    id: is-discord-flow
+    identifiers:
+      name: is-discord-flow
+    attrs:
+      expression: |
+        if context["source"].provider_type == "discord":
+          return True
+  - model: authentik_policies_expression.expressionpolicy
+    id: discord-require-guild
+    identifiers:
+      name: discord-require-guild
+    attrs:
+      # From https://docs.goauthentik.io/docs/users-sources/sources/social-logins/discord/#sync-on-authentication
+      expression: |
+        from authentik.core.models import Group
+
+        ### CONFIG ###
+        guild_id = "${SECRET_DISCORD_GUILD_ID}"
+        ##############
+
+        if not ak_call_policy("is-discord-flow").passing:
+            # Skip check, as this isn't a Discord-sourced flow
+            return True
+
+        # Get the user-source connection object from the context, and get the access token
+        connection = context.get("goauthentik.io/sources/connection")
+        if not connection:
+            return False
+        access_token = connection.access_token
+
+        guild_member_request = requests.get(
+            f"https://discord.com/api/users/@me/guilds/{guild_id}/member",
+            headers={
+                "Authorization": f"Bearer {access_token}"
+            },
+        )
+        guild_member_info = guild_member_request.json()
+        ak_create_event("discord_member_info", member_info=guild_member_info)
+
+        # Ensure we are not being rate limited
+        if guild_member_request.status_code == 429:
+            ak_message(f"Discord is throttling this connection. Retry in {int(guild_member_info['retry_after'])}s")
+            return False
+
+        # Ensure user is a member of the guild
+        if guild_member_info.get("code", 0) != 0:
+            if guild_member_info["code"] == 10004 and not request.user.attributes.get("discord", {}).get("suspension_exempt", False):
+                ak_message("User is not a member of the required guild")
+            else:
+                ak_create_event("discord_error", source=context["source"], code=guild_member_info["code"])
+                ak_message("Discord API error, try again later.")
+            return False
+        return True
+  - model: authentik_policies_expression.expressionpolicy
+    id: update-groups-from-discord
+    identifiers:
+      name: update-groups-from-discord
+    attrs:
+      # From https://docs.goauthentik.io/docs/users-sources/sources/social-logins/discord/#sync-on-authentication
+      expression: |
+        from authentik.core.models import Group
+
+        ### CONFIG ###
+        guild_id = "${SECRET_DISCORD_GUILD_ID}"
+        ##############
+
+        if not ak_call_policy("is-discord-flow").passing:
+            # Skip setting groups from Discord, as this isn't a Discord-sourced flow
+            return True
+
+        # Get the user-source connection object from the context, and get the access token
+        connection = context.get("goauthentik.io/sources/connection")
+        if not connection:
+            return False
+        access_token = connection.access_token
+
+        guild_member_request = requests.get(
+            f"https://discord.com/api/users/@me/guilds/{guild_id}/member",
+            headers={
+                "Authorization": f"Bearer {access_token}"
+            },
+        )
+        guild_member_info = guild_member_request.json()
+        ak_create_event("discord_member_info", member_info=guild_member_info)
+
+        # Ensure we are not being rate limited
+        if guild_member_request.status_code == 429:
+            ak_message(f"Discord is throttling this connection. Retry in {int(guild_member_info['retry_after'])}s")
+            return False
+
+        # Ensure user is a member of the guild
+        if guild_member_info.get("code", 0) != 0:
+            if guild_member_info["code"] == 10004 and not request.user.attributes.get("discord", {}).get("suspension_exempt", False):
+                ak_message("User is not a member of the guild")
+                request.user.is_active = False
+                # Save right away to ensure that the user is deactivated
+                request.user.save()
+            else:
+                ak_create_event("discord_error", source=context["source"], code=guild_member_info["code"])
+                ak_message("Discord API error, try again later.")
+            return False
+
+        # Get all discord_groups
+        authentik_discord_groups = Group.objects.filter(attributes__discord_role_id__isnull=False)
+
+        # Split user groups into discord groups and non discord groups
+        authentik_discord_group_pks = authentik_discord_groups.values_list("pk", flat=True)
+        user_groups_non_discord = request.user.ak_groups.exclude(pk__in=authentik_discord_group_pks)
+        user_groups_discord = list(request.user.ak_groups.filter(pk__in=authentik_discord_group_pks))
+
+        # Filter matching roles based on guild_member_info['roles']
+        user_groups_discord_updated = authentik_discord_groups.filter(attributes__discord_role_id__in=guild_member_info["roles"])
+
+        # Combine user_groups_non_discord and matching_roles
+        user_groups_updated = user_groups_non_discord.union(user_groups_discord_updated)
+
+        # Update user's groups
+        request.user.ak_groups.set(user_groups_updated)
+
+        # Create event with roles changed
+        ak_create_event(
+            "discord_role_sync",
+            user_discord_roles_before=", ".join(str(group) for group in user_groups_discord),
+            user_discord_roles_after=", ".join(str(group) for group in user_groups_discord_updated),
+        )
+
+        return True
+  - model: authentik_policies_expression.expressionpolicy
+    id: update-attrs-from-discord
+    identifiers:
+      name: update-attrs-from-discord
+    attrs:
+      # From https://docs.goauthentik.io/docs/users-sources/sources/social-logins/discord/#store-oauth-info-in-attribute-and-create-avatar-attribute-from-discord-avatar
+      expression: |
+        import base64
+        import copy
+        import requests
+
+        if not ak_call_policy("is-discord-flow").passing:
+            # Skip setting Discord attributes, as this isn't a Discord-sourced flow
+            return True
+
+        user = request.user
+        user_info = request.context["oauth_userinfo"]
+
+        # Record unchanged values to detect if anything has changed
+        original_attributes = copy.deepcopy(user.attributes)
+
+        # Assigns the discord attributes to the user
+        user.attributes["discord"] = {
+            "id": user_info["id"],
+            "username": user_info["username"],
+            "discriminator": user_info["discriminator"],
+            "email": user_info["email"],
+            "avatar": user_info["avatar"]
+        }
+
+        if user_info["avatar"]:
+            # Set the link attribute
+            avatar_url = f"https://cdn.discordapp.com/avatars/{user_info["id"]}/{user_info["avatar"]}.png?size=64"
+            user.attributes["discord"]["avatar_url"] = avatar_url
+
+            # Set the actual image
+            avatar_content = base64.b64encode(requests.get(avatar_url).content)
+            avatar_data_uri = f"data:image/png;base64,{avatar_content.decode("utf-8")}"
+            user.attributes["avatar"] = avatar_data_uri
+
+        # Record the initial values permanently
+        if "discord_initial" not in user.attributes:
+            user.attributes["discord_initial"] = user.attributes["discord"]
+
+        # Only save to the DB if something has changed
+        if user.attributes != original_attributes:
+            user.save()
+
+        return True
+  - model: authentik_policies_expression.expressionpolicy
+    id: discord-sync-or-fail
+    identifiers:
+      name: discord-sync-or-fail
+    attrs:
+      expression: |
+        if not ak_call_policy("is-discord-flow").passing:
+          # Skip setting Discord attributes, as this isn't a Discord-sourced flow.
+          return True
+
+        if not ak_call_policy("update-groups-from-discord").passing:
+          return False
+        return ak_call_policy("update-attrs-from-discord").passing
+  - model: authentik_policies_expression.expressionpolicy
+    id: discord-require-verified-account
+    identifiers:
+      name: discord-require-verified-account
+    attrs:
+      expression: return request.context["oauth_userinfo"].get("verified", False)
+  - model: authentik_policies_expression.expressionpolicy
+    id: discord-require-unique-email
+    identifiers:
+      name: discord-require-unique-email
+    attrs:
+      expression: |
+        from authentik.core.models import User
+
+        # Ensure this matches the *Field Key* value of the prompt
+        email = request.context["oauth_userinfo"].get("email", "")
+        if email == "":
+            # Don't fail when no email is presented
+            return True
+
+        if User.objects.filter(email=email).exists():
+            ak_message(f"Account with email address '{email}' already exists")
+            return False
+
+        return True

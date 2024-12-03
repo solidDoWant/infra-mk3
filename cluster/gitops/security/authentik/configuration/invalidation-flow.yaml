@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: Invalidation flow
+  labels:
+    blueprints.goauthentik.io/description: Handle logout/session invalidation
+entries:
+  # Flow logic
+  - model: authentik_flows.flow
+    id: flow
+    identifiers:
+      slug: invalidation-flow
+    attrs:
+      designation: invalidation
+      name: Logout/invalidate session
+      title: Logout
+      authentication: require_authenticated
+  - model: authentik_stages_user_logout.userlogoutstage
+    id: invalidation-flow-logout-stage
+    identifiers:
+      name: invalidation-flow-logout-stage
+  # Bindings
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      order: 0
+      stage: !KeyOf invalidation-flow-logout-stage
+      target: !KeyOf flow

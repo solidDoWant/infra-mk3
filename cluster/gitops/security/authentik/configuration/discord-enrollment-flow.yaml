@@ -1,0 +1,129 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: Discord enrollment flow
+  labels:
+    blueprints.goauthentik.io/description: Handle Discord enrollment
+entries:
+  # Dependencies
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Discord policies
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Blueprint library
+      required: true
+  # Flow logic
+  - model: authentik_policies_expression.expressionpolicy
+    id: discord-enrollment-flow-pre-creation-checks
+    identifiers:
+      name: discord-enrollment-flow-pre-creation-checks
+    attrs:
+      expression: |
+        if not ak_call_policy("is-discord-flow").passing:
+          # Fail registration, as the source isn't Discord
+          return False
+
+        if not ak_call_policy("discord-require-guild").passing:
+          return False
+        if not ak_call_policy("discord-require-unique-email").passing:
+          return False
+        return ak_call_policy("discord-require-verified-account").passing
+  - model: authentik_flows.flow
+    id: flow
+    identifiers:
+      slug: discord-enrollment-flow
+    attrs:
+      designation: enrollment
+      name: Create an account with Discord login
+      title: Create an account
+      authentication: require_unauthenticated
+  # User info prompt
+  - model: authentik_stages_prompt.prompt
+    id: discord-enrollment-username-prompt
+    identifiers:
+      name: discord-enrollment-username-prompt
+    attrs:
+      initial_value: oauth_userinfo.get("username")
+      initial_value_expression: true
+      required: true
+      type: username
+      field_key: username
+      label: Username
+      order: 100
+  - model: authentik_stages_prompt.prompt
+    id: discord-enrollment-name-prompt
+    identifiers:
+      name: discord-enrollment-name-prompt
+    attrs:
+      initial_value: oauth_userinfo.get("username")
+      initial_value_expression: true
+      required: true
+      type: text
+      field_key: name
+      label: Display name
+      order: 200
+  - model: authentik_stages_prompt.promptstage
+    id: discord-enrollment-user-info-prompt
+    identifiers:
+      name: discord-enrollment-user-info-prompt
+    attrs:
+      fields:
+        - !KeyOf discord-enrollment-username-prompt
+        - !KeyOf discord-enrollment-name-prompt
+  # Save user info
+  - model: authentik_stages_user_write.userwritestage
+    id: discord-enrollment-user-write
+    identifiers:
+      name: discord-enrollment-user-write
+    attrs:
+      user_creation_mode: always_create
+      user_type: internal
+  # Bindings
+  - model: authentik_policies.policybinding
+    identifiers:
+      order: 0
+      policy: !KeyOf discord-enrollment-flow-pre-creation-checks
+      target: !KeyOf flow
+  - model: authentik_flows.flowstagebinding
+    id: discord-enrollment-flow-user-info-binding
+    identifiers:
+      order: 0
+      stage: !KeyOf discord-enrollment-user-info-prompt
+      target: !KeyOf flow
+  - model: authentik_flows.flowstagebinding
+    id: discord-enrollment-flow-user-write-binding
+    identifiers:
+      order: 10
+      stage: !KeyOf discord-enrollment-user-write
+      target: !KeyOf flow
+  - model: authentik_flows.flowstagebinding
+    id: discord-enrollment-flow-access-denied-binding
+    identifiers:
+      order: 20
+      stage:
+        !Find [authentik_stages_deny.denystage, [name, access-denied-stage]]
+      target: !KeyOf flow
+  - model: authentik_policies.policybinding
+    id: discord-enrollment-flow-discord-sync-or-fail-binding
+    identifiers:
+      order: 0
+      policy:
+        !Find [
+          authentik_policies_expression.expressionpolicy,
+          [name, discord-sync-or-fail],
+        ]
+      target: !KeyOf discord-enrollment-flow-access-denied-binding
+      negate: true
+      failure_result: true
+  - model: authentik_flows.flowstagebinding
+    id: discord-enrollment-flow-user-login-binding
+    identifiers:
+      order: 30
+      stage:
+        !Find [authentik_stages_user_login.userloginstage, [name, user-login]]
+      target: !KeyOf flow

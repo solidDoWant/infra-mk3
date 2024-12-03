@@ -1,0 +1,104 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: MFA setup flows
+  labels:
+    blueprints.goauthentik.io/description: Flows for adding user MFA methods
+entries:
+  # Static tokens
+  - model: authentik_flows.flow
+    id: mfa-static-flow
+    identifiers:
+      slug: mfa-static-flow
+    attrs:
+      designation: stage_configuration
+      name: mfa-static-flow
+      title: Static MFA tokens
+      authentication: require_authenticated
+  - model: authentik_stages_authenticator_static.authenticatorstaticstage
+    id: mfa-static-flow-setup-stage
+    identifiers:
+      name: mfa-static-flow-setup-stage
+    attrs:
+      friendly_name: Static MFA tokens
+      token_count: 9
+      token_length: 16
+      configure_flow: !KeyOf mfa-static-flow
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      order: 0
+      stage: !KeyOf mfa-static-flow-setup-stage
+      target: !KeyOf mfa-static-flow
+  # TOTP
+  - model: authentik_flows.flow
+    id: mfa-totp-flow
+    identifiers:
+      slug: mfa-totp-flow
+    attrs:
+      designation: stage_configuration
+      name: mfa-totp-flow
+      title: TOTP 2FA device
+      authentication: require_authenticated
+  - model: authentik_stages_authenticator_totp.authenticatortotpstage
+    id: mfa-totp-flow-setup-stage
+    identifiers:
+      name: mfa-totp-flow-setup-stage
+    attrs:
+      friendly_name: Static MFA tokens
+      digits: 6
+      configure_flow: !KeyOf mfa-totp-flow
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      order: 0
+      stage: !KeyOf mfa-totp-flow-setup-stage
+      target: !KeyOf mfa-totp-flow
+  # WebAuthn
+  - model: authentik_flows.flow
+    id: mfa-webauthn-flow
+    identifiers:
+      slug: mfa-webauthn-flow
+    attrs:
+      designation: stage_configuration
+      name: mfa-webauthn-flow
+      title: MFA WebAuthn device
+      authentication: require_authenticated
+  - model: authentik_stages_authenticator_webauthn.authenticatorwebauthnstage
+    id: mfa-webauthn-flow-setup-stage
+    identifiers:
+      name: mfa-webauthn-flow-setup-stage
+    attrs:
+      friendly_name: MFA WebAuthn device
+      resident_key_requirement: preferred
+      user_verification: preferred
+      configure_flow: !KeyOf mfa-webauthn-flow
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      order: 0
+      stage: !KeyOf mfa-webauthn-flow-setup-stage
+      target: !KeyOf mfa-webauthn-flow
+  # Duo
+  - model: authentik_flows.flow
+    id: mfa-duo-flow
+    identifiers:
+      slug: mfa-duo-flow
+    attrs:
+      designation: stage_configuration
+      name: mfa-duo-flow
+      title: MFA Duo Authenticator
+      authentication: require_authenticated
+  - model: authentik_stages_authenticator_duo.authenticatorduostage
+    id: mfa-duo-flow-setup-stage
+    identifiers:
+      name: mfa-duo-flow-setup-stage
+    attrs:
+      friendly_name: MFA Duo Authenticator
+      api_hostname: "${SECRET_AUTHENTIK_DUO_API_HOSTNAME}"
+      client_id: "${SECRET_AUTHENTIK_DUO_INTEGRATION_KEY}"
+      client_secret: "${SECRET_AUTHENTIK_DUO_SECRET_KEY}"
+      configure_flow: !KeyOf mfa-duo-flow
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      order: 0
+      stage: !KeyOf mfa-duo-flow-setup-stage
+      target: !KeyOf mfa-duo-flow

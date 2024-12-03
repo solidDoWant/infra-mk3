@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: infra-mk3 brand
+  labels:
+    blueprints.goauthentik.io/description: infra-mk3 brand
+entries:
+  # Dependencies
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Password authentication flow
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Invalidation flow
+      required: true
+  - model: authentik_brands.brand
+    id: infra-mk3-brand
+    identifiers:
+      default: true
+      domain: "${SECRET_PUBLIC_DOMAIN_NAME}"
+    attrs:
+      branding_title: infra-mk3
+      branding_logo: /static/dist/assets/icons/icon_left_brand.svg # Default logo
+      branding_favicon: /static/dist/assets/icons/icon.png # Default favicon
+      flow_authentication:
+        !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+      flow_invalidation: !Find [authentik_flows.flow, [slug, invalidation-flow]]

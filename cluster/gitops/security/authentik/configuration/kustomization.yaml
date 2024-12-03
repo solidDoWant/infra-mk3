@@ -1,0 +1,26 @@
+---
+# Not gitops'd (unsupported):
+# * Configure system settings/tenant to default to `attributes.avatar` for avatar
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./password-change-redirect.yaml
+configMapGenerator:
+  - name: authentik-configuration-blueprints
+    files:
+      - ./discord-authentication-flow.yaml
+      - ./discord-enrollment-flow.yaml
+      - ./discord-policies.yaml
+      - ./discord-source.yaml
+      - ./infra-mk3-brand.yaml
+      - ./invalidation-flow.yaml
+      - ./library.yaml
+      - ./mfa-setup-flows.yaml
+      - ./notifications.yaml
+      - ./password-authentication-flow.yaml
+      - ./password-change-flow.yaml
+    options:
+      labels:
+        k8s-sidecar.home.arpa/application: authentik
+      # This can cause weird synchronization issues with Authentik
+      disableNameSuffixHash: true

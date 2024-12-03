@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: Blueprint library
+  labels:
+    blueprints.goauthentik.io/description: Shared policies for blueprints
+entries:
+  - model: authentik_policies_expression.expressionpolicy
+    id: is-sso-flow
+    identifiers:
+      name: is-sso-flow
+    attrs:
+      expression: return ak_is_sso_flow
+  - model: authentik_stages_user_login.userloginstage
+    id: user-login
+    identifiers:
+      name: user-login
+    attrs:
+      geoip_binding: bind_continent_country
+      network_binding: bind_asn
+      remember_me_offset: hours=120;minutes=0;seconds=0 # 5 days offset + session duration = 1 week
+      session_duration: hours=48;minutes=0;seconds=0 # 2 days
+  - model: authentik_stages_deny.denystage
+    id: access-denied-stage
+    identifiers:
+      name: access-denied-stage
+    attrs:
+      deny_message: Access denied

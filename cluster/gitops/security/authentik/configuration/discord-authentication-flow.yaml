@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=./schema.json
+version: 1
+metadata:
+  name: Discord authentication flow
+  labels:
+    blueprints.goauthentik.io/description: Handle Discord authentication
+entries:
+  # Dependencies
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Discord policies
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Blueprint library
+      required: true
+  # Flow logic
+  - model: authentik_flows.flow
+    id: flow
+    identifiers:
+      slug: discord-authentication-flow
+    attrs:
+      designation: authentication
+      name: Discord authentication
+      title: Login with Discord
+      authentication: require_unauthenticated
+  - model: authentik_stages_deny.denystage
+    id: discord-authentication-flow-sync-deny-stage
+    identifiers:
+      name: discord-authentication-flow-sync-deny-stage
+    attrs:
+      deny_message: Access denied
+  # Bindings
+  - model: authentik_policies.policybinding
+    identifiers:
+      order: 0
+      policy:
+        !Find [
+          authentik_policies_expression.expressionpolicy,
+          [name, is-sso-flow],
+        ]
+      target: !KeyOf flow
+  - model: authentik_flows.flowstagebinding
+    id: discord-authentication-flow-access-denied-binding
+    identifiers:
+      order: 0
+      stage:
+        !Find [authentik_stages_deny.denystage, [name, access-denied-stage]]
+      target: !KeyOf flow
+  - model: authentik_policies.policybinding
+    id: discord-authentication-flow-discord-sync-or-fail-binding
+    identifiers:
+      order: 0
+      policy:
+        !Find [
+          authentik_policies_expression.expressionpolicy,
+          [name, discord-sync-or-fail],
+        ]
+      target: !KeyOf discord-authentication-flow-access-denied-binding
+      negate: true
+      failure_result: true
+  - model: authentik_flows.flowstagebinding
+    id: discord-authentication-flow-user-login-binding
+    identifiers:
+      order: 10
+      stage:
+        !Find [authentik_stages_user_login.userloginstage, [name, user-login]]
+      target: !KeyOf flow
