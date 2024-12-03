@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+# TODO call this from CD pipeline whenever version changes
+
+tasks:
+  cnpg-teleport:
+    silent: true
+    dir: "{{ .ROOT_DIR }}/container images/cnpg"
+    vars:
+      IMAGE_NAME:
+        ref: default "ghcr.io/soliddowant/postgresql-teleport" .IMAGE_NAME
+      PG_VERSION:
+        ref: default "17.0" .PG_VERSION
+      PUSH:
+        ref: default "true" .PUSH
+    cmd: |
+      ARGS=(-f Dockerfile.teleport)
+      ARGS+=(--platform linux/amd64,linux/arm64)
+      ARGS+=(-t {{ printf "%s:%s" .IMAGE_NAME .PG_VERSION | shellQuote }})
+      if [[ {{ shellQuote .PUSH }} == "true" ]]; then
+        ARGS+=('--push')
+      fi
+      ARGS+=(--build-arg {{ shellQuote .PG_VERSION }})
+
+      docker buildx build "${ARGS[@]}" .

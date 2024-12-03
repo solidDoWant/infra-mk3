@@ -1,0 +1,14 @@
+ARG PG_VERSION=17.0
+FROM ghcr.io/cloudnative-pg/postgresql:${PG_VERSION}
+
+USER root
+
+RUN PG_MAJOR="$(pg_config --version)" && \
+    PG_MAJOR="${PG_MAJOR#* }" && \
+    PG_MAJOR="${PG_MAJOR%%.*}" && \
+    set -xe && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends "postgresql-${PG_MAJOR}-wal2json" && \
+    rm -rf /var/lib/apt/lists/*;
+
+USER 26 # Postgres user
