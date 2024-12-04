@@ -31,17 +31,17 @@ spec:
             conn_string: "\
               postgresql://\
               teleport-core@teleport-core-postgres-17-rw.security.svc.cluster.local:5432/teleport-core?\
-              pool_max_conns=20\
-              sslrootcert=/etc/teleport-backend/secrets/core/server/ca.crt\
-              sslcert=/etc/teleport-backend/secrets/core/client/tls.crt\
-              sslkey=/etc/teleport-backend/secrets/core/client/tls.key\
+              pool_max_conns=20&\
+              sslrootcert=/etc/teleport-backend/secrets/core/server/ca.crt&\
+              sslcert=/etc/teleport-backend/secrets/core/client/tls.crt&\
+              sslkey=/etc/teleport-backend/secrets/core/client/tls.key&\
               sslmode=verify-full"
             audit_events_uri: "\
               postgresql://\
               teleport-audit@teleport-audit-postgres-17-rw.security.svc.cluster.local:5432/teleport-audit?\
-              sslrootcert=/etc/teleport-backend/secrets/audit/server/ca.crt\
-              sslcert=/etc/teleport-backend/secrets/audit/client/tls.crt\
-              sslkey=/etc/teleport-backend/secrets/audit/client/tls.key\
+              sslrootcert=/etc/teleport-backend/secrets/audit/server/ca.crt&\
+              sslcert=/etc/teleport-backend/secrets/audit/client/tls.crt&\
+              sslkey=/etc/teleport-backend/secrets/audit/client/tls.key&\
               sslmode=verify-full"
             audit_sessions_uri:
       extraVolumes:
@@ -84,7 +84,7 @@ spec:
         proxy_service:
           # TODO limit access to proxy to only gateways per RFD 123:
           # https://github.com/gravitational/teleport/blob/master/rfd/0123-tls-routing-behind-layer7-lb.md
-          use_x_forwarded_for: true
+          trust_x_forwarded_for: true
     authentication:
       type: oidc
       connectorName: authentik
