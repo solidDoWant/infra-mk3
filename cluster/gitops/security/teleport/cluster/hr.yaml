@@ -18,7 +18,7 @@ spec:
     - kind: ConfigMap
       name: teleport-audit-sessions-url
       valuesKey: url
-      targetPath: .auth.teleportConfig.teleport.storage.audit_sessions_url
+      targetPath: .auth.teleportConfig.teleport.storage.audit_sessions_uri
   values:
     clusterName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     kubeClusterName: infra-mk3
@@ -43,7 +43,6 @@ spec:
               sslcert=/etc/teleport-backend/secrets/audit/client/tls.crt&\
               sslkey=/etc/teleport-backend/secrets/audit/client/tls.key&\
               sslmode=verify-full"
-            audit_sessions_uri:
       extraVolumes:
         - name: intermediary-ca-cert
           secret:
