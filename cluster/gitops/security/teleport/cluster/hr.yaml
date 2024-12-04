@@ -89,7 +89,8 @@ spec:
       connectorName: authentik
       localAuth: false
       lockingMode: strict
-      secondFactor: off # This is handled by Authentik. TODO consider additional enforcement
+      # Apparently "off" just errors now???
+      # secondFactor: off # This is handled by Authentik. TODO consider additional enforcement
     proxyListenerMode: multiplex
     sessionRecording: node-sync
     enterprise: true
@@ -130,5 +131,4 @@ spec:
               version: v1
               kind: Deployment
               name: teleport-cluster-auth
-
   # TODO add TSCs
