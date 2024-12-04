@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/configs/blueprint.authentik_v1.json
+version: 1
+metadata:
+  name: Implicit provider authentication
+  labels:
+    blueprints.goauthentik.io/description: Implicitly allow provider to authenticate
+entries:
+  - model: authentik_flows.flow
+    id: implicit-authorization-flow
+    identifiers:
+      slug: implicit-authorization-flow
+    attrs:
+      designation: authorization
+      name: Implicit authorization
+      title: Redirecting to %(app)s
+      authentication: require_authenticated
