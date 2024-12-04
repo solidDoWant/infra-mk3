@@ -60,6 +60,8 @@ spec:
         # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
         replication: true
         login: true
+        # Needed until https://github.com/gravitational/teleport/issues/49745 is addressed
+        superuser: true
   monitoring:
     enablePodMonitor: true
   certificates:

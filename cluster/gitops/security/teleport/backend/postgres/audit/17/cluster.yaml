@@ -52,6 +52,8 @@ spec:
         # Remove the app user password. TLS auth will be enforce instead.
         disablePassword: true
         login: true
+        # Needed until https://github.com/gravitational/teleport/issues/49745 is addressed
+        superuser: true
   monitoring:
     enablePodMonitor: true
   certificates:
