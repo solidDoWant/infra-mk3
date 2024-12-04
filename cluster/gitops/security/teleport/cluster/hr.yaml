@@ -122,7 +122,7 @@ spec:
         patches:
           - patch: |
               - op: add
-                path: /spec/containers/0/envFrom/-
+                path: /spec/template/spec/containers/0/envFrom
                 value:
                   - secretRef:
                       name: teleport-audit-sessions
