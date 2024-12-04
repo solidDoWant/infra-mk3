@@ -18,7 +18,7 @@ spec:
     - kind: ConfigMap
       name: teleport-audit-sessions-url
       valuesKey: url
-      targetPath: .auth.teleportConfig.teleport.storage.audit_sessions_uri
+      targetPath: auth.teleportConfig.teleport.storage.audit_sessions_uri
   values:
     clusterName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     kubeClusterName: infra-mk3
