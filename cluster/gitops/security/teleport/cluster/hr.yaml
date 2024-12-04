@@ -1,0 +1,65 @@
+---
+# yaml-language-server: $schema=./schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teleport-cluster
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: teleport-cluster
+      sourceRef:
+        kind: HelmRepository
+        name: teleport-charts
+      version: 17.0.2
+  values:
+    clusterName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    kubeClusterName: infra-mk3
+    proxyProtocol: off
+    auth:
+      teleportConfig:
+        teleport:
+          storage:
+            type: postgresql
+            conn_string: postgresql://teleport@teleport-postgres-17-rw.security.svc.cluster.local:5432/teleport_backend?sslmode=verify-full&pool_max_conns=20
+    proxy:
+      teleportConfig:
+        proxy_service:
+          # TODO limit access to proxy to only gateways per RFD 123:
+          # https://github.com/gravitational/teleport/blob/master/rfd/0123-tls-routing-behind-layer7-lb.md
+          use_x_forwarded_for: true
+    authentication:
+      type: oidc
+      connectorName: authentik
+      localAuth: false
+      lockingMode: strict
+      secondFactor: off # This is handled by Authentik. TODO consider additional enforcement
+    proxyListenerMode: multiplex
+    sessionRecording: node-sync
+    enterprise: true
+    licenseSecretName: teleport-license
+    operator:
+      enabled: true
+    podMonitor:
+      enabled: true
+    highAvailability:
+      # TODO WTF do I need to do for storage???
+      replicaCount: 2
+      requireAntiAffinity: true
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 1
+      certManager:
+        enabled: true
+        addCommonName: true
+        addPublicAddrs: true
+        issuerName: security-intermediary-ca # TODO this is probably wrong (???)
+    service:
+      type: ClusterIP
+    ingress:
+      # TODO use httproute
+      enabled: true
+      # useExisting: true
+  # postRenderers:
+  # TODO add TSCs

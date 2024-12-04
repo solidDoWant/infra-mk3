@@ -1,10 +1,10 @@
 ---
 # yaml-language-server: $schema=../../../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
-# Approve the the teleport postgres 17 serving certificate specifically.
+# Approve the the teleport backend postgres 17 serving certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: security-intermediary-ca-teleport-postgres-17-serving-cert
+  name: security-intermediary-ca-teleport-core-postgres-17-serving-cert
 spec:
   selector:
     issuerRef:
@@ -17,16 +17,16 @@ spec:
   allowed:
     commonName:
       required: true
-      value: Teleport Postgres 17
+      value: Teleport backend Postgres 17
     dnsNames:
       required: true
       values:
-        - teleport-postgres-17-rw.security.svc
-        - teleport-postgres-17-ro.security.svc
-        - teleport-postgres-17-r.security.svc
-        - teleport-postgres-17-rw.security.svc.cluster.local
-        - teleport-postgres-17-ro.security.svc.cluster.local
-        - teleport-postgres-17-r.security.svc.cluster.local
+        - teleport-core-postgres-17-rw.security.svc
+        - teleport-core-postgres-17-ro.security.svc
+        - teleport-core-postgres-17-r.security.svc
+        - teleport-core-postgres-17-rw.security.svc.cluster.local
+        - teleport-core-postgres-17-ro.security.svc.cluster.local
+        - teleport-core-postgres-17-r.security.svc.cluster.local
     subject:
       countries:
         required: true
@@ -49,16 +49,16 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: teleport-postgres-17-serving-cert
+  name: teleport-core-postgres-17-serving-cert
 spec:
-  commonName: Teleport Postgres 17
+  commonName: Teleport backend Postgres 17
   dnsNames:
-    - teleport-postgres-17-rw.security.svc
-    - teleport-postgres-17-ro.security.svc
-    - teleport-postgres-17-r.security.svc
-    - teleport-postgres-17-rw.security.svc.cluster.local
-    - teleport-postgres-17-ro.security.svc.cluster.local
-    - teleport-postgres-17-r.security.svc.cluster.local
+    - teleport-core-postgres-17-rw.security.svc
+    - teleport-core-postgres-17-ro.security.svc
+    - teleport-core-postgres-17-r.security.svc
+    - teleport-core-postgres-17-rw.security.svc.cluster.local
+    - teleport-core-postgres-17-ro.security.svc.cluster.local
+    - teleport-core-postgres-17-r.security.svc.cluster.local
   subject:
     countries:
       - US
@@ -80,4 +80,4 @@ spec:
     name: security-intermediary-ca
     kind: Issuer
     group: cert-manager.io
-  secretName: teleport-postgres-17-serving-cert
+  secretName: teleport-core-postgres-17-serving-cert

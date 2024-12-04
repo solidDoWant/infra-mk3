@@ -5,10 +5,10 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: teleport-postgres-auth-ca
+  name: teleport-core-postgres-auth-ca
 spec:
   isCA: true
-  commonName: Teleport Postgres authentication Certificate Authority
+  commonName: Teleport backend Postgres authentication Certificate Authority
   subject:
     countries:
       - US
@@ -35,14 +35,14 @@ spec:
     name: self-signed
     kind: ClusterIssuer
     group: cert-manager.io
-  secretName: teleport-postgres-auth-ca
+  secretName: teleport-core-postgres-auth-ca
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: teleport-postgres-auth-ca
+  name: teleport-core-postgres-auth-ca
 spec:
   ca:
-    secretName: teleport-postgres-auth-ca
+    secretName: teleport-core-postgres-auth-ca
     # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name

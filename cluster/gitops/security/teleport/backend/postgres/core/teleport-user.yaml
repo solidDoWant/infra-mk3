@@ -1,41 +1,41 @@
 ---
-# Approve the the postgres streaming replica user auth certificate specifically.
+# Approve the the postgres teleport backend user certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: teleport-postgres-auth-ca-streaming-replica-user
+  name: teleport-core-postgres-auth-ca-teleport-core-user
 spec:
   selector:
     issuerRef:
       group: cert-manager.io
       kind: Issuer
-      name: teleport-postgres-auth-ca
+      name: teleport-core-postgres-auth-ca
     namespace:
       matchNames:
         - security
   allowed:
     commonName:
       required: true
-      value: streaming_replica
+      value: teleport-core
     usages:
       - client auth
   constraints:
-    maxDuration: 1h
+    maxDuration: 720h # 1 month
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: teleport-postgres-streaming-replica-user
+  name: teleport-core-postgres-teleport-core-user
 spec:
-  secretName: teleport-postgres-streaming-replica-user
+  secretName: teleport-core-postgres-teleport-core-user
   usages:
     - client auth
-  commonName: streaming_replica
-  duration: 1h
+  commonName: teleport-core
+  duration: 720h # 1 month
   secretTemplate:
     labels:
       cnpg.io/reload: "true"
   issuerRef:
     group: cert-manager.io
-    name: teleport-postgres-auth-ca
+    name: teleport-core-postgres-auth-ca
     kind: Issuer

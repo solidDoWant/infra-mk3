@@ -3,16 +3,12 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: &cluster_name teleport-postgres-17
+  name: &cluster_name teleport-core-postgres-17
 spec:
   instances: 2
   bootstrap:
     initdb:
-      database: teleport
-      owner: teleport
-      postInitSQL:
-        # Remove the app user password. TLS auth will be enforce instead.
-        - ALTER ROLE teleport PASSWORD NULL;
+      database: teleport-core
   postgresql:
     parameters:
       shared_buffers: 256MB # 25% per docs
@@ -30,8 +26,12 @@ spec:
       # This is per connection. However, because the cluster will be used by one application, the number of individual connections
       # should be low.
       work_mem: 16MB
+      # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
+      # These are already set by default, don't set them again
+      # wal_level: logical
+      # max_replication_slots: 10  # Default is 32
     pg_hba:
-      - hostssl teleport all all cert # Require TLS auth
+      - hostssl teleport-core all all cert # Require TLS auth
   storage:
     size: 5Gi
     storageClass: postgres
@@ -50,13 +50,21 @@ spec:
   #     online: true
   #     snapshotOwnerReference: none
   #     className:
+  managed:
+    roles:
+      - name: teleport-core
+        # Remove the app user password. TLS auth will be enforce instead.
+        disablePassword: true
+        # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
+        replication: true
+        login: true
   monitoring:
     enablePodMonitor: true
   certificates:
-    serverTLSSecret: teleport-postgres-17-serving-cert
-    serverCASecret: teleport-postgres-17-serving-cert
-    clientCASecret: teleport-postgres-auth-ca-cert
-    replicationTLSSecret: teleport-postgres-streaming-replica-user
+    serverTLSSecret: teleport-core-postgres-17-serving-cert
+    serverCASecret: teleport-core-postgres-17-serving-cert
+    clientCASecret: teleport-core-postgres-auth-ca-cert
+    replicationTLSSecret: teleport-core-postgres-streaming-replica-user
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname
