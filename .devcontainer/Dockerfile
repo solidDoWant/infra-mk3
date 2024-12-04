@@ -14,6 +14,8 @@ RUN mkdir -pv /tmp/debs && \
     curl -fsSL -o /tmp/debs/taskfile.deb "https://github.com/go-task/task/releases/download/v3.39.2/task_${KERNEL}_${PRETTY_ARCH}.deb" && \
     # SOPS
     curl -fsSL -o /tmp/debs/sops.deb "https://github.com/getsops/sops/releases/download/v3.9.0/sops_3.9.0_${PRETTY_ARCH}.deb" && \
+    # Teleport
+    curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_17.0.3_${PRETTY_ARCH}.deb" && \
     dpkg -i /tmp/debs/*.deb && \
     rm -rvf /tmp/debs
 
@@ -107,6 +109,15 @@ RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/cmtool
+
+# tsh/tctl/tbot
+RUN mkdir -pv /tmp/cilium && \
+    # Vars for determining download URLs
+    KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
+    curl -fsSL -o /tmp/cilium/cilium.tar.gz "https://github.com/cilium/cilium-cli/releases/download/v0.16.19/cilium-${KERNEL}-${PRETTY_ARCH}.tar.gz" && \
+    tar -xzvf /tmp/cilium/cilium.tar.gz -C /usr/local/bin cilium && \
+    rm -rvf /tmp/cilium
 
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
