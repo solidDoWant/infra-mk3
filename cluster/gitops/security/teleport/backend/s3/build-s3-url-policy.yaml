@@ -27,4 +27,4 @@ spec:
         data:
           data:
             url: >-
-              s3://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}/{{ request.object.data.BUCKET_NAME }}
+              s3://{{ request.object.data.BUCKET_NAME }}?endpoint=https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}
