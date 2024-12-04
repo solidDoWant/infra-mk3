@@ -27,7 +27,9 @@ spec:
       # should be low.
       work_mem: 16MB
     pg_hba:
-      - hostssl teleport-audit all all cert # Require TLS auth
+      # Require TLS auth
+      - hostssl teleport-audit all all cert
+      - hostssl postgres all all cert
   storage:
     size: 5Gi
     storageClass: postgres
