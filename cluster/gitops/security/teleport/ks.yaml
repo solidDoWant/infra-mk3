@@ -43,6 +43,8 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: approver-policy
+    - name: cluster-issuers
     - name: prometheus-crds
     - name: rook-ceph-cluster
     - name: teleport-backend

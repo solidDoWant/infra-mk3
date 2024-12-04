@@ -1,0 +1,21 @@
+---
+# Route TLS connections to the Teleport proxy and let it handle TLS termination
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: teleport
+  # labels:
+  #   external-dns.home.arpa/publish: "true"
+spec:
+  hostnames:
+    - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
+  parentRefs:
+    - name: internal-gateway
+      namespace: networking
+    # - name: external-gateway
+    #   namespace: networking
+  rules:
+    - backendRefs:
+        - name: teleport-cluster
+          port: 443

@@ -1,5 +1,6 @@
 ---
 # yaml-language-server: $schema=./schema.json
+# cspell:words Addrs
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -78,6 +79,10 @@ spec:
           mountPath: /etc/teleport-backend/secrets/audit/server
         - name: teleport-audit-postgres-teleport-audit-user
           mountPath: /etc/teleport-backend/secrets/audit/client
+      extraEnv:
+        # The S3 client will fail before attempting connection to Rook if this is not set
+        - name: AWS_DEFAULT_REGION
+          value: dummy-value
     proxy:
       teleportConfig:
         proxy_service:
@@ -108,17 +113,18 @@ spec:
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
+      # Needed for proxy only per chart
       certManager:
         enabled: true
         addCommonName: true
         addPublicAddrs: true
-        issuerName: security-intermediary-ca # TODO this is probably wrong (???)
+        issuerKind: ClusterIssuer
+        issuerName: letsencrypt-production
     service:
       type: ClusterIP
     ingress:
-      # TODO use httproute
-      enabled: true
-      # useExisting: true
+      # enabled: true
+      useExisting: true
   postRenderers:
     # Add env vars for audit session logging S3 bucket access
     - kustomize:
@@ -134,4 +140,57 @@ spec:
               version: v1
               kind: Deployment
               name: teleport-cluster-auth
-  # TODO add TSCs
+    # Add additional information to cert
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/subject
+                value:
+                  countries:
+                    - US
+                  provinces:
+                    - ${SECRET_STATE}
+                  organizations:
+                    - infra-mk3
+            target:
+              group: cert-manager.io
+              version: v1
+              kind: Certificate
+              name: teleport-cluster
+    # Add TSCs
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/topologySpreadConstraints
+                value:
+                  - maxSkew: 1 # Skew of 1 allows for rolling updates
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: teleport-cluster
+                        app.kubernetes.io/component: auth
+                    whenUnsatisfiable: DoNotSchedule
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              labelSelector: app.kubernetes.io/component = auth
+          - patch: |
+              - op: add
+                path: /spec/template/spec/topologySpreadConstraints
+                value:
+                  - maxSkew: 1 # Skew of 1 allows for rolling updates
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: teleport-cluster
+                        app.kubernetes.io/component: proxy
+                    whenUnsatisfiable: DoNotSchedule
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              labelSelector: app.kubernetes.io/component = proxy
+    # TODO add affinity for auth and postgres primary to attract to the same nodes
