@@ -13,6 +13,16 @@ spec:
         kind: HelmRepository
         name: teleport-charts
       version: 17.0.2
+  valuesFrom:
+    # S3 URL
+    - kind: ConfigMap
+      name: teleport-audit-sessions-url
+      valuesKey: url
+      targetPath: .auth.teleportConfig.teleport.storage.audit_sessions_url
+    # S3 credentials
+    - kind: Secret
+      name: teleport-audit-sessions
+      targetPath: auth.extraEnv
   values:
     clusterName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     kubeClusterName: infra-mk3
@@ -22,7 +32,57 @@ spec:
         teleport:
           storage:
             type: postgresql
-            conn_string: postgresql://teleport@teleport-postgres-17-rw.security.svc.cluster.local:5432/teleport_backend?sslmode=verify-full&pool_max_conns=20
+            conn_string: "\
+              postgresql://\"
+              teleport-core@teleport-core-postgres-17-rw.security.svc.cluster.local:5432/teleport-core?\
+              pool_max_conns=20\
+              sslrootcert=/etc/teleport-backend/secrets/core/server/ca.crt\
+              sslcert=/etc/teleport-backend/secrets/core/client/tls.crt\
+              sslkey=/etc/teleport-backend/secrets/core/client/tls.key\
+              sslmode=verify-full"
+            audit_events_uri: "\
+              postgresql://\"
+              teleport-audit@teleport-audit-postgres-17-rw.security.svc.cluster.local:5432/teleport-audit?\
+              sslrootcert=/etc/teleport-backend/secrets/audit/server/ca.crt\
+              sslcert=/etc/teleport-backend/secrets/audit/client/tls.crt\
+              sslkey=/etc/teleport-backend/secrets/audit/client/tls.key\
+              sslmode=verify-full"
+            audit_sessions_uri:
+      extraVolumes:
+        - name: intermediary-ca-cert
+          secret:
+            secretName: security-intermediary-ca
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt
+        - name: teleport-core-postgres-teleport-core-user
+          secret:
+            secretName: teleport-core-postgres-teleport-core-user
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        - name: teleport-audit-postgres-teleport-audit-user
+          secret:
+            secretName: teleport-audit-postgres-teleport-audit-user
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+      extraVolumeMounts:
+        - name: intermediary-ca-cert
+          mountPath: /etc/teleport-backend/secrets/core/server
+        - name: teleport-core-postgres-teleport-core-user
+          mountPath: /etc/teleport-backend/secrets/core/client
+        - name: intermediary-ca-cert
+          mountPath: /etc/teleport-backend/secrets/audit/server
+        - name: teleport-audit-postgres-teleport-audit-user
+          mountPath: /etc/teleport-backend/secrets/audit/client
     proxy:
       teleportConfig:
         proxy_service:
@@ -44,7 +104,6 @@ spec:
     podMonitor:
       enabled: true
     highAvailability:
-      # TODO WTF do I need to do for storage???
       replicaCount: 2
       requireAntiAffinity: true
       podDisruptionBudget:
