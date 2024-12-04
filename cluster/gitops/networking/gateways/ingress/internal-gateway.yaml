@@ -12,6 +12,36 @@ spec:
     - type: IPAddress
       value: 10.34.0.1
   listeners:
+    # Teleport/Teleport wildcard cert
+    # Because the gateway API group made a monumentally stupid decision to
+    # remove the ability to set certs via route resources, all certs must be
+    # created and specified here. This is both a terrible security decision
+    # (requiring trust to be placed in multiple namespaces, which are used in
+    # k8s as trust boundaries), and a PITA because it introduces coupling that
+    # shouldn't be here.
+    - name: https
+      hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: teleport-wildcard-public-domain-name-cert
+      allowedRoutes:
+        namespaces:
+          from: security
+    - name: https
+      hostname: "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: teleport-wildcard-public-domain-name-cert
+      allowedRoutes:
+        namespaces:
+          from: security
+    # Listeners for everything else
     - name: https
       hostname: &hostname "*.${SECRET_PUBLIC_DOMAIN_NAME}"
       port: 443
