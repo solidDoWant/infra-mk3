@@ -19,10 +19,6 @@ spec:
       name: teleport-audit-sessions-url
       valuesKey: url
       targetPath: .auth.teleportConfig.teleport.storage.audit_sessions_url
-    # S3 credentials
-    - kind: Secret
-      name: teleport-audit-sessions
-      targetPath: auth.extraEnv
   values:
     clusterName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     kubeClusterName: infra-mk3
@@ -120,5 +116,20 @@ spec:
       # TODO use httproute
       enabled: true
       # useExisting: true
-  # postRenderers:
+  postRenderers:
+    # Add env vars for audit session logging S3 bucket access
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/containers/0/envFrom/-
+                value:
+                  - secretRef:
+                      name: teleport-audit-sessions
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: teleport-cluster-auth
+
   # TODO add TSCs
