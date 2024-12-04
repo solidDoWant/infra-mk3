@@ -84,6 +84,9 @@ spec:
           # TODO limit access to proxy to only gateways per RFD 123:
           # https://github.com/gravitational/teleport/blob/master/rfd/0123-tls-routing-behind-layer7-lb.md
           trust_x_forwarded_for: true
+    # In HA mode this is entirely handled via DB/S3/etc.
+    persistence:
+      enabled: false
     authentication:
       type: oidc
       connectorName: authentik
