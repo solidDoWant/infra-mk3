@@ -34,7 +34,7 @@ spec:
       # max_replication_slots: 10  # Default is 32
     pg_hba:
       # Require TLS auth
-      - hostssl teleport-audit all all cert
+      - hostssl teleport-core all all cert
       - hostssl postgres all all cert
   storage:
     size: 5Gi
