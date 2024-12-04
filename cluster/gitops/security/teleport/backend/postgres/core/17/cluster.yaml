@@ -35,7 +35,7 @@ spec:
     pg_hba:
       # Require TLS auth
       - hostssl teleport-core all all cert
-      - hostssl postgres all all cert
+      # - hostssl postgres all all cert
   storage:
     size: 5Gi
     storageClass: postgres
@@ -63,7 +63,7 @@ spec:
         replication: true
         login: true
         # Needed until https://github.com/gravitational/teleport/issues/49745 is addressed
-        superuser: true
+        # superuser: true
   monitoring:
     enablePodMonitor: true
   certificates:
