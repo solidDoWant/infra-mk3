@@ -5,7 +5,6 @@ kind: TeleportOIDCConnector
 metadata:
   name: authentik
 spec:
-  provider: authentik
   client_id: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_ID}"
   client_secret: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_SECRET}"
   issuer_url: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/teleport/
