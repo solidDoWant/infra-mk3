@@ -2,6 +2,7 @@
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kyverno.io/policy_v1.json
 # This is needed to construct the S3 URL. The bucket name has a random suffix,
 # so its value isn't known ahead of time.
+# cspell:words disablesse
 apiVersion: kyverno.io/v1
 kind: Policy
 metadata:
@@ -26,5 +27,8 @@ spec:
         namespace: security
         data:
           data:
-            url: >-
-              s3://{{ request.object.data.BUCKET_NAME }}?endpoint=https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}
+            url: "\
+              s3://\
+              {{ request.object.data.BUCKET_NAME }}?\
+              endpoint=https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}&\
+              disablesse=true"
