@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/teleportoidcconnector_v3.json
+apiVersion: resources.teleport.dev/v3
+kind: TeleportOIDCConnector
+metadata:
+  name: authentik
+spec:
+  provider: authentik
+  client_id: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_ID}"
+  client_secret: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_SECRET}"
+  issuer_url: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/teleport/
+  redirect_url:
+    - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443/v1/webapi/oidc/callback
+  max_age: 24h
+  display: Login with Authentik
+  claims_to_roles:
+    # TODO this is just for testing
+    - claim: groups
+      roles:
+        - full-access
+      value: Teleport users
