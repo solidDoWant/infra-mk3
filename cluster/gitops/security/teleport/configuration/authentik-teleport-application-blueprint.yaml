@@ -52,11 +52,6 @@ stringData:
               authentik_crypto.certificatekeypair,
               [name, authentik Self-signed Certificate],
             ]
-          encryption_key:
-            !Find [
-              authentik_crypto.certificatekeypair,
-              [name, authentik Self-signed Certificate],
-            ]
           authentication_flow:
             !Find [authentik_flows.flow, [slug, password-authentication-flow]]
           invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
