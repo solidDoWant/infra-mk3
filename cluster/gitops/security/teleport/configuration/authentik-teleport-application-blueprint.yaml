@@ -3,6 +3,8 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: authentik-teleport-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
 type: Opaque
 stringData:
   # Unfortunately this must be a secret (rather than secretGenerator) or Flux will not substitute
