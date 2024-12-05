@@ -1,0 +1,82 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/configs/blueprint.authentik_v1.json
+version: 1
+metadata:
+  name: Teleport application
+  labels:
+    blueprints.goauthentik.io/description: Resources for Teleport SSO
+entries:
+  # Dependencies
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Implicit provider authentication
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Password authentication flow
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Invalidation flow
+      required: true
+  # Application
+  - model: authentik_providers_oauth2.oauth2provider
+    id: teleport-provider
+    identifiers:
+      name: Teleport
+    attrs:
+      name: Teleport
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+      client_type: confidential
+      client_id: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_ID}"
+      client_secret: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_SECRET}"
+      redirect_uris: |-
+        https://${SECRET_PUBLIC_DOMAIN_NAME}/v1/webapi/oidc/callback
+      signing_key:
+        !Find [
+          authentik_crypto.certificatekeypair,
+          [name, authentik Self-signed Certificate],
+        ]
+      encryption_key:
+        !Find [
+          authentik_crypto.certificatekeypair,
+          [name, authentik Self-signed Certificate],
+        ]
+      authentication_flow:
+        !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+      access_code_validity: minutes=1
+      access_token_validity: minutes=5
+      refresh_token_validity: days=30
+      property_mappings:
+        - !Find [
+            authentik_providers_oauth2.scopemapping,
+            [name, "authentik default OAuth Mapping: OpenID 'email'"],
+          ]
+        - !Find [
+            authentik_providers_oauth2.scopemapping,
+            [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+          ]
+        - !Find [
+            authentik_providers_oauth2.scopemapping,
+            [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+          ]
+      sub_mode: hashed_user_id
+      include_claims_in_id_token: true
+      issuer_mode: per_provider
+  - model: authentik_core.application
+    id: teleport-application
+    identifiers:
+      slug: teleport
+    attrs:
+      name: Teleport
+      slug: teleport
+      group: Infra access
+      provider: !KeyOf teleport-provider
+      policy_engine_mode: any
+      meta_launch_url: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+      # icon: # TODO
