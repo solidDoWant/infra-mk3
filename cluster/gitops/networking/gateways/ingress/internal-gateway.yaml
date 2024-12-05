@@ -12,6 +12,15 @@ spec:
     - type: IPAddress
       value: 10.34.0.1
   listeners:
+    - name: tls
+      hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+      port: 443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: security
     # Teleport/Teleport wildcard cert
     # Because the gateway API group made a monumentally stupid decision to
     # remove the ability to set certs via route resources, all certs must be
