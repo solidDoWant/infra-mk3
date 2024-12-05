@@ -86,3 +86,11 @@ stringData:
           policy_engine_mode: any
           meta_launch_url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}
           # icon: # TODO
+      # Groups
+      - model: authentik_core.group
+        id: teleport-group
+        identifiers:
+          name: Teleport users
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_TELEPORT_USERS_DISCORD_ROLE_ID}"
