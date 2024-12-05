@@ -20,7 +20,9 @@ spec:
         mode: Passthrough
       allowedRoutes:
         namespaces:
-          from: security
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: security
     - name: teleport-tls-wildcard
       hostname: "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
       port: 443
@@ -29,7 +31,9 @@ spec:
         mode: Passthrough
       allowedRoutes:
         namespaces:
-          from: security
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: security
     # Teleport/Teleport wildcard cert
     # Because the gateway API group made a monumentally stupid decision to
     # remove the ability to set certs via route resources, all certs must be
@@ -47,7 +51,9 @@ spec:
           - name: teleport-wildcard-public-domain-name-cert
       allowedRoutes:
         namespaces:
-          from: security
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: security
     - name: teleport-https-wildcard
       hostname: "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
       port: 443
@@ -58,7 +64,9 @@ spec:
           - name: teleport-wildcard-public-domain-name-cert
       allowedRoutes:
         namespaces:
-          from: security
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: security
     # Listeners for everything else
     - name: https
       hostname: &hostname "*.${SECRET_PUBLIC_DOMAIN_NAME}"
