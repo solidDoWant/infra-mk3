@@ -13,6 +13,10 @@ spec:
   parentRefs:
     - name: internal-gateway
       namespace: networking
+      sectionName: teleport-tls
+    - name: internal-gateway
+      namespace: networking
+      sectionName: teleport-tls-wildcard
     # - name: external-gateway
     #   namespace: networking
   rules:

@@ -12,8 +12,17 @@ spec:
     - type: IPAddress
       value: 10.34.0.1
   listeners:
-    - name: tls
+    - name: teleport-tls
       hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+      port: 443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: security
+    - name: teleport-tls-wildcard
+      hostname: "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
       port: 443
       protocol: TLS
       tls:
@@ -28,7 +37,7 @@ spec:
     # (requiring trust to be placed in multiple namespaces, which are used in
     # k8s as trust boundaries), and a PITA because it introduces coupling that
     # shouldn't be here.
-    - name: https
+    - name: teleport-https
       hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
       port: 443
       protocol: HTTPS
@@ -39,7 +48,7 @@ spec:
       allowedRoutes:
         namespaces:
           from: security
-    - name: https
+    - name: teleport-https-wildcard
       hostname: "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
       port: 443
       protocol: HTTPS
