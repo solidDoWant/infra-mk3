@@ -34,8 +34,7 @@ entries:
       client_type: confidential
       client_id: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_ID}"
       client_secret: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_SECRET}"
-      redirect_uris: |-
-        https://${SECRET_PUBLIC_DOMAIN_NAME}/v1/webapi/oidc/callback
+      redirect_uris: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/v1/webapi/oidc/callback
       signing_key:
         !Find [
           authentik_crypto.certificatekeypair,
