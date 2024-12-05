@@ -17,8 +17,7 @@ spec:
     # This provides access to the `groups` claim
     - profile
   claims_to_roles:
-    # TODO this is just for testing
     - claim: groups
       roles:
         - full-access
-      value: Teleport users
+      value: Teleport admins

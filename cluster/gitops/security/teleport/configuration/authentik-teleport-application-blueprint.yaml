@@ -92,10 +92,10 @@ stringData:
       - model: authentik_core.group
         id: teleport-group
         identifiers:
-          name: Teleport users
+          name: Teleport admins
         attrs:
           attributes:
-            discord_role_id: "${SECRET_AUTHENTIK_TELEPORT_USERS_DISCORD_ROLE_ID}"
+            discord_role_id: "${SECRET_AUTHENTIK_TELEPORT_ADMINS_DISCORD_ROLE_ID}"
       - model: authentik_policies.policybinding
         identifiers:
           order: 0
