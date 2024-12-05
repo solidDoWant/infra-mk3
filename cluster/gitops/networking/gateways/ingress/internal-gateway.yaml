@@ -12,6 +12,7 @@ spec:
     - type: IPAddress
       value: 10.34.0.1
   listeners:
+    # Teleport
     - name: teleport-tls
       hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
       port: 443
