@@ -10,6 +10,8 @@ spec:
   hostnames:
     - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
+    - teleport.cluster.local
+    - "*.teleport.cluster.local"
   parentRefs:
     - name: internal-gateway
       namespace: networking

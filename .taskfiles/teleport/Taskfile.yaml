@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  login:
+    silent: true
+    cmd: |
+      DOMAIN_NAME="teleport.$(
+        sops decrypt --extract '["stringData"]["SECRET_PUBLIC_DOMAIN_NAME"]' \
+        {{ shellQuote .ROOT_DIR }}'/cluster/gitops/flux-system/flux/cluster/cluster-secrets.sops.yaml'
+      )"
+      echo "Logging into ${DOMAIN_NAME}..."
+      tsh login "--proxy=${DOMAIN_NAME}" # "${DOMAIN_NAME}"
