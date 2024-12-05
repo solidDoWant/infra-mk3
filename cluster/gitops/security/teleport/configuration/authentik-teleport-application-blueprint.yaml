@@ -94,3 +94,8 @@ stringData:
         attrs:
           attributes:
             discord_role_id: "${SECRET_AUTHENTIK_TELEPORT_USERS_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf teleport-group
+          target: !KeyOf teleport-application
