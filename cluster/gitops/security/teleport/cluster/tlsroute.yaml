@@ -25,19 +25,3 @@ spec:
     - backendRefs:
         - name: teleport-cluster
           port: 443
-# ---
-# # This is not currently supported by istio (work on this started yesterday)
-# # TODO this is for testing
-# # This might not actually work with subdomains
-# apiVersion: gateway.networking.k8s.io/v1alpha3
-# kind: BackendTLSPolicy
-# metadata:
-#   name: teleport
-# spec:
-#   targetRefs:
-#     - kind: service
-#       name: teleport-cluster
-#       group: ""
-#   validation:
-#     wellKnownCACertificates: "System"
-#     hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
