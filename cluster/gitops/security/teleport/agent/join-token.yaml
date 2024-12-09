@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/teleportprovisiontoken_v2.json
+apiVersion: resources.teleport.dev/v2
+kind: TeleportProvisionToken
+metadata:
+  name: agent-join-token
+  # Make the token last a long time
+  # This isn't a huge risk because Kubernetes will be used to verify the identity of the
+  # requester
+  expires: "2030-01-01T00:00:00Z"
+spec:
+  roles:
+    # - App # TODO
+    - Db
+  join_method: kubernetes
+  kubernetes:
+    type: in_cluster
+    allow:
+      - service_account: security:teleport-kube-agent
