@@ -7,7 +7,8 @@ metadata:
   # Make the token last a long time
   # This isn't a huge risk because Kubernetes will be used to verify the identity of the
   # requester
-  expires: "2030-01-01T00:00:00Z"
+  # Currently bugged, see https://github.com/gravitational/teleport/issues/49925
+  # expires: "2030-01-01T00:00:00Z"
 spec:
   roles:
     # - App # TODO
