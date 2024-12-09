@@ -19,6 +19,12 @@ spec:
     - name: internal-gateway
       namespace: networking
       sectionName: teleport-tls-wildcard
+    - name: internal-gateway
+      namespace: networking
+      sectionName: teleport-cluster-tls
+    - name: internal-gateway
+      namespace: networking
+      sectionName: teleport-cluster-wildcard-tls
     # - name: external-gateway
     #   namespace: networking
   rules:
