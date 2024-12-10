@@ -39,6 +39,8 @@ spec:
             image:
               repository: ubuntu
               tag: 22.04
+            command:
+              - /script/applier.sh
             env:
               RESOURCES_DIRECTORY: /resources
               TELEPORT_DOMAIN_NAME: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
