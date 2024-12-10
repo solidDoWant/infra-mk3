@@ -4,6 +4,25 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
+  name: &app_name teleport-crds
+spec:
+  targetNamespace: security
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/security/teleport/crds
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
   name: &app_name teleport-backend
 spec:
   targetNamespace: security
@@ -43,6 +62,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: teleport-crds
     - name: approver-policy
     - name: cluster-issuers
     - name: prometheus-crds
@@ -68,6 +88,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: teleport-crds
     - name: teleport-cluster
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json

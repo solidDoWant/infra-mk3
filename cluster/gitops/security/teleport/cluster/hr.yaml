@@ -21,6 +21,10 @@ spec:
       valuesKey: url
       targetPath: auth.teleportConfig.teleport.storage.audit_sessions_uri
   values:
+    # I'm pretty sure that the key in the chart docs is for the wrong path
+    # This should cover both the chart docs, and what I think is the right path
+    global:
+      installCRDs: never
     clusterName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     kubeClusterName: infra-mk3
     proxyProtocol: off

@@ -1,0 +1,19 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teleport-operator
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: teleport-cluster
+      sourceRef:
+        kind: HelmRepository
+        name: teleport-charts
+      version: 17.0.2
+  values:
+    # This will be installed as a part of the cluster. Doing so will handle
+    # join tokens and other integration resources
+    enabled: false
+    installCRDs: true
