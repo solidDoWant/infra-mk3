@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-REQUIRED_ENV_VARS=(IDENTITY_DIRECTORY TELEPORT_PROXY_ADDRESS NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKEN_NAME TELEPORT_IDENTITY_FILE)
+REQUIRED_ENV_VARS=(TELEPORT_PROXY_ADDRESS NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKEN_NAME TELEPORT_IDENTITY_FILE)
 
 fatal() {
     >&2 echo "$@"
@@ -33,10 +33,6 @@ check_env_vars() {
     for REQUIRED_ENV_VAR in "${REQUIRED_ENV_VARS[@]}"; do
         [[ -n "${!REQUIRED_ENV_VAR}" ]] || usage
     done
-
-    if [[ ! -d "${RESOURCES_DIRECTORY}" ]]; then
-        fatal "Resources directory '${RESOURCES_DIRECTORY}' does not exist"
-    fi
 }
 
 setup() {
@@ -74,6 +70,6 @@ setup() {
 }
 
 
-check_env_vars
-setup
-run
+# check_env_vars
+# setup
+# run
