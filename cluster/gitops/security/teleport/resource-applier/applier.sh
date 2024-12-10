@@ -34,7 +34,14 @@ setup() {
     # Install deps
     # TODO move this to container image, just not worth the effort right now
     apt update
-    apt install -y --no-install-recommends curl ca-certificates yq inotify-tools
+    apt install -y --no-install-recommends curl ca-certificates inotify-tools
+
+    # Install yq
+    KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)"
+    curl -fsSL -o /usr/local/bin/yq \
+        "https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_${KERNEL}_${PRETTY_ARCH}"
+    chmod +x /usr/local/bin/yq
 
     # Install Teleport binaries
     # shellcheck source=/dev/null
