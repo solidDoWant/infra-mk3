@@ -3,7 +3,7 @@
 apiVersion: resources.teleport.dev/v1
 kind: TeleportRoleV7
 metadata:
-  name: resource-applier
+  name: teleport-resource-applier
 spec:
   allow:
     # Teleport access
@@ -18,7 +18,7 @@ spec:
 apiVersion: resources.teleport.dev/v2
 kind: TeleportProvisionToken
 metadata:
-  name: resource-applier-join-token
+  name: teleport-resource-applier
   # Make the token last a long time
   # This isn't a huge risk because Kubernetes will be used to verify the identity of the
   # requester

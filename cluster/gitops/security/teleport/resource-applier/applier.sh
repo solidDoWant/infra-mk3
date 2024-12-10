@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-REQUIRED_ENV_VARS=(RESOURCES_DIRECTORY TELEPORT_DOMAIN_NAME)
+REQUIRED_ENV_VARS=(RESOURCES_DIRECTORY TELEPORT_DOMAIN_NAME NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKEN_NAME)
 
 fatal() {
     >&2 echo "$@"
@@ -30,6 +30,32 @@ check_env_vars() {
     fi
 }
 
+remote_tctl() {
+    kubectl exec -n "${NAMESPACE}" "${AUTH_SERVER_DEPLOYMENT_NAME}" -c teleport -- \
+        tctl "${@}"
+}
+
+# The Teleport operator does not currently have a resource for bot users.
+# Unfortunately this means that to run `tctl` or other Teleport cluster
+# commands, the script must exec into a Teleport auth server pod to set
+# one up.
+setup_bot() {
+    BOT_COUNT="$(remote_tctl get bots | yq ea '[.] | map(select(.metadata.name == env(BOT_NAME))) | length()')"
+    if [[ "${BOT_COUNT}" != '0' ]]; then
+        echo "Setting up new bot '${BOT_NAME}'..."
+        remote_tctl bots add --roles "${ROLE_NAME}" --token "${TOKEN_NAME}" "${BOT_NAME}"
+    else
+        echo "Found existing bot with name '${BOT_NAME}', attempting to use it"
+    fi
+
+    tctl start \
+        --data-dir=/var/lib/teleport/bot \
+        --destination-dir=/opt/machine-id \
+        --token="${TOKEN_NAME}" \
+        --proxy-server="${TELEPORT_DOMAIN_NAME}" \
+        --join-method=kubernetes
+}
+
 setup() {
     # Install deps
     # TODO move this to container image, just not worth the effort right now
@@ -44,12 +70,12 @@ setup() {
     chmod +x /usr/local/bin/yq
 
     # Install Teleport binaries
-    # shellcheck source=/dev/null
     TELEPORT_MAJOR_VERSION="$(
         curl -fsSL "https://${TELEPORT_DOMAIN_NAME}/v1/webapi/ping" | \
         yq '.server_version' | \
         cut -d. -f1
     )"
+    # shellcheck source=/dev/null
     source /etc/os-release
     curl https://apt.releases.teleport.dev/gpg \
         -o /usr/share/keyrings/teleport-archive-keyring.asc
@@ -62,9 +88,10 @@ setup() {
     # Authenticate with Teleport
     echo "Authenticating with Teleport..."
     sleep 99999
-    # tbot start identity 
+    setup_bot
 
     echo "Setup complete"
+    
 }
 
 upsert_changes() {

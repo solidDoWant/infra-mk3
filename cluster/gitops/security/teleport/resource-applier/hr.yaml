@@ -44,6 +44,11 @@ spec:
             env:
               RESOURCES_DIRECTORY: /resources
               TELEPORT_DOMAIN_NAME: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+              NAMESPACE: "{{ .Release.Namespace }}"
+              AUTH_SERVER_DEPLOYMENT_NAME: teleport-cluster-auth
+              BOT_NAME: teleport-resource-applier
+              ROLE_NAME: teleport-resource-applier
+              TOKEN_NAME: teleport-resource-applier
     defaultPodOptions:
       # This needs root for `apt`, so isolate it from the host. Performance is
       # not a concern.
@@ -63,12 +68,12 @@ spec:
               - path: /script
     serviceAccount:
       create: true
-    # RBAC for k8s-sidecar
     rbac:
       roles:
-        teleport-resource-applier:
+        teleport-resource-applier-k8s-sidecar:
           type: ClusterRole
           rules:
+            # RBAC for k8s-sidecar
             - apiGroups:
                 - ""
               resources:
@@ -78,11 +83,28 @@ spec:
                 - get
                 - list
                 - watch
+        teleport-resource-applier-resource-applier:
+          type: Role
+          rules:
+            # RBAC for Teleport to access auth for first time setup
+            - apiGroups:
+                - ""
+              resources:
+                - pods/exec
+              verbs:
+                - create
       bindings:
-        teleport-resource-applier:
+        teleport-resource-applier-k8s-sidecar:
           type: ClusterRoleBinding
           roleRef:
-            identifier: teleport-resource-applier
+            identifier: teleport-resource-applier-k8s-sidecar
+          subjects:
+            - identifier: default
+              namespace: "{{ .Release.Namespace }}"
+        teleport-resource-applier-resource-applier:
+          type: RoleBinding
+          roleRef:
+            identifier: teleport-resource-applier-resource-applier
           subjects:
             - identifier: default
               namespace: "{{ .Release.Namespace }}"
