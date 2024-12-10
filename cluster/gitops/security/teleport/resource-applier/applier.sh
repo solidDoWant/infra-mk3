@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-REQUIRED_ENV_VARS=(RESOURCES_DIRECTORY TELEPORT_DOMAIN_NAME NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKEN_NAME)
+REQUIRED_ENV_VARS=(RESOURCES_DIRECTORY TELEPORT_PROXY_ADDRESS NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKEN_NAME)
 
 fatal() {
     >&2 echo "$@"
@@ -41,19 +41,22 @@ remote_tctl() {
 # one up.
 setup_bot() {
     BOT_COUNT="$(remote_tctl get bots | yq ea '[.] | map(select(.metadata.name == env(BOT_NAME))) | length()')"
-    if [[ "${BOT_COUNT}" != '0' ]]; then
+    if [[ "${BOT_COUNT}" == '0' ]]; then
         echo "Setting up new bot '${BOT_NAME}'..."
         remote_tctl bots add --roles "${ROLE_NAME}" --token "${TOKEN_NAME}" "${BOT_NAME}"
     else
         echo "Found existing bot with name '${BOT_NAME}', attempting to use it"
     fi
 
-    tctl start \
+    tbot start \
         --data-dir=/var/lib/teleport/bot \
         --destination-dir=/opt/machine-id \
         --token="${TOKEN_NAME}" \
-        --proxy-server="${TELEPORT_DOMAIN_NAME}" \
+        --proxy-server="${TELEPORT_PROXY_ADDRESS}" \
         --join-method=kubernetes
+
+    export TELEPORT_IDENTITY_FILE='/opt/machine-id/identity'
+    export TELEPORT_AUTH_SERVER="${TELEPORT_PROXY_ADDRESS}"
 }
 
 setup() {
@@ -69,9 +72,15 @@ setup() {
         "https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_${KERNEL}_${PRETTY_ARCH}"
     chmod +x /usr/local/bin/yq
 
+    # Install kubectl
+    KUBECTL_VERSION="v1.31.2"
+    curl -fsSL -o /usr/local/bin/kubectl \
+        "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/${KERNEL}/${PRETTY_ARCH}/kubectl"
+    chmod +x /usr/local/bin/kubectl
+
     # Install Teleport binaries
     TELEPORT_MAJOR_VERSION="$(
-        curl -fsSL "https://${TELEPORT_DOMAIN_NAME}/v1/webapi/ping" | \
+        curl -fsSL "https://${TELEPORT_PROXY_ADDRESS}/v1/webapi/ping" | \
         yq '.server_version' | \
         cut -d. -f1
     )"
@@ -87,11 +96,9 @@ setup() {
     
     # Authenticate with Teleport
     echo "Authenticating with Teleport..."
-    sleep 99999
     setup_bot
 
     echo "Setup complete"
-    
 }
 
 upsert_changes() {

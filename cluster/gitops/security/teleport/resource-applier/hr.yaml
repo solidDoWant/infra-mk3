@@ -43,7 +43,7 @@ spec:
               - /script/applier.sh
             env:
               RESOURCES_DIRECTORY: /resources
-              TELEPORT_DOMAIN_NAME: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+              TELEPORT_PROXY_ADDRESS: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
               NAMESPACE: "{{ .Release.Namespace }}"
               AUTH_SERVER_DEPLOYMENT_NAME: teleport-cluster-auth
               BOT_NAME: teleport-resource-applier
@@ -87,6 +87,19 @@ spec:
           type: Role
           rules:
             # RBAC for Teleport to access auth for first time setup
+            - apiGroups:
+                - apps
+              resources:
+                - deployments
+              verbs:
+                - get
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+              verbs:
+                - get
+                - list
             - apiGroups:
                 - ""
               resources:
