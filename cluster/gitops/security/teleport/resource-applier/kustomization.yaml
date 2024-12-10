@@ -8,5 +8,8 @@ configMapGenerator:
   - name: applier-script
     files:
       - applier.sh
+    options:
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
 configurations:
   - ./vol-mount-from-cm-transformer.yaml
