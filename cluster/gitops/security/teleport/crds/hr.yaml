@@ -2,12 +2,12 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: teleport-operator
+  name: teleport-crds
 spec:
   interval: 5m
   chart:
     spec:
-      chart: teleport-cluster
+      chart: teleport-operator
       sourceRef:
         kind: HelmRepository
         name: teleport-charts
