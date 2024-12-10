@@ -26,7 +26,8 @@ metadata:
   # expires: "2030-01-01T00:00:00Z"
 spec:
   roles:
-    - resource-applier
+    - Bot
+  bot_name: teleport-resource-applier
   join_method: kubernetes
   kubernetes:
     type: in_cluster
