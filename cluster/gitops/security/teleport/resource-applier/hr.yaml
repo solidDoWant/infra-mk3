@@ -1,0 +1,86 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# Watch for configmaps with Teleport resources in them and apply them
+# TODO remove this when/if DB support is added to the operator
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teleport-resource-applier
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.5.1
+  values:
+    controllers:
+      teleport-resource-applier:
+        containers:
+          # 1. Watch for configmaps
+          k8s-sidecar:
+            image:
+              repository: ghcr.io/kiwigrid/k8s-sidecar
+              tag: 1.28.0
+            env:
+              LABEL: k8s-sidecar.home.arpa/application
+              LABEL_VALUE: teleport
+              FOLDER: /resources
+              NAMESPACE: ALL
+              RESOURCE: both
+              METHOD: SLEEP
+              UNIQUE_FILENAMES: "true"
+              DEFAULT_FILE_MODE: "660" # Write permissions are required so that the files can be updated
+          # 2. Apply the configmaps
+          resource-applier:
+            image:
+              repository: ubuntu
+              tag: 22.04
+            env:
+              RESOURCES_DIRECTORY: /resources
+              TELEPORT_DOMAIN_NAME: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    defaultPodOptions:
+      # This needs root for `apt`, so isolate it from the host. Performance is
+      # not a concern.
+      runtimeClassName: kata
+    persistence:
+      rootfs:
+        type: emptyDir
+        globalMounts:
+          - path: /resources
+      script:
+        type: configMap
+        name: applier-script
+        defaultMode: 0555
+        advancedMounts:
+          teleport-resource-applier:
+            resource-applier:
+              - path: /script
+    serviceAccount:
+      create: true
+    # RBAC for k8s-sidecar
+    rbac:
+      roles:
+        teleport-resource-applier:
+          type: ClusterRole
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - configmaps
+                - secrets
+              verbs:
+                - get
+                - list
+                - watch
+      bindings:
+        teleport-resource-applier:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: teleport-resource-applier
+          subjects:
+            - identifier: default
+              namespace: "{{ .Release.Namespace }}"

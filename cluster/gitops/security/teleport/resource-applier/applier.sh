@@ -1,0 +1,110 @@
+#!/bin/bash
+# cspell: words Upserting inotify inotifywait nullglob tbot tctl
+
+set -euo pipefail
+
+REQUIRED_ENV_VARS=(RESOURCES_DIRECTORY TELEPORT_DOMAIN_NAME)
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+usage() {
+    USAGE_MSG="Usage: "
+    for REQUIRED_ENV_VAR in "${REQUIRED_ENV_VARS[@]}"; do
+        USAGE_MSG+="${REQUIRED_ENV_VAR}=... "
+    done
+    USAGE_MSG+="$0"
+
+    fatal "${USAGE_MSG}"
+}
+
+check_env_vars() {
+    for REQUIRED_ENV_VAR in "${REQUIRED_ENV_VARS[@]}"; do
+        [[ -n "${!REQUIRED_ENV_VAR}" ]] || usage
+    done
+
+    if [[ ! -d "${RESOURCES_DIRECTORY}" ]]; then
+        fatal "Resources directory '${RESOURCES_DIRECTORY}' does not exist"
+    fi
+}
+
+setup() {
+    # Install deps
+    # TODO move this to container image, just not worth the effort right now
+    apt update
+    apt install -y --no-install-recommends curl ca-certificates yq inotify-tools
+
+    # Install Teleport binaries
+    # shellcheck source=/dev/null
+    TELEPORT_MAJOR_VERSION="$(
+        curl -fsSL "https://${TELEPORT_DOMAIN_NAME}/v1/webapi/ping" | \
+        yq '.server_version' | \
+        cut -d. -f1
+    )"
+    source /etc/os-release
+    curl https://apt.releases.teleport.dev/gpg \
+        -o /usr/share/keyrings/teleport-archive-keyring.asc
+    echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] \
+        https://apt.releases.teleport.dev/${ID} ${VERSION_CODENAME} \
+        stable/v${TELEPORT_MAJOR_VERSION}" > /etc/apt/sources.list.d/teleport.list
+    apt update
+    apt install -y --no-install-recommends teleport-ent
+    
+    # Authenticate with Teleport
+    echo "Authenticating with Teleport..."
+    sleep 99999
+    # tbot start identity 
+
+    echo "Setup complete"
+}
+
+upsert_changes() {
+    FILE_PATH="${1}"
+    echo "Upserting resources from ${FILE_PATH}"
+    tctl apply -f "${FILE_PATH}"
+}
+
+delete_changes() {
+    FILE_PATH="${1}"
+    echo "Deleting resources from ${FILE_PATH}"
+
+    while read -r resource_name; do
+        echo "Deleting ${resource_name}"
+        tctl rm "${resource_name}"
+    done < <(yq -r ea '[.kind + "/" + .metadata.name] | join("\n")' "${FILE_PATH}")
+}
+
+apply_initial() {
+    echo "Performing initial apply..."
+    shopt -s nullglob
+    for file in "${RESOURCES_DIRECTORY}"/*; do
+        upsert_changes "${file}"
+    done
+}
+
+watch_for_changes() {
+    echo "Watching for changes..."
+    inotifywait -m -e modify -e create -e delete --format "%w%f,%e" "${RESOURCES_DIRECTORY}" | while read -r notification; do
+        FILE_PATH="$(echo "${notification}" | cut -d',' -f1)"
+        IFS=',' read -r -a EVENTS <<< "$(echo "${notification}" | cut -d',' -f2-)"
+
+        for event in "${EVENTS[@]}"; do
+            echo "Detected ${event} on ${FILE_PATH}"
+
+            case "${event}" in
+                CREATE) ;&
+                MODIFY) upsert_changes "${FILE_PATH}" ;;
+                DELETE) delete_changes "${FILE_PATH}" ;;
+                *) fatal "Unsupported event '${event}' (script bug)" ;;
+            esac
+        done
+    done
+}
+
+
+check_env_vars
+setup
+apply_initial
+watch_for_changes
