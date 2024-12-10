@@ -1,7 +1,8 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
-# Watch for configmaps with Teleport resources in them and apply them
-# TODO remove this when/if DB support is added to the operator
+# Watch for configmaps with Teleport resources in them and apply them. Doesn't
+# work perfectly, but is good enough.
+# TODO remove this when/if DB and bot support is added to the operator
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

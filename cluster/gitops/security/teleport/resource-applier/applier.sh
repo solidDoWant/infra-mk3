@@ -31,7 +31,7 @@ check_env_vars() {
 }
 
 remote_tctl() {
-    kubectl exec -n "${NAMESPACE}" "${AUTH_SERVER_DEPLOYMENT_NAME}" -c teleport -- \
+    kubectl exec -n "${NAMESPACE}" deployment/"${AUTH_SERVER_DEPLOYMENT_NAME}" -c teleport -- \
         tctl "${@}"
 }
 
@@ -40,6 +40,7 @@ remote_tctl() {
 # commands, the script must exec into a Teleport auth server pod to set
 # one up.
 setup_bot() {
+    echo "Authenticating with Teleport..."
     BOT_COUNT="$(remote_tctl get bots | yq ea '[.] | map(select(.metadata.name == env(BOT_NAME))) | length()')"
     if [[ "${BOT_COUNT}" == '0' ]]; then
         echo "Setting up new bot '${BOT_NAME}'..."
@@ -48,24 +49,36 @@ setup_bot() {
         echo "Found existing bot with name '${BOT_NAME}', attempting to use it"
     fi
 
+    # Run tbot in the background to renew certificates automatically
     tbot start \
         --data-dir=/var/lib/teleport/bot \
         --destination-dir=/opt/machine-id \
         --token="${TOKEN_NAME}" \
         --proxy-server="${TELEPORT_PROXY_ADDRESS}" \
-        --join-method=kubernetes
-
+        --join-method=kubernetes &
+    
     export TELEPORT_IDENTITY_FILE='/opt/machine-id/identity'
     export TELEPORT_AUTH_SERVER="${TELEPORT_PROXY_ADDRESS}"
+
+    # Wait for the identity file to exist
+    echo "Waiting for startup to complete..."
+    while [[ ! -f "${TELEPORT_IDENTITY_FILE}" ]]; do
+        printf '.'
+        sleep 1
+    done
+
+    echo "Successfully authenticated with ${TELEPORT_PROXY_ADDRESS}"
 }
 
 setup() {
     # Install deps
+    echo "Installing dependencies..."
     # TODO move this to container image, just not worth the effort right now
     apt update
     apt install -y --no-install-recommends curl ca-certificates inotify-tools
 
     # Install yq
+    echo "Installing yq..."
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')"
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)"
     curl -fsSL -o /usr/local/bin/yq \
@@ -73,29 +86,27 @@ setup() {
     chmod +x /usr/local/bin/yq
 
     # Install kubectl
+    echo "Installing kubectl..."
     KUBECTL_VERSION="v1.31.2"
     curl -fsSL -o /usr/local/bin/kubectl \
         "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/${KERNEL}/${PRETTY_ARCH}/kubectl"
     chmod +x /usr/local/bin/kubectl
 
     # Install Teleport binaries
-    TELEPORT_MAJOR_VERSION="$(
-        curl -fsSL "https://${TELEPORT_PROXY_ADDRESS}/v1/webapi/ping" | \
-        yq '.server_version' | \
-        cut -d. -f1
-    )"
+    echo "Installing teleport..."
+    TELEPORT_VERSION="$(curl -fsSL "https://${TELEPORT_PROXY_ADDRESS}/v1/webapi/ping" | yq '.server_version')"
+    TELEPORT_MAJOR_VERSION="$( echo "${TELEPORT_VERSION}" | cut -d. -f1)"
     # shellcheck source=/dev/null
     source /etc/os-release
-    curl https://apt.releases.teleport.dev/gpg \
+    curl -fsSL https://apt.releases.teleport.dev/gpg \
         -o /usr/share/keyrings/teleport-archive-keyring.asc
     echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] \
         https://apt.releases.teleport.dev/${ID} ${VERSION_CODENAME} \
         stable/v${TELEPORT_MAJOR_VERSION}" > /etc/apt/sources.list.d/teleport.list
     apt update
-    apt install -y --no-install-recommends teleport-ent
+    apt install -y --no-install-recommends "teleport-ent=${TELEPORT_VERSION}"
     
     # Authenticate with Teleport
-    echo "Authenticating with Teleport..."
     setup_bot
 
     echo "Setup complete"
@@ -104,7 +115,7 @@ setup() {
 upsert_changes() {
     FILE_PATH="${1}"
     echo "Upserting resources from ${FILE_PATH}"
-    tctl apply -f "${FILE_PATH}"
+    tctl create -f "${FILE_PATH}" || true
 }
 
 delete_changes() {
@@ -113,7 +124,7 @@ delete_changes() {
 
     while read -r resource_name; do
         echo "Deleting ${resource_name}"
-        tctl rm "${resource_name}"
+        tctl rm "${resource_name}" || true
     done < <(yq -r ea '[.kind + "/" + .metadata.name] | join("\n")' "${FILE_PATH}")
 }
 
