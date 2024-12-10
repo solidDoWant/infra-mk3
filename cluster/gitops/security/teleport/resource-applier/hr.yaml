@@ -36,7 +36,7 @@ spec:
               UNIQUE_FILENAMES: "true"
               DEFAULT_FILE_MODE: "660" # Write permissions are required so that the files can be updated
           # 2. Authenticate with Teleport
-          auth:
+          auth: &script_container
             image:
               repository: ubuntu
               tag: 22.04
@@ -53,19 +53,9 @@ spec:
               TELEPORT_IDENTITY_FILE: /opt/machine-id/identity
           # 3. Apply the configmaps
           resource-applier:
-            image:
-              repository: ubuntu
-              tag: 22.04
+            <<: *script_container
             command:
               - /script/applier.sh
-            env:
-              RESOURCES_DIRECTORY: /resources
-              TELEPORT_PROXY_ADDRESS: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
-              NAMESPACE: "{{ .Release.Namespace }}"
-              AUTH_SERVER_DEPLOYMENT_NAME: teleport-cluster-auth
-              BOT_NAME: teleport-resource-applier
-              ROLE_NAME: teleport-resource-applier
-              TOKEN_NAME: teleport-resource-applier
     defaultPodOptions:
       # This needs root for `apt`, so isolate it from the host. Performance is
       # not a concern.

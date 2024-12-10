@@ -70,6 +70,6 @@ setup() {
 }
 
 
-# check_env_vars
-# setup
-# run
+check_env_vars
+setup
+run
