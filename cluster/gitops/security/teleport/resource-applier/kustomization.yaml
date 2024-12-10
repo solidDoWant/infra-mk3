@@ -7,7 +7,9 @@ resources:
 configMapGenerator:
   - name: applier-script
     files:
-      - applier.sh
+      - ./applier.sh
+      - ./auth.sh
+      - ./lib.sh
     options:
       annotations:
         kustomize.toolkit.fluxcd.io/substitute: disabled

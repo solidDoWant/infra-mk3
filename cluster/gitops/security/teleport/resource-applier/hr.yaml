@@ -35,7 +35,23 @@ spec:
               METHOD: SLEEP
               UNIQUE_FILENAMES: "true"
               DEFAULT_FILE_MODE: "660" # Write permissions are required so that the files can be updated
-          # 2. Apply the configmaps
+          # 2. Authenticate with Teleport
+          auth:
+            image:
+              repository: ubuntu
+              tag: 22.04
+            command:
+              - /script/auth.sh
+            env:
+              RESOURCES_DIRECTORY: /resources
+              TELEPORT_PROXY_ADDRESS: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+              NAMESPACE: "{{ .Release.Namespace }}"
+              AUTH_SERVER_DEPLOYMENT_NAME: teleport-cluster-auth
+              BOT_NAME: teleport-resource-applier
+              ROLE_NAME: teleport-resource-applier
+              TOKEN_NAME: teleport-resource-applier
+              TELEPORT_IDENTITY_FILE: /opt/machine-id/identity
+          # 3. Apply the configmaps
           resource-applier:
             image:
               repository: ubuntu
@@ -65,8 +81,18 @@ spec:
         defaultMode: 0555
         advancedMounts:
           teleport-resource-applier:
+            auth:
+              - path: /script
             resource-applier:
               - path: /script
+      machine-id:
+        type: emptyDir
+        advancedMounts:
+          teleport-resource-applier:
+            auth:
+              - path: /opt/machine-id
+            resource-applier:
+              - path: /opt/machine-id
     serviceAccount:
       create: true
     rbac:
