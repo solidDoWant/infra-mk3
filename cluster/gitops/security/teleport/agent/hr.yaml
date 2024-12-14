@@ -33,6 +33,8 @@ spec:
       replicaCount: 2
     podMonitor:
       enabled: true
+    tls:
+      existingCASecretName: root-ca-pub-cert
   postRenderers:
     # Add TSCs
     - kustomize:
