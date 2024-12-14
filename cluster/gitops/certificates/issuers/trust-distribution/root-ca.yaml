@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kyverno.io/clusterpolicy_v1.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: extract-root-ca-certificate
+spec:
+  rules:
+    - name: extract-root-ca-certificate
+      # Trigger on new and existing namespaces
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      skipBackgroundRequests: true
+      # Pull in the cert. This is guaranteed to exist because this fluxtomization
+      # depends on the resource that creates this cert
+      context:
+        - name: rootCAPubCert
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/certificates/secrets/root-ca
+            jmesPath: data."tls.crt"
+      # Create a new "secret" with only the public certificate
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: root-ca-pub-cert
+        namespace: >-
+          {{ request.object.metadata.name }}
+        data:
+          type: Opaque
+          data:
+            # Match the TLS type format
+            ca.crt: >-
+              {{ rootCAPubCert }}
+            # Match the Teleport format
+            ca.pem: >-
+              {{ rootCAPubCert }}
