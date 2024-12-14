@@ -1,7 +1,15 @@
 #!/bin/bash
-# cspell: words tbot tctl
+# cspell:words tctl
+
+# The Teleport operator does not currently have a resource for bot users.
+# Unfortunately this means that to run `tctl` or other Teleport cluster
+# commands, the script must exec into a Teleport auth server pod to set
+# one up.
 
 set -euo pipefail
+
+# shellcheck disable=SC2034
+REQUIRED_ENV_VARS=(NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKEN_NAME)
 
 additional_setup() {
     # Install kubectl
@@ -18,27 +26,16 @@ remote_tctl() {
 }
 
 run() {
-    echo "Authenticating with Teleport..."
-
-    # The Teleport operator does not currently have a resource for bot users.
-    # Unfortunately this means that to run `tctl` or other Teleport cluster
-    # commands, the script must exec into a Teleport auth server pod to set
-    # one up.
+    echo "Checking if bot '${BOT_NAME}' exists..."
     BOT_COUNT="$(remote_tctl get bots | yq ea '[.] | map(select(.metadata.name == env(BOT_NAME))) | length()')"
-    if [[ "${BOT_COUNT}" == '0' ]]; then
+    if [[ "${BOT_COUNT}" != '0' ]]; then
+        echo "Found existing bot with name '${BOT_NAME}'"
+    else
         echo "Setting up new bot '${BOT_NAME}'..."
         remote_tctl bots add --roles "${ROLE_NAME}" --token "${TOKEN_NAME}" "${BOT_NAME}"
-    else
-        echo "Found existing bot with name '${BOT_NAME}', attempting to use it"
     fi
 
-    # This will never return unless it errors
-    tbot start \
-        --data-dir=/var/lib/teleport/bot \
-        "--destination-dir=$(dirname "${TELEPORT_IDENTITY_FILE}")" \
-        --token="${TOKEN_NAME}" \
-        --proxy-server="${TELEPORT_PROXY_ADDRESS}" \
-        --join-method=kubernetes
+    echo "Setup complete!"
 }
 
 # shellcheck source=lib.sh

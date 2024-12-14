@@ -3,6 +3,7 @@
 # Usage:
 # 
 # ```shell
+# REQUIRED_ENV_VARS=()  # Optional
 # additional_setup() { }
 # run() { }
 # 
@@ -12,7 +13,7 @@
 
 set -euo pipefail
 
-REQUIRED_ENV_VARS=(TELEPORT_PROXY_ADDRESS NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKEN_NAME TELEPORT_IDENTITY_FILE)
+REQUIRED_ENV_VARS+=()
 
 fatal() {
     >&2 echo "$@"
@@ -49,20 +50,6 @@ setup() {
     curl -fsSL -o /usr/local/bin/yq \
         "https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_${KERNEL}_${PRETTY_ARCH}"
     chmod +x /usr/local/bin/yq
-
-    # Install Teleport binaries
-    echo "Installing teleport..."
-    TELEPORT_VERSION="$(curl -fsSL "https://${TELEPORT_PROXY_ADDRESS}/v1/webapi/ping" | yq '.server_version')"
-    TELEPORT_MAJOR_VERSION="$( echo "${TELEPORT_VERSION}" | cut -d. -f1)"
-    # shellcheck source=/dev/null
-    source /etc/os-release
-    curl -fsSL https://apt.releases.teleport.dev/gpg \
-        -o /usr/share/keyrings/teleport-archive-keyring.asc
-    echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] \
-        https://apt.releases.teleport.dev/${ID} ${VERSION_CODENAME} \
-        stable/v${TELEPORT_MAJOR_VERSION}" > /etc/apt/sources.list.d/teleport.list
-    apt update
-    apt install -y --no-install-recommends "teleport-ent=${TELEPORT_VERSION}"
 
     additional_setup
 

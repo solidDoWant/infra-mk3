@@ -5,11 +5,11 @@ resources:
   - ./hr.yaml
   - ./teleport-bot.yaml
 configMapGenerator:
-  - name: applier-script
+  - name: applier-scripts
     files:
       - ./applier.sh
-      - ./auth.sh
       - ./lib.sh
+      - ./user-setup.sh
     options:
       annotations:
         kustomize.toolkit.fluxcd.io/substitute: disabled

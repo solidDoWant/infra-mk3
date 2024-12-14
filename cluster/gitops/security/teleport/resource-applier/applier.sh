@@ -1,18 +1,36 @@
 #!/bin/bash
-# cspell: words Upserting inotify inotifywait nullglob tctl
+# cspell:words Upserting inotify inotifywait nullglob tctl
 
 set -euo pipefail
 
+# shellcheck disable=SC2034
+REQUIRED_ENV_VARS=(TELEPORT_PROXY_ADDRESS TELEPORT_IDENTITY_FILE RESOURCES_DIRECTORY)
+
 additional_setup() {
+    # Install inotifywait
     echo "Installing inotify-tools..."
     apt install -y --no-install-recommends inotify-tools
+
+    # Install Teleport binaries
+    echo "Installing teleport..."
+    TELEPORT_VERSION="$(curl -fsSL "https://${TELEPORT_PROXY_ADDRESS}/v1/webapi/ping" | yq '.server_version')"
+    TELEPORT_MAJOR_VERSION="$( echo "${TELEPORT_VERSION}" | cut -d. -f1)"
+    # shellcheck source=/dev/null
+    source /etc/os-release
+    curl -fsSL https://apt.releases.teleport.dev/gpg \
+        -o /usr/share/keyrings/teleport-archive-keyring.asc
+    echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] \
+        https://apt.releases.teleport.dev/${ID} ${VERSION_CODENAME} \
+        stable/v${TELEPORT_MAJOR_VERSION}" > /etc/apt/sources.list.d/teleport.list
+    apt update
+    apt install -y --no-install-recommends "teleport-ent=${TELEPORT_VERSION}"
 
     echo "Waiting for identity file to become available..."
     while [[ ! -f "${TELEPORT_IDENTITY_FILE}" ]]; do
         printf '.'
         sleep 1
     done
-    
+
     export TELEPORT_AUTH_SERVER="${TELEPORT_PROXY_ADDRESS}"
     echo "Successfully authenticated with ${TELEPORT_PROXY_ADDRESS}"
 }

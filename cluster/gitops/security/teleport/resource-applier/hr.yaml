@@ -20,8 +20,34 @@ spec:
   values:
     controllers:
       teleport-resource-applier:
+        initContainers:
+          # 0. Ensure a machine ID user exists for `tbot` auth
+          user-setup:
+            image:
+              repository: ubuntu
+              tag: 22.04
+            command:
+              - /script/user-setup.sh
+            env:
+              NAMESPACE: "{{ .Release.Namespace }}"
+              AUTH_SERVER_DEPLOYMENT_NAME: teleport-cluster-auth
+              BOT_NAME: teleport-resource-applier
+              ROLE_NAME: teleport-resource-applier
+              TOKEN_NAME: teleport-resource-applier
         containers:
-          # 1. Watch for configmaps
+          # 1. Authenticate with Teleport
+          tbot:
+            image:
+              repository: public.ecr.aws/gravitational-staging/tbot-distroless
+              tag: 17.0.6-fred.webapi-1
+            args:
+              - start
+              - --data-dir=/var/lib/teleport/bot
+              - --destination-dir=/opt/machine-id
+              - --proxy-server=teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+              - --token=teleport-resource-applier
+              - --join-method=kubernetes
+          # 2. Watch for configmaps
           k8s-sidecar:
             image:
               repository: ghcr.io/kiwigrid/k8s-sidecar
@@ -35,43 +61,37 @@ spec:
               METHOD: SLEEP
               UNIQUE_FILENAMES: "true"
               DEFAULT_FILE_MODE: "660" # Write permissions are required so that the files can be updated
-          # 2. Authenticate with Teleport
-          auth: &script_container
+          # 3. Apply the configmaps
+          resource-applier:
             image:
               repository: ubuntu
               tag: 22.04
             command:
-              - /script/auth.sh
-            env:
-              RESOURCES_DIRECTORY: /resources
-              TELEPORT_PROXY_ADDRESS: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
-              NAMESPACE: "{{ .Release.Namespace }}"
-              AUTH_SERVER_DEPLOYMENT_NAME: teleport-cluster-auth
-              BOT_NAME: teleport-resource-applier
-              ROLE_NAME: teleport-resource-applier
-              TOKEN_NAME: teleport-resource-applier
-              TELEPORT_IDENTITY_FILE: /opt/machine-id/identity
-          # 3. Apply the configmaps
-          resource-applier:
-            <<: *script_container
-            command:
               - /script/applier.sh
+            env:
+              TELEPORT_PROXY_ADDRESS: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+              TELEPORT_IDENTITY_FILE: /opt/machine-id/identity
+              RESOURCES_DIRECTORY: /resources
     defaultPodOptions:
       # This needs root for `apt`, so isolate it from the host. Performance is
       # not a concern.
       runtimeClassName: kata
     persistence:
-      rootfs:
+      resources:
         type: emptyDir
-        globalMounts:
-          - path: /resources
+        advancedMounts:
+          teleport-resource-applier:
+            k8s-sidecar:
+              - path: /resources
+            resource-applier:
+              - path: /resources
       script:
         type: configMap
-        name: applier-script
+        name: applier-scripts
         defaultMode: 0555
         advancedMounts:
           teleport-resource-applier:
-            auth:
+            user-setup:
               - path: /script
             resource-applier:
               - path: /script
@@ -79,7 +99,7 @@ spec:
         type: emptyDir
         advancedMounts:
           teleport-resource-applier:
-            auth:
+            tbot:
               - path: /opt/machine-id
             resource-applier:
               - path: /opt/machine-id
