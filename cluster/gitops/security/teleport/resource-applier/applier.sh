@@ -15,9 +15,9 @@ additional_setup() {
     echo "Installing teleport..."
     TELEPORT_VERSION="$(curl -fsSL "https://${TELEPORT_PROXY_ADDRESS}/v1/webapi/ping" | yq '.server_version')"
     if echo "${TELEPORT_VERSION}" | grep -q '-'; then
-        APT_DOMAIN_NAME='apt.releases.teleport.dev'
-    else
         APT_DOMAIN_NAME='apt.releases.development.teleport.dev'
+    else
+        APT_DOMAIN_NAME='apt.releases.teleport.dev'
     fi
     TELEPORT_MAJOR_VERSION="$( echo "${TELEPORT_VERSION}" | cut -d. -f1)"
     # shellcheck source=/dev/null
