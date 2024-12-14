@@ -21,6 +21,11 @@ spec:
       valuesKey: url
       targetPath: auth.teleportConfig.teleport.storage.audit_sessions_uri
   values:
+    # Temp change to dev tag while https://github.com/gravitational/teleport/pull/50193 goes through review
+    # cspell:words distroless webapi
+    image: public.ecr.aws/gravitational-staging/teleport-distroless
+    enterpriseImage: public.ecr.aws/gravitational-staging/teleport-ent-distroless
+    teleportVersionOverride: 17.0.6-fred.webapi-1
     # I'm pretty sure that the key in the chart docs is for the wrong path
     # This should cover both the chart docs, and what I think is the right path
     global:
