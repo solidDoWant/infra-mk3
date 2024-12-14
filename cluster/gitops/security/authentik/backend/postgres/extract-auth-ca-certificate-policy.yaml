@@ -20,8 +20,18 @@ spec:
           apiCall:
             method: GET
             urlPath: /api/v1/namespaces/security/secrets/authentik-postgres-auth-ca
-            jmesPath: data."ca.crt"
-      # TODO add Teleport root CA
+            jmesPath: data."ca.crt" | base64_decode(@)
+        - name: teleportAuthCa
+          apiCall:
+            method: GET
+            service:
+              url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/webapi/auth/export?type=db
+              headers:
+                - key: Accept
+                  value: application/json
+            # Avoid a circular dependency by setting a default empty value for when the endpoint
+            # does not exist.
+            default: ""
       # Create a new "secret" with only the CA certificates
       generate:
         generateExisting: true
@@ -37,4 +47,4 @@ spec:
           type: Opaque
           stringData:
             ca.crt: |-
-              {{ postgresAuthCa | base64_decode(@) }}
+              {{ postgresAuthCa }}{{ teleportAuthCa }}
