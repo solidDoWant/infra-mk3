@@ -1,0 +1,15 @@
+---
+kind: db
+version: v3
+metadata:
+  name: authentik-postgres-17
+  description: Authentik Postgres 17 database
+  labels:
+    teleport.home.arpa/database.enabled: "true"
+spec:
+  protocol: postgres
+  uri: authentik-postgres-17-rw.security.svc.cluster.local:5432
+  tls:
+    mode: verify-full
+    # The agent will have the cluster PKI root CA public cert loaded
+    trust_system_cert_pool: true

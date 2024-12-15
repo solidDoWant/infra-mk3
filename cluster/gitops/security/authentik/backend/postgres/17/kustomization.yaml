@@ -5,7 +5,7 @@ resources:
   - ./cluster-serving-cert.yaml
   - ./cluster.yaml
 configMapGenerator:
-  - name: teleport-audit-17-db-registration
+  - name: authentik-postgres-17-db-registration
     files:
       - db-registration.yaml.yaml
     options:
