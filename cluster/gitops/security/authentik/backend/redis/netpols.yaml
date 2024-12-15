@@ -56,3 +56,11 @@ spec:
       ports:
         - protocol: TCP
           port: 6379
+    # Communication with Teleport agent
+    - from:
+        - podSelector:
+            matchLabels:
+              app: teleport-agent
+      ports:
+        - protocol: TCP
+          port: 6379
