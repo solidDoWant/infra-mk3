@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 RUN apt update && apt install --no-install-recommends -y \
     file sshpass minicom age whois yq iputils-ping p7zip \
     xorriso parted dosfstools mtools dnsutils redis-tools \
-    inotify-tools postgresql-client
+    inotify-tools postgresql-client uuid-runtime
 
 # Install debs from sources that don't provide an apt repo
 RUN mkdir -pv /tmp/debs && \
