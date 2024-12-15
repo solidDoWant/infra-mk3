@@ -9,4 +9,6 @@ configMapGenerator:
     files:
       - teleport-audit-db-registration.yaml
     options:
+      labels:
+        k8s-sidecar.home.arpa/application: teleport
       disableNameSuffixHash: true
