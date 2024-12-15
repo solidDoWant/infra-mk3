@@ -25,7 +25,7 @@ spec:
           apiCall:
             method: GET
             service:
-              url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/webapi/auth/export?type=db
+              url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/webapi/auth/export?type=db-client
               headers:
                 - key: Accept
                   value: application/json
