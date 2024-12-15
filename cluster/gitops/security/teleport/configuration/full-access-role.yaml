@@ -18,6 +18,18 @@ spec:
         verbs:
           - "*"
     # Teleport access
+    db_labels: &all_labels
+      "*": "*"
+    app_labels: *all_labels
+    node_labels: *all_labels
+    cluster_labels: *all_labels
+    db_service_labels: *all_labels
+    group_labels: *all_labels
+    windows_desktop_labels: *all_labels
+    db_names: &all_list
+      - "*"
+    db_users: *all_list
+    logins: *all_list
     rules:
       - resources:
           - "*"
