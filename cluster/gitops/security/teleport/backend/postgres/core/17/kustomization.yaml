@@ -7,7 +7,7 @@ resources:
 configMapGenerator:
   - name: teleport-core-17-db-registration
     files:
-      - db-registration.yaml.yaml
+      - db-registration.yaml
     options:
       labels:
         k8s-sidecar.home.arpa/application: teleport
