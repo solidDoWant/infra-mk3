@@ -29,6 +29,8 @@ spec:
     db_names: &all_list
       - "*"
     db_users: *all_list
+    logins:
+      - root
     rules:
       - resources:
           - "*"
