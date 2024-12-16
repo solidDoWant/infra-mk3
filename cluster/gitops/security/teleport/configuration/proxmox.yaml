@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/teleportprovisiontoken_v2.json
+apiVersion: resources.teleport.dev/v2
+kind: TeleportProvisionToken
+metadata:
+  name: vm-host-01-${SECRET_TELEPORT_VM_HOST_01_TEMP_JOIN_TOKEN}
+  # Make the token last a long time
+  # This isn't a huge risk because Kubernetes will be used to verify the identity of the
+  # requester
+  # Currently bugged, see https://github.com/gravitational/teleport/issues/49925
+  # expires: "2030-01-01T00:00:00Z"
+spec:
+  roles:
+    - Node
+  join_method: token
+  # TODO switch to TPM 2.0 after new TPM get delivered
+  # join_method: tpm
+  # # teleport tpm identity
+  # tpm:
+  #   ekcert_allowed_cas:
+  #     - TODO
+  #   allow:
+  #     - description: vm-host-01
+  #       ek_public_hash: TODO
+  #       ek_certificate_serial: TODO
