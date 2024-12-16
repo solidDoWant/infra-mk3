@@ -1,22 +1,18 @@
 ---
-kind: node
-version: v2
-sub_kind: openssh
+# yaml-language-server: $schema=../../../../../schemas/crds/teleportopensshserverv2_v1.json
+apiVersion: resources.teleport.dev/v1
+kind: TeleportOpenSSHServerV2
 metadata:
-  name: c117e834-8031-47d9-afbe-9d7d6c0037de
-  labels:
-    type: opnsense
+  name: opnsense-01
 spec:
   addr: 10.3.0.1:22
   hostname: opnsense-01
 ---
-kind: node
-version: v2
-sub_kind: openssh
+# yaml-language-server: $schema=../../../../../schemas/crds/teleportopensshserverv2_v1.json
+apiVersion: resources.teleport.dev/v1
+kind: TeleportOpenSSHServerV2
 metadata:
-  name: 2b7bebf4-fcce-4e32-91a8-14abaa1323ad
-  labels:
-    type: opnsense
+  name: opnsense-02
 spec:
   addr: 10.3.0.2:22
   hostname: opnsense-02
