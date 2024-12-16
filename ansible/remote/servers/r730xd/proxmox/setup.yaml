@@ -154,6 +154,15 @@
               POLICY="allow"
             create: true
           register: pveproxy_file
+    
+    - name: Deploy encrypted dataset
+      ansible.builtin.include_role:
+        name: configure_zfs_dataset
+      vars:
+        pool_name: rpool
+        dataset_name: data/encrypted
+        share_with_nfs: false
+        encrypt: true
 
     # Needed for snippets storage
     - name: Configure Proxmox storage
@@ -166,6 +175,11 @@
 
           zfspool: local-zfs
           	pool rpool/data
+          	sparse
+          	content images,rootdir
+          
+          zfspool: local-zfs-encrypted
+          	pool rpool/data/encrypted
           	sparse
           	content images,rootdir
         dest: /etc/pve/storage.cfg
@@ -290,6 +304,12 @@
     - name: Install Teleport
       ansible.builtin.include_role:
         name: install_teleport
+
+    - name: Encrypt ZFS dataset
+      vars:
+        dataset_name: rpool/data/encrypted
+      ansible.builtin.include_role:
+        name: encrypt_dataset
 
     # # TODO setup democratic-csi access or TLS SSH auth + JIT service access
 

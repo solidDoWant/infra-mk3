@@ -1,0 +1,123 @@
+---
+# cspell:words nabijaczleweli libexec setownable takeownership tcsd oneshot
+- name: Add the tzpfms GPG signing key
+  ansible.builtin.get_url:
+    url: https://{{ domain_name }}/nabijaczleweli.gpg.key
+    dest: >-
+      {{ key_path }}
+    checksum: sha256:f2450a7aebb8b916c3baac61efe46884ddb51a403ce79b0d2637e6b4a84d1c10
+
+- name: Add the tzpfms repository
+  ansible.builtin.apt_repository:
+    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }} {{ ansible_distribution_release }} main
+    state: present
+    filename: tzpfms
+    update_cache: true
+
+- name: Limit the repo to only install tzpfms packages 
+  ansible.builtin.blockinfile:
+    path: "{{ apt_preferences_dir }}/50-tzpfms-pinning"
+    mode: 0644
+    create: true
+    block: |
+      Package: *
+      Pin: origin {{ domain_name }}
+      Pin-Priority: -1
+
+      Package: tzpfms-tpm2 tzpfms-tpm1x tzpfms-common
+      Pin: origin {{ domain_name }}
+      Pin-Priority: 500
+
+- name: Install tzpfms 
+  ansible.builtin.apt:
+    name:
+      - tzpfms-tpm2
+      - tzpfms-common
+      - tpm-tools
+      # TODO this can be removed once the TPM 2.0 module is installed
+      - tzpfms-tpm1x
+      - trousers
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
+# If this fails, run:
+# tpm_takeownership -y -z
+# WARNING: this will reset the TPM. All keys will be lost.
+# This is too critical to run automatically.
+- name: Verify that the TPM is accessible
+  ansible.builtin.command: tpm_setownable -s -z
+  changed_when: false
+
+- name: Check if dataset is already encrypted with a TPM-backed key
+  ansible.builtin.command: zfs-tpm-list -H "{{ dataset_name }}"
+  register: dataset_status
+  changed_when: false
+
+# The important part is that the disks are tied to the TPM, that is, that
+# anybody attempting to unlock the disks has access to the TPM. This is not
+# intended to verify system integrity (such as via Secure Boot PCR7), or what
+# actor is attempting to unlock the disks. Therefore, this need not depend on
+# PCR status or a passphrase.
+- name: Encrypt the dataset
+  environment:
+    TZPFMS_PASSPHRASE_HELPER: echo
+  ansible.builtin.command: zfs-tpm1x-change-key -b "{{ backup_path }}" "{{ dataset_name }}"
+  when: dataset_status.stdout == ""
+
+- name: Copy the recovery file locally
+  ansible.builtin.fetch:
+    src: "{{ backup_path }}"
+    dest: "{{ role_path }}/../../../../../../../keys/"
+  when: dataset_status.stdout == ""
+
+- name: Remove the backup file
+  ansible.builtin.file:
+    path: "{{ backup_path }}"
+    state: absent
+  when: dataset_status.stdout == ""
+
+- name: Define the unit file
+  community.general.ini_file:
+    dest: /lib/systemd/system/zfs-load-key-{{ dataset_name_escaped }}.service
+    owner: root
+    group: root
+    mode: 0644
+    no_extra_spaces: true
+    exclusive: true
+    section: >-
+      {{ item.section }}
+    option: >-
+      {{ item.option }}
+    value: >-
+      {{ item.value }}
+  loop:
+    - section: Unit
+      option: Description
+      value: Load the key for the {{ dataset_name }} dataset
+    - section: Unit
+      option: After
+      value: tcsd.service
+    - section: Service
+      option: ExecStart
+      value: /usr/sbin/zfs-tpm1x-load-key "{{ dataset_name }}"
+    - section: Service
+      option: Environment
+      value: TZPFMS_PASSPHRASE_HELPER=/usr/bin/echo
+    - section: Service
+      option: RemainAfterExit
+      value: "true"
+    - section: Service
+      option: Type
+      value: oneshot
+    - section: Install
+      option: WantedBy
+      value: multi-user.target
+
+- name: Enable unlocking dataset at boot
+  ansible.builtin.service:
+    name: zfs-load-key-{{ dataset_name_escaped }}
+    enabled: true
+    state: started

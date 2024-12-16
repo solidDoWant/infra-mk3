@@ -1,0 +1,9 @@
+---
+# cspell:words nabijaczleweli
+apt_preferences_dir: /etc/apt/preferences.d
+domain_name: debian.nabijaczleweli.xyz
+key_path: /usr/share/keyrings/nabijaczleweli-keyring.asc
+backup_path: >-
+  {{ ansible_env.HOME }}/{{ dataset_name | replace('/', '_') }}.backup
+dataset_name_escaped: >-
+  {{ dataset_name | replace('/', '-') }}

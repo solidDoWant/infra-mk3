@@ -1,16 +1,20 @@
 ---
+# cspell:words anongid anonuid keyformat keylocation sharenfs
 - name: Check if the dataset already exists
-  command: zfs list {{ pool_name }}/{{ dataset_name }}
+  ansible.builtin.command: zfs list {{ pool_name }}/{{ dataset_name }}
   ignore_errors: true
   changed_when: false
   register: zfs_list
 
 - name: Create the dataset
-  command: >-
-    zfs create
+  ansible.builtin.shell: >-
+    echo "dummy passphrase, not used" | zfs create
     {{ pool_name }}/{{ dataset_name }}
     {%- if share_with_nfs %}
     -o sharenfs='all_squash,anonuid={{ nfs_user_id }},anongid={{ nfs_group_id }},{{ nfs_subnets | map("regex_replace", "^(.*)$", "rw=@\1") | join(",") }}'
+    {%- endif %}
+    {%- if encrypt %}
+    -o encryption=aes-256-gcm -o keylocation=prompt -o keyformat=passphrase
     {%- endif %}
     {{ force_sync_writes | ternary("-o sync=disabled", "") }}
   when: zfs_list.rc != 0
