@@ -13,6 +13,20 @@
     filename: teleport
     update_cache: true
 
+- name: Limit the repo to only install tzpfms packages 
+  ansible.builtin.blockinfile:
+    path: "{{ apt_preferences_dir }}/50-tzpfms-pinning"
+    mode: 0644
+    create: true
+    block: |
+      Package: *
+      Pin: origin {{ domain_name }}
+      Pin-Priority: -1
+
+      Package: teleport teleport-ent
+      Pin: origin {{ domain_name }}
+      Pin-Priority: 500
+
 - name: Install Teleport 
   ansible.builtin.apt:
     name: teleport-ent
