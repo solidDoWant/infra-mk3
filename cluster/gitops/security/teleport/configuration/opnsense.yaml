@@ -1,0 +1,22 @@
+---
+kind: node
+version: v2
+sub_kind: openssh
+metadata:
+  name: c117e834-8031-47d9-afbe-9d7d6c0037de
+  labels:
+    type: opnsense
+spec:
+  addr: 10.3.0.1:22
+  hostname: opnsense-01
+---
+kind: node
+version: v2
+sub_kind: openssh
+metadata:
+  name: 2b7bebf4-fcce-4e32-91a8-14abaa1323ad
+  labels:
+    type: opnsense
+spec:
+  addr: 10.3.0.2:22
+  hostname: opnsense-02
