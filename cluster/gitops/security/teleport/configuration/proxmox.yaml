@@ -3,7 +3,7 @@
 apiVersion: resources.teleport.dev/v2
 kind: TeleportProvisionToken
 metadata:
-  name: vm-host-01-${SECRET_TELEPORT_VM_HOST_01_TEMP_JOIN_TOKEN}
+  name: proxmox-vm-host-01-${SECRET_TELEPORT_VM_HOST_01_TEMP_JOIN_TOKEN}
   # Make the token last a long time
   # This isn't a huge risk because Kubernetes will be used to verify the identity of the
   # requester
