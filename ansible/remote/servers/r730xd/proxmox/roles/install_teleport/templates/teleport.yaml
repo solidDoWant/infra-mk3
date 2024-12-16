@@ -1,0 +1,40 @@
+---
+version: v3
+teleport:
+  join_params:
+    # method: tpm
+    # TODO temporary using an ephemeral join token until new 2.0 TPM is delivered
+    method: token
+    token_name: "{{ hostname }}-{{ temp_teleport_join_token_suffix }}"
+  advertise_ip: "{{ ansible_facts['vmbr200']['ipv4']['address'] }}"
+  log:
+    format:
+      extra_fields:
+        - timestamp
+        - level
+        - component
+        - caller
+      output: text
+    output: stderr
+    severity: INFO
+  proxy_server: "{{ teleport_domain_name }}:443"
+app_service:
+  enabled: false
+auth_service:
+  enabled: false
+db_service:
+  enabled: false
+discovery_service:
+  enabled: false
+jamf_service:
+  enabled: false
+kubernetes_service:
+  enabled: false
+proxy_service:
+  enabled: false
+ssh_service:
+  enabled: true
+  labels:
+    type: proxmox
+  enhanced_recording:
+    enabled: true

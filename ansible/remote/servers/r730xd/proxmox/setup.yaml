@@ -287,6 +287,10 @@
       ansible.builtin.include_role:
         name: install_fast_reboot
 
+    - name: Install Teleport
+      ansible.builtin.include_role:
+        name: install_teleport
+
     # # TODO setup democratic-csi access or TLS SSH auth + JIT service access
 
     # # TODO setup mail daemon once relay is setup

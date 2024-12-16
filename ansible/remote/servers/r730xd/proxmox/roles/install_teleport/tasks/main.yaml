@@ -1,0 +1,41 @@
+---
+- name: Add the Teleport GPG signing key
+  ansible.builtin.get_url:
+    url: https://{{ domain_name }}/gpg
+    dest: >-
+      {{ key_path }}
+    checksum: sha256:58958584ca95d311f8b040b010259c7a92cf97e7f0bc850793564c576812eef5
+
+- name: Add the Teleport repository
+  ansible.builtin.apt_repository:
+    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }}/debian {{ ansible_distribution_release }} stable/rolling
+    state: present
+    filename: teleport
+    update_cache: true
+
+- name: Install Teleport 
+  ansible.builtin.apt:
+    name: teleport-ent
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
+- name: Copy the config file to the server
+  ansible.builtin.template:
+    src: teleport.yaml
+    dest: /etc/teleport.yaml
+    owner: root
+    group: root
+    mode: '0440'
+  register: teleport_config
+
+- name: Restart Teleport
+  ansible.builtin.service:
+    name: teleport
+    state: restarted
+  when: teleport_config.changed
+  # This may fail when the Teleport service has not been setup yet, or is unreachable
+  # due to the routers not being fully setup yet
+  ignore_errors: true
