@@ -31,39 +31,40 @@ spec:
     - backendRefs:
         - name: teleport-cluster
           port: 443
----
-apiVersion: gateway.networking.k8s.io/v1alpha3
-kind: BackendTLSPolicy
-metadata:
-  name: enable-teleport-backend-tls
-spec:
-  targetRefs:
-    - group: ""
-      kind: Service
-      name: teleport-cluster
-      sectionName: tls
-  validation:
-    wellKnownCACertificates: System
-    hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
----
-# This is needed as browsers may reuse TLS connections to the ingress gateway,
-# so the ingress gateway sees the wrong host.
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: teleport
-spec:
-  hostnames:
-    - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
-    - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
-  parentRefs:
-    - name: internal-gateway
-      namespace: networking
-  rules:
-    - backendRefs:
-        - name: teleport-cluster
-          port: 443
-      matches:
-        - path:
-            type: PathPrefix
-            value: /
+# This doesn't work because istio does not yet support the BackendTLSPolicy resource
+# ---
+# apiVersion: gateway.networking.k8s.io/v1alpha3
+# kind: BackendTLSPolicy
+# metadata:
+#   name: enable-teleport-backend-tls
+# spec:
+#   targetRefs:
+#     - group: ""
+#       kind: Service
+#       name: teleport-cluster
+#       sectionName: tls
+#   validation:
+#     wellKnownCACertificates: System
+#     hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+# ---
+# # This is needed as browsers may reuse TLS connections to the ingress gateway,
+# # so the ingress gateway sees the wrong host.
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata:
+#   name: teleport
+# spec:
+#   hostnames:
+#     - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+#     - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
+#   parentRefs:
+#     - name: internal-gateway
+#       namespace: networking
+#   rules:
+#     - backendRefs:
+#         - name: teleport-cluster
+#           port: 443
+#       matches:
+#         - path:
+#             type: PathPrefix
+#             value: /
