@@ -2,6 +2,7 @@
 - name: Check if the remote host can reach the Internet
   ansible.builtin.command: ping -c 1 -n -w 1 1.1.1.1
   ignore_errors: true
+  changed_when: false
   register: ping
 
 - name: Download the ISO

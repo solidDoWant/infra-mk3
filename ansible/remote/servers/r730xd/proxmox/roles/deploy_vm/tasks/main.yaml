@@ -20,7 +20,6 @@
   when: not does_vm_exist
   block:
     - name: Set the VM ID to the next available VM ID 
-      when: id is undefined or id == ""
       vars:
         # Get the last VM ID, defaulting to 100, and add one to it.
         query: "sum([not_null(([].vmid | sort(@))[-1], `100`), `1`])"
@@ -32,7 +31,7 @@
             json_query(query)
           }}
       register: set_id_fact
-
+  
     # The community module requires additional tools on the host (not available
     # yet), and requires password auth for the API, rather than calling pvesh
     # locally with SSH keys for auth.
@@ -40,16 +39,35 @@
       vars:
         smbios_uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
         vmgenid_uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+        ssh_keys_value: >-
+          {{
+            lookup('ansible.builtin.file', ssh_public_key_path) |
+            urlencode |
+            replace("/", "%2F")
+          }}
       ansible.builtin.command: >-
         pvesh create /nodes/{{ ansible_hostname }}/qemu
         --vmid {{ id }}
         --agent 1,fstrim_cloned_disks=1
         --balloon {{ memory }}
+        --bios "{{ bios_type }}"
+        {% if bios_type == "ovmf" %}
+        {# the pre-enrolled-keys option is backwards from what everything online says #}
+        {# a value of `1` will put secure boot into key enrollment mode instead of using known keys #}
+        --efidisk0 file=local-zfs-encrypted:1,efitype=4m,pre-enrolled-keys=0
+        {% endif %}
+        {% if iso_type == "iso" %}
         --boot order=virtio1;ide2
+        {% elif iso_type == "qcow" %}
+        --boot order=virtio1
+        {% endif %}
         --cores {{ cores }}
         --cpu host,flags=+aes
         --description "{{ description }}"
-        --ide2 "local:iso/{{ iso_name }},media=cdrom"
+        {% if iso_type == "iso" %}
+        --ide2 "file=local:iso/{{ iso_name }},media=cdrom"
+        {% endif %}
+        --machine type=q35,viommu=virtio
         --memory {{ memory }}
         --name {{ name }}
         --onboot true
@@ -57,14 +75,45 @@
         --protection false
         --scsihw virtio-scsi-pci
         --smbios1 uuid={{ smbios_uuid }}
-        --virtio1 local-zfs:{{ disk_size }}
+        {% if enable_tpm %}
+        --tpmstate0 file=local-zfs-encrypted:1,version=v2.0
+        {% endif %}
+        {% if enable_cloudinit %}
+        --ide0 "file=local-zfs:cloudinit"
+        --citype nocloud
+        {% if ssh_public_key_path is defined %}
+        --sshkeys "{{ ssh_keys_value }}"
+        {% endif %}
+        {% endif %}
+        {% if iso_type == "iso" %}
+        --virtio1 local-zfs:{{ disk_size }},discard=on
+        {% elif iso_type == "qcow" %}
+        --virtio1 local-zfs:0,discard=on,import-from=/var/lib/vz/template/iso/{{ iso_name }}
+        {% endif %}
+        {% for pci_device_mapping in pci_device_mappings %}
+        --hostpci{{ loop.index0 }} mapping={{ pci_device_mapping }}
+        {% endfor %}
         --vmgenid {{ vmgenid_uuid }}
         {{ extra_args }}
 
+    - name: Resize the disk
+      ansible.builtin.command: >-
+        pvesh set
+        /nodes/{{ ansible_hostname }}/qemu/{{ id }}/resize
+        --disk virtio1
+        --size "{{ disk_size }}G"
+      when: iso_type == "qcow"
+
+    - name: Regenerate the cloudinit drive
+      ansible.builtin.command: >-
+        pvesh set
+        /nodes/{{ ansible_hostname }}/qemu/{{ id }}/cloudinit
+      when: enable_cloudinit
+      
     - name: Start the VM
       ansible.builtin.include_role:
         name: change_vm_state
-    
+
     - name: Use sendkey to install the OS
       when: install_sendkey_commands is defined
       vars:
@@ -73,8 +122,17 @@
 
     - name: Remove the install disk
       ansible.builtin.command: >-
-        pvesh set /nodes/{{ ansible_hostname }}/qemu/{{ id }}/config
+        pvesh set
+        /nodes/{{ ansible_hostname }}/qemu/{{ id }}/config
         --delete ide2
+      when: iso_type == "qcow"
+
+    - name: Remove the cloudinit disk
+      ansible.builtin.command: >-
+        pvesh set
+        /nodes/{{ ansible_hostname }}/qemu/{{ id }}/config
+        --delete ide0
+      when: enable_cloudinit
 
     - name: Restart the VM
       vars:
@@ -94,11 +152,6 @@
         state: restart
       ansible.builtin.include_role:
         name: change_vm_state
-    
-    - name: Un-define 'id' fact
-      ansible.builtin.set_fact:
-        id: ""
-      when: set_id_fact is defined
 
 - name: Register the deployment results
   ansible.builtin.set_fact:

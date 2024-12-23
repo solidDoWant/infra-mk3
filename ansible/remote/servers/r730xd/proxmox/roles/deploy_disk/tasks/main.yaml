@@ -1,0 +1,30 @@
+---
+- name: Check if disk exists
+  ansible.builtin.command: >-
+    pvesh get
+    /nodes/{{ ansible_hostname }}/storage/{{ storage_pool }}/content
+    -o json
+  changed_when: false
+  register: disk_query
+
+- name: Deploy the disk
+  vars:
+    query: length([?name == '{{ disk_name }}'])
+    does_disk_exist: >-
+      {{
+        disk_query.stdout |
+        from_json |
+        json_query(query) > 0
+      }}
+  ansible.builtin.command: >-
+    pvesh create 
+    /nodes/{{ ansible_hostname }}/storage/{{ storage_pool }}/content
+    --filename "{{ disk_name }}"
+    --size "{{ disk_size }}"
+    --vmid "{{ vm_id }}"
+  when: not does_disk_exist
+
+- name: Register disk facts
+  ansible.builtin.set_fact:
+    "{{ var_name }}_volume_id": "{{ volume_id }}"
+  when: var_name is defined

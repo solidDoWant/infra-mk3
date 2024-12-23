@@ -428,7 +428,7 @@ ip-space:
           10.3.0.254/32:
             description: OPNsense VIP
         10.3.1.0/24:
-          description: Kubernetes hosts
+          description: Physical Kubernetes hosts
           10.3.1.1/32:
             hostname: talos-k8s-mixed-01
           10.3.1.2/32:
@@ -438,7 +438,7 @@ ip-space:
           10.3.1.4/32:
             hostname: talos-k8s-mixed-04
         10.3.2.0/24:
-          description: IPs for kube-vip BGP speaker
+          description: Physical host IPs for kube-vip BGP speaker
           10.3.2.1/32:
             hostname: talos-k8s-mixed-01
           10.3.2.2/32:
@@ -447,6 +447,12 @@ ip-space:
             hostname: talos-k8s-mixed-03
           10.3.2.4/32:
             hostname: talos-k8s-mixed-04
+        10.3.3.0/24:
+          description: Virtual Kubernetes hosts
+          10.3.3.1/32:
+            hostname: ubuntu-k8s-worker-01
+          10.3.3.2/32:
+            hostname: ubuntu-k8s-worker-02
         10.3.254.1/32:
           description: Bootstrap cluster API VIP
       10.4.0.0/16:

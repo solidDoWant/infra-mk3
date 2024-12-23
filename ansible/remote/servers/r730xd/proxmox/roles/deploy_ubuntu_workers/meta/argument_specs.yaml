@@ -1,0 +1,48 @@
+---
+argument_specs:
+  main:
+    options:
+      ubuntu_version:
+        type: str
+        default: "24.04"
+      vm_count:
+        type: int
+        required: true
+      vm_memory: # MiB
+        type: int
+        default: "{{ 32 * 1024}}"
+      vm_core_count:
+        type: int
+        default: 8
+      vm_disk_size: # GiB
+        type: int
+        default: 128
+      vm_domain_name:
+        type: str
+        required: true
+      vm_bridges:
+        type: dict
+        # Role validation doesn't support arbitrary keys this because it's
+        # "too difficult": https://github.com/ansible/ansible/issues/74001
+        # options:
+        #   mtu:
+        #     type: int
+        #   cloudinit:
+        #      type: dict
+        #      ip_prefix:
+        #        type: str
+        #        required: true
+        #      subnet_bits:
+        #        type: int
+        #        required: true
+        #      gateway:
+        #        type: str
+        #        required: true
+        #      nameserver:
+        #        type: str
+        #        required: true
+        required: true
+      vm_pci_device_mappings:
+        type: list
+        elements: str
+        default: []

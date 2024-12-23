@@ -1,0 +1,18 @@
+---
+argument_specs:
+  main:
+    options:
+      vm_id:
+        type: int
+        required: true
+      storage_pool:
+        type: str
+        required: true
+      disk_name:
+        type: str
+        required: true
+      disk_size:
+        type: str
+        required: true
+      var_name:
+        type: str

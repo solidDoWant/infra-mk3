@@ -2,4 +2,8 @@
 iso_path: "{{ dst_directory }}/{{ iso_name }}"
 src_file_name: "{{ download_url | basename }}"
 src_file_extension: "{{ src_file_name | splitext | last }}"
-should_extract: "{{ src_file_extension != '.iso' }}"
+should_extract: >-
+  {{
+    src_file_extension != '.iso' and 
+    src_file_extension != '.img'
+  }}

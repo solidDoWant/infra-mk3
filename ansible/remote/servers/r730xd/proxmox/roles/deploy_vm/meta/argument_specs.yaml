@@ -22,6 +22,12 @@ argument_specs:
       iso_name:
         type: str
         required: true
+      iso_type:
+        type: str
+        choices:
+          - iso
+          - qcow
+        default: iso
       os_type:
         type: str
         required: true
@@ -39,6 +45,12 @@ argument_specs:
           - l24
           - l26
           - solaris
+      bios_type:
+        type: str
+        choices:
+          - seabios
+          - ovmf
+        default: seabios
       extra_args:
         type: str
       install_sendkey_commands:
@@ -49,3 +61,15 @@ argument_specs:
         type: dict
       var_name:
         type: str
+      enable_tpm:
+        type: bool
+        default: false
+      enable_cloudinit:
+        type: bool
+        default: false
+      ssh_public_key_path:
+        type: str
+      pci_device_mappings:
+        type: list
+        elements: str
+        default: []

@@ -1,0 +1,54 @@
+---
+- name: Set VFIO drivers to load at boot
+  ansible.builtin.lineinfile:
+    path: /etc/modules
+    line: '{{ item }}'
+  loop: >-
+    {{ kernel_modules }} 
+  register: modules_file
+
+- name: Get a list of loaded drivers
+  ansible.builtin.slurp:
+    src: /proc/modules
+  changed_when: false
+  register: lsmod
+
+- name: Load VFIO drivers now
+  vars:
+    loaded_modules: >-
+      {{
+        (
+          lsmod.content |
+          b64decode
+        ).splitlines() |
+        map("regex_replace", " .*$", "")
+      }}
+  ansible.builtin.command: modprobe '{{ item }}'
+  loop: >-
+    {{ kernel_modules }}
+  when: loaded_modules is not contains(item)
+
+# This may take awhile
+- name: Update initramfs
+  ansible.builtin.command: update-initramfs -k all -u
+  when: modules_file is changed
+
+# This shouldn't need a reboot, performance may just be degraded until then
+- name: Ensure that IOMMU passthrough is enabled
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    backrefs: true
+    regexp: >-  # Match lines not containing the item
+      ^#?\s*GRUB_CMDLINE_LINUX_DEFAULT="?((?:(?!{{ item }}).)*?)"?$
+    line: >-
+      GRUB_CMDLINE_LINUX_DEFAULT="\1 {{ item }}"
+  loop:
+    - intel_iommu=on
+    - iommu=pt
+  register: cmdline_file
+
+- name: Update GRUB configuration
+  ansible.builtin.command: update-grub
+  when: >-
+    cmdline_file is changed or
+    modules_file is changed

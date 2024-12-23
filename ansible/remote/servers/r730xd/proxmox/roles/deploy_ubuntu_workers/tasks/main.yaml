@@ -1,0 +1,77 @@
+---
+- name: Ensure ISO exists
+  vars:
+    download_url: >-
+      https://cloud-images.ubuntu.com/releases/{{ ubuntu_version }}/release/ubuntu-{{ ubuntu_version }}-server-cloudimg-amd64.img
+    iso_name: &iso_name ubuntu-{{ ubuntu_version }}.img
+  ansible.builtin.include_role:
+    name: download_iso
+
+- name: Determine the number of available PCI devices for each mapping
+  ansible.builtin.command: >-
+    pvesh get
+    /cluster/mapping/pci/{{ item }}
+    -o json
+  loop: "{{ vm_pci_device_mappings }}"
+  changed_when: false
+  register: pci_device_info_command
+
+- name: Set PCI device count fact
+  vars:
+    map_selector_query: >-
+      length(map[?contains(@, 'node={{ ansible_hostname }}')])
+  ansible.builtin.set_fact:
+    pci_device_counts: >-
+      {{
+        pci_device_counts |
+        default({}) |
+        combine(
+          {
+            item.item: (
+              item.stdout |
+              from_json |
+              json_query(map_selector_query)
+            )
+          }
+        )
+      }}
+  loop: "{{ pci_device_info_command.results }}"
+
+- name: Ensure the VMs exist
+  vars:
+    name: "{{ 'ubuntu-k8s-worker-%02d.%s' | format(item | int, vm_domain_name) }}"
+    description: "Ubuntu Kubernetes instance {{ item }}"
+    memory: "{{ vm_memory }}"
+    cores: "{{ vm_core_count }}"
+    disk_size: "{{ vm_disk_size }}"
+    os_type: l26
+    iso_name: *iso_name
+    iso_type: qcow
+    bios_type: ovmf
+    enable_cloudinit: true
+    enable_tpm: true
+    mapping_query: >- # Only attach devices if there are enough available
+      [?value >= `{{ ansible_loop.index }}`].key
+    pci_device_mappings: >-
+      {{
+        pci_device_counts |
+        dict2items |
+        json_query(mapping_query)
+      }}
+    extra_args: >-
+      {% for name, info in vm_bridges.items() %}
+      {% set mac = "C6:3A:8F:01:{:02X}:{:02X}".format(ansible_loop.index, loop.index0) %}
+      --net{{ loop.index0 }}
+      virtio={{ mac }},bridge={{ name }},firewall=0{% if info.mtu is defined %},mtu={{ info.mtu }}{% endif %}
+      {% if info.cloudinit is defined %}
+      --ipconfig{{ loop.index0 }} gw={{ info.cloudinit.gateway }},ip={{ info.cloudinit.ip_prefix }}.{{ ansible_loop.index }}/{{ info.cloudinit.subnet_bits }}
+      --nameserver {{ info.cloudinit.nameserver }}
+      {% endif %}
+      {% endfor %}
+    var_name: "{{ ansible_loop.index }}"
+  ansible.builtin.include_role:
+    name: deploy_vm
+  loop: "{{ query('sequence', 'start=1 end=%d' | format(vm_count) ) }}"
+  loop_control:
+    extended: true
+  register: vms

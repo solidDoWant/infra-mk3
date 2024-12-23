@@ -1,0 +1,40 @@
+---
+- name: Check if mapping ID exists
+  ansible.builtin.command: >-
+    pvesh get
+    /cluster/mapping/pci/{{ mapping_id }}
+    -o json
+  register: get_mapping
+  changed_when: false
+  ignore_errors: true
+
+- name: Query a list of PCI devices
+  ansible.builtin.command: >-
+    pvesh get
+    /nodes/{{ ansible_hostname }}/hardware/pci
+    -o json
+  register: pci_devices
+  when: get_mapping.rc != 0
+  changed_when: false
+
+- name: Map matching device(s)
+  vars:
+    match_device_query: >-
+      [?{{ device_query }}]
+    matched_devices: >-
+      {{
+        pci_devices.stdout |
+        from_json |
+        json_query(match_device_query) |
+        unique(attribute='iommugroup')
+      }}
+    mappings: >-
+      {% for dev in matched_devices -%}
+      --map "id={{ dev.vendor | regex_replace('^0x', '') }}:{{ dev.device | regex_replace('^0x', '') }},iommugroup={{ dev.iommugroup }},node={{ ansible_hostname }},path={{ dev.id | regex_replace('\.\d$', '') }},subsystem-id={{ dev.subsystem_vendor | regex_replace('^0x', '') }}:{{ dev.subsystem_device | regex_replace('^0x', '') }}"
+      {% endfor %}
+  ansible.builtin.command: >-
+    pvesh create
+    /cluster/mapping/pci
+    --id "{{ mapping_id }}"
+    {{ mappings }}
+  when: get_mapping.rc != 0

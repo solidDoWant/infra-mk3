@@ -32,3 +32,4 @@
   ansible.builtin.file:
     path: "{{ temp_dir.path }}"
     state: absent
+  when: should_extract
