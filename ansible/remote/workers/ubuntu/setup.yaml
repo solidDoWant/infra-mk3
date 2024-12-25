@@ -1,0 +1,327 @@
+---
+# - name: Configure SSH
+#   hosts: workers:&ubuntu
+#   gather_facts: false
+#   become: true
+
+#   vars:
+#     ssh_public_key_path: ~/.ssh/id_rsa.pub
+
+#   roles:
+#     - role: configure_ssh
+
+# - name: Setup workers
+#   hosts: workers:&ubuntu
+#   become: true
+
+#   tasks:
+#     - name: Set timezone
+#       block:
+#         - name: Update the timezone 
+#           community.general.timezone:
+#             name: "{{ timezone }}"
+#           register: timezone
+#         - name: Reconfigure tzdata
+#           ansible.builtin.command: dpkg-reconfigure -f noninteractive tzdata
+#           when: timezone.changed
+
+#     - name: Configure system packages
+#       vars:
+#         apt_config_dir: /etc/apt/apt.conf.d
+#       block:
+#         - name: Disable APT recommends and suggestions
+#           ansible.builtin.blockinfile:
+#             path: "{{ apt_config_dir }}/02-norecommends"
+#             mode: 0644
+#             create: true
+#             block: |
+#               APT::Install-Recommends "false";
+#               APT::Install-Suggests "false";
+#               APT::Get::Install-Recommends "false";
+#               APT::Get::Install-Suggests "false";
+#         - name: Update packages
+#           ansible.builtin.apt:
+#             update_cache: true
+#             cache_valid_time: 600
+#             upgrade: dist
+#             autoclean: true
+#             autoremove: true
+
+#     - name: Install guest agent
+#       ansible.builtin.apt:
+#         name:
+#           - qemu-guest-agent
+#         state: latest
+#         update_cache: true
+#         cache_valid_time: 600
+#         autoclean: true
+#         autoremove: true
+
+#     - name: Setup multipathd
+#       vars:
+#         drive_wwns: "{{ bulk_pool.drive_wwns }}"
+#       ansible.builtin.import_role:
+#         name: setup_multipathd
+#       when: bulk_pool is defined
+
+#     - name: Configure ZFS bulk-pool-01
+#       vars:
+#         pool_name: &pool bulk-pool-01
+#         drive_wwns: "{{ bulk_pool.drive_wwns }}"
+#         slog_euis: "{{ bulk_pool.slog_euis }}"
+#       ansible.builtin.import_role:
+#         name: configure_zpool
+#       when: bulk_pool is defined
+
+#     - name: Deploy datasets
+#       vars:
+#         pool_name: *pool
+#         dataset_name: "{{ item.name }}"
+#         share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
+#       ansible.builtin.include_role:
+#         name: configure_zfs_dataset
+#       loop:
+#         - name: media
+#           share_with_nfs: true
+#         - name: k8s
+#         - name: k8s/democratic-csi
+#         - name: k8s/democratic-csi/pvcs
+#         - name: k8s/democratic-csi/snapshots
+#       when: bulk_pool is defined
+
+#     - name: Install full module package
+#       ansible.builtin.apt:
+#         name:
+#           - linux-image-generic
+#         state: latest
+#         update_cache: true
+#         cache_valid_time: 600
+#         autoclean: true
+#         autoremove: true
+
+# TODO teleport
+
+#     - name: Reboot
+#       ansible.builtin.reboot:
+
+- name: Install k3s
+  hosts: workers:&ubuntu
+  become: true
+
+  vars:
+    install_dir: /usr/bin
+    install_path: "{{ install_dir }}/k3s"
+    systemd_dir: /lib/systemd/system
+    service_name: k3s-agent.service
+    service_file: "{{ systemd_dir }}/{{ service_name }}"
+    service_env_file: "{{ service_file }}.env"
+    kernel_modules:
+      - overlay
+      - br_netfilter
+    k3s_config_directory: /etc/rancher/k3s
+    k3s_config_file_path: "{{ k3s_config_directory }}/config.yaml"
+    k3s_token_file_path: "{{ k3s_config_directory }}/token"
+
+  tasks:
+    - name: Load modules
+      block:
+        - name: Get a list of loaded drivers
+          ansible.builtin.slurp:
+            src: /proc/modules
+          changed_when: false
+          register: lsmod
+        - name: Load module now
+          vars:
+            loaded_modules: >-
+              {{
+                (
+                  lsmod.content |
+                  b64decode
+                ).splitlines() |
+                map("regex_replace", " .*$", "")
+              }}
+          ansible.builtin.command: modprobe '{{ item }}'
+          loop: >-
+            {{ kernel_modules }}
+          when: loaded_modules is not contains(item)
+        - name: Set module to load at boot
+          ansible.builtin.copy:
+            content: |
+              {{ kernel_modules | join("\n") }}
+            dest: /etc/modules-load.d/k3s.conf
+            owner: root
+            group: root
+            mode: 0644
+          register: modules_file
+
+    - name: Configure kernel parameters
+      vars:
+        config:
+          # This will use a little over 256 MB of RAM
+          # Each watch uses 1080 bytes of kernel space memory
+          fs.inotify.max_user_watches: "262144"
+          # This matches the Talos control plane nodes
+          fs.inotify.max_user_instances: "8192"
+          net.ipv6.conf.all.disable_ipv6: "1"
+          net.ipv6.conf.default.disable_ipv6: "1"
+          net.ipv4.ip_forward: "1"
+          net.bridge.bridge-nf-call-iptables: "1"
+      ansible.builtin.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_file: /etc/sysctl.d/98-k3s.conf
+      loop: "{{ config | dict2items }}"
+
+    - name: Check if k3s is already installed
+      ansible.builtin.command: command -v k3s
+      failed_when: false
+      changed_when: false
+      register: k3s_command 
+    - name: Install the k3s binary
+      vars:
+        k3s_version: v1.31.4+k3s1
+        download_url: https://github.com/k3s-io/k3s/releases/download/{{ k3s_version | urlencode }}/k3s
+      ansible.builtin.get_url:
+        url: "{{ download_url }}"
+        dest: "{{ install_path }}"
+        mode: 0755
+        owner: root
+        group: root
+      when: k3s_command.rc != 0
+
+    - name: Create symlinks
+      ansible.builtin.file:
+        src: "{{ install_path }}"
+        dest: "{{ install_dir }}/{{ item }}"
+        state: link
+      loop:
+        - kubectl
+        - crictl
+        - ctr
+    
+    - name: Create env configuration file
+      ansible.builtin.copy:
+        content: |
+          # k3s is primarily configured via yaml config file at
+          # {{ k3s_config_file_path }}**
+        dest: "{{ service_env_file }}"
+        owner: root
+        group: root
+        mode: 0600
+    
+    - name: Ensure k3s configuration directory exists
+      ansible.builtin.file:
+        state: directory
+        path: "{{ k3s_config_directory }}"
+        owner: root
+        group: root
+        mode: 0600
+
+    # k3s prefixes the join token with a hash of the server certificate
+    # (https://docs.k3s.io/cli/token#bootstrap). On first connection, it
+    # attempts to connect to ${K3S_URL}/cacerts endpoint to get the certificate
+    # used by the API server. This endpoint is k3s-specific, and will not work
+    # with a Talos control plane. This presents a trust on first use (TOFU) 
+    # issue.
+    # To mitigate this, Rancher needs to either:
+    # * Prepend the token with the entire certificate, or
+    # * Allow specifying the certificate via the config file.
+    - name: Generate the join token
+      block:
+        - name: Geenrate the token
+          delegate_to: localhost
+          become: false
+          # Format documented here:
+          # https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/#bootstrap-token-secret-format
+          # and here: https://docs.k3s.io/cli/token#bootstrap
+          ansible.builtin.command: >-
+            k3s token create
+            --description "{{ ansible_hostname }}"
+            --ttl 10m
+            --groups system:bootstrappers:nodes
+            --usages authentication
+          register: token_command
+        - name: Create token file
+          ansible.builtin.copy:
+            # Remove the cert hash, making it an insecure token with TOFU
+            # vulnerability (see above)
+            content: >-
+              {{
+                token_command.stdout |
+                split("::") |
+                last
+              }}
+            dest: "{{ k3s_token_file_path }}"
+            owner: root
+            group: root
+            mode: 0600
+
+    - name: Get cluster API endpoint
+      delegate_to: localhost
+      become: false
+      ansible.builtin.command: >-
+        kubectl config view
+        -o jsonpath="{.clusters[*].cluster.server}"
+      register: cluster_api_endpoint_command
+      changed_when: false
+
+    - name: Create the YAML config file
+      ansible.builtin.copy:
+        content: |
+          ---
+          token-file: "{{ k3s_token_file_path }}"
+          server: "{{ cluster_api_endpoint_command.stdout }}"
+          node-name: {{ ansible_hostname }}
+          node-label:
+            - k8s.home.arpa/node.user-namespaces=false
+            - cilium.home.arpa/node.bgp-enabled=true
+          kubelet-arg:
+            - rotate-server-certificates=true
+            - rotate-certificates=true
+            - image-gc-high-threshold=50
+            - image-gc-low-threshold=20
+            - max-pods=128
+            - serialize-image-pulls=false
+        dest: "{{ k3s_config_file_path }}"
+        owner: root
+        group: root
+        mode: 0600
+
+    - name: Create k3s unit file
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Lightweight Kubernetes
+          Documentation=https://k3s.io
+          Wants=network-online.target
+          After=network-online.target
+
+          [Install]
+          WantedBy=multi-user.target
+
+          [Service]
+          Type=notify
+          EnvironmentFile=-{{ service_env_file }}
+          KillMode=process
+          Delegate=yes
+          # Having non-zero Limit*s causes performance problems due to accounting overhead
+          # in the kernel. We recommend using cgroups to do container-local accounting.
+          LimitNOFILE=1048576
+          LimitNPROC=infinity
+          LimitCORE=infinity
+          TasksMax=infinity
+          TimeoutStartSec=0
+          Restart=always
+          RestartSec=5s
+          ExecStart={{ install_path }} agent
+        dest: "{{ service_file }}"
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Enable and start service
+      ansible.builtin.service:
+        name: "{{ service_name }}"
+        enabled: true
+        state: started

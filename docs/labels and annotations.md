@@ -24,6 +24,7 @@ The following labels are used across multiple applications in the cluster:
 | `zfs.home.arpa`            | `node.local-storage-enabled`         | `true`  | Node                   | No       | Opt-in to allow using the node for local ZFS-based storage.                                       |
 | `zfs.home.arpa`            | `node.local-storage-deployed`        | `true`  | Node                   | No       | Indicates if the node local storage zpool has been deployed.                                      |
 | `zfs.home.arpa`            | `node.local-storage-scrub`           | `true`  | Node                   | No       | Indicates if the node local storage zpool should be immediately scrubbed.                         |
+| `k8s.home.arpa`            | `node.user-namespaces`               | `false` | Node                   | No       | Indicates if the node supports user namespaces.                                                   |
 
 # Kubernetes resource annotations
 

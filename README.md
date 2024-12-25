@@ -1,3 +1,14 @@
+# Branch notes:
+
+This approach does not work because k3s does not support joining non-k3s control planes, primarily due to the missing `/cacerts` endpoint.
+
+Even if it did work, there are apparently several issues with some talos features in use (such as KubePrism) which makes non-talos nodes unfeasible.
+
+A talos node cannot be used in place of a k3s/ubuntu node, because (as of time of writing, v1.9) Talos is missing the following:
+* QLogic FC HBA kernel module (qla2xxx.ko)
+* Tape library kernel module (st.ko)
+* NFS server kernel module (nfsd.ko)
+
 # infra-mk3
 
 This repo is both the documentation of, and, in part, the implementation of the fourth major iteration of my homelab infrastructure. The primary objective of this implementation is to provide a reliable and stable way for me to continue to develop my technical skills. A brief history and more information on my motivation is written up [here](./docs/motivation%20and%20background.md).
@@ -5,6 +16,7 @@ This repo is both the documentation of, and, in part, the implementation of the 
 Excluding secrets, this project is designed to be reproducible by anybody with the same physical hardware. See [here](./docs/setup.md) to get started.
 
 ## Overview
+- [Branch notes:](#branch-notes)
 - [infra-mk3](#infra-mk3)
   - [Overview](#overview)
   - [Hardware Architecture](#hardware-architecture)

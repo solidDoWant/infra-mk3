@@ -49,6 +49,9 @@ COPY --from=registry.k8s.io/kubectl:v1.31.2 /bin/kubectl /usr/local/bin/kubectl
 # flux
 COPY --from=ghcr.io/fluxcd/flux-cli:v2.4.0 /usr/local/bin/flux /usr/local/bin/flux
 
+# k3s
+COPY --from=rancher/k3s:v1.31.4-k3s1 /bin/k3s /usr/local/bin/k3s
+
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
 COPY --from=alpine/helm:3.16.2 /usr/bin/helm /usr/local/bin/helm
@@ -148,4 +151,5 @@ RUN \
     istioctl completion bash | sudo tee /etc/bash_completion.d/istioctl.bash > /dev/null && \
     diffoci completion bash | sudo tee /etc/bash_completion.d/diffoci.bash > /dev/null && \
     docker completion bash | sudo tee /etc/bash_completion.d/docker.bash > /dev/null && \
-    cmtool completion bash | sudo tee /etc/bash_completion.d/cmtool.bash > /dev/null
+    cmtool completion bash | sudo tee /etc/bash_completion.d/cmtool.bash > /dev/null && \
+    k3s completion bash | sudo tee /etc/bash_completion.d/k3s.bash > /dev/null

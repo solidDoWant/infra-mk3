@@ -255,35 +255,6 @@
         autoclean: true
         autoremove: true
 
-    # - name: Setup multipathd
-    #   ansible.builtin.include_role:
-    #     name:  setup_multipathd 
-    #   vars:
-    #     drive_wwns: "{{ bulk_pool_drive_wwns }}"
-
-    # - name: Configure ZFS bulk-pool-01
-    #   ansible.builtin.include_role:
-    #     name: configure_zpool
-    #   vars:
-    #     pool_name: &pool bulk-pool-01
-    #     drive_wwns: "{{ bulk_pool.drive_wwns }}"
-    #     slog_euis: "{{ bulk_pool.slog_euis }}"
-
-    # - name: Deploy datasets
-    #   ansible.builtin.include_role:
-    #     name: configure_zfs_dataset
-    #   vars:
-    #     pool_name: *pool
-    #     dataset_name: "{{ item.name }}"
-    #     share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
-    #   loop:
-    #     - name: media
-    #       share_with_nfs: true
-    #     - name: k8s
-    #     - name: k8s/democratic-csi
-    #     - name: k8s/democratic-csi/pvcs
-    #     - name: k8s/democratic-csi/snapshots
-
     - name: Remove subscription nag
       ansible.builtin.replace:
         path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
@@ -339,6 +310,12 @@
           device_query: >-
             subsystem_device_name &&
             contains(subsystem_device_name, '9207-8e')
+        - mapping_id: disk-shelf-slog-1
+          device_query: >-
+            contains(id, '0000:84:00')
+        - mapping_id: disk-shelf-slog-2
+          device_query: >-
+            contains(id, '0000:85:00')
     
     - name: Deploy Ubuntu worker VMs
       vars:
@@ -358,6 +335,8 @@
         vm_pci_device_mappings:
           - tape-library-fc-hbas
           - disk-shelf-sas-hbas
+          - disk-shelf-slog-1
+          - disk-shelf-slog-2
       ansible.builtin.include_role:
         name: deploy_ubuntu_workers
     
