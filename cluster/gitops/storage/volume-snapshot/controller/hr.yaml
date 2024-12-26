@@ -29,7 +29,5 @@ spec:
           whenUnsatisfiable: DoNotSchedule
       pdb:
         minAvailable: 1
-        selector:
-          app.kubernetes.io/instance: *app_name
       serviceMonitor:
         create: true
