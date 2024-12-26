@@ -67,7 +67,7 @@ spec:
               group: apps
               version: v1
               kind: Deployment
-              labelSelector: app.kubernetes.io/component = openebs-zfs-controller
+              labelSelector: component = openebs-zfs-controller
     # Add topology spread constraints
     - kustomize:
         patches:
@@ -86,4 +86,4 @@ spec:
               group: apps
               version: v1
               kind: Deployment
-              labelSelector: app.kubernetes.io/component = openebs-zfs-controller
+              labelSelector: component = openebs-zfs-controller
