@@ -113,6 +113,20 @@ spec:
                 version: v2
                 kind: HelmRelease
                 labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
+            # Add a patch that disables CRD installation
+            - patch: |
+                apiVersion: placeholder-value-does-not-matter
+                kind: placeholder-value-does-not-matter
+                metadata:
+                  name: placeholder-value-does-not-matter
+                spec:
+                  install:
+                    crds: Skip
+              target:
+                group: helm.toolkit.fluxcd.io
+                version: v2
+                kind: HelmRelease
+                labelSelector: patches.flux.home.arpa/helmrelease.skip-crds == true
             # Set HelmRelease source ref to flux-system namespace
             - patch: |
                 apiVersion: placeholder-value-does-not-matter
