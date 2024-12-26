@@ -3,7 +3,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./namespace.yaml
-  - ./crds/ks.yaml
   - ./openebs/ks.yaml
   - ./rook-ceph/ks.yaml
   - ./volume-snapshot/ks.yaml
