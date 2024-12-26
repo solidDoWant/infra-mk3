@@ -56,6 +56,18 @@ spec:
       # Disable zfs-localpv-installed volume snapshot CRDs entirely
       crds: *crds
   postRenderers:
+    # Remove the volume snapshot controller
+    # Why TF is this included in every CSI controller pod???
+    - kustomize:
+        patches:
+          - patch: |
+              - op: remove
+                path: /spec/template/spec/containers/2
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              labelSelector: app.kubernetes.io/component = openebs-zfs-controller
     # Add topology spread constraints
     - kustomize:
         patches:
