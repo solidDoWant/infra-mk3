@@ -38,6 +38,16 @@
     state: directory
   when: zpool_list.rc != 0
 
+- name: Install ZFS userspace tools
+  ansible.builtin.apt:
+    name:
+      - zfsutils-linux
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
 - name: Check if the pool can be imported
   ansible.builtin.shell: >-
     zpool import |
@@ -49,10 +59,10 @@
   when: zpool_list.rc != 0
 
 - name: Import the pool
-  ansible.builtin.include_tasks: zpool import -f "{{ pool_name }}"
+  ansible.builtin.command: zpool import -f "{{ pool_name }}"
   when: >-
     zpool_list.rc != 0 and
-    pool_name in zpool_import_pools.stdout 
+    pool_name in zpool_import_pools.stdout
 
 - name: Create the pool
   ansible.builtin.command: >-

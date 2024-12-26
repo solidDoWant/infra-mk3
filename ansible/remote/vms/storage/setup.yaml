@@ -1,0 +1,151 @@
+---
+- name: Configure SSH
+  hosts: vms:&storage
+  gather_facts: false
+  become: true
+
+  vars:
+    ssh_public_key_path: ~/.ssh/id_rsa.pub
+
+  roles:
+    - role: configure_ssh
+
+- name: Setup workers
+  hosts: vms:&storage
+  become: true
+
+  tasks:
+    - name: Set timezone
+      block:
+        - name: Update the timezone 
+          community.general.timezone:
+            name: "{{ timezone }}"
+          register: timezone
+        - name: Reconfigure tzdata
+          ansible.builtin.command: dpkg-reconfigure -f noninteractive tzdata
+          when: timezone.changed
+
+    - name: Configure system packages
+      vars:
+        apt_config_dir: /etc/apt/apt.conf.d
+      block:
+        - name: Disable APT recommends and suggestions
+          ansible.builtin.blockinfile:
+            path: "{{ apt_config_dir }}/02-norecommends"
+            mode: 0644
+            create: true
+            block: |
+              APT::Install-Recommends "false";
+              APT::Install-Suggests "false";
+              APT::Get::Install-Recommends "false";
+              APT::Get::Install-Suggests "false";
+        - name: Update packages
+          ansible.builtin.apt:
+            update_cache: true
+            cache_valid_time: 600
+            upgrade: dist
+            autoclean: true
+            autoremove: true
+
+    - name: Install guest agent
+      ansible.builtin.apt:
+        name:
+          - qemu-guest-agent
+        state: latest
+        update_cache: true
+        cache_valid_time: 600
+        autoclean: true
+        autoremove: true
+
+    # IPv6 (support) has caused nothing but trouble
+    - name: Disable IPv6
+      block:
+        - name: Disable IPv6 sysctls
+          vars:
+            config:
+              net.ipv6.conf.all.disable_ipv6: "1"
+              net.ipv6.conf.default.disable_ipv6: "1"
+          ansible.builtin.sysctl:
+            name: "{{ item.key }}"
+            value: "{{ item.value }}"
+            state: present
+            sysctl_file: /etc/sysctl.d/100-ipv6.conf
+          loop: "{{ config | dict2items }}"
+
+        - name: Disable IPv6 via kernel cmdline parameter
+          ansible.builtin.lineinfile:
+            path: /etc/default/grub.d/50-cloudimg-settings.cfg
+            backrefs: true
+            regexp: >-  # Match lines not containing the item
+              ^#?\s*GRUB_CMDLINE_LINUX_DEFAULT="?((?:(?!{{ item }}).)*?)"?$
+            line: >-
+              GRUB_CMDLINE_LINUX_DEFAULT="\1 {{ item }}"
+          loop:
+            - ipv6.disable=1
+          register: cmdline_file
+
+        - name: Update GRUB configuration
+          ansible.builtin.command: update-grub
+          when: cmdline_file is changed
+
+    - name: Setup multipathd
+      vars:
+        drive_wwns: "{{ bulk_pool.drive_wwns }}"
+      ansible.builtin.import_role:
+        name: setup_multipathd
+      when: bulk_pool is defined
+
+    - name: Configure ZFS bulk-pool-01
+      vars:
+        pool_name: &pool bulk-pool-01
+        drive_wwns: "{{ bulk_pool.drive_wwns }}"
+        slog_euis: "{{ bulk_pool.slog_euis }}"
+      ansible.builtin.import_role:
+        name: configure_zpool
+      when: bulk_pool is defined
+
+    - name: Deploy datasets
+      vars:
+        pool_name: *pool
+        dataset_name: "{{ item.name }}"
+        share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
+      ansible.builtin.include_role:
+        name: configure_zfs_dataset
+      loop:
+        - name: media
+          share_with_nfs: true
+        - name: k8s
+        - name: k8s/democratic-csi
+        - name: k8s/democratic-csi/pvcs
+        - name: k8s/democratic-csi/snapshots
+      when: bulk_pool is defined
+
+    - name: Install full module package
+      ansible.builtin.apt:
+        name:
+          - linux-image-generic
+        state: latest
+        update_cache: true
+        cache_valid_time: 600
+        autoclean: true
+        autoremove: true
+
+    - name: Install fast-reboot script
+      ansible.builtin.include_role:
+        name: install_fast_reboot
+
+    - name: Install Teleport
+      vars:
+        advertised_ip: "{{ ansible_default_ipv4.address }}"
+        join_method: tpm
+        token_name: "{{ hostname }}"
+        ssh_labels:
+          type: vm
+          purpose: backup
+      ansible.builtin.include_role:
+        name: install_teleport
+
+    # TODO setup democratic-csi access
+
+    - name: Reboot
+      ansible.builtin.reboot:

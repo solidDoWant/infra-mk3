@@ -417,6 +417,8 @@ ip-space:
             hostname: proxmox-vm-host-01
         10.2.3.0/24:
           description: VMs
+          10.2.3.1/32:
+            hostname: ubuntu-storage-host-01
         10.2.4.0/23:
           description: DHCP range
       10.3.0.0/16:

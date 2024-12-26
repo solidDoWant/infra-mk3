@@ -255,35 +255,6 @@
         autoclean: true
         autoremove: true
 
-    # - name: Setup multipathd
-    #   ansible.builtin.include_role:
-    #     name:  setup_multipathd 
-    #   vars:
-    #     drive_wwns: "{{ bulk_pool_drive_wwns }}"
-
-    # - name: Configure ZFS bulk-pool-01
-    #   ansible.builtin.include_role:
-    #     name: configure_zpool
-    #   vars:
-    #     pool_name: &pool bulk-pool-01
-    #     drive_wwns: "{{ bulk_pool.drive_wwns }}"
-    #     slog_euis: "{{ bulk_pool.slog_euis }}"
-
-    # - name: Deploy datasets
-    #   ansible.builtin.include_role:
-    #     name: configure_zfs_dataset
-    #   vars:
-    #     pool_name: *pool
-    #     dataset_name: "{{ item.name }}"
-    #     share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
-    #   loop:
-    #     - name: media
-    #       share_with_nfs: true
-    #     - name: k8s
-    #     - name: k8s/democratic-csi
-    #     - name: k8s/democratic-csi/pvcs
-    #     - name: k8s/democratic-csi/snapshots
-
     - name: Remove subscription nag
       ansible.builtin.replace:
         path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
@@ -302,6 +273,13 @@
         name: install_fast_reboot
 
     - name: Install Teleport
+      vars:
+        advertised_ip: "{{ ansible_facts['vmbr200']['ipv4']['address'] }}"
+        # TODO temporary using an ephemeral join token until new 2.0 TPM is delivered
+        join_method: token
+        token_name: "{{ hostname }}-{{ temp_teleport_join_token_suffix }}"
+        ssh_labels:
+          type: proxmox
       ansible.builtin.include_role:
         name: install_teleport
 
@@ -311,13 +289,11 @@
       ansible.builtin.include_role:
         name: encrypt_dataset
 
-    # # TODO setup democratic-csi access or TLS SSH auth + JIT service access
-
     # # TODO setup mail daemon once relay is setup
 
     # # TODO setup node exporter once monitoring stack is deployed
 
-- name: Kubernetes node setup tasks
+- name: Storage VM setup tasks
   hosts: r730xd:&proxmox
   vars:
     ssh_public_key_path: ~/.ssh/id_rsa.pub
@@ -339,25 +315,32 @@
           device_query: >-
             subsystem_device_name &&
             contains(subsystem_device_name, '9207-8e')
+        - mapping_id: disk-shelf-slog-1
+          device_query: >-
+            contains(id, '0000:84:00')
+        - mapping_id: disk-shelf-slog-2
+          device_query: >-
+            contains(id, '0000:85:00')
     
-    - name: Deploy Ubuntu worker VMs
+    - name: Deploy Ubuntu storage VM
       vars:
-        vm_count: 2
+        vm_count: 1
         vm_domain_name: "{{ local_domain_name }}"
         vm_bridges:
-          vmbr300:
+          vmbr200:
             mtu: >-
               {{
-                network.vlans["300"].mtu
+                network.vlans["200"].mtu
               }}
             cloudinit:
-              ip_prefix: 10.3.3
+              ip_prefix: 10.2.3
               subnet_bits: 16
-              gateway: 10.3.0.254
-              nameserver: 10.3.0.254
+              gateway: 10.2.0.254
+              nameserver: 10.2.0.254
         vm_pci_device_mappings:
           - tape-library-fc-hbas
           - disk-shelf-sas-hbas
+          - disk-shelf-slog-1
+          - disk-shelf-slog-2
       ansible.builtin.include_role:
         name: deploy_ubuntu_workers
-    

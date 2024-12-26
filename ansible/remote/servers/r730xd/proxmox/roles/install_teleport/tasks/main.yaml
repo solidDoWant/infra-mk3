@@ -8,12 +8,12 @@
 
 - name: Add the Teleport repository
   ansible.builtin.apt_repository:
-    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }}/debian {{ ansible_distribution_release }} stable/rolling
+    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }}/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable/rolling
     state: present
     filename: teleport
     update_cache: true
 
-- name: Limit the repo to only install tzpfms packages 
+- name: Limit the repo to only install teleport and teleport-ent packages 
   ansible.builtin.blockinfile:
     path: "{{ apt_preferences_dir }}/50-tzpfms-pinning"
     mode: 0644
@@ -47,7 +47,7 @@
 
 - name: Restart Teleport
   ansible.builtin.service:
-    name: teleport
+    name: teleport.service
     state: restarted
   when: teleport_config.changed
   # This may fail when the Teleport service has not been setup yet, or is unreachable

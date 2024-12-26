@@ -39,8 +39,8 @@
 
 - name: Ensure the VMs exist
   vars:
-    name: "{{ 'ubuntu-k8s-worker-%02d.%s' | format(item | int, vm_domain_name) }}"
-    description: "Ubuntu Kubernetes instance {{ item }}"
+    name: "{{ 'ubuntu-storage-host-%02d.%s' | format(item | int, vm_domain_name) }}"
+    description: "Ubuntu storage instance {{ item }}"
     memory: "{{ vm_memory }}"
     cores: "{{ vm_core_count }}"
     disk_size: "{{ vm_disk_size }}"

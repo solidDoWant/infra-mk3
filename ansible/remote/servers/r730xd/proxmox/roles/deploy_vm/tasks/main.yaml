@@ -52,9 +52,7 @@
         --balloon {{ memory }}
         --bios "{{ bios_type }}"
         {% if bios_type == "ovmf" %}
-        {# the pre-enrolled-keys option is backwards from what everything online says #}
-        {# a value of `1` will put secure boot into key enrollment mode instead of using known keys #}
-        --efidisk0 file=local-zfs-encrypted:1,efitype=4m,pre-enrolled-keys=0
+        --efidisk0 file=local-zfs-encrypted:1,efitype=4m,pre-enrolled-keys=1
         {% endif %}
         {% if iso_type == "iso" %}
         --boot order=virtio1;ide2

@@ -1,12 +1,15 @@
 ---
 - name: Check if host public key has been imported
   delegate_to: localhost
+  become: false
   ansible.builtin.command: ssh-keygen -F {{ inventory_hostname }}
   ignore_errors: true
+  changed_when: false
   register: is_host_known
 
 - name: Update local known_hosts
   delegate_to: localhost
+  become: false
   ansible.builtin.shell: >-
     ssh-keyscan "{{ inventory_hostname }}"
     >> ~/.ssh/known_hosts
@@ -24,9 +27,14 @@
       {%- endif %}
   register: sshd_config_changes
 
+- name: Populate service facts
+  ansible.builtin.service_facts:
+  when: sshd_config_changes.changed
+
 - name: Restart sshd service
   ansible.builtin.service:
-    name: sshd.service
+    name: >-
+      {{ ("sshd" in services) | ternary("sshd", "ssh") }}.service
     daemon_reload: true
     enabled: true
     state: restarted

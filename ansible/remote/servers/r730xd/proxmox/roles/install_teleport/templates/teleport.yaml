@@ -2,11 +2,9 @@
 version: v3
 teleport:
   join_params:
-    # method: tpm
-    # TODO temporary using an ephemeral join token until new 2.0 TPM is delivered
-    method: token
-    token_name: "{{ hostname }}-{{ temp_teleport_join_token_suffix }}"
-  advertise_ip: "{{ ansible_facts['vmbr200']['ipv4']['address'] }}"
+    method: "{{ join_method }}"
+    token_name: "{{ token_name }}"
+  advertise_ip: "{{ advertised_ip }}"
   log:
     format:
       extra_fields:
@@ -34,7 +32,6 @@ proxy_service:
   enabled: false
 ssh_service:
   enabled: true
-  labels:
-    type: proxmox
+  labels: {{ ssh_labels | to_yaml()}}
   enhanced_recording:
     enabled: true

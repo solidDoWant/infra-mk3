@@ -41,25 +41,33 @@ servers:
           hosts:
             10.2.2.1:
               hostname: proxmox-vm-host-01
-              bulk_pool:
-                drive_wwns:
-                  - 5000039a48092cc1
-                  - 5000039a8859fc21
-                  - 5000039aa82b3c9d
-                  - 5000039a48090cf9
-                  - 5000039aa82b269d
-                  - 5000039ac819d76d
-                  - 5000039ac819d789
-                  - 5000039ac81a7285
-                slog_euis:
-                  - 5cd2e4eef5180100
-                  - 5cd2e4a36c7d0100
           vars:
             ansible_user: root
             # This won't be used after the SSH key is uploaded - only for bootstraping.
             ansible_password: root
             ansible_python_interpreter: auto_silent
             internet_interface_name: vmbrWAN
+vms:
+  children:
+    storage:
+      hosts:
+        10.2.3.1:
+          hostname: ubuntu-storage-host-01
+          bulk_pool:
+            drive_wwns:
+              - 5000039a48092cc1
+              - 5000039a8859fc21
+              - 5000039aa82b3c9d
+              - 5000039a48090cf9
+              - 5000039aa82b269d
+              - 5000039ac819d76d
+              - 5000039ac819d789
+              - 5000039ac81a7285
+            slog_euis:
+              - 5cd2e4eef5180100
+              - 5cd2e4a36c7d0100
+      vars:
+        ansible_user: ubuntu
 routers:
   children:
     opnsense:

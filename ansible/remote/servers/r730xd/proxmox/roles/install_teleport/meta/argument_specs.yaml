@@ -1,0 +1,22 @@
+---
+argument_specs:
+  main:
+    options:
+      teleport_domain_name:
+        type: str
+        required: true
+      advertised_ip:
+        type: str
+        required: true
+      join_method:
+        type: str
+        default: tpm
+        choices:
+          - tpm
+          - token
+      token_name:
+        type: str
+        required: true
+      ssh_labels:
+        type: dict
+        required: true
