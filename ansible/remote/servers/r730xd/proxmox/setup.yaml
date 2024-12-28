@@ -276,8 +276,8 @@
       vars:
         advertised_ip: "{{ ansible_facts['vmbr200']['ipv4']['address'] }}"
         # TODO temporary using an ephemeral join token until new 2.0 TPM is delivered
-        join_method: token
-        token_name: "{{ hostname }}-{{ temp_teleport_join_token_suffix }}"
+        join_method: tpm
+        token_name: "{{ hostname }}"
         ssh_labels:
           type: proxmox
       ansible.builtin.include_role:
