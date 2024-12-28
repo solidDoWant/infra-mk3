@@ -24,7 +24,7 @@
       Pin: origin {{ domain_name }}
       Pin-Priority: -1
 
-      Package: tzpfms-tpm2 tzpfms-tpm1x tzpfms-common
+      Package: tzpfms-tpm2 tzpfms-common
       Pin: origin {{ domain_name }}
       Pin-Priority: 500
 
@@ -33,10 +33,7 @@
     name:
       - tzpfms-tpm2
       - tzpfms-common
-      - tpm-tools
-      # TODO this can be removed once the TPM 2.0 module is installed
-      - tzpfms-tpm1x
-      - trousers
+      - tpm2-tools
     state: latest
     update_cache: true
     cache_valid_time: 600
@@ -64,9 +61,12 @@
 - name: Encrypt the dataset
   environment:
     TZPFMS_PASSPHRASE_HELPER: echo
-  ansible.builtin.command: zfs-tpm1x-change-key -b "{{ backup_path }}" "{{ dataset_name }}"
+  ansible.builtin.command: zfs-tpm2-change-key -b "{{ backup_path }}" "{{ dataset_name }}"
   when: dataset_status.stdout == ""
 
+# To use:
+# cat keys/10.2.2.1/root/rpool_data_encrypted.backup | tsh ssh root@proxmox-vm-host-01 zfs load-key rpool/data/encrypted
+# TODO taskfile for this
 - name: Copy the recovery file locally
   ansible.builtin.fetch:
     src: "{{ backup_path }}"
@@ -102,7 +102,7 @@
       value: tcsd.service
     - section: Service
       option: ExecStart
-      value: /usr/sbin/zfs-tpm1x-load-key "{{ dataset_name }}"
+      value: /usr/sbin/zfs-tpm2-load-key "{{ dataset_name }}"
     - section: Service
       option: Environment
       value: TZPFMS_PASSPHRASE_HELPER=/usr/bin/echo
