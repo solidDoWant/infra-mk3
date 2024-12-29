@@ -32,6 +32,9 @@ spec:
         createPSPs:
           baseline: false
           privileged: false
+      operator:
+        securityContext:
+          readOnlyRootFilesystem: false # Needed for startup script
     # Disable all addons except for postgres and redis
     stash-catalog:
       elasticsearch:

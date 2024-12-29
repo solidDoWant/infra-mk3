@@ -16,8 +16,28 @@ spec:
   values:
     replicaCount: 2
     licenseSecretName: panopticon-chart-license
+    image:
+      securityContext:
+        # Needed for startup
+        readOnlyRootFilesystem: false
   postRenderers:
-    # TODO tsc
+    # Add TSC
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/topologySpreadConstraints
+                value:
+                  - maxSkew: 1 # Skew of 1 allows for rolling updates
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: panopticon
+                    whenUnsatisfiable: DoNotSchedule
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
     - kustomize:
         patches:
           - patch: |
@@ -106,4 +126,3 @@ spec:
               group: apps
               version: v1
               kind: Deployment
-              labelSelector: app.kubernetes.io/instance = panopticon
