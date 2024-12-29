@@ -26,7 +26,7 @@ spec:
               mountPath: /license-cert
             - name: license-ca-serving-cert
               mountPath: /serving-cert
-            - name: nginx-config
+            - name: appscode-license-ca-endpoint-nginx-config
               mountPath: /etc/nginx
             - name: tmp
               mountPath: /tmp
@@ -40,6 +40,14 @@ spec:
               cpu: 10m
           ports:
             - containerPort: 443
+          readinessProbe: &probe
+            initialDelaySeconds: 5
+            httpGet:
+              scheme: HTTPS
+              host: licenses.appscode.com
+              port: 443
+              path: /certificates/ca.crt
+          livenessProbe: *probe
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
