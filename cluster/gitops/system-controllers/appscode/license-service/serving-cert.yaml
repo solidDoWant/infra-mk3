@@ -7,6 +7,7 @@ kind: Certificate
 metadata:
   name: appscode-license-ca-serving-cert
 spec:
+  isCA: true # Self-signed cert must be a CA
   commonName: licenses.appscode.com
   dnsNames:
     - licenses.appscode.com
@@ -19,6 +20,15 @@ spec:
       - infra-mk3
   usages:
     - server auth
+    # Self-signed cert must be able to sign itself
+    - cert sign
+    - crl sign
+  # Allow only signing for the license domain name
+  nameConstraints:
+    critical: true
+    permitted:
+      dnsDomains:
+        - licenses.appscode.com
   duration: 720h # One month
   privateKey:
     algorithm: RSA
