@@ -1,0 +1,70 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appscode-license-ca-endpoint
+spec:
+  selector:
+    matchLabels:
+      app: appscode-license-ca-endpoint
+  template:
+    metadata:
+      labels:
+        app: appscode-license-ca-endpoint
+    spec:
+      replicas: 2
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+      containers:
+        - name: appscode-license-ca-endpoint
+          image: nginxinc/nginx-unprivileged:1.27.2-alpine
+          volumeMounts:
+            - name: license-public-certificate
+              mountPath: /license-cert
+            - name: license-ca-serving-cert
+              mountPath: /serving-cert
+            - name: nginx-config
+              mountPath: /etc/nginx
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 1m
+            limits:
+              memory: 128Mi
+              cpu: 10m
+          ports:
+            - containerPort: 443
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: license-public-certificate
+          secret:
+            name: appscode-license-ca
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt
+        - name: license-ca-serving-cert
+          secret:
+            name: appscode-license-ca-serving-cert
+            defaultMode: 0440
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 10Mi

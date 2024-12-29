@@ -122,6 +122,28 @@ spec:
                 path: /spec/template/spec/containers/0/command
                 value:
                   - /scripts/startup.sh
+              # Override the DNS config
+              - op: add
+                path: /spec/template/spec/hostAliases
+                value:
+                  - ip: "${APPSCODE_LICENSE_SERVICE_IP}"
+                    hostnames:
+                      - licenses.appscode.com
+                      - api.appscode.com  # Not currently used, but may be in the future
+              # Add the license service serving cert
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: scripts
+                  secret:
+                    defaultMode: 0444
+                    secretName: appscode-license-ca-pub-cert
+              - op: add
+                path: /spec/template/spec/containers/0/volumeMounts/-
+                value:
+                  name: appscode-license-ca-pub-cert
+                  mountPath: /etc/ssl/certs/license-service-serving-cert.crt
+                  subPath: ca.crt
             target:
               group: apps
               version: v1

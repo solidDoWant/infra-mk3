@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kyverno.io/clusterpolicy_v1.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: extract-appscode-license-serving-certificate
+spec:
+  rules:
+    - name: extract-appscode-license-serving-certificate
+      # Trigger on new and existing namespaces matching requesting the cert
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  appscode.home.arpa/namespace.license-cert: "true"
+      skipBackgroundRequests: true
+      # Pull in the cert
+      context:
+        - name: pubCert
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/system-controllers/secrets/appscode-license-ca
+            jmesPath: data."tls.crt"
+      # Create a new "secret" with only the public certificate
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: appscode-license-ca-pub-cert
+        namespace: >-
+          {{ request.object.metadata.name }}
+        data:
+          type: Opaque
+          data:
+            ca.crt: >-
+              {{ pubCert }}

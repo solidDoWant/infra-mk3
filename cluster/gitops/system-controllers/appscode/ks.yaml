@@ -4,19 +4,20 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name panopticon-app
+  name: &app_name appscode-license-service
 spec:
-  targetNamespace: monitoring
+  targetNamespace: system-controllers
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/monitoring/panopticon/app
+  path: /cluster/gitops/system-controllers/appscode-license-service
   prune: true
   sourceRef:
     kind: GitRepository
     name: infra-mk3
   wait: true
   dependsOn:
-    - name: prometheus-crds
-    - name: appscode-license-service
+    - name: cert-manager
+    - name: approver-policy
+    - name: cluster-issuers

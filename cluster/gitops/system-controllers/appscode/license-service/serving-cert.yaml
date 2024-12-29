@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+# This is self signed because it should be explicitly trusted where needed, and
+# nowhere else.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: appscode-license-ca-serving-cert
+spec:
+  commonName: licenses.appscode.com
+  dnsNames:
+    - licenses.appscode.com
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  duration: 720h # One month
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: appscode-license-ca-serving-cert
