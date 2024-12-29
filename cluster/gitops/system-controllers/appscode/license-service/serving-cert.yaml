@@ -21,7 +21,8 @@ spec:
     - server auth
   duration: 720h # One month
   privateKey:
-    algorithm: Ed25519
+    algorithm: RSA
+    size: 2048
     encoding: PKCS8
     rotationPolicy: Always
   issuerRef:
