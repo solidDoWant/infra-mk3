@@ -51,7 +51,8 @@ spec:
                 value:
                   - name: install-deps
                     image: alpine:3.21.0  # Alpine dependencies are pretty well contained
-                    command: /scripts/bootstrap.sh
+                    command:
+                      - /scripts/bootstrap.sh
                     volumeMounts:
                       - name: scripts
                         mountPath: /scripts
