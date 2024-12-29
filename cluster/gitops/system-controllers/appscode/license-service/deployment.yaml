@@ -49,14 +49,14 @@ spec:
       volumes:
         - name: license-public-certificate
           secret:
-            name: appscode-license-ca
+            secretName: appscode-license-ca
             defaultMode: 0440
             items:
               - key: ca.crt
                 path: ca.crt
         - name: license-ca-serving-cert
           secret:
-            name: appscode-license-ca-serving-cert
+            secretName: appscode-license-ca-serving-cert
             defaultMode: 0440
         - name: nginx-config
           configMap:
