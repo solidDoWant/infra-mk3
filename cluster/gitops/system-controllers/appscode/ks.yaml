@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/system-controllers/appscode-license-service
+  path: /cluster/gitops/system-controllers/appscode/license-service
   prune: true
   sourceRef:
     kind: GitRepository
