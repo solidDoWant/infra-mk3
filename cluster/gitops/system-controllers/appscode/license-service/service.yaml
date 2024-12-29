@@ -4,6 +4,7 @@ kind: Service
 metadata:
   name: appscode-license-ca-endpoint
 spec:
+  type: LoadBalancer
   loadBalancerIP: "${APPSCODE_LICENSE_SERVICE_IP}"
   selector:
     app: appscode-license-ca-endpoint
