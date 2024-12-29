@@ -134,14 +134,14 @@ spec:
               - op: add
                 path: /spec/template/spec/volumes/-
                 value:
-                  name: appscode-license-ca-pub-cert
+                  name: appscode-license-ca-serving-pub-cert
                   secret:
                     defaultMode: 0444
-                    secretName: appscode-license-ca-pub-cert
+                    secretName: appscode-license-ca-serving-pub-cert
               - op: add
                 path: /spec/template/spec/containers/0/volumeMounts/-
                 value:
-                  name: appscode-license-ca-pub-cert
+                  name: appscode-license-ca-serving-pub-cert
                   mountPath: /etc/ssl/certs/license-service-serving-cert.crt
                   subPath: ca.crt
             target:

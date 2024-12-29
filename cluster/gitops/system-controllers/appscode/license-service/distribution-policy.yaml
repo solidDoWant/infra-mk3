@@ -22,7 +22,7 @@ spec:
         - name: pubCert
           apiCall:
             method: GET
-            urlPath: /api/v1/namespaces/system-controllers/secrets/appscode-license-ca
+            urlPath: /api/v1/namespaces/system-controllers/secrets/appscode-license-ca-serving-cert
             jmesPath: data."tls.crt"
       # Create a new "secret" with only the public certificate
       generate:
@@ -30,7 +30,7 @@ spec:
         synchronize: true
         apiVersion: v1
         kind: Secret
-        name: appscode-license-ca-pub-cert
+        name: appscode-license-ca-serving-pub-cert
         namespace: >-
           {{ request.object.metadata.name }}
         data:
