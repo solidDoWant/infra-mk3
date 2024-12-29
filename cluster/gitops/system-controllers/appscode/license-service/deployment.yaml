@@ -26,7 +26,7 @@ spec:
               mountPath: /license-cert
             - name: license-ca-serving-cert
               mountPath: /serving-cert
-            - name: appscode-license-ca-endpoint-nginx-config
+            - name: nginx-config
               mountPath: /etc/nginx
             - name: tmp
               mountPath: /tmp
@@ -68,7 +68,7 @@ spec:
             defaultMode: 0440
         - name: nginx-config
           configMap:
-            name: nginx-config
+            name: appscode-license-ca-endpoint-nginx-config
             items:
               - key: nginx.conf
                 path: nginx.conf
