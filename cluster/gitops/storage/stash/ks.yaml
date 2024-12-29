@@ -37,6 +37,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: prometheus-crds
     - name: stash-crds
     - name: kyverno-app
     - name: panopticon-app
