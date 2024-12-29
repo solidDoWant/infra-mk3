@@ -27,6 +27,35 @@ spec:
     group: cert-manager.io
   secretName: appscode-license-ca
 ---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kyverno.io/clusterpolicy_v1.json
+# Copy the cert to the certificates namespace so that cert-manager can load it
+# This is required for cluster issuers.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: clone-appscode-license-certificate-to-certificates-namespace
+spec:
+  rules:
+    - name: clone-appscode-license-certificate-to-certificates-namespace
+      # Trigger on new and existing namespaces matching requesting the cert
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              name: certificates
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: appscode-license-ca
+        namespace: >-
+          {{ request.object.metadata.name }}
+        clone:
+          namespace: system-controllers
+          name: appscode-license-ca
+---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
