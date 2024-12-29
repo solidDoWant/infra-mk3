@@ -93,7 +93,9 @@ RUN mkdir -pv /tmp/krew && \
 ENV PATH="${KREW_ROOT}/bin:${PATH}"
 
 ## Krew plugins
-RUN kubectl krew install kyverno cnpg sniff
+RUN kubectl krew index add appscode https://github.com/appscode/krew-index.git && \
+    kubectl krew update && \
+    kubectl krew install kyverno cnpg sniff appscode/stash
 
 ## Krew ownership fix
 RUN find /usr/local/krew -type d -exec chmod 777 {} \; && \
