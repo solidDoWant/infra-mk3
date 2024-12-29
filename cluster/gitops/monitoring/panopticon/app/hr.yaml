@@ -21,7 +21,7 @@ spec:
     - kustomize:
         patches:
           - patch: |
-              # Add the startup script volume
+              # Add the script volume
               - op: add
                 path: /spec/template/spec/volumes/-
                 value:
@@ -29,12 +29,61 @@ spec:
                   secret:
                     defaultMode: 0500
                     secretName: panopticon-scripts
-              # Mount the startup script volume
+              # Add the dependency volumes
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: bin
+                  emptyDir: {}
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: lib
+                  emptyDir: {}
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: usr-bin
+                  emptyDir: {}
+              # Add init container to install required tools
+              - op: add
+                path: /spec/template/spec/initContainers
+                value:
+                  - name: install-deps
+                    image: alpine:3.21.0  # Alpine dependencies are pretty well contained
+                    command: /scripts/bootstrap.sh
+                    volumeMounts:
+                      - name: scripts
+                        mountPath: /scripts
+                      - name: bin
+                        mountPath: /shared/bin
+                      - name: lib
+                        mountPath: /shared/lib
+                      - name: usr-bin
+                        mountPath: /shared/usr/bin
+              # Mount the script volume
               - op: add
                 path: /spec/template/spec/containers/0/volumeMounts/-
                 value:
                   name: scripts
                   mountPath: /scripts
+              # Mount the shared volumes. These directories are empty in the
+              # panopticon container.
+              - op: add
+                path: /spec/template/spec/containers/0/volumeMounts/-
+                value:
+                  name: bin
+                  mountPath: /bin
+              - op: add
+                path: /spec/template/spec/containers/0/volumeMounts/-
+                value:
+                  name: lib
+                  mountPath: /lib
+              - op: add
+                path: /spec/template/spec/containers/0/volumeMounts/-
+                value:
+                  name: usr-bin
+                  mountPath: /usr/bin
               # Set pod startup command
               - op: add
                 path: /spec/template/spec/containers/0/command
