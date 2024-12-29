@@ -41,7 +41,7 @@ spec:
   privateKey:
     algorithm: RSA
   issuerRef:
-    name: self-signed
+    name: appscode-license-ca
     kind: ClusterIssuer
     group: cert-manager.io
   secretName: panopticon-license
