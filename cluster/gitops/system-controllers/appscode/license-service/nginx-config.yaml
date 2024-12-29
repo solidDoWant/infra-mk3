@@ -17,6 +17,8 @@ data:
         server_name licenses.appscode.com;
         ssl_certificate /serving-cert/tls.crt;
         ssl_certificate_key /serving-cert/tls.key;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
 
         location /certificates/ca.crt {
           client_max_body_size 1M;
