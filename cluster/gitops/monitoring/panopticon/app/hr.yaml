@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=./schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: panopticon
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: panopticon
+      sourceRef:
+        kind: HelmRepository
+        name: appscode-charts
+      version: v2024.11.8
+  values:
+    replicaCount: 2
+    licenseSecretName: panopticon-chart-license
+  postRenderers:
+    # TODO tsc
+    - kustomize:
+        patches:
+          - patch: |
+              # Add the startup script volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: scripts
+                  secret:
+                    defaultMode: 0500
+                    secretName: panopticon-scripts
+              # Mount the startup script volume
+              - op: add
+                path: /spec/template/spec/containers/0/volumeMounts/-
+                value:
+                  name: panopticon-scripts
+                  mountPath: /scripts
+              # Set pod startup command
+              - op: add
+                path: /spec/template/spec/containers/0/command
+                value:
+                  - /scripts/startup.sh
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              labelSelector: app.kubernetes.io/instance = panopticon

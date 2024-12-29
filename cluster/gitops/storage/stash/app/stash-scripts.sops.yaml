@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-    name: sops-scripts
+    name: stash-scripts
     annotations:
         kustomize.toolkit.fluxcd.io/substitute: disabled
 type: Opaque
@@ -31,8 +31,8 @@ sops:
             M3ltNTU0RVlCc3hralIvSFpLZ1FwdW8K4nkmiwfMIBe54RF/y9WzJqK3hBj3T1Jv
             j7UGYmVgj8IXhG38Bc2dsPgzSI03eyFM0j9ETX5hejP+K3PYe1ywLA==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2024-12-29T01:09:23Z"
-    mac: ENC[AES256_GCM,data:IVrYO1xRr8VRm17dfh722Ryx/5GGvpOWTRQuLDV70jD/rHKj0ybHaHT9UaX7IPd6FPcerwnsqWAYzvX3kQbDxyewHXNEFGl/evhvhQKXAaG2in6Fbo14vUkmB2VlFAeNrS3ZGaaToHTGS5lBzwhjSR7C275YyrVBgFbootqwOIQ=,iv:obdKYO5XbBUmIcVDBVZmGbLYG42iLflQ5Hfe2kP1Kas=,tag:oRbTk7Vn1SqDYH1h3koG7A==,type:str]
+    lastmodified: "2024-12-29T01:44:38Z"
+    mac: ENC[AES256_GCM,data:s769MOHXvkDod7XO/uLAvTzVC/ma6eJYLaAhBl76Cn6/zPkkodeYjSbuzWmh6sKtJ1EgiUANikbebKhgOkY28XsLsWktqUS2t2alZUqkcWLEugWprPBYMIvB9QD7NN1pssgJ+JtXzlLhVFT7MVrUmec7AEwtK8T4cCQPPEvgKtM=,iv:cplkUgJJ+IE20d+1ljc4cN1ucUKeMX4VQpvlyQf8CMI=,tag:Xsyq/FJ+1f4qU6rlcqFfew==,type:str]
     pgp: []
     encrypted_regex: ^(data|stringData)$
     mac_only_encrypted: true
