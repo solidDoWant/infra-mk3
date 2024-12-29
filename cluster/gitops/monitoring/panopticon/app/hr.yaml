@@ -27,7 +27,7 @@ spec:
                 value:
                   name: scripts
                   secret:
-                    defaultMode: 0500
+                    defaultMode: 0555
                     secretName: panopticon-scripts
               # Add the dependency volumes
               - op: add
@@ -44,6 +44,11 @@ spec:
                 path: /spec/template/spec/volumes/-
                 value:
                   name: usr-bin
+                  emptyDir: {}
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: usr-lib
                   emptyDir: {}
               # Add init container to install required tools
               - op: add
@@ -62,6 +67,8 @@ spec:
                         mountPath: /shared/lib
                       - name: usr-bin
                         mountPath: /shared/usr/bin
+                      - name: usr-lib
+                        mountPath: /shared/usr/lib
               # Mount the script volume
               - op: add
                 path: /spec/template/spec/containers/0/volumeMounts/-
@@ -85,6 +92,11 @@ spec:
                 value:
                   name: usr-bin
                   mountPath: /usr/bin
+              - op: add
+                path: /spec/template/spec/containers/0/volumeMounts/-
+                value:
+                  name: usr-lib
+                  mountPath: /usr/lib
               # Set pod startup command
               - op: add
                 path: /spec/template/spec/containers/0/command

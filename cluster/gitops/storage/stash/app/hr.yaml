@@ -63,7 +63,7 @@ spec:
                 value:
                   name: scripts
                   secret:
-                    defaultMode: 0500
+                    defaultMode: 0555
                     secretName: stash-scripts
               # Mount the startup script volume
               - op: add
