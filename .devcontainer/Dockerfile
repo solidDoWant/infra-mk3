@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 RUN apt update && apt install --no-install-recommends -y \
     file sshpass minicom age whois yq iputils-ping p7zip \
     xorriso parted dosfstools mtools dnsutils redis-tools \
-    inotify-tools postgresql-client uuid-runtime
+    inotify-tools uuid-runtime postgresql-common
 
 # Install debs from sources that don't provide an apt repo
 RUN mkdir -pv /tmp/debs && \
@@ -19,6 +19,12 @@ RUN mkdir -pv /tmp/debs && \
     curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_17.0.3_${PRETTY_ARCH}.deb" && \
     dpkg -i /tmp/debs/*.deb && \
     rm -rvf /tmp/debs
+
+# Postgres APT repo
+# Some tools (i.e. pg_dump) must have a version newer than or equal to the postgres server version. Ubuntu "Plucky" or newer is needed
+# for postgresql-client-17, so use the postgres APT repo instead
+RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
+    apt install --no-install-recommends -y postgresql-client-17
 
 # Needed for BIOS and iDRAC config
 COPY install-racadm.sh /tmp/install-racadm.sh
@@ -112,15 +118,6 @@ RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/cmtool
-
-# tsh/tctl/tbot
-RUN mkdir -pv /tmp/cilium && \
-    # Vars for determining download URLs
-    KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
-    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
-    curl -fsSL -o /tmp/cilium/cilium.tar.gz "https://github.com/cilium/cilium-cli/releases/download/v0.16.19/cilium-${KERNEL}-${PRETTY_ARCH}.tar.gz" && \
-    tar -xzvf /tmp/cilium/cilium.tar.gz -C /usr/local/bin cilium && \
-    rm -rvf /tmp/cilium
 
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
