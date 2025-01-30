@@ -176,3 +176,5 @@ spec:
     cephBlockPoolsVolumeSnapshotClass:
       enabled: true
       name: ssd-replicated-3x-block
+      annotations:
+        snapshot.storage.kubernetes.io/is-default-class: "true"
