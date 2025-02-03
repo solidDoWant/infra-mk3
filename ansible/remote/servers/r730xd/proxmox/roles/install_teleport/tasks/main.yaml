@@ -15,7 +15,7 @@
 
 - name: Limit the repo to only install teleport and teleport-ent packages 
   ansible.builtin.blockinfile:
-    path: "{{ apt_preferences_dir }}/50-tzpfms-pinning"
+    path: "{{ apt_preferences_dir }}/50-teleport-pinning"
     mode: 0644
     create: true
     block: |
