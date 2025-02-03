@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/teleportprovisiontoken_v2.json
+apiVersion: resources.teleport.dev/v2
+kind: TeleportProvisionToken
+metadata:
+  name: ubuntu-development-01
+  # Make the token last a long time
+  # This isn't a huge risk because CA pinning will be used to verify the identity of the
+  # requester
+  # Currently bugged, see https://github.com/gravitational/teleport/issues/49925
+  # expires: "2030-01-01T00:00:00Z"
+spec:
+  roles:
+    - Node
+  join_method: tpm
+  tpm:
+    # Pulled from /var/lib/swtpm-localca/issuercert.pem
+    # on the hypervisor
+    ekcert_allowed_cas:
+      - |
+        -----BEGIN CERTIFICATE-----
+        MIIEKjCCApKgAwIBAgIUGZwnKLNQjIGL0TfZwXy6zlU8/G4wDQYJKoZIhvcNAQEL
+        BQAwHzEdMBsGA1UEAxMUc3d0cG0tbG9jYWxjYS1yb290Y2EwIBcNMjQxMjIyMTAw
+        MDAwWhgPOTk5OTEyMzEyMzU5NTlaMBgxFjAUBgNVBAMTDXN3dHBtLWxvY2FsY2Ew
+        ggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQCv5W1Boi60FzGkXWdlwJri
+        yy3+CTl7m6RpGMHCeL8JHQNxbI9NZsUOCOZJBMFG7dJQU3HWEZw0g1GSfJpGOQEA
+        Qu81qtkFP0nbWit2EYRG4c14WEWYBW6epS0Rs5RMSKPDKLr84QJ7b3E35dqesOMA
+        e4M2TzqALz9Uf0y5mDdKlYyPmKpTf5S3UtsJrzai2P2SNTKHBGlcgZSQBl3SJPVj
+        6Cmwi5jAF+VoMKmPZQQmICHW8y3VdziaWlXdNm7aH2Y8yLVDBASb9hi85WTfAygl
+        9igrw3+lE7UPMYwM/+QvZ+8deSIZP/PVvIU/Ki3AbEZHfubYnEJ08SmJdiQKxnCR
+        jQh6zE36+5npoUXXioS3gFA3XMt7LECSnHWiFxDP03BJM/KaUWV8m0blJj5vMv1d
+        9yIhNwS6K/o0IXRPhhXN1Sn+/TQry/hV4c4Fk6JQctbNkuRQuc4h5LHlh2Ypmph+
+        wNtpKkwAeRePuTSuUnm1xXCnlHXoENDAW3DhtB43R48CAwEAAaNjMGEwDwYDVR0T
+        AQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAgQwHQYDVR0OBBYEFKNDm9Nqh03VV/W1
+        +owDhcTAuGKEMB8GA1UdIwQYMBaAFGCGE+CEjL+YL1EqQ5lRnFkvV48uMA0GCSqG
+        SIb3DQEBCwUAA4IBgQBoLn2HZN1Vcjol2GZ3TzyMDoacQnNCPEZb4D+JT1XWfHbX
+        m7YvLK3zb2Ug9/PkUmo9ZwWelWQPdkn+GUA8ePZD7ok0/QTqKqlBoiQcfoJ2jKtl
+        mY4TrmzCGjcmBpC+4Ri1LhL6yA0HFrx6eBVxW+uMpq6IIEbynGLZF7lU2/UqRaK8
+        ydrr1Aaqy268EAuQx/e6YA6GSiwme/ACi6buTcoNIkbtAFf+U3jagd6E6r1wsE5X
+        WUe/O4za4zrv8ixJ55/uH8GNR3Am1/2Guhzx+ty1ESu0SbJUTUwk7sx4LOgCqB08
+        RG6KlzvGvBtP3lCt6N4sB2LGKlMpbeakexqpEiaQG3X/HS8iXZtJ8qUAM8y6c+bj
+        o8I56pCYMaqZ150Wq6+JId238t44lQdB0nxsG8byCIS5itT/exOv4rLNAHRA+/x7
+        5rYFxkKVEtqvyrADYyYVY28aPIdkz3xm+lUuXtrRwpLg3YykVPB9JssuRhohay49
+        JNjjxnBxx2MK0OblcD8=
+        -----END CERTIFICATE-----
+    allow:
+      - description: ubuntu-development-01
+        # Pulled from `teleport tpm identify` on the node
+        ek_public_hash: d669e372af46342a126e3826f50774591983e351f3e8e65503520a1fc483fefc
