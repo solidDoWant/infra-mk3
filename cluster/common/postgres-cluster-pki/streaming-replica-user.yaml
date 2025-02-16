@@ -1,9 +1,9 @@
 ---
-# Approve the the postgres teleport backend user certificate specifically.
+# Approve the the postgres streaming replica user auth certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: ${NAME}-postgres-auth-ca-${NAME}-user
+  name: ${NAME}-postgres-auth-ca-streaming-replica-user
 spec:
   selector:
     issuerRef:
@@ -16,22 +16,22 @@ spec:
   allowed:
     commonName:
       required: true
-      value: ${NAME}
+      value: streaming_replica
     usages:
       - client auth
   constraints:
-    maxDuration: 720h # 1 month
+    maxDuration: 1h
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: ${NAME}-postgres-${NAME}-user
+  name: ${NAME}-postgres-streaming-replica-user
 spec:
-  secretName: ${NAME}-postgres-${NAME}-user
+  secretName: ${NAME}-postgres-streaming-replica-user
   usages:
     - client auth
-  commonName: ${NAME}
-  duration: 720h # 1 month
+  commonName: streaming_replica
+  duration: 1h
   secretTemplate:
     labels:
       cnpg.io/reload: "true"

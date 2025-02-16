@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: testing
+  name: &app_name cluster
+spec:
+  targetNamespace: testing
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/testing/cluster
+  components:
+    - ../../../common/postgres-cluster-pki
+  postBuild:
+    substitute:
+      NAME: test-db
+      MAJOR_VERSION: "17"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true

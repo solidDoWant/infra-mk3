@@ -1,0 +1,14 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./cluster-serving-cert.yaml
+  - ./cluster.yaml
+configMapGenerator:
+  - name: ${NAME}-${MAJOR_VERSION}-db-registration
+    files:
+      - db-registration.yaml
+    options:
+      labels:
+        k8s-sidecar.home.arpa/application: teleport
+      disableNameSuffixHash: true
