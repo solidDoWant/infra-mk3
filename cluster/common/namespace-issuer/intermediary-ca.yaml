@@ -3,13 +3,13 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: security-intermediary-ca
+  name: ${NAMESPACE}-intermediary-ca
 spec:
   isCA: true
-  commonName: infra-mk3 security Intermediary Certificate Authority
+  commonName: infra-mk3 ${NAMESPACE} Intermediary Certificate Authority
   dnsNames:
-    - security.svc
-    - security.svc.cluster.local
+    - ${NAMESPACE}.svc
+    - ${NAMESPACE}.svc.cluster.local
   subject:
     countries:
       - US
@@ -18,7 +18,7 @@ spec:
     organizations:
       - infra-mk3
     organizationalUnits:
-      - security
+      - ${NAMESPACE}
   usages:
     - cert sign
     - crl sign
@@ -26,8 +26,8 @@ spec:
     critical: true
     permitted:
       dnsDomains:
-        - .security.svc
-        - .security.svc.cluster.local
+        - .${NAMESPACE}.svc
+        - .${NAMESPACE}.svc.cluster.local
   duration: 8766h # 1 year
   privateKey:
     algorithm: Ed25519
@@ -37,14 +37,14 @@ spec:
     name: root-ca
     kind: ClusterIssuer
     group: cert-manager.io
-  secretName: security-intermediary-ca
+  secretName: ${NAMESPACE}-intermediary-ca
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/clusterissuer_v1.json
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: security-intermediary-ca
+  name: ${NAMESPACE}-intermediary-ca
 spec:
   ca:
-    secretName: security-intermediary-ca
+    secretName: ${NAMESPACE}-intermediary-ca
     # TODO implement CRL service + CLI tool that allows for revoking certs based upon cert-manager name

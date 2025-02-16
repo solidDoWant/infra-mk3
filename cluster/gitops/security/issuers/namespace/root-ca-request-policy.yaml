@@ -3,7 +3,7 @@
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: root-ca-issuer-${NAMESPACE}-intermediary-ca
+  name: root-ca-issuer-security-intermediary-ca
 spec:
   selector:
     issuerRef:
@@ -12,17 +12,17 @@ spec:
       name: root-ca
     namespace:
       matchNames:
-        - ${NAMESPACE}
+        - security
   allowed:
     isCA: true
     commonName:
       required: true
-      value: infra-mk3 ${NAMESPACE} Intermediary Certificate Authority
+      value: infra-mk3 security Intermediary Certificate Authority
     dnsNames:
       required: true
       values:
-        - ${NAMESPACE}.svc
-        - ${NAMESPACE}.svc.cluster.local
+        - security.svc
+        - security.svc.cluster.local
     subject:
       countries:
         required: true
@@ -39,7 +39,7 @@ spec:
       organizationalUnits:
         required: true
         values:
-          - ${NAMESPACE}
+          - security
     usages:
       - cert sign
       - crl sign
