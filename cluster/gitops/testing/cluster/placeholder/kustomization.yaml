@@ -2,5 +2,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 components:
-  - ../../../../common/postgres-cluster-pki
-  - ../../../../common/postgres-cluster
+  - ../../../../components/postgres/cluster
+  - ../../../../components/postgres/pki
