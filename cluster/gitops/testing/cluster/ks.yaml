@@ -12,11 +12,11 @@ spec:
       app.kubernetes.io/name: *app_name
   interval: 5m
   path: /cluster/gitops/testing/cluster/placeholder
-  postBuild:
-    substitute:
-      NAME: test-db
-      NAMESPACE: testing
-      MAJOR_VERSION: "17"
+  # postBuild:
+  #   substitute:
+  #     NAME: test-db
+  #     NAMESPACE: testing
+  #     MAJOR_VERSION: "17"
   prune: true
   sourceRef:
     kind: GitRepository
