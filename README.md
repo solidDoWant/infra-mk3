@@ -199,9 +199,9 @@ Ceph, managed by Rook within the Kubernetes cluster, is used for fast, durable s
 
 #### Backups
 
-Data on important Ceph in-cluster volumes is backed up to a ZFS dataset on the Proxmox host via [Stash](https://stash.run/). This ZFS dataset is accessible via a NFS share that Stash mounts in backup pods. After a backup occurs, a snapshot of the ZFS dataset is taken. This solution allows for:
+Important data and applications are backed up to via [a backup tool that I developed](https://github.com/solidDoWant/backup-tool). Backups are stored in a (relatively) large ZFS pool on one of my hosts. After a backup occurs, a snapshot of the ZFS dataset is taken. This solution allows for:
 
-* Point in time recovery of workloads
+* Consistent backups of application workloads
 * Selective backups of specific paths within volumes
 * Direct file access to the backups (many other solutions require an object store)
 * Compression of backup data
