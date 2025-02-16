@@ -12,8 +12,6 @@ spec:
       app.kubernetes.io/name: *app_name
   interval: 5m
   path: /cluster/gitops/testing/cluster/placeholder
-  components:
-    - ../../../common/postgres-cluster-pki
   postBuild:
     substitute:
       NAME: test-db
