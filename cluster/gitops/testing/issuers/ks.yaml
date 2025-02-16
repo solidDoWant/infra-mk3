@@ -12,6 +12,9 @@ spec:
       app.kubernetes.io/name: *app_name
   interval: 5m
   path: /cluster/gitops/testing/issuers/namespace
+  postBuild:
+    substitute:
+      NAMESPACE: testing
   prune: true
   sourceRef:
     kind: GitRepository
