@@ -3,20 +3,20 @@
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: ${NAME}-postgres-auth-ca-${NAME}-user
+  name: teleport-core-postgres-auth-ca-teleport-core-user
 spec:
   selector:
     issuerRef:
       group: cert-manager.io
       kind: Issuer
-      name: ${NAME}-postgres-auth-ca
+      name: teleport-core-postgres-auth-ca
     namespace:
       matchNames:
         - security
   allowed:
     commonName:
       required: true
-      value: ${NAME}
+      value: teleport-core
     usages:
       - client auth
   constraints:
@@ -25,17 +25,17 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: ${NAME}-postgres-${NAME}-user
+  name: teleport-core-postgres-teleport-core-user
 spec:
-  secretName: ${NAME}-postgres-${NAME}-user
+  secretName: teleport-core-postgres-teleport-core-user
   usages:
     - client auth
-  commonName: ${NAME}
+  commonName: teleport-core
   duration: 720h # 1 month
   secretTemplate:
     labels:
       cnpg.io/reload: "true"
   issuerRef:
     group: cert-manager.io
-    name: ${NAME}-postgres-auth-ca
+    name: teleport-core-postgres-auth-ca
     kind: Issuer
