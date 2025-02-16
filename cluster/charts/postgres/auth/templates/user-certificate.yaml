@@ -1,0 +1,16 @@
+{{ range $name, $info := .Values.users }}
+{{- $certName := printf "%s-postgres-%s-user" $.Values.clusterName $name -}}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $certName }}
+spec:
+  secretName: {{ $certName }}
+  usages:
+    - client auth
+  commonName: {{ $info.username }}
+  duration: 1h
+  secretTemplate: {{ include "cnpg-labels" $ | nindent 4 }}
+  issuerRef: {{ include "ca-issuer-ref" $ | nindent 4 }}
+{{ end }}

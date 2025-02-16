@@ -1,0 +1,14 @@
+clusterName: ""
+certificates:
+  ca:
+    subject: {} # This is currently only supported for the CA certificate (TODO add support for user certs)
+    issuerRef:
+      name: self-signed
+      kind: ClusterIssuer
+      group: cert-manager.io
+teleportDomainName: ""
+users:
+  streaming-replica:
+    username: streaming_replica
+  # example-application:
+  #   name: example-application
