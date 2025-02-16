@@ -4,16 +4,16 @@
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: security-intermediary-ca-${NAME}-postgres-${MAJOR_VERSION}-serving-cert
+  name: ${NAMESPACE}-intermediary-ca-${NAME}-postgres-${MAJOR_VERSION}-serving-cert
 spec:
   selector:
     issuerRef:
       group: cert-manager.io
       kind: Issuer
-      name: security-intermediary-ca
+      name: ${NAMESPACE}-intermediary-ca
     namespace:
       matchNames:
-        - security
+        - ${NAMESPACE}
   allowed:
     commonName:
       required: true
@@ -21,12 +21,12 @@ spec:
     dnsNames:
       required: true
       values:
-        - ${NAME}-postgres-${MAJOR_VERSION}-rw.security.svc
-        - ${NAME}-postgres-${MAJOR_VERSION}-ro.security.svc
-        - ${NAME}-postgres-${MAJOR_VERSION}-r.security.svc
-        - ${NAME}-postgres-${MAJOR_VERSION}-rw.security.svc.cluster.local
-        - ${NAME}-postgres-${MAJOR_VERSION}-ro.security.svc.cluster.local
-        - ${NAME}-postgres-${MAJOR_VERSION}-r.security.svc.cluster.local
+        - ${NAME}-postgres-${MAJOR_VERSION}-rw.${NAMESPACE}.svc
+        - ${NAME}-postgres-${MAJOR_VERSION}-ro.${NAMESPACE}.svc
+        - ${NAME}-postgres-${MAJOR_VERSION}-r.${NAMESPACE}.svc
+        - ${NAME}-postgres-${MAJOR_VERSION}-rw.${NAMESPACE}.svc.cluster.local
+        - ${NAME}-postgres-${MAJOR_VERSION}-ro.${NAMESPACE}.svc.cluster.local
+        - ${NAME}-postgres-${MAJOR_VERSION}-r.${NAMESPACE}.svc.cluster.local
     subject:
       countries:
         required: true
@@ -53,12 +53,12 @@ metadata:
 spec:
   commonName: ${NAME} Postgres ${MAJOR_VERSION}
   dnsNames:
-    - ${NAME}-postgres-${MAJOR_VERSION}-rw.security.svc
-    - ${NAME}-postgres-${MAJOR_VERSION}-ro.security.svc
-    - ${NAME}-postgres-${MAJOR_VERSION}-r.security.svc
-    - ${NAME}-postgres-${MAJOR_VERSION}-rw.security.svc.cluster.local
-    - ${NAME}-postgres-${MAJOR_VERSION}-ro.security.svc.cluster.local
-    - ${NAME}-postgres-${MAJOR_VERSION}-r.security.svc.cluster.local
+    - ${NAME}-postgres-${MAJOR_VERSION}-rw.${NAMESPACE}.svc
+    - ${NAME}-postgres-${MAJOR_VERSION}-ro.${NAMESPACE}.svc
+    - ${NAME}-postgres-${MAJOR_VERSION}-r.${NAMESPACE}.svc
+    - ${NAME}-postgres-${MAJOR_VERSION}-rw.${NAMESPACE}.svc.cluster.local
+    - ${NAME}-postgres-${MAJOR_VERSION}-ro.${NAMESPACE}.svc.cluster.local
+    - ${NAME}-postgres-${MAJOR_VERSION}-r.${NAMESPACE}.svc.cluster.local
   subject:
     countries:
       - US
@@ -77,7 +77,7 @@ spec:
     labels:
       cnpg.io/reload: "true"
   issuerRef:
-    name: security-intermediary-ca
+    name: ${NAMESPACE}-intermediary-ca
     kind: Issuer
     group: cert-manager.io
   secretName: ${NAME}-postgres-${MAJOR_VERSION}-serving-cert
