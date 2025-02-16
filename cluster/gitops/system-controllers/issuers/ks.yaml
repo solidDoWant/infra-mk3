@@ -6,12 +6,15 @@ metadata:
   namespace: flux-system
   name: &app_name system-controllers-namespace-issuer
 spec:
-  targetNamespace: system-controllers
+  targetNamespace: &namespace system-controllers
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
   path: /cluster/gitops/system-controllers/issuers/namespace
+  postBuild:
+    substitute:
+      NAMESPACE: *namespace
   prune: true
   sourceRef:
     kind: GitRepository

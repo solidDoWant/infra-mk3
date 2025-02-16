@@ -28,12 +28,15 @@ metadata:
   namespace: flux-system
   name: &app_name istio-issuer
 spec:
-  targetNamespace: istio-system
+  targetNamespace: &namespace istio-system
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
   path: /cluster/gitops/istio-system/issuers/istio
+  postBuild:
+    substitute:
+      NAMESPACE: *namespace
   prune: true
   sourceRef:
     kind: GitRepository
