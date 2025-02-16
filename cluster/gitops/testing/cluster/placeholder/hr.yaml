@@ -8,7 +8,7 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: /cluster/charts/testchart
+      chart: ./cluster/charts/testchart
       sourceRef:
         kind: GitRepository
         name: infra-mk3
