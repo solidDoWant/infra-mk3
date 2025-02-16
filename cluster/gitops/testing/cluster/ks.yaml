@@ -17,6 +17,7 @@ spec:
   postBuild:
     substitute:
       NAME: test-db
+      NAMESPACE: testing
       MAJOR_VERSION: "17"
   prune: true
   sourceRef:

@@ -12,7 +12,7 @@ spec:
       name: ${NAME}-postgres-auth-ca
     namespace:
       matchNames:
-        - security
+        - ${NAMESPACE}
   allowed:
     commonName:
       required: true

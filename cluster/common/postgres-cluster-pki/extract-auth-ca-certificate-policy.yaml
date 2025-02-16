@@ -19,7 +19,7 @@ spec:
         - name: postgresAuthCa
           apiCall:
             method: GET
-            urlPath: /api/v1/namespaces/security/secrets/${NAME}-postgres-auth-ca
+            urlPath: /api/v1/namespaces/${NAMESPACE}/secrets/${NAME}-postgres-auth-ca
             jmesPath: data."ca.crt" | base64_decode(@)
         - name: teleportAuthCa
           apiCall:
@@ -39,7 +39,7 @@ spec:
         apiVersion: v1
         kind: Secret
         name: ${NAME}-postgres-auth-ca-cert
-        namespace: security
+        namespace: ${NAMESPACE}
         data:
           metadata:
             labels:
