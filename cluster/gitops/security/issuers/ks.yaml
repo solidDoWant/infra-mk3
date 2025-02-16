@@ -6,12 +6,15 @@ metadata:
   namespace: flux-system
   name: &app_name security-namespace-issuer
 spec:
-  targetNamespace: security
+  targetNamespace: &namespace security
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
   path: /cluster/gitops/security/issuers/namespace
+  postBuild:
+    substitute:
+      NAMESPACE: *namespace
   prune: true
   sourceRef:
     kind: GitRepository
