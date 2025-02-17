@@ -66,12 +66,14 @@ spec:
               - containerPort: 80
                 name: http
         # TODO security context
-        # TODO TSCs
-        # pod:
-        #   topologySpreadConstraints:
-        #     - maxSkew:
-        #       topologyKey:
-        #       whenUnsatisfiable:
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: vaultwarden-app
+              whenUnsatisfiable: DoNotSchedule
     service:
       app:
         controller: vaultwarden
