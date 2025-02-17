@@ -1,0 +1,120 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.5.1
+  values:
+    controllers:
+      vaultwarden:
+        replicas: 2
+        containers:
+          app:
+            image:
+              repository: vaultwarden/server
+              tag: 1.33.2-alpine
+            env:
+              # General config
+              DOMAIN: https://vaultwarden.${SECRET_PUBLIC_DOMAIN_NAME}
+              SIGNUPS_ALLOWED: "false"
+              # Database config
+              DATABASE_NAME:
+                secretKeyRef:
+                  name: vaultwarden-postgres-17-app
+                  key: dbname
+              DATABASE_SERVICE_NAME:
+                secretKeyRef:
+                  name: vaultwarden-postgres-17-app
+                  key: host
+              DATABASE_PORT:
+                secretKeyRef:
+                  name: vaultwarden-postgres-17-app
+                  key: port
+              DATABASE_NAMESPACE:
+                fieldRef:
+                  fieldPath: metadata.namespace
+              DATABASE_USERNAME:
+                secretKeyRef:
+                  name: vaultwarden-postgres-17-app
+                  key: port
+              DATABASE_URL: "\
+                postgresql://$(DATABASE_USERNAME)@$(DATABASE_SERVICE_NAME).$(DATABASE_NAMESPACE).svc:$(DATABASE_PORT)/$(DATABASE_NAME)?\
+                sslrootcert=/certs/postgres/serving/ca.crt&\
+                sslcert=/certs/postgres/user/tls.crt&\
+                sslkey=/certs/postgres/user/tls.key&\
+                sslmode=verify-full"
+              # SMTP config
+              SMTP_HOST: docker-postfix-mail.email.svc.cluster.local
+              SMTP_FROM_NAME: Vaultwarden
+              SMTP_FROM: no-reply-vaultwarden@${SECRET_PUBLIC_DOMAIN_NAME}
+              SMTP_PORT: "25"
+              SMTP_SECURITY: "off"
+            envFrom:
+              - secretRef:
+                  name: vaultwarden-env-values
+            ports:
+              - containerPort: 80
+                name: http
+        # TODO security context
+        # TODO TSCs
+        # pod:
+        #   topologySpreadConstraints:
+        #     - maxSkew:
+        #       topologyKey:
+        #       whenUnsatisfiable:
+    service:
+      app:
+        controller: vaultwarden
+        ports:
+          http:
+            port: 80
+        sessionAffinity: ClientIP
+        sessionAffinityConfig:
+          clientIP:
+            timeoutSeconds: 10800 # 3 hours
+    # TODO httproute, block /admin
+    persistence:
+      data:
+        type: persistentVolumeClaim
+        # This is needed for HA
+        accessMode: ReadWriteMany
+        size: 5Gi
+        storageClass: ssd-replicated-3x
+        advancedMounts:
+          vaultwarden:
+            app:
+              - path: /data
+      postgres-serving-cert:
+        type: secret
+        name: postgres-serving-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          vaultwarden:
+            app:
+              - path: /certs/postgres/serving
+      postgres-user-cert:
+        type: secret
+        name: postgres-vaultwarden-cert
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          vaultwarden:
+            app:
+              - path: /certs/postgres/user

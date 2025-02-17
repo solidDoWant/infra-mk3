@@ -23,49 +23,27 @@ spec:
     - name: prometheus-crds
     - name: rook-ceph-cluster
     - name: security-namespace-issuer
-# ---
-# # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
-# apiVersion: kustomize.toolkit.fluxcd.io/v1
-# kind: Kustomization
-# metadata:
-#   namespace: flux-system
-#   name: &app_name authentik-app
-# spec:
-#   targetNamespace: security
-#   commonMetadata:
-#     labels:
-#       app.kubernetes.io/name: *app_name
-#   interval: 5m
-#   path: /cluster/gitops/security/authentik/app
-#   prune: true
-#   sourceRef:
-#     kind: GitRepository
-#     name: infra-mk3
-#   wait: true
-#   dependsOn:
-#     - name: authentik-backend
-#     - name: docker-postfix-app
-#     - name: gateway-crds
-#     - name: rook-ceph-cluster
-# ---
-# # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
-# apiVersion: kustomize.toolkit.fluxcd.io/v1
-# kind: Kustomization
-# metadata:
-#   namespace: flux-system
-#   name: &app_name authentik-configuration
-# spec:
-#   targetNamespace: security
-#   commonMetadata:
-#     labels:
-#       app.kubernetes.io/name: *app_name
-#   interval: 5m
-#   path: /cluster/gitops/security/authentik/configuration
-#   prune: true
-#   sourceRef:
-#     kind: GitRepository
-#     name: infra-mk3
-#   wait: true
-#   dependsOn:
-#     - name: authentik-app
-#     - name: gateway-crds
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: vaultwarden-app
+spec:
+  targetNamespace: security
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/security/vaultwarden/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: vaultwarden-backend
+    - name: docker-postfix-app
+    - name: gateway-crds
+    - name: rook-ceph-cluster
