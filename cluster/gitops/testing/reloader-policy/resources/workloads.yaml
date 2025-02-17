@@ -43,12 +43,9 @@ spec:
           command:
             - sleep
             - "99999"
-          env:
-            - name: TEST_KEY
-              valueFrom:
-                configMapKeyRef:
-                  key: key
-                  name: testing-cm
+          envFrom:
+            - configMapKeyRef:
+                key: key
           resources:
             limits:
               memory: "128Mi"
@@ -74,12 +71,9 @@ spec:
           command:
             - sleep
             - "99999"
-          env:
-            - name: TEST_KEY
-              valueFrom:
-                secretKeyRef:
-                  key: key
-                  name: testing-secret
+          envFrom:
+            - secretKeyRef:
+                key: key
           resources:
             limits:
               memory: "128Mi"
@@ -105,17 +99,11 @@ spec:
           command:
             - sleep
             - "99999"
-          env:
-            - name: TEST_KEY1
-              valueFrom:
-                configMapKeyRef:
-                  key: key
-                  name: testing-cm
-            - name: TEST_KEY2
-              valueFrom:
-                secretKeyRef:
-                  key: key
-                  name: testing-secret
+          envFrom:
+            - configMapKeyRef:
+                key: key
+            - secretKeyRef:
+                key: key
           resources:
             limits:
               memory: "128Mi"

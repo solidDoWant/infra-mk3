@@ -102,3 +102,29 @@ spec:
                       - valueFrom:
                           secretKeyRef:
                             <(name): *object_name
+    - name: restart-workload-on-configmap-envfrom-change
+      match: *configmap_match
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                containers:
+                  - envfrom:
+                      - configMapKeyRef:
+                          <(name): *object_name
+    - name: restart-workload-on-secret-envfrom-change
+      match: *secret_match
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                containers:
+                  - envfrom:
+                      - secretKeyRef:
+                          <(name): *object_name
