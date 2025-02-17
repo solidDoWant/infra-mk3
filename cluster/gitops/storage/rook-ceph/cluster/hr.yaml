@@ -122,7 +122,66 @@ spec:
             csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
             csi.storage.k8s.io/node-stage-secret-namespace: *secret_namespace
             csi.storage.k8s.io/fstype: ext4
-    cephFileSystems: []
+    cephBlockPoolsVolumeSnapshotClass:
+      enabled: true
+      name: ssd-replicated-3x-block
+      isDefault: true
+    cephFileSystems:
+      - name: ssd-replicated
+        spec:
+          metadataPool:
+            failureDomain: chassis
+            replicated:
+              size: 3
+          dataPool:
+            name: data0
+            failureDomain: chassis
+            erasureCoded:
+              dataChunks: 2
+              codingChunks: 1
+          metadataServer:
+            # Active/passive
+            activeCount: 1
+            activeStandby: true
+            resources:
+              limits:
+                memory: 1Gi
+              requests:
+                cpu: 100m
+                memory: 1Gi
+            # TODO
+            # placement:
+            #   topologySpreadConstraints:
+            #     - maxSkew: 1
+            #       topologyKey: kubernetes.io/hostname
+            #       labelSelector:
+            #         matchLabels:
+            #           # cspell:words cephobjectstores
+            #           app.kubernetes.io/component: cephobjectstores.ceph.rook.io
+            #           app.kubernetes.io/name: ceph-rgw
+            #           app.kubernetes.io/instance: ssd-replicated
+            #       whenUnsatisfiable: DoNotSchedule
+            priorityClassName: system-cluster-critical
+        storageClass:
+          enabled: true
+          name: ssd-replicated-filesystem
+          pool: data0
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+          parameters:
+            # Default values for the chart
+            csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/provisioner-secret-namespace: &secret_namespace storage
+            csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/controller-expand-secret-namespace: *secret_namespace
+            csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+            csi.storage.k8s.io/node-stage-secret-namespace: *secret_namespace
+            csi.storage.k8s.io/fstype: ext4
+    # TODO volume snapshot class
+    cephFileSystemVolumeSnapshotClass:
+      enabled: true
+      name: ssd-replicated-filesystem
+      isDefault: true
     cephObjectStores:
       - name: ssd-replicated
         spec:
@@ -146,7 +205,7 @@ spec:
               limits:
                 memory: 1Gi
               requests:
-                cpu: 1000m
+                cpu: 100m
                 memory: 1Gi
             instances: 2
             placement:
@@ -173,7 +232,3 @@ spec:
           name: ssd-replicated-object
           reclaimPolicy: Delete
           volumeBindingMode: Immediate
-    cephBlockPoolsVolumeSnapshotClass:
-      enabled: true
-      name: ssd-replicated-3x-block
-      isDefault: true
