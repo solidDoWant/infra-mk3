@@ -113,7 +113,7 @@ spec:
               spec:
                 containers:
                   - envfrom:
-                      - configMapKeyRef:
+                      - configMapRef:
                           <(name): *object_name
     - name: restart-workload-on-secret-envfrom-change
       match: *secret_match
@@ -126,5 +126,5 @@ spec:
               spec:
                 containers:
                   - envfrom:
-                      - secretKeyRef:
+                      - secretRef:
                           <(name): *object_name
