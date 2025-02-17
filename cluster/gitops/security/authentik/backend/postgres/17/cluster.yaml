@@ -55,7 +55,7 @@ spec:
   certificates:
     serverTLSSecret: authentik-postgres-17-serving-cert
     serverCASecret: authentik-postgres-17-serving-cert
-    clientCASecret: authentik-postgres-auth-ca-cert
+    clientCASecret: authentik-client-auth-public-certs
     replicationTLSSecret: authentik-postgres-streaming-replica-user
   topologySpreadConstraints:
     - maxSkew: 1
