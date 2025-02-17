@@ -130,11 +130,12 @@ spec:
       - name: ssd-replicated
         spec:
           metadataPool:
+            name: ssd-replicated-filesystem-metadata
             failureDomain: chassis
             replicated:
               size: 3
           dataPools:
-            - name: data0
+            - name: ssd-replicated-filesystem-data0
               failureDomain: chassis
               replicated:
                 size: 3
@@ -163,7 +164,7 @@ spec:
         storageClass:
           enabled: true
           name: ssd-replicated-filesystem
-          pool: data0
+          pool: ssd-replicated-filesystem-data0
           reclaimPolicy: Delete
           volumeBindingMode: Immediate
           parameters:
