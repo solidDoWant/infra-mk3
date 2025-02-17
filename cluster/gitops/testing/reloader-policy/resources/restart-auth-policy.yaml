@@ -7,9 +7,11 @@ metadata:
 spec:
   mutateExistingOnPolicyUpdate: false
   rules:
-    # Global anchors appear to be "AND"ed together, so separate rules for secrets
-    # and configmaps are needed.
-    - name: restart-workload-on-configmap-change
+    # Global anchors appear to be "AND"ed together, so separate rules are
+    # needed for every combination of:
+    # * secrets, configmaps
+    # * volume, env, envFrom
+    - name: restart-workload-on-configmap-volume-change
       match:
         any:
           - resources: &configmap_resources
@@ -49,16 +51,13 @@ spec:
                 volumes:
                   - configMap:
                       <(name): &object_name "{{ request.object.metadata.name }}"
-    - name: restart-workload-on-secret-change
+    - name: restart-workload-on-secret-volume-change
       match:
         any:
           - resources: &secret_resources
               <<: *configmap_resources
               kinds:
                 - Secret
-          # CNPG doesn't directly attach secrets to database server pods, so
-          # this shouldn't affect a database cluster. CNPG handles reloads on
-          # its own.
           - resources:
               <<: *secret_resources
               selector:
@@ -74,3 +73,67 @@ spec:
                 volumes:
                   - secret:
                       <(secretName): *object_name
+    - name: restart-workload-on-configmap-env-change
+      match:
+        any:
+          - resources: &configmap_resources
+              kinds:
+                - ConfigMap
+              operations:
+                - UPDATE
+              selector:
+                matchLabels:
+                  kyverno.home.arpa/reload: "true"
+          # CNPG doesn't directly attach secrets to database server pods, so
+          # this shouldn't affect a database cluster. CNPG handles reloads on
+          # its own.
+          - resources:
+              <<: *configmap_resources
+              selector:
+                matchLabels:
+                  cnpg.io/reload: "true"
+      mutate:
+        targets: &targets
+          - &target
+            apiVersion: apps/v1
+            kind: Deployment
+            # namespace: "{{ request.namespace }}"
+            namespace: testing
+          - <<: *target
+            kind: StatefulSet
+          - <<: *target
+            kind: DaemonSet
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                containers:
+                  - env:
+                      - valuesFrom:
+                          configMapKeyRef:
+                            <(name): *object_name
+    - name: restart-workload-on-secret-env-change
+      match:
+        any:
+          - resources: &secret_resources
+              <<: *configmap_resources
+              kinds:
+                - Secret
+          - resources:
+              <<: *secret_resources
+              selector:
+                matchLabels:
+                  cnpg.io/reload: "true"
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                containers:
+                  - env:
+                      - valuesFrom:
+                          secretKeyRef:
+                            <(name): *object_name

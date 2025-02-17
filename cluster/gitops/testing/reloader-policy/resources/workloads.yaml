@@ -46,14 +46,16 @@ spec:
           command:
             - sleep
             - "99999"
+          env:
+            - name: TEST_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: key
+                  name: testing-cm
           resources:
             limits:
               memory: "128Mi"
               cpu: "50m"
-          volumeMounts:
-            - name: testing-cm
-              mountPath: /etc/config
-              defaultMode: 0666
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -78,14 +80,16 @@ spec:
           command:
             - sleep
             - "99999"
+          env:
+            - name: TEST_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: key
+                  name: testing-secret
           resources:
             limits:
               memory: "128Mi"
               cpu: "50m"
-          volumeMounts:
-            - name: testing-secret
-              mountPath: /etc/secret
-              defaultMode: 0666
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -113,148 +117,18 @@ spec:
           command:
             - sleep
             - "99999"
+          env:
+            - name: TEST_KEY1
+              valueFrom:
+                configMapKeyRef:
+                  key: key
+                  name: testing-cm
+            - name: TEST_KEY2
+              valueFrom:
+                secretKeyRef:
+                  key: key
+                  name: testing-secret
           resources:
             limits:
               memory: "128Mi"
               cpu: "50m"
-          volumeMounts:
-            - name: testing-cm
-              mountPath: /etc/config
-              defaultMode: 0666
-            - name: testing-secret
-              mountPath: /etc/secret
-              defaultMode: 0666
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: no-configuration
-spec:
-  selector:
-    matchLabels:
-      app: no-configuration
-  serviceName: no-configuration
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: no-configuration
-    spec:
-      containers:
-        - name: no-configuration
-          image: ubuntu:latest
-          command:
-            - sleep
-            - "99999"
-          resources:
-            limits:
-              memory: "128Mi"
-              cpu: "50m"
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: with-cm
-spec:
-  selector:
-    matchLabels:
-      app: with-cm
-  serviceName: with-cm
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: with-cm
-    spec:
-      volumes:
-        - name: testing-cm
-          configMap:
-            name: testing-cm
-      containers:
-        - name: with-cm
-          image: ubuntu:latest
-          command:
-            - sleep
-            - "99999"
-          resources:
-            limits:
-              memory: "128Mi"
-              cpu: "50m"
-          volumeMounts:
-            - name: testing-cm
-              mountPath: /etc/config
-              defaultMode: 0666
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: with-secret
-spec:
-  selector:
-    matchLabels:
-      app: with-secret
-  serviceName: with-secret
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: with-secret
-    spec:
-      volumes:
-        - name: testing-secret
-          secret:
-            secretName: testing-secret
-      containers:
-        - name: with-secret
-          image: ubuntu:latest
-          command:
-            - sleep
-            - "99999"
-          resources:
-            limits:
-              memory: "128Mi"
-              cpu: "50m"
-          volumeMounts:
-            - name: testing-secret
-              mountPath: /etc/secret
-              defaultMode: 0666
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: with-cm-and-secret
-spec:
-  selector:
-    matchLabels:
-      app: with-cm-and-secret
-  serviceName: with-cm-and-secret
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: with-cm-and-secret
-    spec:
-      volumes:
-        - name: testing-cm
-          configMap:
-            name: testing-cm
-        - name: testing-secret
-          secret:
-            secretName: testing-secret
-      containers:
-        - name: with-cm-and-secret
-          image: ubuntu:latest
-          command:
-            - sleep
-            - "99999"
-          resources:
-            limits:
-              memory: "128Mi"
-              cpu: "50m"
-          volumeMounts:
-            - name: testing-cm
-              mountPath: /etc/config
-              defaultMode: 0666
-            - name: testing-secret
-              mountPath: /etc/secret
-              defaultMode: 0666
