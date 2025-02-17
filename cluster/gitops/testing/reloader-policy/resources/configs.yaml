@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: testing-cm
+  labels:
+    kyverno.home.arpa/reload: "true"
+data:
+  key: original-value
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: testing-secret
+  labels:
+    kyverno.home.arpa/reload: "true"
+type: Opaque
+stringData:
+  key: original-value

@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: restart-workload-on-config-changes
+spec:
+  mutateExistingOnPolicyUpdate: false
+  rules:
+    - name: restart-workload-on-config-change
+      match:
+        any:
+          - resources:
+              kinds: &kinds
+                - Secret
+                - ConfigMap
+              selector:
+                matchLabels:
+                  kyverno.home.arpa/reload: "true"
+          # CNPG doesn't directly attach secrets to database server pods, so
+          # this shouldn't affect a database cluster. CNPG handles reloads on
+          # its own.
+          - resources:
+              kinds: *kinds
+              selector:
+                matchLabels:
+                  cnpg.io/reload: "true"
+      preconditions:
+        all:
+          - key: "{{ request.operation }}"
+            operator: Equals
+            value: UPDATE
+      mutate:
+        targets:
+          - &target
+            apiVersion: apps/v1
+            kind: Deployment
+            # namespace: "{{ request.namespace }}"
+            namespace: testing
+          - <<: *target
+            kind: StatefulSet
+        patchStrategicMerge:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  kyverno.home.arpa/reload-tag: "{{ random('[0-9a-z]{8}') }}"
+              spec:
+                volumes:
+                  - secret:
+                      <(secretName): "{{ request.object.metadata.name }}"
+                  - configMap:
+                      <(name): "{{ request.object.metadata.name }}"
