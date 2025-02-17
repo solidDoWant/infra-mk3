@@ -28,27 +28,8 @@ spec:
               DOMAIN: https://vaultwarden.${SECRET_PUBLIC_DOMAIN_NAME}
               SIGNUPS_ALLOWED: "false"
               # Database config
-              DATABASE_NAME:
-                secretKeyRef:
-                  name: vaultwarden-postgres-17-app
-                  key: dbname
-              DATABASE_SERVICE_NAME:
-                secretKeyRef:
-                  name: vaultwarden-postgres-17-app
-                  key: host
-              DATABASE_PORT:
-                secretKeyRef:
-                  name: vaultwarden-postgres-17-app
-                  key: port
-              DATABASE_NAMESPACE:
-                fieldRef:
-                  fieldPath: metadata.namespace
-              DATABASE_USERNAME:
-                secretKeyRef:
-                  name: vaultwarden-postgres-17-app
-                  key: port
               DATABASE_URL: "\
-                postgresql://$(DATABASE_USERNAME)@$(DATABASE_SERVICE_NAME).$(DATABASE_NAMESPACE).svc:$(DATABASE_PORT)/$(DATABASE_NAME)?\
+                postgresql://vaultwarden@vaultwarden.security.svc:5432/vaultwarden?\
                 sslrootcert=/certs/postgres/serving/ca.crt&\
                 sslcert=/certs/postgres/user/tls.crt&\
                 sslkey=/certs/postgres/user/tls.key&\
