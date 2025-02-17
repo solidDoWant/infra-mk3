@@ -149,18 +149,17 @@ spec:
               requests:
                 cpu: 100m
                 memory: 1Gi
-            # TODO
-            # placement:
-            #   topologySpreadConstraints:
-            #     - maxSkew: 1
-            #       topologyKey: kubernetes.io/hostname
-            #       labelSelector:
-            #         matchLabels:
-            #           # cspell:words cephobjectstores
-            #           app.kubernetes.io/component: cephobjectstores.ceph.rook.io
-            #           app.kubernetes.io/name: ceph-rgw
-            #           app.kubernetes.io/instance: ssd-replicated
-            #       whenUnsatisfiable: DoNotSchedule
+            placement:
+              topologySpreadConstraints:
+                - maxSkew: 1
+                  topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      # cspell:words cephfilesystems
+                      app.kubernetes.io/component: cephfilesystems.ceph.rook.io
+                      app.kubernetes.io/name: ceph-mds
+                      app.kubernetes.io/part-of: ssd-replicated
+                  whenUnsatisfiable: DoNotSchedule
             priorityClassName: system-cluster-critical
         storageClass:
           enabled: true
@@ -170,14 +169,13 @@ spec:
           volumeBindingMode: Immediate
           parameters:
             # Default values for the chart
-            csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/provisioner-secret-name: rook-csi-cephfs-provisioner
             csi.storage.k8s.io/provisioner-secret-namespace: &secret_namespace storage
-            csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/controller-expand-secret-name: rook-csi-cephfs-provisioner
             csi.storage.k8s.io/controller-expand-secret-namespace: *secret_namespace
-            csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+            csi.storage.k8s.io/node-stage-secret-name: rook-csi-cephfs-node
             csi.storage.k8s.io/node-stage-secret-namespace: *secret_namespace
             csi.storage.k8s.io/fstype: ext4
-    # TODO volume snapshot class
     cephFileSystemVolumeSnapshotClass:
       enabled: true
       name: ssd-replicated-filesystem
