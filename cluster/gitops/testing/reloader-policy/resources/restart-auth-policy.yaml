@@ -74,7 +74,7 @@ spec:
                 volumes:
                   - secret:
                       <(secretName): *object_name
-    - name: restart-workload-on-configmap-env-change
+    - name: restart-workload-on-container-configmap-env-change
       match: *configmap_match
       mutate:
         targets: *targets
@@ -83,12 +83,12 @@ spec:
             template:
               <<: *template
               spec:
-                containers:
+                containers: &configmap_env_change
                   - env:
                       - valueFrom:
                           configMapKeyRef:
                             <(name): *object_name
-    - name: restart-workload-on-secret-env-change
+    - name: restart-workload-on-container-secret-env-change
       match: *secret_match
       mutate:
         targets: *targets
@@ -97,12 +97,12 @@ spec:
             template:
               <<: *template
               spec:
-                containers:
+                containers: &secret_env_change
                   - env:
                       - valueFrom:
                           secretKeyRef:
                             <(name): *object_name
-    - name: restart-workload-on-configmap-envfrom-change
+    - name: restart-workload-on-container-configmap-envfrom-change
       match: *configmap_match
       mutate:
         targets: *targets
@@ -111,11 +111,11 @@ spec:
             template:
               <<: *template
               spec:
-                containers:
+                containers: &configmap_envfrom_change
                   - envFrom:
                       - configMapRef:
                           <(name): *object_name
-    - name: restart-workload-on-secret-envfrom-change
+    - name: restart-workload-on-container-secret-envfrom-change
       match: *secret_match
       mutate:
         targets: *targets
@@ -124,7 +124,47 @@ spec:
             template:
               <<: *template
               spec:
-                containers:
+                containers: &secret_envfrom_change
                   - envFrom:
                       - secretRef:
                           <(name): *object_name
+    - name: restart-workload-on-initContainer-configmap-env-change
+      match: *configmap_match
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                initContainers: *configmap_env_change
+    - name: restart-workload-on-initContainer-secret-env-change
+      match: *secret_match
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                initContainers: *secret_env_change
+    - name: restart-workload-on-initContainer-configmap-envfrom-change
+      match: *configmap_match
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                initContainers: *configmap_envfrom_change
+    - name: restart-workload-on-initContainer-secret-envfrom-change
+      match: *secret_match
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                initContainers: *secret_envfrom_change
