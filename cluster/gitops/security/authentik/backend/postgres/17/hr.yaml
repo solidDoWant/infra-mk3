@@ -13,6 +13,8 @@ spec:
         name: infra-mk3
         namespace: flux-system
       version: 0.1.0
+  dependsOn:
+    - name: authentik-postgres-auth
   values:
     clusterName: authentik
     certificates:

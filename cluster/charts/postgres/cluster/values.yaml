@@ -15,7 +15,13 @@ certificates:
       name: ""
       kind: Issuer
       group: cert-manager.io
-    subject: {}
+    subject:
+      countries:
+        - US
+      provinces:
+        - ${SECRET_STATE}
+      organizations:
+        - infra-mk3
 storage:
   size: 5Gi
   storageClass: postgres

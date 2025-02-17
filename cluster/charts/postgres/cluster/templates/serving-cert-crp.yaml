@@ -22,8 +22,7 @@ spec:
       {{- range $field, $value := .Values.certificates.serving.subject }}
       {{ $field }}:
         required: true
-        values:
-          - {{ $value }}
+        values: {{ $value | toYaml | nindent 10 }}
       {{- end }}
     {{- end }}
     usages:
