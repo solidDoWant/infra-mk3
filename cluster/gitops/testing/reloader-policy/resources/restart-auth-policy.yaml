@@ -112,7 +112,7 @@ spec:
               <<: *template
               spec:
                 containers:
-                  - envfrom:
+                  - envFrom:
                       - configMapRef:
                           <(name): *object_name
     - name: restart-workload-on-secret-envfrom-change
@@ -125,6 +125,6 @@ spec:
               <<: *template
               spec:
                 containers:
-                  - envfrom:
+                  - envFrom:
                       - secretRef:
                           <(name): *object_name
