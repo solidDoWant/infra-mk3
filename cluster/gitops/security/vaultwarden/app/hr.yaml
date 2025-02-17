@@ -72,7 +72,7 @@ spec:
               topologyKey: kubernetes.io/hostname
               labelSelector:
                 matchLabels:
-                  app.kubernetes.io/instance: vaultwarden-app
+                  app.kubernetes.io/instance: vaultwarden
               whenUnsatisfiable: DoNotSchedule
     service:
       app:
@@ -98,7 +98,7 @@ spec:
               - path: /data
       postgres-serving-cert:
         type: secret
-        name: postgres-serving-cert
+        name: vaultwarden-postgres-17-serving-cert
         defaultMode: 0444
         items:
           - key: ca.crt
@@ -109,7 +109,7 @@ spec:
               - path: /certs/postgres/serving
       postgres-user-cert:
         type: secret
-        name: postgres-vaultwarden-cert
+        name: vaultwarden-postgres-vaultwarden-user
         defaultMode: 0440
         items:
           - key: tls.crt
