@@ -22,6 +22,7 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "50m"
+      terminationGracePeriodSeconds: 0
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -36,10 +37,6 @@ spec:
       labels:
         app: with-cm
     spec:
-      volumes:
-        - name: testing-cm
-          configMap:
-            name: testing-cm
       containers:
         - name: with-cm
           image: ubuntu:latest
@@ -56,6 +53,7 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "50m"
+      terminationGracePeriodSeconds: 0
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -70,10 +68,6 @@ spec:
       labels:
         app: with-secret
     spec:
-      volumes:
-        - name: testing-secret
-          secret:
-            secretName: testing-secret
       containers:
         - name: with-secret
           image: ubuntu:latest
@@ -90,6 +84,7 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "50m"
+      terminationGracePeriodSeconds: 0
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -104,13 +99,6 @@ spec:
       labels:
         app: with-cm-and-secret
     spec:
-      volumes:
-        - name: testing-cm
-          configMap:
-            name: testing-cm
-        - name: testing-secret
-          secret:
-            secretName: testing-secret
       containers:
         - name: with-cm-and-secret
           image: ubuntu:latest
@@ -132,3 +120,4 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "50m"
+      terminationGracePeriodSeconds: 0
