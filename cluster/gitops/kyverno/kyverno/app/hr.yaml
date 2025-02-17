@@ -23,15 +23,24 @@ spec:
             - apiGroups:
                 - ""
               resources:
+                - configmaps
                 - secrets
-              verbs:
-                - list
-                - watch
-                - get
+              verbs: &all_common_verbs
                 - create
-                - update
-                - patch
                 - delete
+                - deletecollection
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - apps
+              resources:
+                - deployments
+                - statefulsets
+                - daemonsets
+              verbs: *all_common_verbs
       priorityClassName: system-cluster-critical
       topologySpreadConstraints:
         - maxSkew: 1
