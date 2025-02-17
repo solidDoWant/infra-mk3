@@ -91,7 +91,7 @@ spec:
         # This is needed for HA
         accessMode: ReadWriteMany
         size: 5Gi
-        storageClass: ssd-replicated-3x
+        storageClass: ssd-replicated-filesystem # Needed for RWX
         advancedMounts:
           vaultwarden:
             app:
