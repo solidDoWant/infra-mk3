@@ -10,6 +10,7 @@ spec:
     # Global anchors appear to be "AND"ed together, so separate rules are
     # needed for every combination of:
     # * secrets, configmaps
+    # * containers and initcontainers
     # * volume, env, envFrom
     - name: restart-workload-on-configmap-volume-change
       match: &configmap_match
@@ -84,7 +85,7 @@ spec:
               spec:
                 containers:
                   - env:
-                      - valuesFrom:
+                      - valueFrom:
                           configMapKeyRef:
                             <(name): *object_name
     - name: restart-workload-on-secret-env-change
@@ -98,6 +99,6 @@ spec:
               spec:
                 containers:
                   - env:
-                      - valuesFrom:
+                      - valueFrom:
                           secretKeyRef:
                             <(name): *object_name
