@@ -2,12 +2,12 @@
 {{ .Values.clusterName }}-postgres-{{ .Values.majorVersion }}
 {{- end -}}
 
-{{- define "serving-cert-name" -}}
-{{ include "cluster-resource-name" . }}-serving-cert
+{{- define "cluster-readable-name" -}}
+{{ .Values.clusterName }}-postgres-{{ .Values.majorVersion }}
 {{- end -}}
 
-{{- define "serving-cert-common-name" -}}
-{{ .Values.clusterName }} Postgres {{ .Values.majorVersion }}
+{{- define "serving-cert-name" -}}
+{{ include "cluster-resource-name" . }}-serving-cert
 {{- end -}}
 
 {{/*
@@ -26,3 +26,7 @@
 {{- define "wal-bucket-name" -}}
 {{ include "cluster-resource-name" . }}-wal
 {{- end -}}
+
+{{- define "db-registration-configmap-name" -}}
+{{ include "cluster-resource-name" .}}-db-registration
+{{- end }}

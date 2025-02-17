@@ -13,7 +13,7 @@ spec:
   allowed:
     commonName:
       required: true
-      value: {{ include "serving-cert-common-name" . }}
+      value: {{ include "cluster-readable-name" . }}
     dnsNames:
       required: true
       values: {{ include "serving-domain-names" . | nindent 8 }}
