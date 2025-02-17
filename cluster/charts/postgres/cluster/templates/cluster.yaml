@@ -1,0 +1,62 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "cluster-resource-name" . }}
+spec:
+  instances: {{ .Values.instances }}
+  {{- if .Values.imageName }}
+  imageName: {{ .Values.imageName }} # Needed for Teleport
+  {{- end }}
+  bootstrap:
+    initdb:
+      database: {{ default .Values.clusterName .Values.databaseName}}
+  postgresql:
+    parameters: {{ .Values.parameters | toYaml | nindent 6 }}
+    pg_hba:
+      # Require TLS auth for all databases, users, and IP addresses
+      - hostssl all all all cert
+  storage: {{ .Values.storage | toYaml | nindent 4 }}
+  resources: {{ .Values.resources | toYaml | nindent 4 }}
+  primaryUpdateMethod: switchover
+  backup:
+    target: prefer-standby
+    volumeSnapshot:
+      {{- if .Values.backups.volumeSnapshot.className }}
+      className: {{ .Values.backups.volumeSnapshot.className }}
+      {{- end }}
+      online: true
+      onlineConfiguration:
+        immediateCheckpoint: false
+        waitForArchive: true
+      snapshotOwnerReference: backup
+    barmanObjectStore:
+      destinationPath: s3://{{ include "wal-bucket-name" . }}/
+      {{- if .Values.bucket.endpoint }}
+      endpointURL: {{ .Values.bucket.endpoint }}
+      {{- end }}
+      s3Credentials:
+        accessKeyId:
+          name: {{ include "wal-bucket-name" . }}
+          key: AWS_ACCESS_KEY_ID
+        secretAccessKey:
+          name: {{ include "wal-bucket-name" . }}
+          key: AWS_SECRET_ACCESS_KEY
+  monitoring:
+    enablePodMonitor: true
+  certificates:
+    serverTLSSecret: {{ include "serving-cert-name" . }}
+    serverCASecret: {{ include "serving-cert-name" . }}
+    clientCASecret: {{ tpl .Values.certificates.clientCA.secretName . }}
+    replicationTLSSecret: {{ tpl .Values.certificates.replicationUser.secretName . }}
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+          cnpg.io/podRole: instance
+      whenUnsatisfiable: DoNotSchedule
+{{- if .Values.additionalClusterConfig }}
+{{ .Values.additionalClusterConfig | toYaml | indent 2 }}
+{{- end }}

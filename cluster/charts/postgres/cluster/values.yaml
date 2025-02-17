@@ -1,0 +1,66 @@
+clusterName: ""
+majorVersion: 17
+databaseName: ""
+imageName: ""
+instances: 2
+certificates:
+  clientCA:
+    # This will be templated
+    secretName: "{{ .Values.clusterName }}-client-auth-public-certs"
+  replicationUser:
+    # This will be templated
+    secretName: "{{ .Values.clusterName }}-postgres-streaming-replica-user"
+  serving:
+    issuerRef:
+      name: ""
+      kind: Issuer
+      group: cert-manager.io
+    subject: {}
+storage:
+  size: 5Gi
+  storageClass: postgres
+resources:
+  requests:
+    cpu: 100m
+    memory: 1Gi
+  limits:
+    memory: 1Gi
+parameters:
+  shared_buffers: 256MB # This should be 25% of the total allocated memory per the docs
+  # Not needed, backing storage (ZFS) uses CoW:
+  # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#setting-full_page_writesoff
+  # This cannot be set or the cluster will fail to restart
+  # full_page_writes: off
+  # Not needed on ZFS:
+  # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#tune-wal_init_zero--wal_recycle
+  wal_init_zero: "off"
+  wal_recycle: "off"
+  # Needs OpenZFS 2.3.0 to be effective, which will likely require Talos 1.9 or 1.10
+  # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#alternative-wal_sync_methodopen_datasync
+  wal_sync_method: open_datasync
+  # This is per connection. However, because the cluster will be used by one application, the number of individual connections
+  # should be low.
+  work_mem: 16MB
+  # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
+  # These are already set by default, don't set them again
+  # wal_level: logical
+  # max_replication_slots: 10  # Default is 32
+
+# managed:
+#   roles:
+#     - name: ${DATABASE_NAME:=${NAME}}
+#       # Remove the app user password. TLS auth will be enforce instead.
+#       disablePassword: true
+#       # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
+#       replication: true
+#       login: true
+additionalClusterConfig: {}
+bucket:
+  endpoint: ""
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    maxObjects: "10000"
+    maxSize: 10Gi
+backups:
+  volumeSnapshot:
+    className: postgres

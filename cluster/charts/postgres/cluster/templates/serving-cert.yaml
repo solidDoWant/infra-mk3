@@ -1,0 +1,21 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "serving-cert-name" . }}
+spec:
+  commonName: {{ include "serving-cert-common-name" . }}
+  dnsNames: {{ include "serving-domain-names" . | nindent 4 }}
+  subject: {{ .Values.certificates.serving.subject | toYaml | nindent 4 }}
+  usages:
+    - server auth
+  duration: 720h # One month
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  issuerRef: {{ .Values.certificates.serving.issuerRef | toYaml | nindent 4 }}
+  secretName: {{ include "serving-cert-name" . }}
