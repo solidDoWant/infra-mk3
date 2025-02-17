@@ -61,7 +61,7 @@ spec:
   certificates:
     serverTLSSecret: teleport-audit-postgres-17-serving-cert
     serverCASecret: teleport-audit-postgres-17-serving-cert
-    clientCASecret: teleport-audit-postgres-auth-ca-cert
+    clientCASecret: teleport-audit-client-auth-public-certs
     replicationTLSSecret: teleport-audit-postgres-streaming-replica-user
   topologySpreadConstraints:
     - maxSkew: 1
