@@ -1,0 +1,45 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teleport-core-postgres-17
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      sourceRef:
+        kind: GitRepository
+        name: infra-mk3
+        namespace: flux-system
+      version: 0.1.0
+  dependsOn:
+    - name: teleport-core-postgres-auth
+  values:
+    clusterName: teleport-core
+    # Includes the wal2json extension, required for the core db only
+    imageName: ghcr.io/soliddowant/postgresql-teleport:17.0
+    certificates:
+      serving:
+        issuerRef:
+          name: security-intermediary-ca
+        subject:
+          countries:
+            - US
+          provinces:
+            - ${SECRET_STATE}
+          organizations:
+            - infra-mk3
+    additionalClusterConfig:
+      managed:
+        roles:
+          - name: teleport-core
+            # Remove the app user password. TLS auth will be enforce instead.
+            # This doesn't make a huge difference given that TLS auth is enforced via pg_hba
+            disablePassword: true
+            # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
+            # Docs are unclear if this is required for the "core" database, audit database, or both.
+            replication: true
+            login: true
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
