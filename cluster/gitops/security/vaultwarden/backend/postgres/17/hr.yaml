@@ -1,0 +1,32 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden-postgres-17
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      sourceRef:
+        kind: GitRepository
+        name: infra-mk3
+        namespace: flux-system
+      version: 0.1.0
+  dependsOn:
+    - name: vaultwarden-postgres-auth
+  values:
+    clusterName: vaultwarden
+    certificates:
+      serving:
+        issuerRef:
+          name: security-intermediary-ca
+        subject:
+          countries:
+            - US
+          provinces:
+            - ${SECRET_STATE}
+          organizations:
+            - infra-mk3
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
