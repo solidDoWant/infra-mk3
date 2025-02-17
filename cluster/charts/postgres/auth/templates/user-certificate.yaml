@@ -1,5 +1,5 @@
 {{ range $name, $info := .Values.users }}
-{{- $certName := printf "%s-postgres-%s-user" $.Values.clusterName $name -}}
+{{- $certName := printf "%s-postgres-%s-user" $.Values.serviceName $name -}}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

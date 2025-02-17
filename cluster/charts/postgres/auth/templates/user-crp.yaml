@@ -3,7 +3,7 @@
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: {{ $.Values.clusterName }}-postgres-auth-ca-{{ $name }}-user
+  name: {{ $.Values.serviceName }}-postgres-auth-ca-{{ $name }}-user
 spec:
   selector:
     issuerRef: {{ include "ca-issuer-ref" $ | nindent 6 }}

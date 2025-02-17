@@ -5,7 +5,7 @@ labels:
 {{- end }}
 
 {{- define "ca-cert-name" -}}
-{{ .Values.clusterName }}-postgres-auth-ca
+{{ .Values.serviceName }}-postgres-auth-ca
 {{- end }}
 
 {{- define "ca-issuer-ref" -}}
@@ -15,9 +15,9 @@ name: {{ include "ca-cert-name" . }}
 {{- end }}
 
 {{- define "ca-secret-generator-policy-name" -}}
-extract-{{ .Values.clusterName }}-postgres-auth-ca-certificate
+extract-{{ .Values.serviceName }}-postgres-auth-ca-certificate
 {{- end }}
 
 {{- define "ca-secret-name" -}}
-{{ .Values.clusterName }}-client-auth-public-certs
+{{ .Values.serviceName }}-client-auth-public-certs
 {{- end }}

@@ -5,7 +5,7 @@ metadata:
   name: {{ include "ca-cert-name" . }}
 spec:
   isCA: true
-  commonName: {{ .Values.clusterName }} Postgres authentication Certificate Authority
+  commonName: {{ .Values.serviceName }} Postgres authentication Certificate Authority
   subject: {{ .Values.certificates.ca.subject | toYaml | nindent 4 }}
   usages:
     - cert sign
