@@ -136,9 +136,8 @@ spec:
           dataPools:
             - name: data0
               failureDomain: chassis
-              erasureCoded:
-                dataChunks: 2
-                codingChunks: 1
+              replicated:
+                size: 3
           metadataServer:
             # Active/passive
             activeCount: 1
