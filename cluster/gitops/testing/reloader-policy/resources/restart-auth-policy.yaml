@@ -39,6 +39,8 @@ spec:
             namespace: testing
           - <<: *target
             kind: StatefulSet
+          - <<: *target
+            kind: DaemonSet
         patchStrategicMerge:
           spec:
             template:
