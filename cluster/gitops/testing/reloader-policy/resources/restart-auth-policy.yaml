@@ -7,13 +7,16 @@ metadata:
 spec:
   mutateExistingOnPolicyUpdate: false
   rules:
-    - name: restart-workload-on-config-change
+    # Global anchors appear to be "AND"ed together, so separate rules for secrets
+    # and configmaps are needed.
+    - name: restart-workload-on-configmap-change
       match:
         any:
-          - resources:
-              kinds: &kinds
-                - Secret
+          - resources: &configmap_resources
+              kinds:
                 - ConfigMap
+              operations:
+                - UPDATE
               selector:
                 matchLabels:
                   kyverno.home.arpa/reload: "true"
@@ -21,17 +24,12 @@ spec:
           # this shouldn't affect a database cluster. CNPG handles reloads on
           # its own.
           - resources:
-              kinds: *kinds
+              <<: *configmap_resources
               selector:
                 matchLabels:
                   cnpg.io/reload: "true"
-      preconditions:
-        all:
-          - key: "{{ request.operation }}"
-            operator: Equals
-            value: UPDATE
       mutate:
-        targets:
+        targets: &targets
           - &target
             apiVersion: apps/v1
             kind: Deployment
@@ -43,13 +41,36 @@ spec:
             kind: DaemonSet
         patchStrategicMerge:
           spec:
-            template:
+            template: &template
               metadata:
                 annotations:
                   kyverno.home.arpa/reload-tag: "{{ random('[0-9a-z]{8}') }}"
               spec:
                 volumes:
-                  - secret:
-                      <(secretName): "{{ request.object.metadata.name }}"
                   - configMap:
-                      <(name): "{{ request.object.metadata.name }}"
+                      <(name): &object_name "{{ request.object.metadata.name }}"
+    - name: restart-workload-on-secret-change
+      match:
+        any:
+          - resources: &secret_resources
+              <<: *configmap_resources
+              kinds:
+                - Secret
+          # CNPG doesn't directly attach secrets to database server pods, so
+          # this shouldn't affect a database cluster. CNPG handles reloads on
+          # its own.
+          - resources:
+              <<: *secret_resources
+              selector:
+                matchLabels:
+                  cnpg.io/reload: "true"
+      mutate:
+        targets: *targets
+        patchStrategicMerge:
+          spec:
+            template:
+              <<: *template
+              spec:
+                volumes:
+                  - secret:
+                      <(secretName): *object_name
