@@ -27,6 +27,7 @@ spec:
               # General config
               DOMAIN: https://vaultwarden.${SECRET_PUBLIC_DOMAIN_NAME}
               SIGNUPS_ALLOWED: "false"
+              IP_HEADER: X-Forwarded-For
               # Database config
               DATABASE_URL: "\
                 postgresql://vaultwarden@vaultwarden-postgres-17-rw.security.svc:5432/vaultwarden?\
