@@ -16,10 +16,37 @@ spec:
   # Not using Teleport for this until https://github.com/democratic-csi/democratic-csi/issues/454
   # is addressed
   valuesFrom:
-    - kind: Secret
+    - &secret_values
+      kind: Secret
       name: zfs-generic-iscsi-authentication
       valuesKey: SSH_PRIVATE_KEY
       targetPath: driver.config.sshConnection.privateKey
+    # Credentials as configured for the initiator
+    - <<: *secret_values
+      valuesKey: USERID
+      targetPath: driver.config.iscsi.shareStrategyTargetCli.tpg.auth.userid
+    - <<: *secret_values
+      valuesKey: PASSWORD
+      targetPath: driver.config.iscsi.shareStrategyTargetCli.tpg.auth.password
+    - <<: *secret_values
+      valuesKey: USERNAME_IN
+      targetPath: driver.config.iscsi.shareStrategyTargetCli.tpg.auth.mutual_userid
+    - <<: *secret_values
+      valuesKey: PASSWORD_IN
+      targetPath: driver.config.iscsi.shareStrategyTargetCli.tpg.auth.mutual_password
+    # Credentials as configured for the target
+    - <<: *secret_values
+      valuesKey: USERNAME
+      targetPath: storageClasses[0].secrets.node-stage-secret."node-db.node.session.auth.username"
+    - <<: *secret_values
+      valuesKey: PASSWORD
+      targetPath: storageClasses[0].secrets.node-stage-secret."node-db.node.session.auth.password"
+    - <<: *secret_values
+      valuesKey: USERNAME_IN
+      targetPath: storageClasses[0].secrets.node-stage-secret."node-db.node.session.auth.username_in"
+    - <<: *secret_values
+      valuesKey: PASSWORD_IN
+      targetPath: storageClasses[0].secrets.node-stage-secret."node-db.node.session.auth.password_in"
   values:
     driver:
       config:
@@ -53,12 +80,6 @@ spec:
                 generate_node_acls: 1
                 cache_dynamic_acls: 1
                 demo_mode_write_protect: 0
-              auth:
-                # See storageclass - TODO
-                userid: USERNAME
-                password: PASSWORD
-                mutual_userid: USERNAME_IN
-                mutual_password: PASSWORD_IN
             block:
               attributes:
                 emulate_tpu: 1 # Enable UNMAP IOCTL when thin provisioning
@@ -66,7 +87,6 @@ spec:
           targetPortals: []
     csiDriver:
       name: iscsi.zfs.democratic-csi.local
-    # TODO tbot sidecar
     controller:
       replicaCount: 2
       priorityClassName: system-cluster-critical
@@ -109,10 +129,7 @@ spec:
             # TODO tunnel via istio so that data is encrypted in transit
             # TODO netpols
             node-db.node.session.auth.authmethod: CHAP
-            node-db.node.session.auth.username: USERNAME
-            node-db.node.session.auth.password: PASSWORD
-            node-db.node.session.auth.username_in: USERNAME_IN
-            node-db.node.session.auth.password_in: PASSWORD_IN
+            # Remaining vars are set in `valuesFrom`
     volumeSnapshotClasses:
       - name: zfs-generic-iscsi-snapshot
         annotations:
