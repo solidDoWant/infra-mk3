@@ -37,16 +37,16 @@ spec:
     # Credentials as configured for the target
     - <<: *secret_values
       valuesKey: USERNAME
-      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.username"
+      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.username
     - <<: *secret_values
       valuesKey: PASSWORD
-      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.password"
+      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.password
     - <<: *secret_values
       valuesKey: USERNAME_IN
-      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.username_in"
+      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.username_in
     - <<: *secret_values
       valuesKey: PASSWORD_IN
-      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.password_in"
+      targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.password_in
   values:
     driver:
       config:
