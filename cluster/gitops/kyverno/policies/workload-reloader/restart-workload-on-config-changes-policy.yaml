@@ -1,7 +1,7 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
 apiVersion: kyverno.io/v1
-kind: Policy
+kind: ClusterPolicy
 metadata:
   name: restart-workload-on-config-changes
 spec:
@@ -47,8 +47,7 @@ spec:
           - &target
             apiVersion: apps/v1
             kind: Deployment
-            # namespace: "{{ request.namespace }}"
-            namespace: testing
+            namespace: "{{ request.namespace }}"
           - <<: *target
             kind: StatefulSet
           - <<: *target
