@@ -36,7 +36,7 @@ spec:
       targetPath: driver.config.iscsi.shareStrategyTargetCli.tpg.auth.mutual_password
     # Credentials as configured for the target
     - <<: *secret_values
-      valuesKey: USERNAME
+      valuesKey: USERID
       targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.username
     - <<: *secret_values
       valuesKey: PASSWORD
