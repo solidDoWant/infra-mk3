@@ -1,0 +1,39 @@
+---
+# cspell:words targetclid runas
+- name: Install targetcli 
+  ansible.builtin.apt:
+    name: targetcli-fb
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
+- name: Enable and start the targetcli service
+  ansible.builtin.systemd:
+    name: targetclid
+    enabled: yes
+    state: started
+
+- name: Create the democratic-csi group 
+  ansible.builtin.group:
+    name: "{{ group_name }}"
+
+- name: Create the democratic-csi user
+  ansible.builtin.user:
+    name: "{{ user_name }}"
+    password: "*" # Disable password auth
+    shell: /usr/bin/bash
+
+- name: Look up full command path for sudo commands
+  ansible.builtin.command: which "{{ item }}"
+  register: command_paths
+  loop: "{{ sudo_commands }}"
+  changed_when: false
+
+- name: Allow democratic-csi user to run commands as root via sudo
+  community.general.sudoers:
+    commands: "{{ command_paths.results | map(attribute='stdout') | list }}"
+    name: "{{ user_name }}"
+    user: "{{ user_name }}"
+    runas: root
