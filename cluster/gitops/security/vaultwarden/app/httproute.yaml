@@ -12,7 +12,9 @@ spec:
   parentRefs:
     - name: internal-gateway
       namespace: networking
-    # If public access is enabled, block /admin
+    # If public access is enabled, block /admin, /health
+    # Deploy metrics and alerting rules as well: https://github.com/Tricked-dev/vwmetrics
+    # Switch to kata-container runtime
     # - name: external-gateway
     #   namespace: networking
   rules:
