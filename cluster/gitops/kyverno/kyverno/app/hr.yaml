@@ -41,6 +41,11 @@ spec:
                 - statefulsets
                 - daemonsets
               verbs: *all_common_verbs
+            - apiGroups:
+                - cert-manager.io
+              resources:
+                - certificates
+              verbs: *all_common_verbs
       priorityClassName: system-cluster-critical
       topologySpreadConstraints:
         - maxSkew: 1
