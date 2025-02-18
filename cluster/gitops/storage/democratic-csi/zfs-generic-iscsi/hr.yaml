@@ -116,3 +116,5 @@ spec:
     volumeSnapshotClasses:
       - name: zfs-generic-iscsi-snapshot
         deletionPolicy: Delete
+        parameters:
+          detachedSnapshots: "false"
