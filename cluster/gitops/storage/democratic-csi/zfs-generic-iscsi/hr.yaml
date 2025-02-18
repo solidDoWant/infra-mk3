@@ -1,0 +1,107 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: democratic-csi-zfs-generic-iscsi
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: democratic-csi
+      sourceRef:
+        kind: HelmRepository
+        name: democratic-csi-charts
+      version: 0.14.7
+  values:
+    driver:
+      config:
+        driver: zfs-generic-iscsi
+        sshConnection:
+          host: 10.2.3.1 # ubuntu-storage-host-01
+          port: 22
+          username: democratic-csi
+          # Authentication is handled via Teleport tbot sidecar
+        zfs:
+          cli:
+            sudoEnabled: true
+          datasetProperties:
+            # TODO user properties
+          datasetParentName: bulk-pool-01/k8s/democratic-csi/pvcs
+          detachedSnapshotsDatasetParentName: bulk-pool-01/k8s/democratic-csi/snapshots
+          zvolCompression: # inherit
+          zvolDedup: # inherit
+          zvolEnableReservation: # inherit
+          zvolBlocksize: # inherit
+        iscsi:
+          shareStrategy: targetCli
+          shareStrategyTargetCli:
+            sudoEnabled: true
+            basename: iqn.2025-02.${SECRET_INTERNAL_DOMAIN_NAME_REVERSED}.ubuntu-storage-host-01.iscsi-1
+            tpg:
+              attributes:
+                authentication: 1 # Enable CHAP
+                # Required per docs, see
+                # https://github.com/democratic-csi/democratic-csi/blob/master/examples/zfs-generic-iscsi.yaml#L66
+                generate_node_acls: 1
+                cache_dynamic_acls: 1
+                demo_mode_write_protect: 0
+              auth:
+                # See storageclass - TODO
+                userid: USERNAME
+                password: PASSWORD
+                mutual_userid: USERNAME_IN
+                mutual_password: PASSWORD_IN
+            block:
+              attributes:
+                emulate_tpu: 1 # Enable UNMAP IOCTL when thin provisioning
+          targetPortal: 10.2.3.1:3260 # ubuntu-storage-host-01
+          targetPortals: []
+    csiDriver:
+      name: iscsi.zfs.democratic-csi.local
+    # TODO TSCs
+    # TODO PDB
+    # TODO tbot sidecar
+    controller:
+      replicaCount: 2
+      priorityClassName: system-cluster-critical
+      externalHealthMonitorController:
+        extraArgs:
+          - --enable-node-watcher=true
+      driver:
+        image: &dcsi_image docker.io/democraticcsi/democratic-csi:v1.9.3
+      # TODO TSCs
+      # topologySpreadConstraints:
+    node:
+      hostPID: true # Needed for running on Talos nodes
+      priorityClassName: system-cluster-critical
+      driver:
+        image: *dcsi_image
+        # Needed for running on Talos nodes
+        extraEnv:
+          - name: ISCSIADM_HOST_STRATEGY
+            value: nsenter
+          - name: ISCSIADM_HOST_PATH
+            value: /usr/local/sbin/iscsiadm
+        iscsiDirHostPath: /usr/local/etc/iscsi
+        iscsiDirHostPathType: ""
+    storageClasses:
+      - name: zfs-generic-iscsi
+        reclaimPolicy: Delete
+        volumeBindingMode: Immediate
+        allowVolumeExpansion: true
+        parameters:
+          fsType: ext4
+        secrets:
+          node-stage-secret:
+            # TODO CHAP
+            # TODO tunnel via istio so that data is encrypted in transit
+            # TODO netpols
+            node-db.node.session.auth.authmethod: CHAP
+            node-db.node.session.auth.username: USERNAME
+            node-db.node.session.auth.password: PASSWORD
+            node-db.node.session.auth.username_in: USERNAME_IN
+            node-db.node.session.auth.password_in: PASSWORD_IN
+    volumeSnapshotClasses:
+      - name: zfs-generic-iscsi-snapshot
+        deletionPolicy: Delete
