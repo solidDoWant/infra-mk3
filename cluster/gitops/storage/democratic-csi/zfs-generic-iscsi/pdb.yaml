@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: &app_name democratic-csi-zfs-generic-iscsi
+  labels: &labels
+    app.kubernetes.io/instance: *app_name
+    app.kubernetes.io/component: controller-linux
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

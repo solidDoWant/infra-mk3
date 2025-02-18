@@ -146,6 +146,8 @@
         name: install_teleport
 
     - name: Setup democratic-csi access
+      vars:
+        openssh_key: "{{ democratic_csi_openssh_public_key }}"
       ansible.builtin.include_role:
         name: setup_democratic_csi
 

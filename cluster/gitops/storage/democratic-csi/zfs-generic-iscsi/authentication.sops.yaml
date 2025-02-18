@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: zfs-generic-iscsi-authentication
+type: Opaque
+stringData:
+    SSH_PRIVATE_KEY: ENC[AES256_GCM,data:n4PpCQCKKMfqukHL0OkIgHPsbpf+ZMPU64Fs5LXqC9qqVVIdtvM/3Hj9lug+a6SnDRQSZR2qHo8sang6ZcmI43icsXDJpy+N3SM01FYCSYhGjE3Kj74c4TsxZnVhlCtfuuvGi74Zo5Kx9Z0xwZEk9/F4ZowwJpbf/9m+wSLbwUvYr1cac8bBJgatBbhMBoqPrEjlrZSVSFjubN9M3m+QY8tsTaJSCMRtjqjzMJhpKuPdykZ4g2n9ZAl/oXpiL6FnZm3Tc8DI2csKstlV0IRDjXB30HucpKEeIqSz59RDSZ/GC2eQQa1/5/vruQ/ymAf+UG7WnEplTEqDPdoNQGMqm+FMaSzKFi+38o5UNbq9oEvsjHVLlUTRldAP1bJNScYEyEk/OkoU0NJTeXdV13jvwfY5ch764jV3j2pRvw4YfCpG/ndETNkJ7KzPkPPXUKqOMm+gR0Q6sWteIe9m+vn4q3ce8KuGBF4TjK2Gf/6rIE56WASp8nSIVn0qbe/Y8p/J5vjwC2NhZ5+38hZJGS0YurD4GJsgmjwUd9A/,iv:KelmayCJj/CwG2zXPKKfIOi1K0R7vdLXG5WUJHxzDXs=,tag:DYzx6ynjuAk5CTnEQcnZqA==,type:str]
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age:
+        - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA1NFI2MjB5TytlY1ZobUxO
+            cHJ0WkszVGF5c2FYdVNpOVh1NmZ3MjRGZURzCnlFMURJeDdZakdOU2RMZTBzZ3FG
+            WVpyNW1URFNNYlB5Z1g4dy9wMlBuNUEKLS0tIGh5MnJpVFBOWTByVjZTZmo2K09x
+            UnZRenIweC9PV1owWURDaUwvVE00dFUKWGU0fWG3A3p6t0x/F6rvRgZBznx9mGXN
+            8Ttdq+2LisHNmb+QVEp/RnwVUbT2R45O54mX+Limz3Q8oyz+HXgl2A==
+            -----END AGE ENCRYPTED FILE-----
+        - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBxR09CVUE1YVRwc0M2OG1X
+            ZGlVdFFLUnB6WUNrSUkvem82TUdGQXBzS2lBCkhOQ210MC9mcWhEUDZQbGhJSWhZ
+            dzAxWjFFaExMUllSNDVrVEk5eWt1N0EKLS0tIGoxNkJKbXVXQkppc1RaVVBlUTVz
+            Ui8xbGtZR1hRcGV2SUtNRnRDd1FVaWcKEdyihoWr49AF+WRdA2l0dCJpewS5pF9B
+            FH1lNyfvG0iqqJK3Ts7go/DrhpuO+PoJR+Ehaf8UKyOut0iF/7hKGQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2025-02-18T09:59:26Z"
+    mac: ENC[AES256_GCM,data:AaRRh84/EeKfKa3TbV7c6KnwnYlLxv5E5tU3t0ec//4rrCn438G8vq2rnBB9XP3/VoJMfScMRJVpqsM64bg/0cOczLcKIpATIUMFWHimbxuMDTIrGN0/eRntc/xip+fNjluz6LKjAHwflFe+D9xXiIRirTq7c1SChauVLFasT8Q=,iv:qOHp+IHrw4pETut8D7IMxT9Rx4ENbzLxRsK+1VAeDYc=,tag:tfUNl9jglvhrSN3xV8VzQA==,type:str]
+    pgp: []
+    encrypted_regex: ^(data|stringData)$
+    mac_only_encrypted: true
+    version: 3.9.0

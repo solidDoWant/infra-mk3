@@ -23,17 +23,40 @@
   ansible.builtin.user:
     name: "{{ user_name }}"
     password: "*" # Disable password auth
+    group: "{{ group_name }}"
     shell: /usr/bin/bash
+  register: created_user
 
-- name: Look up full command path for sudo commands
-  ansible.builtin.command: which "{{ item }}"
-  register: command_paths
-  loop: "{{ sudo_commands }}"
-  changed_when: false
+- name: Add the democratic-csi SSH public key
+  block:
+    - name: Create the .ssh directory
+      ansible.builtin.file:
+        state: directory
+        path: "{{ created_user.home }}/.ssh"
+        owner: "{{ created_user.name }}"
+        group: "{{ created_user.group }}"
+        mode: 0700
+    - name: Add the key
+      ansible.builtin.lineinfile:
+        line: "{{ openssh_key }} {{ created_user.name }}@k8s"
+        create: true
+        dest: "{{ created_user.home }}/.ssh/authorized_keys"
+        owner: "{{ created_user.name }}"
+        group: "{{ created_user.group }}"
+        mode: 0600
+  when: created_user.changed
 
-- name: Allow democratic-csi user to run commands as root via sudo
-  community.general.sudoers:
-    commands: "{{ command_paths.results | map(attribute='stdout') | list }}"
-    name: "{{ user_name }}"
-    user: "{{ user_name }}"
-    runas: root
+- name: Allow access to commands that democratic-csi needs for ZFS and iSCSI
+  block:
+    - name: Look up full command path for sudo commands
+      ansible.builtin.command: which "{{ item }}"
+      register: command_paths
+      loop: "{{ sudo_commands }}"
+      changed_when: false
+
+    - name: Allow democratic-csi user to run commands as root via sudo
+      community.general.sudoers:
+        commands: "{{ command_paths.results | map(attribute='stdout') | list }}"
+        name: "{{ user_name }}"
+        user: "{{ user_name }}"
+        runas: root

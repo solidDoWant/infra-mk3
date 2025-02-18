@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: democratic-csi-zfs-generic-iscsi
+  name: &app_name democratic-csi-zfs-generic-iscsi
 spec:
   interval: 5m
   chart:
@@ -13,15 +13,22 @@ spec:
         kind: HelmRepository
         name: democratic-csi-charts
       version: 0.14.7
+  # Not using Teleport for this until https://github.com/democratic-csi/democratic-csi/issues/454
+  # is addressed
+  valuesFrom:
+    - kind: Secret
+      name: zfs-generic-iscsi-authentication
+      valuesKey: SSH_PRIVATE_KEY
+      targetPath: driver.config.sshConnection.privateKey
   values:
     driver:
       config:
         driver: zfs-generic-iscsi
         sshConnection:
+          # Options documented here: https://www.npmjs.com/package/ssh2#client-methods
           host: 10.2.3.1 # ubuntu-storage-host-01
           port: 22
           username: democratic-csi
-          # Authentication is handled via Teleport tbot sidecar
         zfs:
           cli:
             sudoEnabled: true
@@ -59,8 +66,6 @@ spec:
           targetPortals: []
     csiDriver:
       name: iscsi.zfs.democratic-csi.local
-    # TODO TSCs
-    # TODO PDB
     # TODO tbot sidecar
     controller:
       replicaCount: 2
@@ -70,8 +75,14 @@ spec:
           - --enable-node-watcher=true
       driver:
         image: &dcsi_image docker.io/democraticcsi/democratic-csi:v1.9.3
-      # TODO TSCs
-      # topologySpreadConstraints:
+      topologySpreadConstraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: controller-linux
+              app.kubernetes.io/instance: *app_name
+          whenUnsatisfiable: DoNotSchedule
     node:
       hostPID: true # Needed for running on Talos nodes
       priorityClassName: system-cluster-critical
