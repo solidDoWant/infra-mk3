@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: set-certificate-revision-limit
+spec:
+  rules:
+    - # Trigger on creation or change to ensure that the field is always set
+      name: set-certificate-revision-limit
+      match:
+        any:
+          - resources:
+              kinds:
+                - Certificate
+      mutate:
+        mutateExistingOnPolicyUpdate: true
+        targets:
+          - apiVersion: cert-manager.io/v1
+            kind: Certificate
+            namespace: "{{ request.namespace }}"
+            name: "{{ request.object.metadata.name }}"
+        patchStrategicMerge:
+          spec:
+            # Only set if not already set
+            +(revisionHistoryLimit): 1
