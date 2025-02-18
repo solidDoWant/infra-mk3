@@ -11,6 +11,7 @@ The following labels are used across multiple applications in the cluster:
 | `descheduler.home.arpa`    | `enable-lifetime-eviction`           | `false` | Pods                   | No       | Opt-out to stop Descheduler from evicting pods over a set age.                                    |
 | `external-dns.home.arpa`   | `publish`                            | `true`  | Networks               | No       | Opt-in to allow publishing a DNS record to Cloudflare.                                            |
 | `k8s-sidecar.home.arpa`    | `application`                        | String  | ConfigMaps and Secrets | No       | Opt-in to load the resource into the configured application.                                      |
+| `kyverno.home.arpa`        | `reload`                             | `true`  | ConfigMaps and Secrets | No       | True to reload attached workloads when changed                                                    |
 | `patches.flux.home.arpa`   | `deployment.ignore-replicas`         | `true`  | Deployment             | No       | Opt-in to allow the HelmRelease owning a deployment from reverting changes to the replica count.  |
 | `patches.flux.home.arpa`   | `helmrelease.append-drift-detection` | `true`  | HelmRelease            | No       | Opt-in to append HelmRelease drift detection rules, to avoid overwriting existing values.         |
 | `patches.flux.home.arpa`   | `helmrelease.defaults`               | `false` | HelmRelease            | No       | Opt-out to prevent a HelmRelease from receiving "standard" defaults.                              |
@@ -30,7 +31,8 @@ The following labels are used across multiple applications in the cluster:
 
 The following annotations are used across multiple applications in the cluster:
 
-| Key prefix        | Key name                  | Values | Valid resources | Required | Description                                                        |
-| ----------------- | ------------------------- | ------ | --------------- | -------- | ------------------------------------------------------------------ |
-| `zfs.home.arpa`   | `node.pool-drive-matcher` | String | Node            | No       | File path matcher for drives that should be included in a ZFS pool |
-| `talos.home.arpa` | `installer-image`         | String | Node            | Yes      | Full image name (without tag) for auto updates                     |
+| Key prefix          | Key name                  | Values | Valid resources | Required | Description                                                        |
+| ------------------- | ------------------------- | ------ | --------------- | -------- | ------------------------------------------------------------------ |
+| `kyverno.home.arpa` | `reload-tag`              | String | Workloads       | No       | Random value added by Kyverno to trigger a reload of a workflow    |
+| `talos.home.arpa`   | `installer-image`         | String | Node            | Yes      | Full image name (without tag) for auto updates                     |
+| `zfs.home.arpa`     | `node.pool-drive-matcher` | String | Node            | No       | File path matcher for drives that should be included in a ZFS pool |
