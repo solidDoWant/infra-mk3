@@ -29,7 +29,7 @@ spec:
       valuesKey: PASSWORD
       targetPath: driver.config.iscsi.shareStrategyTargetCli.tpg.auth.password
     - <<: *secret_values
-      valuesKey: USERNAME_IN
+      valuesKey: USERID_IN
       targetPath: driver.config.iscsi.shareStrategyTargetCli.tpg.auth.mutual_userid
     - <<: *secret_values
       valuesKey: PASSWORD_IN
@@ -42,7 +42,7 @@ spec:
       valuesKey: PASSWORD
       targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.password
     - <<: *secret_values
-      valuesKey: USERNAME_IN
+      valuesKey: USERID_IN
       targetPath: storageClasses[0].secrets.node-stage-secret.node-db\.node\.session\.auth\.username_in
     - <<: *secret_values
       valuesKey: PASSWORD_IN
