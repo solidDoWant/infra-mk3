@@ -61,6 +61,9 @@ spec:
             sudoEnabled: true
           datasetProperties:
             # TODO user properties
+          # Needs https://github.com/democratic-csi/democratic-csi/pull/455
+          snapshotProperties:
+            # TODO user properties
           datasetParentName: bulk-pool-01/k8s/democratic-csi/pvcs
           detachedSnapshotsDatasetParentName: bulk-pool-01/k8s/democratic-csi/snapshots
           zvolCompression: # inherit
@@ -125,7 +128,6 @@ spec:
           fsType: ext4
         secrets:
           node-stage-secret:
-            # TODO CHAP
             # TODO tunnel via istio so that data is encrypted in transit
             # TODO netpols
             node-db.node.session.auth.authmethod: CHAP
