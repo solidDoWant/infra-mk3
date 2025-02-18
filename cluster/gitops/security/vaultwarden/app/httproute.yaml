@@ -1,0 +1,21 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: vaultwarden
+  labels:
+    app.kubernetes.io/part-of: vaultwarden
+    # external-dns.home.arpa/publish: "true"
+spec:
+  hostnames:
+    - vaultwarden.${SECRET_PUBLIC_DOMAIN_NAME}
+  parentRefs:
+    - name: internal-gateway
+      namespace: networking
+    # If public access is enabled, block /admin
+    # - name: external-gateway
+    #   namespace: networking
+  rules:
+    - backendRefs:
+        - name: vaultwarden
+          port: 80

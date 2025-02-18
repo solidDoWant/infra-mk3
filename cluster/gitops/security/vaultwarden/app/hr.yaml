@@ -46,8 +46,26 @@ spec:
             ports:
               - containerPort: 80
                 name: http
-        # TODO security context
+            probes:
+              liveness: &probe
+                enabled: true
+                path: /health
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
         pod:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           topologySpreadConstraints:
             - maxSkew: 1 # Skew of 1 allows for rolling updates
               topologyKey: kubernetes.io/hostname
@@ -55,7 +73,6 @@ spec:
                 matchLabels:
                   app.kubernetes.io/instance: vaultwarden
               whenUnsatisfiable: DoNotSchedule
-    # TODO PDB
     service:
       app:
         controller: vaultwarden
@@ -66,7 +83,6 @@ spec:
         sessionAffinityConfig:
           clientIP:
             timeoutSeconds: 10800 # 3 hours
-    # TODO httproute, block /admin
     persistence:
       data:
         type: persistentVolumeClaim
