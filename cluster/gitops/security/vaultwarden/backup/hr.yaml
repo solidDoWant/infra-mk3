@@ -32,9 +32,9 @@ spec:
         clusterCloning:
           certificates:
             servingCert:
-              issuerKind: Issuer
+              issuerKind: ClusterIssuer
             clientCACert:
-              issuerKind: Issuer
+              issuerKind: ClusterIssuer
             postgresUserCert:
               certificateRequestPolicy:
                 enabled: true
