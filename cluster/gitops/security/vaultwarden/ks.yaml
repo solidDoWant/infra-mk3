@@ -61,7 +61,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/security/vaultwarden/backups
+  path: /cluster/gitops/security/vaultwarden/backup
   prune: true
   sourceRef:
     kind: GitRepository
