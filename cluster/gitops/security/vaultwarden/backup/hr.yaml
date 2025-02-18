@@ -42,3 +42,4 @@ spec:
               certificateRequestPolicy:
                 enabled: true
         backupToolPodCreationTimeout: 3m
+        namespace: "{{ .Release.Namespace }}"
