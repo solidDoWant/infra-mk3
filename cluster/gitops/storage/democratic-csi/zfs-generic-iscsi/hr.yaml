@@ -115,6 +115,8 @@ spec:
             node-db.node.session.auth.password_in: PASSWORD_IN
     volumeSnapshotClasses:
       - name: zfs-generic-iscsi-snapshot
+        annotations:
+          snapshot.storage.kubernetes.io/is-default-class: "true"
         deletionPolicy: Delete
         parameters:
           detachedSnapshots: "false"
