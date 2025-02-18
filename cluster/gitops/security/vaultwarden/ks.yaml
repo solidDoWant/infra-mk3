@@ -22,6 +22,7 @@ spec:
     - name: kyverno-app
     - name: prometheus-crds
     - name: rook-ceph-cluster
+    - name: openebs
     - name: security-namespace-issuer
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
@@ -47,3 +48,33 @@ spec:
     - name: docker-postfix-app
     - name: gateway-crds
     - name: rook-ceph-cluster
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name vaultwarden-backup
+spec:
+  targetNamespace: security
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/security/vaultwarden/backups
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: vaultwarden-app
+    - name: volume-snapshot-crds
+    - name: rook-ceph-cluster
+    - name: prometheus-crds
+    - name: security-namespace-issuer
+    - name: cluster-issuers
+    - name: approver-policy
+    - name: openebs
+    - name: cloudnative-pg
+    - name: democratic-csi-zfs-generic-iscsi

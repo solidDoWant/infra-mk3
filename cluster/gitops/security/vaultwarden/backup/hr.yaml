@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden-backup
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: dr-job
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: soliddowant-charts
+      version: 0.0.2
+  values:
+    jobConfig:
+      drType: vaultwarden
+      drAction: backup
+      cronjob:
+        schedule: "@daily"
+      configFile:
+        backupName: vaultwarden-backup
+        volumeStorageClass: zfs-generic-iscsi # Backed by storage server
+        dataPVCName: vaultwarden-data
+        cnpgClusterName: vaultwarden-postgres-17
+        # These can (and should) be self signed as only the backup tool
+        # will be using them, and only temporarily (less than a minute)
+        servingCertIssuerName: self-signed
+        clientCACertIssuerName: self-signed
+        clusterCloning:
+          certificates:
+            servingCert:
+              issuerKind: Issuer
+            clientCACert:
+              issuerKind: Issuer
+            postgresUserCert:
+              certificateRequestPolicy:
+                enabled: true
+            streamingReplicaUserCert:
+              certificateRequestPolicy:
+                enabled: true
+        backupToolPodCreationTimeout: 3m
