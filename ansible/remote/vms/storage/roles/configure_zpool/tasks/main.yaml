@@ -1,4 +1,5 @@
 ---
+# cspell:words listsnapshots
 - name: Install NFS server packages
   ansible.builtin.apt:
     name:
@@ -75,6 +76,7 @@
     -O atime=off
     -O xattr=sa
     -O mountpoint=/mnt/{{ pool_name }}
+    -O listsnapshots=on
     {{ pool_name }}
     raidz2
     {{ drive_wwns | map("regex_replace", "^(.*)$", "dm-uuid-mpath-3\1") | join(" ") }}
