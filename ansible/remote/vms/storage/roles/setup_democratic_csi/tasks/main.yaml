@@ -36,12 +36,17 @@
     - name: Look up full command path for sudo commands
       ansible.builtin.command: which "{{ item }}"
       register: command_paths
-      loop: "{{ sudo_commands }}"
+      loop: "{{ sudo_commands | map(attribute='name') | list }}"
       changed_when: false
-
     - name: Allow democratic-csi user to run commands as root via sudo
       community.general.sudoers:
-        commands: "{{ command_paths.results | map(attribute='stdout') | list }}"
+        commands: >-
+          {{ 
+            command_paths.results | map(attribute='stdout') |
+            zip(sudo_commands | map(attribute='args', default="")) |
+            map('select') |
+            map('join', ' ')
+          }}
         name: "{{ user_name }}"
         user: "{{ user_name }}"
         runas: root

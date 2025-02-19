@@ -2,4 +2,8 @@
 user_name: democratic-csi
 group_name: "{{ user_name }}"
 sudo_commands:
-  - zfs
+  - name: zfs
+  - name: chmod 
+    args: ^[0-9]{1,4}\s+/mnt/bulk-pool-01/k8s/democratic-csi/nfs/pvcs/pvc-[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$
+  - name: chown
+    args: ^democratic-csi:democratic-csi\s+/mnt/bulk-pool-01/k8s/democratic-csi/nfs/pvcs/pvc-[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$
