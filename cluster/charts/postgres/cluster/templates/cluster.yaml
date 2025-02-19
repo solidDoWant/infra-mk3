@@ -44,9 +44,9 @@ spec:
         secretAccessKey:
           name: {{ include "wal-bucket-name" . }}
           key: AWS_SECRET_ACCESS_KEY
-      # WAL backups are mainly just to help with WAL streaming when a replica
-      # can't get the WAL from the primary, and for cluster cloning.
-      retentionPolicy: "1d"
+    # WAL backups are mainly just to help with WAL streaming when a replica
+    # can't get the WAL from the primary, and for cluster cloning.
+    retentionPolicy: "1d"
   monitoring:
     enablePodMonitor: true
   certificates:
