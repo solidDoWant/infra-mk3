@@ -1,20 +1,5 @@
 ---
-# cspell:words targetclid runas
-- name: Install targetcli 
-  ansible.builtin.apt:
-    name: targetcli-fb
-    state: latest
-    update_cache: true
-    cache_valid_time: 600
-    autoclean: true
-    autoremove: true
-
-- name: Enable and start the targetcli service
-  ansible.builtin.systemd:
-    name: targetclid
-    enabled: yes
-    state: started
-
+# cspell:words runas
 - name: Create the democratic-csi group 
   ansible.builtin.group:
     name: "{{ group_name }}"
@@ -46,7 +31,7 @@
         mode: 0600
   when: created_user.changed
 
-- name: Allow access to commands that democratic-csi needs for ZFS and iSCSI
+- name: Allow access to commands that democratic-csi needs for ZFS
   block:
     - name: Look up full command path for sudo commands
       ansible.builtin.command: which "{{ item }}"

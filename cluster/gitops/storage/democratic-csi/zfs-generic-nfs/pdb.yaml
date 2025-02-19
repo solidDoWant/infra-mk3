@@ -2,7 +2,7 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: &app_name democratic-csi-zfs-generic-iscsi
+  name: &app_name democratic-csi-zfs-generic-nfs
   labels: &labels
     app.kubernetes.io/instance: *app_name
     app.kubernetes.io/component: controller-linux

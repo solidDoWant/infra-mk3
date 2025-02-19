@@ -5,7 +5,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: &app_name democratic-csi-zfs-generic-iscsi
+  name: &app_name democratic-csi-zfs-generic-nfs
 spec:
   interval: 5m
   chart:
@@ -18,18 +18,17 @@ spec:
   # Not using Teleport for this until https://github.com/democratic-csi/democratic-csi/issues/454
   # is addressed
   valuesFrom:
-    - &secret_values
-      kind: Secret
-      name: zfs-generic-iscsi-authentication
+    - kind: Secret
+      name: zfs-generic-nfs-authentication
       valuesKey: SSH_PRIVATE_KEY
       targetPath: driver.config.sshConnection.privateKey
   values:
     driver:
       config:
-        driver: zfs-generic-iscsi
+        driver: zfs-generic-nfs
         sshConnection:
           # Options documented here: https://www.npmjs.com/package/ssh2#client-methods
-          host: 10.2.3.1 # ubuntu-storage-host-01
+          host: &host 10.2.3.1 # ubuntu-storage-host-01
           port: 22
           username: democratic-csi
         zfs:
@@ -40,32 +39,24 @@ spec:
           # Needs https://github.com/democratic-csi/democratic-csi/pull/455
           snapshotProperties:
             # TODO user properties
-          datasetParentName: bulk-pool-01/k8s/democratic-csi/pvcs
-          detachedSnapshotsDatasetParentName: bulk-pool-01/k8s/democratic-csi/snapshots
-          zvolCompression: # inherit
-          zvolDedup: # inherit
-          zvolEnableReservation: # inherit
-          zvolBlocksize: # inherit
-        iscsi:
-          shareStrategy: targetCli
-          shareStrategyTargetCli:
-            sudoEnabled: true
-            basename: iqn.2025-02.${SECRET_INTERNAL_DOMAIN_NAME_REVERSED}.ubuntu-storage-host-01.iscsi-1
-            tpg:
-              attributes:
-                authentication: 0 # Disable CHAP. This just isn't working.
-                # Required per docs, see
-                # https://github.com/democratic-csi/democratic-csi/blob/master/examples/zfs-generic-iscsi.yaml#L66
-                generate_node_acls: 1
-                cache_dynamic_acls: 1
-                demo_mode_write_protect: 0
-            block:
-              attributes:
-                emulate_tpu: 1 # Enable UNMAP IOCTL when thin provisioning
-          targetPortal: 10.2.3.1:3260 # ubuntu-storage-host-01
-          targetPortals: []
+          datasetParentName: bulk-pool-01/k8s/democratic-csi/nfs/pvcs
+          detachedSnapshotsDatasetParentName: bulk-pool-01/k8s/democratic-csi/nfs/detached-snapshots
+          datasetEnableQuotas: true
+          datasetEnableReservation: true
+          datasetPermissionsMode: "0770"
+          datasetPermissionsUser: democratic-csi
+          datasetPermissionsGroup: democratic-csi
+        nfs:
+          shareStrategy: setDatasetProperties
+          shareStrategySetDatasetProperties:
+            properties:
+              # TODO enable TLS for kernel socks via tlshd (xprtsec=mtls)
+              # This will require expanding PKI out of cluster
+              # Limit mounts of this dataset to the k8s cluster host network only
+              sharenfs: sec=sys,rw=@10.3.0.0/16,crossmnt,no_subtree_check,no_root_squash
+          shareHost: *host
     csiDriver:
-      name: iscsi.zfs.democratic-csi.local
+      name: nfs.zfs.democratic-csi.local
     controller:
       replicaCount: 2
       priorityClassName: system-cluster-critical
@@ -83,27 +74,31 @@ spec:
               app.kubernetes.io/instance: *app_name
           whenUnsatisfiable: DoNotSchedule
     node:
-      hostPID: true # Needed for running on Talos nodes
       priorityClassName: system-cluster-critical
       driver:
         image: *dcsi_image
-        # Needed for running on Talos nodes
-        extraEnv:
-          - name: ISCSIADM_HOST_STRATEGY
-            value: nsenter
-          - name: ISCSIADM_HOST_PATH
-            value: /usr/local/sbin/iscsiadm
-        iscsiDirHostPath: /usr/local/etc/iscsi
-        iscsiDirHostPathType: ""
     storageClasses:
-      - name: zfs-generic-iscsi
+      - name: zfs-generic-nfs
         reclaimPolicy: Delete
         volumeBindingMode: Immediate
         allowVolumeExpansion: true
         parameters:
-          fsType: ext4
+          fsType: nfs
+        mountOptions:
+          - timeo=100 # Start request timeout at 10s instead of the default of 60
+          - rsize=1048576 # 1MB read size (max)
+          - wsize=1048576 # 1MB write size (max)
+          - nfsvers=4.2
+            # If client ports are randomly chosen, then this should roughly balance the traffic between both legs in the LAG
+          - nconnect=8
+        secrets:
+          provisioner-secret:
+          controller-publish-secret:
+          node-stage-secret:
+          node-publish-secret:
+          controller-expand-secret:
     volumeSnapshotClasses:
-      - name: zfs-generic-iscsi-snapshot
+      - name: zfs-generic-nfs-snapshot
         annotations:
           snapshot.storage.kubernetes.io/is-default-class: "true"
         deletionPolicy: Delete

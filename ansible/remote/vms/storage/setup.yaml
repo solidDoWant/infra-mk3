@@ -116,8 +116,9 @@
           share_with_nfs: true
         - name: k8s
         - name: k8s/democratic-csi
-        - name: k8s/democratic-csi/pvcs
-        - name: k8s/democratic-csi/snapshots
+        - name: k8s/democratic-csi/nfs
+        - name: k8s/democratic-csi/nfs/pvcs
+        - name: k8s/democratic-csi/nfs/detached-snapshots
       when: bulk_pool is defined
 
     - name: Install full module package

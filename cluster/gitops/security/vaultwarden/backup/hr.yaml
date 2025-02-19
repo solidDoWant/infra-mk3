@@ -22,7 +22,7 @@ spec:
         schedule: "@daily"
       configFile:
         backupName: vaultwarden-backup
-        volumeStorageClass: zfs-generic-iscsi # Backed by storage server
+        volumeStorageClass: zfs-generic-nfs # Backed by storage server
         dataPVCName: vaultwarden-data
         cnpgClusterName: vaultwarden-postgres-17
         # These can (and should) be self signed as only the backup tool

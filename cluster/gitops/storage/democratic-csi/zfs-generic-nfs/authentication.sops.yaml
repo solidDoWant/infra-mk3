@@ -1,15 +1,10 @@
 apiVersion: v1
 kind: Secret
 metadata:
-    name: zfs-generic-iscsi-authentication
+    name: zfs-generic-nfs-authentication
 type: Opaque
 stringData:
     SSH_PRIVATE_KEY: ENC[AES256_GCM,data:n4PpCQCKKMfqukHL0OkIgHPsbpf+ZMPU64Fs5LXqC9qqVVIdtvM/3Hj9lug+a6SnDRQSZR2qHo8sang6ZcmI43icsXDJpy+N3SM01FYCSYhGjE3Kj74c4TsxZnVhlCtfuuvGi74Zo5Kx9Z0xwZEk9/F4ZowwJpbf/9m+wSLbwUvYr1cac8bBJgatBbhMBoqPrEjlrZSVSFjubN9M3m+QY8tsTaJSCMRtjqjzMJhpKuPdykZ4g2n9ZAl/oXpiL6FnZm3Tc8DI2csKstlV0IRDjXB30HucpKEeIqSz59RDSZ/GC2eQQa1/5/vruQ/ymAf+UG7WnEplTEqDPdoNQGMqm+FMaSzKFi+38o5UNbq9oEvsjHVLlUTRldAP1bJNScYEyEk/OkoU0NJTeXdV13jvwfY5ch764jV3j2pRvw4YfCpG/ndETNkJ7KzPkPPXUKqOMm+gR0Q6sWteIe9m+vn4q3ce8KuGBF4TjK2Gf/6rIE56WASp8nSIVn0qbe/Y8p/J5vjwC2NhZ5+38hZJGS0YurD4GJsgmjwUd9A/,iv:KelmayCJj/CwG2zXPKKfIOi1K0R7vdLXG5WUJHxzDXs=,tag:DYzx6ynjuAk5CTnEQcnZqA==,type:str]
-    #ENC[AES256_GCM,data:GwcXQeb0GpirVrgXnD8TV5WqKyW+WZPiey9ViDcyliBneko=,iv:FVGIDH057i4eC7/w5adQ4kbN77z6DN3L1LMxsRICThQ=,tag:FHwrvWxVlDnBXU+REXAOpA==,type:comment]
-    USERID: ENC[AES256_GCM,data:+TJnNWeT7kDZbsBcAyuABg==,iv:wfVKWE6uV7yTIfXjjnRYlC5Gv8zOQQYLbBTOf2kBxZ0=,tag:lEMlp0y273bTqWrQI57qMQ==,type:str]
-    PASSWORD: ENC[AES256_GCM,data:RxohLrmWyudUYNTe4lcAfw==,iv:l5Pxiel9iL3TBWQnezuUr92BsqrQ5fN03Rs8d/SSBKk=,tag:0SRJ9096cvH7N38eRzGWxw==,type:str]
-    USERID_IN: ENC[AES256_GCM,data:BfbwnrOc0W8pDvm0mHeuOQ==,iv:Kp/uiR0zFFwBdTZdOeKkYlJ42zS69iYLz11SW1Nbk+M=,tag:KI11IJA86GxVYklFW+fI0Q==,type:str]
-    PASSWORD_IN: ENC[AES256_GCM,data:TgDs17Hw8QPdJSsY1zfMYQ==,iv:14vRT9bFkwj7RA0spRnQ+Nr+PnFUcSx5cSg3A9+IUx4=,tag:gVSGntcLb+1apMmKjxO8PQ==,type:str]
 sops:
     kms: []
     gcp_kms: []
@@ -34,8 +29,8 @@ sops:
             Ui8xbGtZR1hRcGV2SUtNRnRDd1FVaWcKEdyihoWr49AF+WRdA2l0dCJpewS5pF9B
             FH1lNyfvG0iqqJK3Ts7go/DrhpuO+PoJR+Ehaf8UKyOut0iF/7hKGQ==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2025-02-19T00:05:21Z"
-    mac: ENC[AES256_GCM,data:sXfbLZRxICIj9h02tKYwe2UH4MgYSmx1EUkr7UPjugT51pv+3O20Xej2eeElwO8yimchf7cPDhJaIgNoc/BZeXndJqW/p4RLWHmMvTDCORnCCo+256URuLsDqQb9bYYVA/wH8iS4sDh2o05q5ajjZgURMWBiyJElyT0wEx3TMTk=,iv:a/F+jRlW1bbToqSXZyooCMHHsW6Omoxg3ycY5HVlTNw=,tag:PTu12F783t0x+kK5kE4hqA==,type:str]
+    lastmodified: "2025-02-19T00:25:05Z"
+    mac: ENC[AES256_GCM,data:AKlHCrik1ELLTqFnhdEjrH4Go7Bsjrx/euiSc65Ippr3Mv1fAUgp61ImWb1xgXDrDNjD3NgqR3In0NjR0nG4mssiqa/+ArJ9CKbaNs+anRzomNwoDfKAp+25m9TwSuGVzAPPtPWNGAZXgWc4JJgb0HsQ24n2f+84zXHecD3bmRk=,iv:HWIWFSvFik4iGmm9Zp/tEerzsjRFhijMTtodi7qaiDc=,tag:aRBfVnpr/ZNoE6nIU+AccA==,type:str]
     pgp: []
     encrypted_regex: ^(data|stringData)$
     mac_only_encrypted: true

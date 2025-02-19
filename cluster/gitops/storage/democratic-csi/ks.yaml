@@ -4,14 +4,14 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name democratic-csi-zfs-generic-iscsi
+  name: &app_name democratic-csi-zfs-generic-nfs
 spec:
   targetNamespace: storage
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/storage/democratic-csi/zfs-generic-iscsi
+  path: /cluster/gitops/storage/democratic-csi/zfs-generic-nfs
   prune: true
   sourceRef:
     kind: GitRepository
