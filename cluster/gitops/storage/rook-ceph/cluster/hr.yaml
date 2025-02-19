@@ -49,7 +49,24 @@ spec:
           - name: rgw
             enabled: true
       dashboard:
+        # SSO cannot currently be enabled. Due to a Ceph bug, SSO requires HTTPS
+        # even when the dashboard is behind a reverse proxy. This means that the
+        # reverse proxy must communicate with the dashboard over HTTPS. When
+        # using the Gateway API, this requires the use of a BackendTLSPolicy.
+        # The gateway API implementation that I'm currently using (Istio) does
+        # not support this. Therefore, the dashboard cannot have SSO enabled.
         # encryption in transit will be handled by istio
+        # Related links:
+        # * Ceph HTTPS bug: https://tracker.ceph.com/issues/48306, https://github.com/rook/rook/issues/8633
+        # * Istio lack of support for BackendTLSPolicy: https://github.com/istio/istio/issues/50408
+        # * Dashboard SSO setup docs: https://docs.ceph.com/en/quincy/mgr/dashboard/#dashboard-sso-support
+        # To enable SSO (after the above is resolved):
+        # 1. Deploy the authentik SAML provider and application. ACS URL is
+        #    https://rook.${SECRET_PUBLIC_DOMAIN_NAME}/auth/saml2
+        # 2. Setup SSO via the toolbox pod:
+        #    `ceph dashboard sso setup saml2 https://rook.${SECRET_PUBLIC_DOMAIN_NAME} https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/api/v3/providers/saml/3/metadata/?download
+        # 3. Enable SSO:
+        #    `ceph dashboard sso enable saml2`
         ssl: false
         # TODO prom deployment
         # prometheusEndpoint:
