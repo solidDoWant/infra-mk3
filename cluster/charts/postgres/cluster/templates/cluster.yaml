@@ -35,6 +35,8 @@ spec:
       {{- if .Values.bucket.endpoint }}
       endpointURL: {{ .Values.bucket.endpoint }}
       {{- end }}
+      wal:
+        compression: bzip2  # TODO switch to zstd, see https://github.com/cloudnative-pg/plugin-barman-cloud/issues/127
       s3Credentials:
         accessKeyId:
           name: {{ include "wal-bucket-name" . }}
@@ -42,6 +44,9 @@ spec:
         secretAccessKey:
           name: {{ include "wal-bucket-name" . }}
           key: AWS_SECRET_ACCESS_KEY
+      # WAL backups are mainly just to help with WAL streaming when a replica
+      # can't get the WAL from the primary, and for cluster cloning.
+      retentionPolicy: "1d"
   monitoring:
     enablePodMonitor: true
   certificates:
