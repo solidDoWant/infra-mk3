@@ -17,6 +17,14 @@ spec:
       enabled: true
     admissionController: &controller_config
       replicas: 2
+      # TODO tune this, setting because kyverno is choking
+      resources:
+        requests:
+          cpu: 100m
+          memory: 1Gi
+        limits:
+          cpu: ~
+          memory: 1Gi
       rbac:
         clusterRole:
           extraResources:
