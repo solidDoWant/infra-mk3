@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teleport-backup
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: dr-job
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: soliddowant-charts
+        namespace: flux-system
+      version: 0.0.5
+  values:
+    jobConfig:
+      drType: teleport
+      drAction: backup
+      cronjob:
+        schedule: "@daily"
+      configFile:
+        backupName: teleport-backup
+        backupVolume:
+          storageClass: zfs-generic-nfs # Backed by storage server
+        cnpgClusters:
+          core:
+            name: teleport-core-postgres-17
+          audit:
+            name: teleport-audit-postgres-17
+        servingCertIssuerName: self-signed
+        clientCACertIssuerName: self-signed
+        clusterCloning:
+          certificates:
+            servingCert:
+              issuerKind: ClusterIssuer
+            clientCACert:
+              issuerKind: ClusterIssuer
+            postgresUserCert:
+              certificateRequestPolicy:
+                enabled: true
+            streamingReplicaUserCert:
+              certificateRequestPolicy:
+                enabled: true
+        auditSessionLogs:
+          credentials:
+            # Required when not using AWS S3
+            region: dummy-value
+            s3ForcePathStyle: true
+        namespace: "{{ .Release.Namespace }}"
+  valuesFrom:
+    - kind: Secret
+      name: teleport-audit-sessions
+      valuesKey: AWS_ACCESS_KEY_ID
+      targetPath: jobConfig.configFile.auditSessionLogs.credentials.accessKeyId
+    - kind: Secret
+      name: teleport-audit-sessions
+      valuesKey: AWS_SECRET_ACCESS_KEY
+      targetPath: jobConfig.configFile.auditSessionLogs.credentials.secretAccessKey
+    - kind: ConfigMap
+      name: teleport-audit-sessions-backup-vars
+      valuesKey: endpoint
+      targetPath: jobConfig.configFile.auditSessionLogs.credentials.endpoint
+    - kind: ConfigMap
+      name: teleport-audit-sessions-backup-vars
+      valuesKey: s3Path
+      targetPath: jobConfig.configFile.auditSessionLogs.s3Path

@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
+# This is needed to construct the S3 URL. The bucket name has a random suffix,
+# so its value isn't known ahead of time.
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: &name build-teleport-audit-sessions-backup-vars
+spec:
+  rules:
+    - # Trigger on change of any of these resources
+      name: *name
+      match:
+        any:
+          - resources:
+              kinds:
+                - ConfigMap
+              name: teleport-audit-sessions
+      skipBackgroundRequests: true
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: teleport-audit-sessions-backup-vars
+        namespace: security
+        data:
+          data:
+            s3Path: s3://{{ request.object.data.BUCKET_NAME }}
+            endpoint: https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}
