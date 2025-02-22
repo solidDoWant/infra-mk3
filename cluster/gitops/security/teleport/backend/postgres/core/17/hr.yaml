@@ -37,7 +37,7 @@ spec:
             # This doesn't make a huge difference given that TLS auth is enforced via pg_hba
             disablePassword: true
             # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
-            # Docs are unclear if this is required for the "audit" database, audit database, or both.
+            # Docs are unclear if this is required for the "core" database, audit database, or both.
             replication: true
             login: true
     bucket:
