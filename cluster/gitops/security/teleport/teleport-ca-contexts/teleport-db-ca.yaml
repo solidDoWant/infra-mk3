@@ -1,0 +1,21 @@
+---
+apiVersion: kyverno.io/v2alpha1
+kind: GlobalContextEntry
+metadata:
+  name: teleport-db-ca
+spec:
+  apiCall:
+    method: GET
+    refreshInterval: 1h
+    service:
+      url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/webapi/auth/export?type=db-client&format=json
+      headers:
+        - key: Accept
+          value: application/json
+    jmesPath: >
+      [].data |
+      [*].base64_decode(@) |
+      join('', @)
+    # Avoid a circular dependency by setting a default empty value for when the endpoint
+    # does not exist.
+    default: ""
