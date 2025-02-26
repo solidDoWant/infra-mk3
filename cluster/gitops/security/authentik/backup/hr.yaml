@@ -1,0 +1,65 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authentik-backup
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: dr-job
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: soliddowant-charts
+      version: 0.0.8
+  values:
+    jobConfig:
+      drType: authentik
+      drAction: backup
+      cronjob:
+        schedule: "@daily"
+      configFile:
+        backupName: authentik-backup
+        backupVolume:
+          storageClass: zfs-generic-nfs # Backed by storage server
+        cluster:
+          name: authentik-postgres-17
+          servingCertIssuerName: self-signed
+          clientCACertIssuerName: self-signed
+          clusterCloning:
+            certificates:
+              servingCert:
+                issuerKind: ClusterIssuer
+              clientCACert:
+                issuerKind: ClusterIssuer
+              postgresUserCert:
+                certificateRequestPolicy:
+                  enabled: true
+              streamingReplicaUserCert:
+                certificateRequestPolicy:
+                  enabled: true
+        s3:
+          credentials:
+            # Required when not using AWS S3
+            region: dummy-value
+            s3ForcePathStyle: true
+        namespace: "{{ .Release.Namespace }}"
+  valuesFrom:
+    - kind: Secret
+      name: authentik-media
+      valuesKey: AWS_ACCESS_KEY_ID
+      targetPath: jobConfig.configFile.s3.credentials.accessKeyId
+    - kind: Secret
+      name: authentik-media
+      valuesKey: AWS_SECRET_ACCESS_KEY
+      targetPath: jobConfig.configFile.s3.credentials.secretAccessKey
+    - kind: ConfigMap
+      name: authentik-media-backup-vars
+      valuesKey: endpoint
+      targetPath: jobConfig.configFile.s3.credentials.endpoint
+    - kind: ConfigMap
+      name: authentik-media-backup-vars
+      valuesKey: s3Path
+      targetPath: jobConfig.configFile.s3.s3Path
