@@ -12,7 +12,3 @@ spec:
       headers:
         - key: Accept
           value: application/json
-    jmesPath: >
-      [].data |
-      [*].base64_decode(@) |
-      join('', @)
