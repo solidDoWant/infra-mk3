@@ -16,6 +16,3 @@ spec:
       [].data |
       [*].base64_decode(@) |
       join('', @)
-    # Avoid a circular dependency by setting a default empty value for when the endpoint
-    # does not exist.
-    default: ""
