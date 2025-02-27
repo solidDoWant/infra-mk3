@@ -1,0 +1,22 @@
+---
+# cspell:words corazawaf
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: coraza-waf
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: external-gateway
+  url: oci://ghcr.io/corazawaf/coraza-proxy-wasm:0.5.0
+  imagePullPolicy: IfNotPresent
+  phase: AUTHN
+  pluginConfig:
+    rules: |
+      # Use the example config. This will provide some value while
+      # reducing the need to fine-tune the configuration.
+      Include @recommended-conf
+      SecRuleEngine On
+      Include @crs-setup-conf
+      Include @owasp_crs/*.conf
