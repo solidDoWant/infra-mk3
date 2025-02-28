@@ -76,7 +76,7 @@ run_checks() {
 
 provision_pool() {
     echo "Provisioning pool '${POOL_NAME}'..."
-    if run_rootfs_cmd zpool list "${POOL_NAME}"; then
+    if run_rootfs_cmd zpool list "${POOL_NAME}" > /dev/null; then
         warn "Pool already exists"
         return
     fi
@@ -99,7 +99,7 @@ provision_dataset() {
     DATASET="${1}"
 
     echo "Provisioning dataset '${DATASET}'..."
-    if run_rootfs_cmd zfs list "${DATASET}"; then
+    if run_rootfs_cmd zfs list "${DATASET}" > /dev/null; then
         warn "Dataset '${DATASET}' already exists"
         return
     fi
@@ -133,10 +133,8 @@ configure_dataset() {
     VALUE="${3}"
 
     echo "Setting dataset '${DATASET}' property '${PROPERTY}' to '${VALUE}'..."
-    CURRENT_VALUE="$(run_rootfs_cmd zfs get "${PROPERTY}" "${DATASET}" -H -o value)" || EC="$?"
-    if [[ -n "${EC}" ]]; then
-        fatal "Failed to get property '${PROPERTY}' on dataset '${DATASET}'"
-    fi
+    CURRENT_VALUE="$(run_rootfs_cmd zfs get -H -o value "${PROPERTY}" "${DATASET}")" || \
+        fatal "Failed to get property '${PROPERTY}' on dataset '${DATASET}' (exit code '${?}')"
 
     if [[ "${CURRENT_VALUE}" == "${VALUE}" ]]; then
         warn "Property '${PROPERTY}' to '${VALUE}' already set on dataset '${DATASET}'"
@@ -161,6 +159,7 @@ finalize() {
     echo "Provisioning complete"
     run_rootfs_cmd zpool list
     run_rootfs_cmd zfs list
+    sleep 30
 }
 
 run_checks
