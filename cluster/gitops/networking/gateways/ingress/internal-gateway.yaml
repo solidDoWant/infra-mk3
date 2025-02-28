@@ -65,7 +65,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: internal-gateway-istio
+    name: internal-gateway-internal-gateways
   metrics:
     - type: Resource
       resource:
@@ -85,11 +85,11 @@ spec:
       app.kubernetes.io/name: ingress-gateways
       gateway.networking.k8s.io/gateway-name: internal-gateway
 ---
-# Approve the the internal-gateway-istio certificate specifically.
+# Approve the the internal-gateway-internal-gateways certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: istio-intermediary-ca-internal-gateway-istio-cert
+  name: istio-intermediary-ca-internal-gateway-internal-gateways-cert
 spec:
   selector:
     issuerRef:
@@ -108,7 +108,7 @@ spec:
     uris:
       required: true
       values:
-        - spiffe://istio.cluster.local/ns/networking/sa/internal-gateway-istio
+        - spiffe://istio.cluster.local/ns/networking/sa/internal-gateway-internal-gateways
     usages:
       - client auth
       - server auth

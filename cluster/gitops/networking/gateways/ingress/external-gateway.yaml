@@ -41,7 +41,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: external-gateway-istio
+    name: external-gateway-external-gateways
   metrics:
     - type: Resource
       resource:
@@ -61,11 +61,11 @@ spec:
       app.kubernetes.io/name: ingress-gateways
       gateway.networking.k8s.io/gateway-name: external-gateway
 ---
-# Approve the the external-gateway-istio certificate specifically.
+# Approve the the external-gateway-external-gateways certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: istio-intermediary-ca-external-gateway-istio-cert
+  name: istio-intermediary-ca-external-gateway-external-gateways-cert
 spec:
   selector:
     issuerRef:
@@ -84,7 +84,7 @@ spec:
     uris:
       required: true
       values:
-        - spiffe://istio.cluster.local/ns/networking/sa/external-gateway-istio
+        - spiffe://istio.cluster.local/ns/networking/sa/external-gateway-external-gateways
     usages:
       - client auth
       - server auth
