@@ -9,6 +9,11 @@ type: Opaque
 stringData:
   # Unfortunately this must be a secret (rather than secretGenerator) or Flux will not substitute
   # values within it
+  # Really need https://lore.proxmox.com/pve-devel/3fee9614-5a2e-4a3c-afef-75f4ded2dfd6@proxmox.com/ for mapping of OIDC claims to groups
+  # PVE instructions (not yet added to ansible):
+  # pveum realm add authentik --type openid --issuer-url https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/proxmox/ \
+  #   --client-id ${SECRET_PROXMOX_AUTHENTIK_OIDC_CLIENT_ID} --client-key ${SECRET_PROXMOX_AUTHENTIK_OIDC_CLIENT_SECRET} \
+  #   --username-claim username --autocreate 1
   authentik-proxmox-application-blueprint.yaml: |
     ---
     # yaml-language-server: $schema=../../../../../schemas/configs/blueprint.authentik_v1.json
@@ -47,7 +52,7 @@ stringData:
           client_id: "${SECRET_PROXMOX_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_PROXMOX_AUTHENTIK_OIDC_CLIENT_SECRET}"
           redirect_uris: |-
-            https://10.2.2.1:8006
+            https://10.2.2.1:8006.*
           signing_key:
             !Find [
               authentik_crypto.certificatekeypair,
