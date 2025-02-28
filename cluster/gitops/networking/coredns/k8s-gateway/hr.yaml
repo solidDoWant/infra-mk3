@@ -12,15 +12,22 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
-        name: ori-edge-charts
-      version: 2.4.0
+        name: kuxabeast-charts
+      version: 2.4.1
   values:
     domain: ${SECRET_PUBLIC_DOMAIN_NAME}
     # Needed until https://github.com/ori-edge/k8s_gateway/pull/306 is merged
+    # And one of:
+    # * https://github.com/ori-edge/k8s_gateway/issues/36
+    # * https://github.com/ori-edge/k8s_gateway/pull/308
     image:
       registry: ghcr.io
-      repository: soliddowant/k8s_gateway
-      tag: v0.4.0-37-g9b0bbe7
+      repository: kuxabeast/k8s_gateway
+      tag: latest@sha256:79038025967f7f5ae08e22836ddc5df85f271d72d439b60fdec5e09e2a256c56
+    # Only use the internal gateways
+    filters:
+      gatewayClasses:
+        - internal-gateways
     # Chart defaults + rewrite for PTR responses
     extraZonePlugins:
       - name: log
