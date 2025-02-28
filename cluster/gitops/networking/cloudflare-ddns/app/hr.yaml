@@ -78,15 +78,17 @@ spec:
             path: /metrics
             interval: 30s
             scrapeTimeout: 30s
-    route:
-      app:
-        enabled: true
-        parentRefs:
-          - name: internal-gateway
-            namespace: networking
-            sectionName: https
-        hostnames:
-          - cloudflare-ddns.${SECRET_PUBLIC_DOMAIN_NAME}
-        rules:
-          - backendRefs:
-              - name: app
+    # The current endpoints don't provide any tangible value to users,
+    # but expose some information that shouldn't be public.
+    # route:
+    #   app:
+    #     enabled: true
+    #     parentRefs:
+    #       - name: internal-gateway
+    #         namespace: networking
+    #         sectionName: https
+    #     hostnames:
+    #       - cloudflare-ddns.${SECRET_PUBLIC_DOMAIN_NAME}
+    #     rules:
+    #       - backendRefs:
+    #           - name: app
