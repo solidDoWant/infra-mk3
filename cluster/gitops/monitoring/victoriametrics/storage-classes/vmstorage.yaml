@@ -1,0 +1,12 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: victoriametrics-vmstorage
+parameters:
+  poolname: ${LOCAL_ZFS_POOL_NAME}/openebs/victoriametrics/vmstorage
+  fstype: zfs
+  # TODO tune these. These are just a rough guess at what might possibly be good.
+  compression: zstd
+  dedup: off
+provisioner: zfs.csi.openebs.io
