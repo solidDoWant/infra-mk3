@@ -23,6 +23,10 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
+                  - key: zfs.home.arpa/node.local-storage-enabled
+                    operator: In
+                    values:
+                      - "true"
                   - key: zfs.home.arpa/node.local-storage-config-map
                     operator: NotIn
                     values:

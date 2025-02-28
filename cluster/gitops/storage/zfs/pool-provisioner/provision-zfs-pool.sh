@@ -159,7 +159,7 @@ finalize() {
     echo "Provisioning complete"
     run_rootfs_cmd zpool list
     run_rootfs_cmd zfs list
-    sleep 30
+    sleep 60
 }
 
 run_checks

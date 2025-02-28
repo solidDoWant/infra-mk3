@@ -18,7 +18,8 @@ rules:
       - get
       - list
       # Needed to label nodes with
-      # `zfs.home.arpa/node.local-storage-deployed=true` when completed
+      # `zfs.home.arpa/node.local-storage-deployed=true` when completed, as well as
+      # `zfs.home.arpa/node.local-storage-config-map` with the name of the config map
       - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
