@@ -15,15 +15,18 @@ spec:
       hostPID: true
       nodeSelector:
         zfs.home.arpa/node.local-storage-enabled: "true"
+      # Only run on nodes that have not already had the current version of the
+      # script ran. When the script runs, it will update the label to prevent
+      # running again.
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                  - key: zfs.home.arpa/node.local-storage-deployed
+                  - key: zfs.home.arpa/node.local-storage-config-map
                     operator: NotIn
                     values:
-                      - "true"
+                      - zfs-pool-provisioner-scripts # This will be replaced by kustomize
       containers:
         - name: *app_name
           image: alpine/k8s:1.31.2
@@ -38,6 +41,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: ROOTFS_PATH
               value: &rootfs_path /rootfs
+            - name: CONFIG_MAP_NAME
+              value: zfs-pool-provisioner-scripts # This will be replaced by kustomize
           securityContext:
             # Needed for zpool creation
             privileged: true

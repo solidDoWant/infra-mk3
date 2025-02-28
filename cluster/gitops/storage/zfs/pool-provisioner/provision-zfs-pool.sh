@@ -2,12 +2,16 @@
 
 set -euo pipefail
 
-fatal() {
+warn() {
     >&2 echo "$@"
+}
+
+fatal() {
+    warn "$@"
     exit 1
 }
 
-REQUIRED_ENV_VARS=(NODE_NAME ROOTFS_PATH POOL_NAME)
+REQUIRED_ENV_VARS=(NODE_NAME ROOTFS_PATH POOL_NAME CONFIG_MAP_NAME)
 usage() {
     USAGE_MSG="Usage: "
     for REQUIRED_ENV_VAR in "${REQUIRED_ENV_VARS[@]}"; do
@@ -46,20 +50,6 @@ run_rootfs_cmd() {
     chroot "${ROOTFS_PATH}" "${@}"
 }
 
-label_node() {
-    # Prevent the pool from being re-initialized
-    kubectl label --overwrite node "${NODE_NAME}" 'zfs.home.arpa/node.local-storage-deployed=true'
-}
-
-check_pool() {
-    if ! run_rootfs_cmd zpool list "${POOL_NAME}"; then
-        return
-    fi
-
-    label_node
-    fatal "Pool already exists"
-}
-
 check_devices() {
     for POOL_DRIVE_PATH in "${POOL_DRIVE_PATHS[@]}"; do
         [[ -b "${POOL_DRIVE_PATH}" ]] || \
@@ -79,39 +69,102 @@ run_checks() {
     check_env_vars
     load_annotation_vars
     check_module
-    check_pool
     check_devices
     check_fs
     echo "All checks passed"
 }
 
+provision_pool() {
+    echo "Provisioning pool '${POOL_NAME}'..."
+    if run_rootfs_cmd zpool list "${POOL_NAME}"; then
+        warn "Pool already exists"
+        return
+    fi
+
+    run_rootfs_cmd zpool create \
+        -f \
+        -o ashift=12 \
+        -O acltype=posixacl \
+        -O compression=lz4 \
+        -O dnodesize=auto \
+        -O relatime=off \
+        -O atime=off \
+        -O xattr=sa \
+        -O "mountpoint=/var/mnt/${POOL_NAME}" \
+        "${POOL_NAME}" \
+        "${POOL_DRIVE_PATH[@]#${ROOTFS_PATH}}"
+}
+
+provision_dataset() {
+    DATASET="${1}"
+
+    echo "Provisioning dataset '${DATASET}'..."
+    if run_rootfs_cmd zfs list "${DATASET}"; then
+        warn "Dataset '${DATASET}' already exists"
+        return
+    fi
+
+    run_rootfs_cmd zfs create "${DATASET}"
+}
+
+provision_datasets() {
+    # This cross-cutting logic isn't great, but I'm not sure where else to put it
+    DATASETS=(
+        ""
+        "/postgres"
+        "/victoriametrics"
+        "/victoriametrics/vmstorage"
+    )
+    DATASETS=("${DATASETS[@]/#/${POOL_NAME}/openebs}")
+
+    for DATASET in "${DATASETS[@]}"; do
+        provision_dataset "${DATASET}"
+    done
+}
+
+provision() {
+    provision_pool
+    provision_datasets
+}
+
+configure_dataset() {
+    DATASET="${1}"
+    PROPERTY="${2}"
+    VALUE="${3}"
+
+    echo "Setting dataset '${DATASET}' property '${PROPERTY}' to '${VALUE}'..."
+    CURRENT_VALUE="$(run_rootfs_cmd zfs get "${PROPERTY}" "${DATASET}" -H -o value)" || EC="$?"
+    if [[ -n "${EC}" ]]; then
+        fatal "Failed to get property '${PROPERTY}' on dataset '${DATASET}'"
+    fi
+
+    if [[ "${CURRENT_VALUE}" == "${VALUE}" ]]; then
+        warn "Property '${PROPERTY}' to '${VALUE}' already set on dataset '${DATASET}'"
+        return
+    fi
+
+    run_rootfs_cmd zfs set "${PROPERTY}=${VALUE}" "${DATASET}"
+}
+
+configure_datasets() {
+    # cSpell:words primarycache
+    configure_dataset "${POOL_NAME}/openebs/postgres" "primarycache" "metadata"
+}
+
+label_node() {
+    kubectl label --overwrite node "${NODE_NAME}" 'zfs.home.arpa/node.local-storage-deployed=true'
+    # Prevent the pool from being re-initialized unless there is a change to this script
+    kubectl label --overwrite node "${NODE_NAME}" "zfs.home.arpa/node.local-storage-config-map=${CONFIG_MAP_NAME}"
+}
+
+finalize() {
+    echo "Provisioning complete"
+    run_rootfs_cmd zpool list
+    run_rootfs_cmd zfs list
+}
+
 run_checks
-
-# cSpell:disable
-echo "Provisioning pool..."
-run_rootfs_cmd zpool create \
-    -f \
-    -o ashift=12 \
-    -O acltype=posixacl \
-    -O compression=lz4 \
-    -O dnodesize=auto \
-    -O relatime=off \
-    -O atime=off \
-    -O xattr=sa \
-    -O "mountpoint=/var/mnt/${POOL_NAME}" \
-    "${POOL_NAME}" \
-    "${POOL_DRIVE_PATH[@]#${ROOTFS_PATH}}"
-
-# OpenEBS + database dataset provisioning
-# This cross-cutting logic isn't great, but I'm not sure where else to put it
-run_rootfs_cmd zfs create "${POOL_NAME}/openebs"
-run_rootfs_cmd zfs create "${POOL_NAME}/openebs/postgres"
-run_rootfs_cmd zfs create "${POOL_NAME}/openebs/victoriametrics"
-run_rootfs_cmd zfs create "${POOL_NAME}/openebs/victoriametrics/vmstorage"
-# Rely on postgres cache for actual data
-run_rootfs_cmd zfs set primarycache=metadata "${POOL_NAME}/openebs/postgres"
-
+provision
+configure_datasets
 label_node
-echo "Provisioning complete"
-run_rootfs_cmd zpool list
-run_rootfs_cmd zfs list
+finalize

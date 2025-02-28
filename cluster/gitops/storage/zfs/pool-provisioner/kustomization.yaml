@@ -11,3 +11,5 @@ configMapGenerator:
     options:
       labels:
         kustomize.toolkit.fluxcd.io/substitute: disabled
+configurations:
+  - ./vol-mount-from-cm-transformer.yaml

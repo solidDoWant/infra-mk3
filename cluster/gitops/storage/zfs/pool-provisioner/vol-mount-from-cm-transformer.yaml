@@ -1,0 +1,9 @@
+---
+nameReference:
+  - kind: ConfigMap
+    version: v1
+    fieldSpecs:
+      - path: spec/template/spec/containers/env/value
+        kind: DaemonSet
+      - path: spec/template/spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/matchExpressions/values
+        kind: DaemonSet
