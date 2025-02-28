@@ -41,6 +41,7 @@ echo "Scrub complete!"
 
 echo "Post-scrub status:"
 run_rootfs_cmd zpool status -v
+sleep 60
 
 # Cleanup
 kubectl label --overwrite node "${NODE_NAME}" 'zfs.home.arpa/node.local-storage-scrub-'

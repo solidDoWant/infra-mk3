@@ -149,21 +149,18 @@ configure_datasets() {
     configure_dataset "${POOL_NAME}/openebs/postgres" "primarycache" "metadata"
 }
 
-label_node() {
-    kubectl label --overwrite node "${NODE_NAME}" 'zfs.home.arpa/node.local-storage-deployed=true'
-    # Prevent the pool from being re-initialized unless there is a change to this script
-    kubectl label --overwrite node "${NODE_NAME}" "zfs.home.arpa/node.local-storage-config-map=${CONFIG_MAP_NAME}"
-}
-
 finalize() {
     echo "Provisioning complete"
     run_rootfs_cmd zpool list
     run_rootfs_cmd zfs list
-    sleep 60
+
+    kubectl label --overwrite node "${NODE_NAME}" 'zfs.home.arpa/node.local-storage-deployed=true'
+    sleep 60    # Must sleep before labeling or k8s will kill the pod first
+    # Prevent the pool from being re-initialized unless there is a change to this script
+    kubectl label --overwrite node "${NODE_NAME}" "zfs.home.arpa/node.local-storage-config-map=${CONFIG_MAP_NAME}"
 }
 
 run_checks
 provision
 configure_datasets
-label_node
 finalize
