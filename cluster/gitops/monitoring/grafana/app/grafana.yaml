@@ -146,7 +146,7 @@ spec:
                       fieldPath: status.podIP
               ports:
                 # TODO see above about removing this after next release
-                - name: grafana-alert-manual
+                - name: grafana-alert-m
                   containerPort: 9094
                   protocol: TCP
               securityContext: &container_security_context
