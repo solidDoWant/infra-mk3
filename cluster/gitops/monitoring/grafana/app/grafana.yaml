@@ -4,6 +4,8 @@ apiVersion: grafana.integreatly.org/v1beta1
 kind: Grafana
 metadata:
   name: grafana
+  labels:
+    grafana.home.arpa/instance: grafana
 spec:
   config:
     auth:
