@@ -35,7 +35,8 @@ spec:
             probes:
               liveness: &probe
                 enabled: true
-                type: AUTO
+                type: HTTP
+                port: 8081
                 path: /
               readiness: *probe
             securityContext:
