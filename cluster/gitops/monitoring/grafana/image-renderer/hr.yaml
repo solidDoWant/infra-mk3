@@ -72,6 +72,7 @@ spec:
         ports:
           http:
             port: 80
+            targetPort: http
             protocol: HTTP
     serviceMonitor:
       grafana-image-renderer:
