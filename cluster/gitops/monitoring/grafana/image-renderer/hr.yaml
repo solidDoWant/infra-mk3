@@ -41,7 +41,9 @@ spec:
               readiness: *probe
             securityContext:
               allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
+              # TODO figure out what's being written to and mount it to a temp dir,
+              # to limit what can be changed
+              # readOnlyRootFilesystem: true
               capabilities:
                 drop:
                   - ALL
