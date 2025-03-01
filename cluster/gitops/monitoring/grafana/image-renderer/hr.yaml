@@ -47,6 +47,13 @@ spec:
                   - ALL
         pod:
           securityContext:
+            # Image uses non-numeric user/group which isn't compatible with
+            # runAsNonRoot. Explicitly set the user/group to the same value
+            # as the image.
+            runAsUser: &uid 472
+            runAsGroup: *uid
+            fsGroup: *uid
+            fsGroupChangePolicy: OnRootMismatch
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
