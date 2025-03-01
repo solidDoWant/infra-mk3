@@ -30,13 +30,13 @@ spec:
                   name: grafana-image-renderer-auth-token
                   key: authToken
             ports:
-              - containerPort: 8081
+              - containerPort: &process_port 8081
                 name: http
             probes:
               liveness: &probe
                 enabled: true
                 type: HTTP
-                port: 8081
+                port: *process_port
                 path: /
               readiness: *probe
             securityContext:
@@ -47,10 +47,6 @@ spec:
                   - ALL
         pod:
           securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            fsGroup: 1000
-            fsGroupChangePolicy: OnRootMismatch
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
