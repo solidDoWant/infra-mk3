@@ -88,7 +88,7 @@ spec:
               - path: /certs/serving
       nginx-config:
         type: configMap
-        name: victoriametrics-license-service-nginx-config
+        identifier: nginx-config
         advancedMounts:
           victoriametrics-license-service:
             app:
@@ -100,7 +100,7 @@ spec:
             app:
               - path: /tmp
     configMaps:
-      victoriametrics-license-service-nginx-config:
+      nginx-config:
         data:
           nginx.conf: |
             pid /tmp/nginx.pid;
