@@ -67,12 +67,23 @@ spec:
           http:
             port: 80
             protocol: HTTP
+    serviceMonitor:
+      grafana-image-renderer:
+        enabled: true
+        serviceName: "{{ .Release.Name }}"
+        endpoints:
+          - port: http
+            scheme: http
+            path: /metrics
+            interval: 1m
+            scrapeTimeout: 10s
     persistence:
       config:
         type: configMap
         identifier: config
         items:
           - key: config.json
+            path: config.json
         advancedMounts:
           grafana-image-renderer:
             app:
