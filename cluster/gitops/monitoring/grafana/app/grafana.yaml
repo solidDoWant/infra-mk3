@@ -120,9 +120,9 @@ spec:
             - name: grafana
               envFrom:
                 - configMapRef:
-                    name: grafana-image-renderer
+                    name: grafana-notification-images
                 - secretRef:
-                    name: grafana-image-renderer
+                    name: grafana-notification-images
               env:
                 - name: GF_SECURITY_ADMIN_PASSWORD
                   valueFrom:
