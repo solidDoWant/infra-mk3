@@ -35,20 +35,20 @@ spec:
       {
         "Version": "2012-10-17",
         "Statement": [
-            {
-                "Effect": "Allow",
-                "Principal": "*",
-                "Action": [
-                    "s3:GetObject"
-                ],
-                "Resource": [
-                    "arn:aws:s3:::grafana-notification-images/*"
-                ],
-                "Condition": {
-                    "Bool": {
-                        "aws:SecureTransport": "true"
-                    }
-                },
+          {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+              "s3:GetObject"
+            ],
+            "Resource": [
+              "arn:aws:s3:::grafana-notification-images/*"
+            ],
+            "Condition": {
+              "Bool": {
+                "aws:SecureTransport": "true"
+              }
             }
+          }
         ]
       }
