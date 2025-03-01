@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./authentik-grafana-application-blueprint.yaml
+  - ./configmap-dashboard-provider-rbac.yaml
+  - ./grafana-admin-password.sops.yaml
+  - ./grafana.yaml
+  - ./httproute.yaml
+configMapGenerator:
+  - name: configmap-dashboard-provider-config
+    files:
+      - values.yaml=./configmap-dashboard-provider-config.yaml
+configurations:
+  - ./hr-values-from-cm-transformer.yaml

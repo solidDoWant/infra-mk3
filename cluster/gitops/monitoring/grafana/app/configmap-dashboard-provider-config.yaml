@@ -1,0 +1,13 @@
+---
+# Source: https://grafana.com/docs/grafana/latest/administration/provisioning/#dashboards
+apiVersion: 1
+
+providers:
+  - name: configmap-dashboard-provider
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: false # Changes need to be made to the configmap, not the copied file
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true
