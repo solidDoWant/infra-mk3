@@ -1,0 +1,86 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grafana-image-renderer
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.5.1
+  values:
+    controllers:
+      grafana-image-renderer:
+        replicas: 2
+        containers:
+          app:
+            image:
+              repository: grafana/grafana-image-renderer
+              tag: 3.12.1
+            env:
+              ENABLE_METRICS: "true"
+              AUTH_TOKEN:
+                secretKeyRef:
+                  name: grafana-image-renderer-auth-token
+                  key: authToken
+            ports:
+              - containerPort: 8081
+                name: http
+            probes:
+              liveness: &probe
+                enabled: true
+                type: AUTO
+                path: /
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: grafana-image-renderer
+              whenUnsatisfiable: DoNotSchedule
+    service:
+      app:
+        controller: grafana-image-renderer
+        ports:
+          http:
+            port: 80
+            protocol: HTTP
+    persistence:
+      config:
+        type: configMap
+        identifier: config
+        items:
+          - key: config.json
+        advancedMounts:
+          grafana-image-renderer:
+            app:
+              - path: /usr/src/app/config.json
+                subPath: config.json
+                readOnly: true
+    configMaps:
+      config:
+        data:
+          config.json: |
+            {}
