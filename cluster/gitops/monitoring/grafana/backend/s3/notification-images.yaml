@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/objectbucket.io/objectbucketclaim_v1alpha1.json
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: grafana-notification-images
+spec:
+  bucketName: grafana-notification-images
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    maxObjects: "1000"
+    maxSize: 10G
+    bucketLifecycle: |
+      {
+        "Rules": [
+          {
+            "ID": "AbortIncompleteMultipartUploads",
+            "Status": "Enabled",
+            "Prefix": "",
+            "AbortIncompleteMultipartUpload": {
+              "DaysAfterInitiation": 1
+            }
+          },
+          {
+            "ID": "ExpireAfter30Days",
+            "Status": "Enabled",
+            "Prefix": "",
+            "Expiration": {
+              "Days": 30
+            }
+          }
+        ]
+      }
+    bucketPolicy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": [
+                    "s3:GetObject"
+                ],
+                "Resource": [
+                    "arn:aws:s3:::grafana-notification-images/*"
+                ],
+                "Condition": {
+                    "Bool": {
+                        "aws:SecureTransport": "true"
+                    }
+                },
+            }
+        ]
+      }
