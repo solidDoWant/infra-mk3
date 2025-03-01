@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: victoriametrics-license-service
+  labels:
+    app: victoriametrics-license-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: victoriametrics-license-service

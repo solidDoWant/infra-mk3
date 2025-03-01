@@ -1,0 +1,135 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# README:
+# Per https://github.com/VictoriaMetrics/VictoriaMetrics/blob/281f1a94e45f9879076a0c207d8b0c9c30bca983/docs/enterprise.md#valid-cases-for-victoriametrics-enterprise,
+# I am permitted to use the VictoriaMetrics Enterprise license as:
+# * I'm evaluating the software, and
+# * I have requested a trial license per VictoriaMetrics' request, and
+# * This is a non-commercial project
+# I am in no way modifying VictoriaMetrics Enterprise, its source code and I am using it as-is.
+# I am also not redistributing the VictoriaMetrics Enterprise software in any way, nor am I redistributing a plaintext license.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoriametrics-license-service
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.5.1
+  values:
+    controllers:
+      victoriametrics-license-service:
+        replicas: 2
+        containers:
+          app:
+            image:
+              repository: nginxinc/nginx-unprivileged
+              tag: 1.27.2-alpine
+            resources:
+              requests:
+                memory: 128Mi
+                cpu: 1m
+              limits:
+                memory: 128Mi
+                cpu: 10m
+            ports:
+              - containerPort: 443
+                name: http
+            probes:
+              liveness: &probe
+                enabled: true
+                type: AUTO
+                path: /api/v1/verify
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: victoriametrics-license-service
+              whenUnsatisfiable: DoNotSchedule
+    service:
+      app:
+        controller: victoriametrics-license-service
+        clusterIP: ${VICTORIAMETRICS_LICENSE_SERVICE_IP}
+        ports:
+          http:
+            port: 443
+            protocol: HTTPS
+    persistence:
+      serving-cert:
+        type: secret
+        name: victoriametrics-license-service-serving-cert
+        defaultMode: 0440
+        advancedMounts:
+          victoriametrics-license-service:
+            app:
+              - path: /certs/serving
+      nginx-config:
+        type: configMap
+        name: victoriametrics-license-service-nginx-config
+        advancedMounts:
+          victoriametrics-license-service:
+            app:
+              - path: /etc/nginx
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          victoriametrics-license-service:
+            app:
+              - path: /tmp
+    configMaps:
+      victoriametrics-license-service-nginx-config:
+        data:
+          nginx.conf: |
+            pid /tmp/nginx.pid;
+            events {
+            }
+            http {
+              log_format request_data escape=json '$remote_addr - $remote_user [$time_local] '
+                                '"$request" $status $bytes_sent '
+                                '"$http_referrer" "$http_user_agent" "$request_body"';
+              server {
+                listen 443 ssl;
+                server_name license.victoriametrics.com;
+                ssl_certificate /certs/serving/tls.crt;
+                ssl_certificate_key /certs/serving/tls.key;
+                ssl_protocols       TLSv1.2 TLSv1.3;
+                ssl_ciphers         HIGH:!aNULL:!MD5;
+
+                location /api/v1/verify {
+                  client_max_body_size 1M;
+                  client_body_buffer_size 1M;
+                  access_log /dev/stdout request_data;
+
+                  return 200;
+                }
+              }
+
+              client_body_temp_path /tmp/client_temp 1 2;
+              proxy_temp_path /tmp/proxy_temp 1 2;
+              fastcgi_temp_path /tmp/fastcgi_temp 1 2;
+              uwsgi_temp_path /tmp/uwsgi_temp 1 2;
+              scgi_temp_path /tmp/scgi_temp 1 2;
+            }
