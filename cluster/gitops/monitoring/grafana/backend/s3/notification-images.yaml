@@ -43,12 +43,7 @@ spec:
             ],
             "Resource": [
               "arn:aws:s3:::grafana-notification-images/*"
-            ],
-            "Condition": {
-              "Bool": {
-                "aws:SecureTransport": "true"
-              }
-            }
+            ]
           }
         ]
       }
