@@ -52,7 +52,7 @@ spec:
       # ha_peers: grafana-alerting.monitoring.svc:9094
       # ha_advertise_address: $${POD_IP}:9094
       ha_listen_address: $${POD_IP_MANUAL}:9094
-      ha_peers: grafana-alerting-manaual.monitoring.svc:9094
+      ha_peers: grafana-alerting-manual.monitoring.svc:9094
       ha_advertise_address: $${POD_IP_MANUAL}:9094
       ha_peer_timeout: 15s
       ha_reconnect_timeout: 2m
