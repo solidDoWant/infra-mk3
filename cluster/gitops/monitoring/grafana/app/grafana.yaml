@@ -44,9 +44,16 @@ spec:
     remote_cache:
       type: database
     unified_alerting:
-      ha_listen_address: $${POD_IP}:9094
-      ha_peers: grafana-alerting.monitoring.svc:9094
-      ha_advertise_address: $${POD_IP}:9094
+      # TODO use this config and delete the manually-configured service after
+      # the next operator release. Non-standard values are used to prevent
+      # breakage when upgrading to the next release.
+      # See https://github.com/grafana/grafana-operator/pull/1840
+      # ha_listen_address: $${POD_IP}:9094
+      # ha_peers: grafana-alerting.monitoring.svc:9094
+      # ha_advertise_address: $${POD_IP}:9094
+      ha_listen_address: $${POD_IP_MANUAL}:9094
+      ha_peers: grafana-alerting-manaual.monitoring.svc:9094
+      ha_advertise_address: $${POD_IP_MANUAL}:9094
       ha_peer_timeout: 15s
       ha_reconnect_timeout: 2m
     unified_alerting.screenshots:
@@ -60,7 +67,7 @@ spec:
       region: dummy-region
     rendering:
       server_url: http://grafana-image-renderer.monitoring.svc/render
-      callback_url: http://grafana.monitoring.svc:3000
+      callback_url: http://grafana-service.monitoring.svc:3000
     analytics:
       check_for_updates: "false"
       check_for_plugin_updates: "false"
@@ -92,7 +99,7 @@ spec:
                 name: configmap-dashboard-provider-config
             - name: &postgres_serving root-ca-cert
               secret:
-                secretName: security-intermediary-ca
+                secretName: monitoring-intermediary-ca
                 defaultMode: 0440
                 items:
                   - key: ca.crt
@@ -133,6 +140,15 @@ spec:
                     secretKeyRef:
                       name: grafana-image-renderer-auth-token
                       key: authToken
+                - name: POD_IP_MANUAL
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: status.podIP
+              ports:
+                # TODO see above about removing this after next release
+                - name: grafana-alert-manual
+                  containerPort: 9094
+                  protocol: TCP
               securityContext: &container_security_context
                 readOnlyRootFilesystem: true
                 runAsNonRoot: true

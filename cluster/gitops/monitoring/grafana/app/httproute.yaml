@@ -14,5 +14,5 @@ spec:
       namespace: networking
   rules:
     - backendRefs:
-        - name: *app_name
-          port: 80
+        - name: grafana-service
+          port: 3000

@@ -5,8 +5,10 @@ resources:
   - ./authentik-grafana-application-blueprint.yaml
   - ./configmap-dashboard-provider-rbac.yaml
   - ./grafana-admin-password.sops.yaml
+  - ./grafana-alerting-manual.yaml
   - ./grafana.yaml
   - ./httproute.yaml
+  - ./pdb.yaml
 configMapGenerator:
   - name: configmap-dashboard-provider-config
     files:
