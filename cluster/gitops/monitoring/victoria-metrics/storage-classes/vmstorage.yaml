@@ -10,3 +10,5 @@ parameters:
   compression: zstd
   dedup: off
 provisioner: zfs.csi.openebs.io
+# This is important so that PVCs get bound to pods satisfying the TSCs.
+volumeBindingMode: WaitForFirstConsumer
