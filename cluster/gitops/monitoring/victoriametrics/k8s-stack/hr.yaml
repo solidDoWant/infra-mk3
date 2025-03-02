@@ -1,0 +1,212 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoriametrics-license-service
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: victoria-metrics-k8s-stack
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: victoria-metrics-charts
+      version: 0.38.0
+  values:
+    global:
+      license:
+        keyRef:
+          name: victoriametrics-license-key
+          key: licenseKey
+    victoria-metrics-operator:
+      crds:
+        enabled: false
+      operator:
+        # Delete the VM version of prom resources if the prom resources are deleted
+        enable_converter_ownership: true
+      replicaCount: 2
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 1
+      topologySpreadConstraints:
+        # TODO
+        # - maxSkew: 1 # Skew of 1 allows for rolling updates
+        #   topologyKey: kubernetes.io/hostname
+        #   labelSelector:
+        #     matchLabels:
+        #       app.kubernetes.io/component: controller
+        #       app.kubernetes.io/instance: *app_name
+        #   whenUnsatisfiable: DoNotSchedule
+      admissionWebhooks:
+        certManager:
+          enabled: true
+          # TODO CRP, subject, label secretTemplate with reload annotation
+          issuer:
+            name: monitoring-intermediary-ca
+            kind: Issuer
+            group: cert-manager.io
+          cert:
+            # cert-manager ca injector will handle updating the webhook
+            # Kyverno will reload the actual deployment
+            duration: 4h
+    defaultDashboards:
+      grafanaOperator: &grafana_operator
+        enabled: true
+        spec:
+          instanceSelector:
+            matchLabels:
+              grafana.home.arpa/instance: grafana
+    external:
+      grafana:
+        # This is passed to alert rules for links to the Grafana dashboard
+        host: grafana.${SECRET_PUBLIC_DOMAIN_NAME}
+    vmsingle:
+      enabled: false
+    vmcluster:
+      # TODO verify that -dedup.minScrapeInterval is the same on both storage and select nodes
+      enabled: true
+      spec:
+        # This can be large because downsampling is reducing the amount of data stored.
+        # If this cluster actually lasts for more than a few years and I'm running out of space,
+        # I'll either change the downsampling period or add more storage (which will be cheaper).
+        retentionPeriod: 10y
+        replicationFactor: &replication_factor 2
+        # Non-root user, limited disk write access, drop capabilities, etc.
+        useStrictSecurity: true
+        # This is an application-aware load balancer which should better
+        # determine the best backend to send traffic to than Cilium
+        requestsLoadBalancer:
+          enabled: true
+          spec: &ha_component
+            hostAliases: &host_aliases
+              - ip: ${VICTORIAMETRICS_LICENSE_SERVICE_IP}
+                hostnames:
+                  - license.victoriametrics.com
+            podDisruptionBudget:
+              minAvailable: 1
+            replicaCount: 2
+            useStrictSecurity: true
+            # If these components fail then there will be no notification that something is going wrong
+            priorityClassName: system-cluster-critical
+            # topologySpreadConstraints: # TODO
+        vminsert: &cluster_storage_component
+          <<: *ha_component
+          # TODO this will take som tuning and requires historic metrics to get right
+          # Probably isn't needed at all given that two replicas min will be running
+          # hpa:
+          #   minReplicas: 2
+          #   maxReplicas: 5
+          # topologySpreadConstraints: # TODO
+        vmselect:
+          <<: *cluster_storage_component
+          # Cache storage. Not critical. Docs suggest a small (single-digit GB) amount.
+          # Because it's small and needs to be fast, I'm putting it on a memory-backed
+          # temporary volume.
+          storage:
+            emptyDir:
+              # Important for resource sizing: the limit is counted gainst the pod's
+              # memory limit.
+              medium: Memory
+              sizeLimit: 2Gi
+          # topologySpreadConstraints: # TODO
+        vmstorage:
+          hostAliases: *host_aliases
+          # This must be set to at least three for high availability. Data must always
+          # be accessible, even when at most one replica is unavailable. This means that
+          # new data must be recorded at least twice, otherwise, when the only replica
+          # with a given piece of data is unavailable, that data is also unavailable.
+          # With only two replicas and a replicationFactor of 2, this means that when
+          # one replica is unavailable, current information is still available, but
+          # new information will only be recorded once, making the once-recorded data
+          # unavailable when the unavailable and available replicas are switched.
+          # This can only be reduced to two when:
+          # * VictoriaMetrics adds support for rebalancing data automatically (manual currently planned, automatic not)
+          #   * https://github.com/VictoriaMetrics/VictoriaMetrics/issues/188
+          #   * https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2324
+          # * vminsert instances (not vmagent) support caching data and later pushing
+          #   it when a storage replica is temporarily unavailable
+          replicaCount: 3 # 2 * replicationFactor - 1
+          podDisruptionBudget:
+            minAvailable: *replication_factor
+          storage:
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 10Gi # This is probably way low, but I need to see rate of growth to properly estimate it.
+                # TODO this needs tuning and benchmarking.
+                storageClassName: victoriametrics-vmstorage
+                volumeMode: Filesystem
+          extraArgs:
+            downsampling.period: 30d:1m,180d:30m,1y:1h,2y:4h,5y:12h,10y:1d
+            # retentionFilter: # TODO set retention filters for specific low value, high volume metrics
+          # TODO remove this, this is just for the first deployment so that I don't have to deal with recreating
+          # statefulset pods/PVCs when updating the TSC
+          podMetadata:
+            labels:
+              one-off-vmstorage-tsc: "true"
+          # TODO
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  one-off-vmstorage-tsc: "true"
+              whenUnsatisfiable: DoNotSchedule
+          # vmBackup: # TODO maybe. Metrics are not critical to back up.
+        # ingress: # TODO HTTPRoute. Might put vmgateway in front.
+    alertmanager:
+      spec:
+        <<: *ha_component
+        externalURL: https://alertmanager.${SECRET_PUBLIC_DOMAIN_NAME}
+        # Upstream alertmanager storage requirements and usage is really poorly documented.
+        # Based on https://groups.google.com/g/prometheus-developers/c/KQ5UbAbaYnU, it looks
+        # like storage is used for recording:
+        # * Silences
+        # * Notification states
+        # These are propagated throughout the cluster via the gossip protocol.
+        # Because performance is not critical, but availability is, I'm putting this on
+        # a replicated storage backend. Using an emptyDir volume may be sufficient, if
+        # restarted instances receive the state via the gossip protocol before actually
+        # processing alerts. However, if the entire cluster is rebooted at once (such as
+        # when power is lost and UPS runs out of energy), the state will be lost.
+        storage:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 1Gi # Probably way larger than needed, but still pretty small.
+              storageClassName: ssd-replicated-3x
+              volumeMode: Filesystem
+      # config: # TODO
+      # TODO discord receiver(s). Send different priority and/or labeled alerts to different channels, with different notification settings.
+      # ingress: # TODO HTTPRoute. Might put vmgateway in front.
+    vmalert:
+      # Must be set when using multiple vminsert instances (which is the case when using a cluster)
+      remoteWriteVMAgent: true
+      spec:
+        <<: *ha_component
+        # TODO verify that:
+        # * The remote read and write endpoints are correct, pointing to requestsLoadBalancer and vmagent. Looks like write may point to agent but read does not.
+        # * The notification URLs are correct (maybe use DNS service discovery)
+      # ingress: # TODO HTTPRoute. Might put vmgateway in front.
+    vmagent:
+      # TODO check each instance to verify that they're all scraping the same targets
+      spec:
+        <<: *ha_component
+        # TODO verify that this targets requestsLoadBalancer
+        arbitraryFSAccessThroughSMs:
+          deny: true
+      # ingress: # TODO HTTPRoute. Might put vmgateway in front.
+    defaultDatasources:
+      grafanaOperator: *grafana_operator
+    grafana:
+      enabled: false
+    coreDns:
+      # This is handled by the coredns deployments
+      enabled: false
