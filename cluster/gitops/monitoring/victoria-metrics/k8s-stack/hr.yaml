@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -24,6 +25,7 @@ spec:
         enabled: false
         plain: false
       operator:
+        fullnameOverride: victoria-metrics-operator
         # Delete the VM version of prom resources if the prom resources are deleted
         enable_converter_ownership: true
       replicaCount: 2
@@ -42,7 +44,6 @@ spec:
       admissionWebhooks:
         certManager:
           enabled: true
-          # TODO CRP, subject, label secretTemplate with reload annotation
           issuer:
             name: monitoring-intermediary-ca
             kind: Issuer
@@ -211,3 +212,38 @@ spec:
     coreDns:
       # This is handled by the coredns deployments
       enabled: false
+  postRenderers:
+    # Fix the webhook certificate to meet reasonable standards
+    - kustomize:
+        patches:
+          - patch: |
+              # Set the:
+              # * Subject
+              # * Secret labels
+              # * Common name
+              - op: add
+                path: /spec/subject
+                value:
+                  countries:
+                    - US
+                  provinces:
+                    - ${SECRET_STATE}
+                  organizations:
+                    - infra-mk3
+              - op: add
+                path: /spec/secretTemplate
+                value:
+                  labels:
+                    kyverno.home.arpa/reload: "true"
+              - op: add
+                path: /spec/commonName
+                value: victoria-metrics-operator
+              # Remove the:
+              # * DNS name without root domain
+              - op: remove
+                path: /spec/dnsNames/0
+            target:
+              group: cert-manager.io
+              version: v1
+              kind: Certificate
+              name: victoria-metrics-operator-validation

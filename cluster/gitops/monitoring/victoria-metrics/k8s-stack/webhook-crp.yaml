@@ -1,0 +1,42 @@
+---
+# Approve the the victoria-metrics-operator-validation certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: monitoring-intermediary-ca-victoria-metrics-operator-validation
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: monitoring-intermediary-ca
+    namespace:
+      matchNames:
+        - monitoring
+  allowed:
+    commonName:
+      required: true
+      value: victoria-metrics-operator
+    dnsNames:
+      required: true
+      values:
+        - victoria-metrics-operator.monitoring
+        - victoria-metrics-operator.monitoring.svc
+        - victoria-metrics-operator.monitoring.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 4h
