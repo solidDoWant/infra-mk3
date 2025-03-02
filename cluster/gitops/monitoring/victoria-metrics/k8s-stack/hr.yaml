@@ -241,9 +241,11 @@ spec:
                 path: /spec/commonName
                 value: VictoriaMetrics operator
               # Remove the:
-              # * DNS name without root domain
+              # * DNS name without the svc or svc.cluster.local domains
               - op: remove
                 path: /spec/dnsNames/0
+              - op: remove
+                path: /spec/dnsNames/1
             target:
               group: cert-manager.io
               version: v1
