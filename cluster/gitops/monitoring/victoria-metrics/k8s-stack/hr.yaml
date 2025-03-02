@@ -245,6 +245,16 @@ spec:
       forceDeployDatasource: true
     kube-state-metrics:
       fullnameOverride: kube-state-metrics
+      replicas: 2
+      podDisruptionBudget:
+        minAvailable: 1
+      topologySpreadConstraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: kube-state-metrics
+          whenUnsatisfiable: DoNotSchedule
     coreDns:
       # This is handled by the coredns deployments
       enabled: false
