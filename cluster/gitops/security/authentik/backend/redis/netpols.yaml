@@ -28,6 +28,17 @@ spec:
       ports:
         - protocol: TCP
           port: 9999
+    # Communication from vmagent (monitoring)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+      ports:
+        - protocol: TCP
+          port: 9999
   egress:
     # Communication between instances
     - to:
