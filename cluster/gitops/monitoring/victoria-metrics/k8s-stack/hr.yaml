@@ -257,13 +257,10 @@ spec:
           whenUnsatisfiable: DoNotSchedule
       vmScrape:
         spec:
-          endpoints:
-            - port: http
-              honorLabels: true
-              metricRelabelConfigs:
-                - action: labeldrop
-                  regex: (uid|container_id|image_id|instance)
-          jobLabel: app.kubernetes.io/name
+          # This is a special case because multiple replicas (should)
+          # report the same metrics. Telling VM to scrape the service
+          # rather than the underlying pods prevents duplicate metrics.
+          discoveryRole: service
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
     coreDns:
