@@ -113,7 +113,7 @@ spec:
               - name: victoria-metrics-license-service-serving-cert
                 mountPath: /etc/ssl/certs/tls.crt
                 subPath: tls.crt
-        vmselect: &cluster_storage_component
+        vmselect:
           <<: *ha_component
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
@@ -157,6 +157,13 @@ spec:
             maxLabelsPerTimeseries: "150"
         vmstorage:
           <<: *ha_component
+          resources:
+            requests:
+              memory: 4Gi
+              cpu: 1000m
+            limits:
+              memory: 4Gi
+              cpu: 2000m
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
             tag: v1.112.0-enterprise-cluster
