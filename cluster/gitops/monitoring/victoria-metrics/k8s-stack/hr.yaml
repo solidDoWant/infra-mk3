@@ -66,7 +66,6 @@ spec:
       grafana:
         # This is passed to alert rules for links to the Grafana dashboard
         host: grafana.${SECRET_PUBLIC_DOMAIN_NAME}
-        forceDeployDatasource: true
     vmsingle:
       enabled: false
     vmcluster:
@@ -243,6 +242,7 @@ spec:
       grafanaOperator: *grafana_operator
     grafana:
       enabled: false
+      forceDeployDatasource: true
     kube-state-metrics:
       fullnameOverride: kube-state-metrics
     coreDns:
