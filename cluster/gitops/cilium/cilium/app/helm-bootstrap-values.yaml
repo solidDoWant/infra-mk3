@@ -103,6 +103,10 @@ hubble:
     rollOutPods: true
     ingress:
       enabled: false
+    frontend:
+      server:
+        ipv6:
+          enabled: false
 ipMasqAgent:
   enabled: false # TODO enable after bpf is re-enabled
   # enabled: true
