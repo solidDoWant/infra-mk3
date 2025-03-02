@@ -2,7 +2,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: victoriametrics-k8s-stack
+  name: victoria-metrics-k8s-stack
 spec:
   interval: 5m
   chart:
@@ -11,13 +11,13 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
-        name: victoriametrics-charts
+        name: victoria-metrics-charts
       version: 0.38.0
   values:
     global:
       license:
         keyRef:
-          name: victoriametrics-license-key
+          name: victoria-metrics-license-key
           key: licenseKey
     victoria-metrics-operator:
       crds:
@@ -81,7 +81,7 @@ spec:
           enabled: true
           spec: &ha_component
             hostAliases: &host_aliases
-              - ip: ${VICTORIAMETRICS_LICENSE_SERVICE_IP}
+              - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
                   - license.victoriametrics.com
             podDisruptionBudget:
@@ -139,7 +139,7 @@ spec:
                   requests:
                     storage: 10Gi # This is probably way low, but I need to see rate of growth to properly estimate it.
                 # TODO this needs tuning and benchmarking.
-                storageClassName: victoriametrics-vmstorage
+                storageClassName: victoria-metrics-vmstorage
                 volumeMode: Filesystem
           extraArgs:
             downsampling.period: 30d:1m,180d:30m,1y:1h,2y:4h,5y:12h,10y:1d
