@@ -24,6 +24,11 @@ spec:
       matches:
         - path:
             type: PathPrefix
+            value: /select/0/prometheus/vmui
+    - backendRefs: *ref
+      matches:
+        - path:
+            type: PathPrefix
             value: /favicon.ico
     - matches:
         - path:
@@ -102,7 +107,7 @@ spec:
       matches:
         - path:
             type: PathPrefix
-            value: /bootstrap.min.css
+            value: /static
     - backendRefs: *ref
       matches:
         - path:
