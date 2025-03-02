@@ -142,6 +142,7 @@ spec:
               whenUnsatisfiable: DoNotSchedule
         vminsert:
           <<: *cluster_storage_component
+          storage: null
           topologySpreadConstraints:
             - maxSkew: 1 # Skew of 1 allows for rolling updates
               topologyKey: kubernetes.io/hostname
