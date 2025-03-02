@@ -93,6 +93,9 @@ nodes:
           # Make ZFS flush to disk more frequently on async writes:
           # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#controversial-zfs_txg_timeout1--synchronous_commitoff--logbiasthroughput
           - zfs.zfs_txg_timeout=1
+          # Disable ipv6 via command line parameter
+          # This one actually works
+          - ipv6.disable=1
     isoSchematic:
       customization:
         <<: *schematic_customization
