@@ -209,6 +209,8 @@ spec:
       grafanaOperator: *grafana_operator
     grafana:
       enabled: false
+    kube-state-metrics:
+      fullnameOverride: kube-state-metrics
     coreDns:
       # This is handled by the coredns deployments
       enabled: false
@@ -237,7 +239,7 @@ spec:
                     kyverno.home.arpa/reload: "true"
               - op: add
                 path: /spec/commonName
-                value: victoria-metrics-operator
+                value: VictoriaMetrics operator
               # Remove the:
               # * DNS name without root domain
               - op: remove
