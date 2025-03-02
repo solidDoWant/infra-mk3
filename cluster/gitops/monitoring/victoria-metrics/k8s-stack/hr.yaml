@@ -255,6 +255,8 @@ spec:
             matchLabels:
               app.kubernetes.io/name: kube-state-metrics
           whenUnsatisfiable: DoNotSchedule
+    prometheus-node-exporter:
+      fullnameOverride: prometheus-node-exporter
     coreDns:
       # This is handled by the coredns deployments
       enabled: false
