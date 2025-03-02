@@ -60,11 +60,13 @@ spec:
         spec:
           instanceSelector:
             matchLabels:
+              dashboards: null
               grafana.home.arpa/instance: grafana
     external:
       grafana:
         # This is passed to alert rules for links to the Grafana dashboard
         host: grafana.${SECRET_PUBLIC_DOMAIN_NAME}
+        forceDeployDatasource: true
     vmsingle:
       enabled: false
     vmcluster:
