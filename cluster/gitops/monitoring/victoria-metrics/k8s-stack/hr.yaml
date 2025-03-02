@@ -21,11 +21,11 @@ spec:
           name: victoria-metrics-license-key
           key: licenseKey
     victoria-metrics-operator:
+      fullnameOverride: victoria-metrics-operator
       crds:
         enabled: false
         plain: false
       operator:
-        fullnameOverride: victoria-metrics-operator
         # Delete the VM version of prom resources if the prom resources are deleted
         enable_converter_ownership: true
       replicaCount: 2
