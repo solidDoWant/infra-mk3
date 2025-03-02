@@ -114,8 +114,7 @@ spec:
               - name: victoria-metrics-license-service-serving-cert
                 mountPath: /etc/ssl/certs/tls.crt
                 subPath: tls.crt
-        vminsert: &cluster_storage_component
-          <<: *ha_component
+        vmselect: &cluster_storage_component
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
             tag: v1.112.0-enterprise-cluster
@@ -124,19 +123,6 @@ spec:
           # hpa:
           #   minReplicas: 2
           #   maxReplicas: 5
-          topologySpreadConstraints:
-            - maxSkew: 1 # Skew of 1 allows for rolling updates
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: vminsert
-              whenUnsatisfiable: DoNotSchedule
-          # This is outrageously high but I'd like to get the data in first so that I can
-          # more easily tell which labels I can drop
-          extraArgs:
-            maxLabelsPerTimeseries: "150"
-        vmselect:
-          <<: *cluster_storage_component
           # Cache storage. Not critical. Docs suggest a small (single-digit GB) amount.
           # Because it's small and needs to be fast, I'm putting it on a memory-backed
           # temporary volume.
@@ -153,6 +139,19 @@ spec:
                 matchLabels:
                   app.kubernetes.io/name: vmselect
               whenUnsatisfiable: DoNotSchedule
+        vminsert:
+          <<: *cluster_storage_component
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: vminsert
+              whenUnsatisfiable: DoNotSchedule
+          # This is outrageously high but I'd like to get the data in first so that I can
+          # more easily tell which labels I can drop
+          extraArgs:
+            maxLabelsPerTimeseries: "150"
         vmstorage:
           <<: *cluster_storage_component
           # This must be set to at least three for high availability. Data must always
