@@ -107,7 +107,7 @@ spec:
                       path: tls.crt
             volumeMounts:
               - name: victoria-metrics-license-service-serving-cert
-                mountPath: /etc/ssl/certs
+                mountPath: /etc/ssl/certs/tls.crt
                 subPath: tls.crt
         vminsert: &cluster_storage_component
           <<: *ha_component
