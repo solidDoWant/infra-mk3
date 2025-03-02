@@ -322,11 +322,25 @@ spec:
           discoveryRole: service
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
+    kubelet:
+      vmScrape:
+        spec:
+          relabelConfigs:
+            # This is the same as the chart default, but it explicitly excludes NFD node labels,
+            # and talos extension labels. These don't really provide any value, and they cause
+            # cardinality to explode.
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(?!feature_node|extensions_talos_dev)(.+)
+            - sourceLabels: [__metrics_path__]
+              targetLabel: metrics_path
+            - targetLabel: job
+              replacement: kubelet
     coreDns:
       # This is handled by the coredns deployments
       enabled: false
   postRenderers:
     # Fix the webhook certificate to meet reasonable standards
+    # The added fields will not be needed upon next release
     - kustomize:
         patches:
           - patch: |
