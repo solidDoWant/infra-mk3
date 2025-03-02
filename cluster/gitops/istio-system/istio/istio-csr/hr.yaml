@@ -51,8 +51,7 @@ spec:
             podAffinityTerm:
               labelSelector:
                 matchLabels:
-                  app.kubernetes.io/instance: istio
-                  app.kubernetes.io/component: istiod
+                  app.kubernetes.io/instance: istio-istiod
               topologyKey: kubernetes.io/hostname
   postRenderers:
     # Mark the deployment/its pods as system critical

@@ -33,9 +33,6 @@ spec:
         PILOT_ENABLE_ALPHA_GATEWAY_API: "true"
       deploymentLabels:
         patches.flux.home.arpa/deployment.ignore-replicas: "true"
-      podLabels:
-        # app.kubernetes.io/instance: istio # This changed, TODO figure out what it changed to
-        app.kubernetes.io/component: istiod
       # Try to schedule on nodes that already have istio services running
       affinity:
         podAffinity:
@@ -50,15 +47,14 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/instance: istio
+                    app.kubernetes.io/instance: istio-istiod
                 topologyKey: kubernetes.io/hostname
       topologySpreadConstraints:
         - maxSkew: 1 # Skew of 1 allows for rolling updates
           topologyKey: kubernetes.io/hostname
           labelSelector:
             matchLabels:
-              app.kubernetes.io/instance: istio
-              app.kubernetes.io/component: istiod
+              app.kubernetes.io/instance: istio-istiod
           whenUnsatisfiable: DoNotSchedule
     global:
       caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
