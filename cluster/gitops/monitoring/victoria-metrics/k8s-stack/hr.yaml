@@ -268,7 +268,7 @@ spec:
         extraArgs:
           # This is because cilium is exporting a ton of metrics, largely due to some pods making IPv6 requests which are unsupported on my network.
           # TODO find the pods and fix them
-          promscrape.maxScrapeSize: 16MiB
+          promscrape.maxScrapeSize: 32MiB
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
