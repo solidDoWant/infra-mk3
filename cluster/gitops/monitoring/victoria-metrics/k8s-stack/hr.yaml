@@ -255,6 +255,15 @@ spec:
             matchLabels:
               app.kubernetes.io/name: kube-state-metrics
           whenUnsatisfiable: DoNotSchedule
+      vmScrape:
+        spec:
+          endpoints:
+            - port: http
+              honorLabels: true
+              metricRelabelConfigs:
+                - action: labeldrop
+                  regex: (uid|container_id|image_id|instance)
+          jobLabel: app.kubernetes.io/name
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
     coreDns:
