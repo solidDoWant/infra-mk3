@@ -24,7 +24,8 @@ spec:
       matches:
         - path:
             type: PathPrefix
-            value: /select/0/prometheus/vmui
+            # API access needed for dashboards
+            value: /select/0/prometheus
     - backendRefs: *ref
       matches:
         - path:
