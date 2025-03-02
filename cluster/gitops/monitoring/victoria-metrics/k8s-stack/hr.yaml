@@ -97,6 +97,18 @@ spec:
             # If these components fail then there will be no notification that something is going wrong
             priorityClassName: system-cluster-critical
             # topologySpreadConstraints: # TODO
+            volumes:
+              - name: victoria-metrics-license-service-serving-cert
+                secret:
+                  secretName: victoria-metrics-license-service-serving-cert
+                  defaultMode: 0440
+                  items:
+                    - key: tls.crt
+                      path: tls.crt
+            volumeMounts:
+              - name: victoria-metrics-license-service-serving-cert
+                mountPath: /etc/ssl/certs
+                subPath: tls.crt
         vminsert: &cluster_storage_component
           <<: *ha_component
           # TODO this will take som tuning and requires historic metrics to get right
