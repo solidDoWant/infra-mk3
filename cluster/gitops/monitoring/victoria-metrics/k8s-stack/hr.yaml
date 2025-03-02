@@ -35,14 +35,12 @@ spec:
         enabled: true
         minAvailable: 1
       topologySpreadConstraints:
-        # TODO
-        # - maxSkew: 1 # Skew of 1 allows for rolling updates
-        #   topologyKey: kubernetes.io/hostname
-        #   labelSelector:
-        #     matchLabels:
-        #       app.kubernetes.io/component: controller
-        #       app.kubernetes.io/instance: *app_name
-        #   whenUnsatisfiable: DoNotSchedule
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: victoria-metrics-operator
+          whenUnsatisfiable: DoNotSchedule
       admissionWebhooks:
         certManager:
           enabled: true
@@ -97,7 +95,13 @@ spec:
             useStrictSecurity: true
             # If these components fail then there will be no notification that something is going wrong
             priorityClassName: system-cluster-critical
-            # topologySpreadConstraints: # TODO
+            topologySpreadConstraints:
+              - maxSkew: 1 # Skew of 1 allows for rolling updates
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: vmclusterlb-vmauth-balancer
+                whenUnsatisfiable: DoNotSchedule
             volumes:
               - name: victoria-metrics-license-service-serving-cert
                 secret:
@@ -120,7 +124,12 @@ spec:
           # hpa:
           #   minReplicas: 2
           #   maxReplicas: 5
-          # topologySpreadConstraints: # TODO
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: vminsert
           # This is outrageously high but I'd like to get the data in first so that I can
           # more easily tell which labels I can drop
           maxLabelsPerTimeseries: 150
@@ -135,7 +144,12 @@ spec:
               # memory limit.
               medium: Memory
               sizeLimit: 2Gi
-          # topologySpreadConstraints: # TODO
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: vmselect
         vmstorage:
           <<: *cluster_storage_component
           # This must be set to at least three for high availability. Data must always
@@ -169,18 +183,12 @@ spec:
           extraArgs:
             downsampling.period: 30d:1m,180d:30m,1y:1h,2y:4h,5y:12h,10y:1d
             # retentionFilter: # TODO set retention filters for specific low value, high volume metrics
-          # TODO remove this, this is just for the first deployment so that I don't have to deal with recreating
-          # statefulset pods/PVCs when updating the TSC
-          podMetadata:
-            labels:
-              one-off-vmstorage-tsc: "true"
-          # TODO
           topologySpreadConstraints:
             - maxSkew: 1 # Skew of 1 allows for rolling updates
               topologyKey: kubernetes.io/hostname
               labelSelector:
                 matchLabels:
-                  one-off-vmstorage-tsc: "true"
+                  app.kubernetes.io/name: vmstorage
               whenUnsatisfiable: DoNotSchedule
           # vmBackup: # TODO maybe. Metrics are not critical to back up.
         # ingress: # TODO HTTPRoute. Might put vmgateway in front.
@@ -200,7 +208,12 @@ spec:
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
         ############# ha_component #############
-        # topologySpreadConstraints: # TODO
+        topologySpreadConstraints:
+          - maxSkew: 1 # Skew of 1 allows for rolling updates
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: vmalertmanager
         externalURL: https://alertmanager.${SECRET_PUBLIC_DOMAIN_NAME}
         # Upstream alertmanager storage requirements and usage is really poorly documented.
         # Based on https://groups.google.com/g/prometheus-developers/c/KQ5UbAbaYnU, it looks
@@ -234,12 +247,24 @@ spec:
         # TODO verify that:
         # * The remote read and write endpoints are correct, pointing to requestsLoadBalancer and vmagent. Looks like write may point to agent but read does not.
         # * The notification URLs are correct (maybe use DNS service discovery)
+        topologySpreadConstraints:
+          - maxSkew: 1 # Skew of 1 allows for rolling updates
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: vmalert
       # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     vmagent:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
         <<: *ha_component
         # TODO verify that this targets requestsLoadBalancer
+        topologySpreadConstraints:
+          - maxSkew: 1 # Skew of 1 allows for rolling updates
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: vmagent
       # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     defaultDatasources:
       grafanaOperator: *grafana_operator
