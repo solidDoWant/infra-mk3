@@ -199,7 +199,6 @@ spec:
                   app.kubernetes.io/name: vmstorage
               whenUnsatisfiable: DoNotSchedule
           # vmBackup: # TODO maybe. Metrics are not critical to back up.
-        # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     alertmanager:
       spec:
         ############# ha_component #############
@@ -247,7 +246,6 @@ spec:
               volumeMode: Filesystem
       # config: # TODO
       # TODO discord receiver(s). Send different priority and/or labeled alerts to different channels, with different notification settings.
-      # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     # vmagent and vmalert instances point at the wrong service, but there isn't an easy workaround for this.
     # They should point at the vmclusterlb instance instead of vmselect and vminsert directly. For details, see
     # https://github.com/VictoriaMetrics/helm-charts/issues/2024
@@ -263,7 +261,6 @@ spec:
               matchLabels:
                 app.kubernetes.io/name: vmalert
             whenUnsatisfiable: DoNotSchedule
-      # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     vmagent:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
@@ -275,7 +272,6 @@ spec:
               matchLabels:
                 app.kubernetes.io/name: vmagent
             whenUnsatisfiable: DoNotSchedule
-      # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     defaultDatasources:
       grafanaOperator: *grafana_operator
     grafana:
