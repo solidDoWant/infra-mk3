@@ -83,6 +83,9 @@ spec:
         requestsLoadBalancer:
           enabled: true
           spec: &ha_component
+            image:
+              # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
+              tag: v1.112.0-enterprise
             hostAliases: &host_aliases
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
@@ -164,7 +167,21 @@ spec:
         # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     alertmanager:
       spec:
-        <<: *ha_component
+        ############# ha_component #############
+        # The ha_component anchor currently requires image.tag to be set, but it shouldn't be here
+        # Remove this block once the linked issue is fixed
+        hostAliases:
+          - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+            hostnames:
+              - license.victoriametrics.com
+        podDisruptionBudget:
+          minAvailable: 1
+        replicaCount: 2
+        useStrictSecurity: true
+        # If these components fail then there will be no notification that something is going wrong
+        priorityClassName: system-cluster-critical
+        ############# ha_component #############
+        # topologySpreadConstraints: # TODO
         externalURL: https://alertmanager.${SECRET_PUBLIC_DOMAIN_NAME}
         # Upstream alertmanager storage requirements and usage is really poorly documented.
         # Based on https://groups.google.com/g/prometheus-developers/c/KQ5UbAbaYnU, it looks
