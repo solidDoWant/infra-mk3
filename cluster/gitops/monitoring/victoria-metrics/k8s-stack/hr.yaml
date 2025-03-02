@@ -67,7 +67,6 @@ spec:
     vmsingle:
       enabled: false
     vmcluster:
-      # TODO verify that -dedup.minScrapeInterval is the same on both storage and select nodes
       enabled: true
       spec:
         # This can be large because downsampling is reducing the amount of data stored.
@@ -244,14 +243,14 @@ spec:
       # config: # TODO
       # TODO discord receiver(s). Send different priority and/or labeled alerts to different channels, with different notification settings.
       # ingress: # TODO HTTPRoute. Might put vmgateway in front.
+    # vmagent and vmalert instances point at the wrong service, but there isn't an easy workaround for this.
+    # They should point at the vmclusterlb instance instead of vmselect and vminsert directly. For details, see
+    # https://github.com/VictoriaMetrics/helm-charts/issues/2024
     vmalert:
       # Must be set when using multiple vminsert instances (which is the case when using a cluster)
       remoteWriteVMAgent: true
       spec:
         <<: *ha_component
-        # TODO verify that:
-        # * The remote read and write endpoints are correct, pointing to requestsLoadBalancer and vmagent. Looks like write may point to agent but read does not.
-        # * The notification URLs are correct (maybe use DNS service discovery)
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
@@ -264,7 +263,6 @@ spec:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
         <<: *ha_component
-        # TODO verify that this targets requestsLoadBalancer
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
