@@ -244,8 +244,9 @@ spec:
               # * DNS name without the svc or svc.cluster.local domains
               - op: remove
                 path: /spec/dnsNames/0
+              # Because this is the second remove operation, the old second item is now the first
               - op: remove
-                path: /spec/dnsNames/1
+                path: /spec/dnsNames/0
             target:
               group: cert-manager.io
               version: v1
