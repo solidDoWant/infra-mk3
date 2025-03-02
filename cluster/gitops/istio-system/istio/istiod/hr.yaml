@@ -34,7 +34,7 @@ spec:
       deploymentLabels:
         patches.flux.home.arpa/deployment.ignore-replicas: "true"
       podLabels:
-        app.kubernetes.io/instance: istio
+        # app.kubernetes.io/instance: istio # This changed, TODO figure out what it changed to
         app.kubernetes.io/component: istiod
       # Try to schedule on nodes that already have istio services running
       affinity:
