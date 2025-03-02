@@ -132,7 +132,8 @@ spec:
                   app.kubernetes.io/name: vminsert
           # This is outrageously high but I'd like to get the data in first so that I can
           # more easily tell which labels I can drop
-          maxLabelsPerTimeseries: 150
+          extraArgs:
+            maxLabelsPerTimeseries: "150"
         vmselect:
           <<: *cluster_storage_component
           # Cache storage. Not critical. Docs suggest a small (single-digit GB) amount.
