@@ -13,10 +13,7 @@ spec:
     - name: internal-gateway
       namespace: networking
   rules:
-    - backendRefs: &ref
-        - name: vmselect-victoria-metrics-k8s-stack
-          port: 8481
-      matches:
+    - matches:
         - path:
             type: PathPrefix
             value: /
@@ -28,7 +25,9 @@ spec:
             path:
               type: ReplaceFullPath
               replaceFullPath: /vmui
-    - backendRefs: *ref
+    - backendRefs:
+        - name: vmselect-victoria-metrics-k8s-stack
+          port: 8481
       matches:
         - path:
             type: PathPrefix
@@ -48,10 +47,7 @@ spec:
     - name: internal-gateway
       namespace: networking
   rules:
-    - backendRefs: &ref
-        - name: vmalert-victoria-metrics-k8s-stack
-          port: 8481
-      matches:
+    - matches:
         - path:
             type: PathPrefix
             value: /
@@ -63,7 +59,9 @@ spec:
             path:
               type: ReplaceFullPath
               replaceFullPath: /vmalert
-    - backendRefs: *ref
+    - backendRefs:
+        - name: vmalert-victoria-metrics-k8s-stack
+          port: 8481
       matches:
         - path:
             type: PathPrefix
@@ -83,10 +81,7 @@ spec:
     - name: internal-gateway
       namespace: networking
   rules:
-    - backendRefs: &ref
-        - name: vmagent-victoria-metrics-k8s-stack
-          port: 8429
-      matches:
+    - matches:
         - path:
             type: PathPrefix
             value: /
@@ -98,7 +93,9 @@ spec:
             path:
               type: ReplaceFullPath
               replaceFullPath: /targets
-    - backendRefs: *ref
+    - backendRefs: &ref
+        - name: vmagent-victoria-metrics-k8s-stack
+          port: 8429
       matches:
         - path:
             type: PathPrefix
