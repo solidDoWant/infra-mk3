@@ -236,8 +236,6 @@ spec:
       spec:
         <<: *ha_component
         # TODO verify that this targets requestsLoadBalancer
-        arbitraryFSAccessThroughSMs:
-          deny: true
       # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     defaultDatasources:
       grafanaOperator: *grafana_operator
