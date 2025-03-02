@@ -130,6 +130,7 @@ spec:
               labelSelector:
                 matchLabels:
                   app.kubernetes.io/name: vminsert
+              whenUnsatisfiable: DoNotSchedule
           # This is outrageously high but I'd like to get the data in first so that I can
           # more easily tell which labels I can drop
           extraArgs:
@@ -151,6 +152,7 @@ spec:
               labelSelector:
                 matchLabels:
                   app.kubernetes.io/name: vmselect
+              whenUnsatisfiable: DoNotSchedule
         vmstorage:
           <<: *cluster_storage_component
           # This must be set to at least three for high availability. Data must always
@@ -215,6 +217,7 @@ spec:
             labelSelector:
               matchLabels:
                 app.kubernetes.io/name: vmalertmanager
+            whenUnsatisfiable: DoNotSchedule
         externalURL: https://alertmanager.${SECRET_PUBLIC_DOMAIN_NAME}
         # Upstream alertmanager storage requirements and usage is really poorly documented.
         # Based on https://groups.google.com/g/prometheus-developers/c/KQ5UbAbaYnU, it looks
@@ -254,6 +257,7 @@ spec:
             labelSelector:
               matchLabels:
                 app.kubernetes.io/name: vmalert
+            whenUnsatisfiable: DoNotSchedule
       # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     vmagent:
       # TODO check each instance to verify that they're all scraping the same targets
@@ -266,6 +270,7 @@ spec:
             labelSelector:
               matchLabels:
                 app.kubernetes.io/name: vmagent
+            whenUnsatisfiable: DoNotSchedule
       # ingress: # TODO HTTPRoute. Might put vmgateway in front.
     defaultDatasources:
       grafanaOperator: *grafana_operator
