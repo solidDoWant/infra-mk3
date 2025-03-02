@@ -13,6 +13,18 @@ spec:
     - name: internal-gateway
       namespace: networking
   rules:
+    - backendRefs: &ref
+        - name: vmselect-victoria-metrics-k8s-stack
+          port: 8481
+      matches:
+        - path:
+            type: PathPrefix
+            value: /select/0/vmui
+    - backendRefs: *ref
+      matches:
+        - path:
+            type: PathPrefix
+            value: /favicon.ico
     - matches:
         - path:
             type: PathPrefix
@@ -24,14 +36,7 @@ spec:
             statusCode: 301
             path:
               type: ReplaceFullPath
-              replaceFullPath: /vmui
-    - backendRefs:
-        - name: vmselect-victoria-metrics-k8s-stack
-          port: 8481
-      matches:
-        - path:
-            type: PathPrefix
-            value: /vmui
+              replaceFullPath: /select/0/vmui
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
 apiVersion: gateway.networking.k8s.io/v1
@@ -47,6 +52,13 @@ spec:
     - name: internal-gateway
       namespace: networking
   rules:
+    - backendRefs:
+        - name: vmalert-victoria-metrics-k8s-stack
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /vmalert
     - matches:
         - path:
             type: PathPrefix
@@ -59,13 +71,6 @@ spec:
             path:
               type: ReplaceFullPath
               replaceFullPath: /vmalert
-    - backendRefs:
-        - name: vmalert-victoria-metrics-k8s-stack
-          port: 8481
-      matches:
-        - path:
-            type: PathPrefix
-            value: /vmalert
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
 apiVersion: gateway.networking.k8s.io/v1
@@ -81,18 +86,6 @@ spec:
     - name: internal-gateway
       namespace: networking
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      filters:
-        - type: RequestRedirect
-          requestRedirect:
-            scheme: https
-            statusCode: 301
-            path:
-              type: ReplaceFullPath
-              replaceFullPath: /targets
     - backendRefs: &ref
         - name: vmagent-victoria-metrics-k8s-stack
           port: 8429
@@ -105,6 +98,28 @@ spec:
         - path:
             type: PathPrefix
             value: /service-discovery
+    - backendRefs: *ref
+      matches:
+        - path:
+            type: PathPrefix
+            value: /bootstrap.min.css
+    - backendRefs: *ref
+      matches:
+        - path:
+            type: PathPrefix
+            value: /favicon.ico
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /targets
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
 apiVersion: gateway.networking.k8s.io/v1
