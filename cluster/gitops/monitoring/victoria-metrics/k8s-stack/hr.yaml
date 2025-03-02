@@ -265,6 +265,13 @@ spec:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
         <<: *ha_component
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 1000m
+          limits:
+            memory: 2Gi
+            cpu: 2000m
         extraArgs:
           # This is because cilium is exporting a ton of metrics, largely due to some pods making IPv6 requests which are unsupported on my network.
           # TODO find the pods and fix them
