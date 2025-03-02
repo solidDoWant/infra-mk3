@@ -141,6 +141,13 @@ spec:
               whenUnsatisfiable: DoNotSchedule
         vminsert:
           <<: *ha_component
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 1500m
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
             tag: v1.112.0-enterprise-cluster
