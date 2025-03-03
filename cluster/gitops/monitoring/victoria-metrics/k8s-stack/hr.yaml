@@ -348,12 +348,14 @@ spec:
         spec:
           relabelConfigs:
             # This is the same as the chart default, but it explicitly excludes NFD node labels,
-            # and talos extension labels. These don't really provide any value, and they cause
-            # cardinality to explode.
+            # and talos extension labels, and some others. These don't really provide any value,
+            # and they cause cardinality to explode.
             - action: labelmap
               regex: __meta_kubernetes_node_label_(.+)
             - action: labeldrop
-              regex: (feature_node|extensions_talos_dev).*
+              regex: (feature_node|extensions_talos_dev|beta_kubernetes|plan_upgrade_cattle_io|openebs_io|katacontainers_io).*
+            - action: labeldrop
+              regex: .*home_arpa.*
             - sourceLabels: [__metrics_path__]
               targetLabel: metrics_path
             - targetLabel: job
