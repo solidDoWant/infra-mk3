@@ -9,6 +9,7 @@ resources:
   - ./grafana.yaml
   - ./httproute.yaml
   - ./pdb.yaml
+  - ./service-monitor.yaml
 configMapGenerator:
   - name: configmap-dashboard-provider-config
     files:
