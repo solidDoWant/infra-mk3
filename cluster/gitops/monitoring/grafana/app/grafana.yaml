@@ -223,3 +223,7 @@ spec:
                       name: grafana-admin-password
                       key: adminPassword
               securityContext: *container_security_context
+  service:
+    metadata:
+      labels:
+        app.kubernetes.io/name: grafana-app
