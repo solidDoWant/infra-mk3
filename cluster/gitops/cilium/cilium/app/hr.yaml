@@ -27,7 +27,7 @@ spec:
           metricRelabelings:
             - action: drop
               regex: ICMPv6
-              source_labels:
+              sourceLabels:
                 - protocol
       relay:
         prometheus:
