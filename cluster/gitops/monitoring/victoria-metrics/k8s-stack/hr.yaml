@@ -329,6 +329,17 @@ spec:
         selector:
           k8s-app: kube-controller-manager
           component: ~
+      vmScrape: &control_plane_scrape_config
+        spec:
+          endpoints:
+            - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+              port: http-metrics
+              scheme: https
+              tlsConfig:
+                # TODO pin these certs or generate them all from the same root CA.
+                # These appear to be generated for each separate node, and aren't
+                # rooted by the talsecret values.
+                insecureSkipVerify: true
     kubelet:
       vmScrape:
         spec:
@@ -370,6 +381,7 @@ spec:
         selector:
           k8s-app: kube-scheduler
           component: ~
+      vmScrape: *control_plane_scrape_config
   postRenderers:
     # Fix the webhook certificate to meet reasonable standards
     # The added fields will not be needed upon next release
