@@ -1,0 +1,11 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: image-rendering-service
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  grafanaCom:
+    # https://grafana.com/grafana/dashboards/12203-grafana-image-rendering-service/
+    id: 12203
