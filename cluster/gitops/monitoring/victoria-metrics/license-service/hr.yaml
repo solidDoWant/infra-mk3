@@ -34,10 +34,10 @@ spec:
             resources:
               requests:
                 memory: 128Mi
-                cpu: 1m
+                cpu: 10m
               limits:
                 memory: 128Mi
-                cpu: 10m
+                cpu: 100m
             ports:
               - containerPort: 443
                 name: http
