@@ -957,6 +957,31 @@
                               - network: (self)
               loop: "{{ network.physical | dict2items }}"
               when: item.value.firewall.allow_firewall_dns_responses | default(false)
+              # This is useless and IPv6 is disabled pretty much everywhere, and it creates more logs and metrics
+            - name: Block ICMPv6
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: block
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet6
+                        - statetype: keep state
+                        - descr: Block ICMPv6
+                        - direction: in
+                        - quick: "1"
+                        - protocol: ipv6-icmp
+                        - category: ICMP
+                        - source:
+                            _:
+                              - any: "1"
+                        - destination:
+                            _:
+                              - any: "1"
+              loop: "{{ network.physical | dict2items }}"
     - name: Configure WAN failover
       block:
         - name: Configure gateways
