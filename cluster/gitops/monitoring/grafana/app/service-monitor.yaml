@@ -6,7 +6,7 @@ spec:
   endpoints:
     - interval: 1m
       path: /metrics
-      port: metrics
+      port: grafana
       scrapeTimeout: 10s
   jobLabel: grafana-deployment
   selector:
