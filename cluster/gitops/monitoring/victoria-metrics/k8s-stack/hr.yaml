@@ -324,6 +324,10 @@ spec:
           discoveryRole: service
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
+    kubeControllerManager:
+      service:
+        selector:
+          k8s-app: kube-controller-manager
     kubelet:
       vmScrape:
         spec:
@@ -340,6 +344,24 @@ spec:
     coreDns:
       # This is handled by the coredns deployments
       enabled: false
+    kubeEtcd:
+      service:
+        selector:
+          # This is a workaround for targeting etcd instance on all control planes.
+          # Because etcd does not run in a pod, it cannot be directly targeted via a service.
+          # Instead, the service must select pods that run on the same nodes as the etcd instances,
+          # and also have host networking enabled. The controller manager and scheduler are good
+          # choices because they meet these requirements.
+          k8s-app: kube-controller-manager
+        # This port does not require authentication, and only serves metrics. TODO build automation
+        # to pull in the etcd certs via talosctl, which can be called via pods with a Talos service account.
+        # Then the normal, authenticated 2379 port can be used. Or even better, move the root CA out
+        # of the cluster (probably into a HSM), and issue these certs with it.
+        targetPort: 2381
+    kubeScheduler:
+      service:
+        selector:
+          k8s-app: kube-scheduler
   postRenderers:
     # Fix the webhook certificate to meet reasonable standards
     # The added fields will not be needed upon next release
