@@ -24,6 +24,12 @@ spec:
       metrics:
         serviceMonitor:
           enabled: true
+        metricRelabelings:
+          # This action is VM-specific
+          - action: drop_if_contains
+            target_label: protocol
+            source_labels:
+              - ICMPv6
       relay:
         prometheus:
           serviceMonitor:
