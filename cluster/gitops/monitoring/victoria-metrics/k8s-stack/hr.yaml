@@ -360,6 +360,15 @@ spec:
         # Then the normal, authenticated 2379 port can be used. Or even better, move the root CA out
         # of the cluster (probably into a HSM), and issue these certs with it.
         targetPort: 2381
+      vmScrape:
+        spec:
+          jobLabel: jobLabel
+          namespaceSelector:
+            matchNames:
+              - kube-system
+          endpoints:
+            - port: http-metrics
+              scheme: http
     kubeScheduler:
       service:
         selector:
