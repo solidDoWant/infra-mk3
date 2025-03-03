@@ -328,6 +328,7 @@ spec:
       service:
         selector:
           k8s-app: kube-controller-manager
+          component: ~
     kubelet:
       vmScrape:
         spec:
@@ -353,6 +354,7 @@ spec:
           # and also have host networking enabled. The controller manager and scheduler are good
           # choices because they meet these requirements.
           k8s-app: kube-controller-manager
+          component: ~
         # This port does not require authentication, and only serves metrics. TODO build automation
         # to pull in the etcd certs via talosctl, which can be called via pods with a Talos service account.
         # Then the normal, authenticated 2379 port can be used. Or even better, move the root CA out
@@ -362,6 +364,7 @@ spec:
       service:
         selector:
           k8s-app: kube-scheduler
+          component: ~
   postRenderers:
     # Fix the webhook certificate to meet reasonable standards
     # The added fields will not be needed upon next release
