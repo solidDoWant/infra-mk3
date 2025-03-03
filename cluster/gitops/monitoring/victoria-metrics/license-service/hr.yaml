@@ -40,11 +40,12 @@ spec:
                 cpu: 100m
             ports:
               - containerPort: 443
-                name: http
+                name: https
             probes:
               liveness: &probe
                 enabled: true
                 type: AUTO
+                port: https
                 path: /api/v1/verify
               readiness: *probe
             securityContext: &security_context
@@ -72,6 +73,7 @@ spec:
             probes:
               liveness: &probe
                 enabled: true
+                port: metrics
                 type: HTTP
                 path: /metrics
               readiness: *probe
