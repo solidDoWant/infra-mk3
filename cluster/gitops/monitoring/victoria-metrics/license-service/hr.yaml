@@ -47,12 +47,35 @@ spec:
                 type: AUTO
                 path: /api/v1/verify
               readiness: *probe
-            securityContext:
+            securityContext: &security_context
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
               capabilities:
                 drop:
                   - ALL
+          metrics:
+            image:
+              repository: ghcr.io/nginx/nginx-prometheus-exporter
+              tag: 1.4.1
+            args:
+              - --nginx.scrape-uri=http://localhost:8080/stub_status
+            resources:
+              requests:
+                memory: 64Mi
+                cpu: 10m
+              limits:
+                memory: 64Mi
+                cpu: 100m
+            ports:
+              - containerPort: 9113
+                name: metrics
+            probes:
+              liveness: &probe
+                enabled: true
+                type: HTTP
+                path: /metrics
+              readiness: *probe
+            securityContext: *security_context
         pod:
           securityContext:
             runAsUser: 1000
@@ -77,6 +100,19 @@ spec:
           http:
             port: 443
             protocol: HTTPS
+          metrics:
+            port: 9113
+            protocol: HTTP
+    serviceMonitor:
+      victoria-metrics-license-service:
+        enabled: true
+        serviceName: "{{ .Release.Name }}"
+        endpoints:
+          - port: metrics
+            scheme: http
+            path: /metrics
+            interval: 1m
+            scrapeTimeout: 10s
     persistence:
       serving-cert:
         type: secret
@@ -110,6 +146,8 @@ spec:
               log_format request_data escape=json '$remote_addr - $remote_user [$time_local] '
                                 '"$request" $status $bytes_sent '
                                 '"$http_referrer" "$http_user_agent" "$request_body"';
+              
+              # Application
               server {
                 listen 443 ssl;
                 server_name license.victoriametrics.com;
@@ -124,6 +162,15 @@ spec:
                   access_log /dev/stdout request_data;
 
                   return 200;
+                }
+              }
+
+              # Info for metrics sidecar
+              server {
+                listen 8080;
+
+                location /stub_status {
+                  stub_status;
                 }
               }
 
