@@ -341,6 +341,9 @@ spec:
                 # rooted by the talsecret values.
                 insecureSkipVerify: true
     kubelet:
+      vmScrapes:
+        kubelet:
+          enabled: true
       vmScrape:
         spec:
           relabelConfigs:
@@ -348,7 +351,9 @@ spec:
             # and talos extension labels. These don't really provide any value, and they cause
             # cardinality to explode.
             - action: labelmap
-              regex: __meta_kubernetes_node_label_(?!feature_node|extensions_talos_dev)(.+)
+              regex: __meta_kubernetes_node_label_(.+)
+            - action: labeldrop
+              regex: (feature_node|extensions_talos_dev).*
             - sourceLabels: [__metrics_path__]
               targetLabel: metrics_path
             - targetLabel: job
