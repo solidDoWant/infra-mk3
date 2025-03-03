@@ -84,7 +84,7 @@ spec:
             image:
               # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
               tag: v1.112.0-enterprise
-            hostAliases: &host_aliases
+            hostAliases:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
                   - license.victoriametrics.com
@@ -360,7 +360,7 @@ spec:
             - action: labelmap
               regex: __meta_kubernetes_node_label_(.+)
             - action: labeldrop
-              regex: (feature_node|extensions_talos_dev|beta_kubernetes|plan_upgrade_cattle_io|openebs_io|katacontainers_io).*
+              regex: (feature_node|extensions_talos_dev|beta_kubernetes|plan_upgrade_cattle_io|openebs_io|katacontainers_io|topology_rook_io_).*
             - action: labeldrop
               regex: .*home_arpa.*
             - sourceLabels: [__metrics_path__]
