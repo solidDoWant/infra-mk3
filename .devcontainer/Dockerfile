@@ -17,6 +17,8 @@ RUN mkdir -pv /tmp/debs && \
     curl -fsSL -o /tmp/debs/sops.deb "https://github.com/getsops/sops/releases/download/v3.9.0/sops_3.9.0_${PRETTY_ARCH}.deb" && \
     # Teleport
     curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_17.0.3_${PRETTY_ARCH}.deb" && \
+    # jsonnet
+    curl -fsSL -o /tmp/debs/jsonnet.deb "https://github.com/google/go-jsonnet/releases/download/v0.20.0/jsonnet-go_0.20.0_${KERNEL}_${PRETTY_ARCH}.deb" && \
     dpkg -i /tmp/debs/*.deb && \
     rm -rvf /tmp/debs
 
@@ -117,6 +119,13 @@ RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/cmtool
+
+# jsonnet-builder
+RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
+    curl -fsSL -o /usr/local/bin/jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.6.0/jb-${KERNEL}-${PRETTY_ARCH}" && \
+    chmod +x /usr/local/bin/jb
+
 
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
