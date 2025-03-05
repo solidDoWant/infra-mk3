@@ -117,11 +117,13 @@ spec:
           <<: *ha_component
           resources:
             requests:
-              memory: 1Gi
+              memory: 2Gi
               cpu: 250m
             limits:
-              memory: 1Gi
+              memory: 2Gi
               cpu: 1000m
+          extraArgs:
+            memory.allowedPercent:
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
             tag: v1.112.0-enterprise-cluster
@@ -362,7 +364,6 @@ spec:
                 - action: drop
                   source_labels: [mountpoint]
                   regex: "/var/lib/kubelet/pods.+"
-
     kubeControllerManager:
       service:
         selector:
