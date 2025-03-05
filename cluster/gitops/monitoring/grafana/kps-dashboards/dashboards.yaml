@@ -1,0 +1,169 @@
+# cspell:words apiserver persistentvolumesusage
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: grafana-overview
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: grafana-overview.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: apiserver
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: apiserver.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: k8s-resources-cluster
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: k8s-resources-cluster.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: k8s-resources-namespace
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: k8s-resources-namespace.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: k8s-resources-workloads-namespace
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: k8s-resources-workloads-namespace.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: k8s-resources-node
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: k8s-resources-node.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: k8s-resources-pod
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: k8s-resources-pod.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: k8s-resources-workload
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: k8s-resources-workload.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cluster-total
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: cluster-total.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: namespace-by-pod
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: namespace-by-pod.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: namespace-by-workload
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: namespace-by-workload.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: pod-total
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: pod-total.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: workload-total
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: workload-total.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: persistentvolumesusage
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-cluster-total
+    key: persistentvolumesusage.json
