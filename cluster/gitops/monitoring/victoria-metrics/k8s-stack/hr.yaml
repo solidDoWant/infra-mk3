@@ -356,7 +356,7 @@ spec:
                   target_label: pod
                   # This is uses VM-specific features.
                   # Helm is templating this which is why `printf` is needed
-                  replacement: '{{ printf "{{service}}-{{__meta_kubernetes_node_name}}" }}'
+                  replacement: '{{ printf "{{service}}-{{__meta_kubernetes_pod_node_name}}" }}'
               # Chart default values
               metricRelabelConfigs:
                 - action: drop
