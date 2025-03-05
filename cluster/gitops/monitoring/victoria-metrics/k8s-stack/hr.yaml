@@ -335,6 +335,32 @@ spec:
           discoveryRole: service
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
+      vmScrape:
+        spec:
+          endpoints:
+            - port: metrics
+              relabelConfigs:
+                # These is set at the target level rather than the metric level,
+                # so it should be replaced once here instead of on every single metric.
+                # Replace the instance name (something like 10.3.1.1:9100) with the node name
+                # (something like talos-k8s-mixed-01).
+                - source_labels:
+                    - __meta_kubernetes_pod_node_name
+                  action: replace
+                  target_label: instance
+                # Rename the pod label metrics. This causes churn every time the pods are restarted.
+                # There should always be a 1:1 mapping between a pod and a node, so this label is redundant.
+                # However, it could still be useful for "meta" queries, like the number of metrics exported
+                # by each pod.
+                - action: replace
+                  target_label: pod
+                  replacement: "{{service}}-{{__meta_kubernetes_node_name}}"
+              # Chart default values
+              metricRelabelConfigs:
+                - action: drop
+                  source_labels: [mountpoint]
+                  regex: "/var/lib/kubelet/pods.+"
+
     kubeControllerManager:
       service:
         selector:
