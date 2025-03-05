@@ -9,7 +9,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-grafana-overview
     key: grafana-overview.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -21,7 +21,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-apiserver
     key: apiserver.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -33,7 +33,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-k8s-resources-cluster
     key: k8s-resources-cluster.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -45,7 +45,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-k8s-resources-namespace
     key: k8s-resources-namespace.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -57,7 +57,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-k8s-resources-workloads-namespace
     key: k8s-resources-workloads-namespace.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -69,7 +69,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-k8s-resources-node
     key: k8s-resources-node.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -81,7 +81,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-k8s-resources-pod
     key: k8s-resources-pod.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -93,7 +93,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-k8s-resources-workload
     key: k8s-resources-workload.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -117,7 +117,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-namespace-by-pod
     key: namespace-by-pod.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -129,7 +129,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-namespace-by-workload
     key: namespace-by-workload.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -141,7 +141,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-pod-total
     key: pod-total.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -153,7 +153,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-workload-total
     key: workload-total.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -165,5 +165,5 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   configMapRef:
-    name: grafana-dashboard-cluster-total
+    name: grafana-dashboard-persistentvolumesusage
     key: persistentvolumesusage.json
