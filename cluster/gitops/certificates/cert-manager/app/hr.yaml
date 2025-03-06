@@ -40,6 +40,12 @@ spec:
     prometheus:
       servicemonitor:
         enabled: true
+        endpointAdditionalProperties:
+          # This adds a "9402" valued label to all metrics, which is also included
+          # in the instance metric. This is useless, so drop it.
+          relabelings:
+            - action: labeldrop
+              regex: endpoint
     # Prefer placing cert-manager pods _of different components_ on the same
     # node, but force pods _of the same component_ onto separate nodes.
     affinity: &affinity_rules
