@@ -329,6 +329,42 @@ spec:
             matchLabels:
               app.kubernetes.io/name: kube-state-metrics
           whenUnsatisfiable: DoNotSchedule
+      customResourceState:
+        enabled: true
+        config:
+          # See https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/extend/customresourcestate-metrics.md
+          kind: CustomResourceStateMetrics
+          spec:
+            resources:
+              - groupVersionKind:
+                  group: cert-manager.io
+                  kind: certificates
+                  version: v1
+                labelsFromPath:
+                  name:
+                    - metadata
+                    - name
+                  namespace:
+                    - metadata
+                    - namespace
+                metrics:
+                  - name: certificate_issuance_timestamp_seconds
+                    help: Certificate issuance timestamp in seconds from Unix Epoch time
+                    each:
+                      type: Gauge
+                      gauge:
+                        path:
+                          - status
+                          - notBefore
+      rbac:
+        extraRules:
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - certificates
+            verbs:
+              - list
+              - watch
       vmScrape:
         spec:
           # This is a special case because multiple replicas (should)
