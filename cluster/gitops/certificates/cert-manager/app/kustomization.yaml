@@ -8,6 +8,6 @@ resources:
 configMapGenerator:
   - name: certificate-manager-dashboard
     files:
-      - certificate-manager.yaml=./dashboard.yaml
+      - dashboard.json=./dashboard.json
 configurations:
   - ./hr-values-from-cm-transformer.yaml
