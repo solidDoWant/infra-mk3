@@ -1,0 +1,16 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: infinity
+spec:
+  datasource:
+    type: yesoreyeram-infinity-datasource
+    name: Infinity
+    access: proxy
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  plugins:
+    - name: yesoreyeram-infinity-datasource
+      version: 2.12.2
