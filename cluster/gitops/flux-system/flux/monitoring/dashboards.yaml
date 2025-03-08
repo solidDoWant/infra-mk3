@@ -8,7 +8,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://github.com/fluxcd/flux2-monitoring-example/blob/e5ce1a5de2c11f0d5e02876fe167552a891bac6f/monitoring/configs/dashboards/cluster.json
+  url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/e5ce1a5de2c11f0d5e02876fe167552a891bac6f/monitoring/configs/dashboards/cluster.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
@@ -19,7 +19,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://github.com/fluxcd/flux2-monitoring-example/blob/e5ce1a5de2c11f0d5e02876fe167552a891bac6f/monitoring/configs/dashboards/control-plane.json
+  url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/e5ce1a5de2c11f0d5e02876fe167552a891bac6f/monitoring/configs/dashboards/control-plane.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
@@ -30,4 +30,4 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://github.com/fluxcd/flux2-monitoring-example/blob/e5ce1a5de2c11f0d5e02876fe167552a891bac6f/monitoring/configs/dashboards/logs.json
+  url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/e5ce1a5de2c11f0d5e02876fe167552a891bac6f/monitoring/configs/dashboards/logs.json
