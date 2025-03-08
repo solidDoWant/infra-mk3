@@ -29,7 +29,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: infra-mk3
-  path: /cluster/gitops/flux-system/flux/metrics
+  path: /cluster/gitops/flux-system/flux/monitoring
   targetNamespace: flux-system
   dependsOn:
     - name: flux
