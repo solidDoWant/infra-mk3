@@ -4,6 +4,7 @@ kind: GrafanaDashboard
 metadata:
   name: certificate-manager
 spec:
+  allowCrossNamespaceImport: true
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
