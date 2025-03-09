@@ -342,6 +342,17 @@ spec:
           mountPath: /etc/kube-state-metrics/custom-resource-state-metrics/
       extraArgs:
         - --custom-resource-state-config-file=/etc/kube-state-metrics/custom-resource-state-metrics/config.yaml
+      rbac:
+        extraRules:
+          # This is needed when custom resource state metrics are enabled but the
+          # chart option for them is disabled
+          - apiGroups:
+              - apiextensions.k8s.io
+            resources:
+              - customresourcedefinitions
+            verbs:
+              - list
+              - watch
       vmScrape:
         spec:
           # This is a special case because multiple replicas (should)
