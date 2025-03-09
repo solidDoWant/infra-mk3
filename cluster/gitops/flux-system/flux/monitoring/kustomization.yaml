@@ -4,7 +4,7 @@ kind: Kustomization
 resources:
   - ./dashboards.yaml
   - ./ksm-rbac.yaml
-  - ./pod-monitor
+  - ./pod-monitor.yaml
 configMapGenerator:
   - name: flux-ksm-custom-metrics
     options:
