@@ -24,15 +24,21 @@ spec:
                 matchLabels:
                   kyverno.home.arpa/ksm-custom-resource-config: "true"
       preconditions:
-        # Only run if the contents have changed
-        # This ignores things like metadata and status changes
         any:
+          # Cover the case where the configmap is created or updated, AND
+          # the actual config value has changed.
+          # This ignores things like status and metadata changes.
           - key: '{{ request.object.data."config.yaml" || `{}` | to_string(@) }}'
             operator: NotEquals
-            value: '{{ request.object.data."config.yaml" || `{}` | to_string(@) }}'
+            value: '{{ request.oldObject.data."config.yaml" || `{}` | to_string(@) }}'
+          # Cover the case where a configmap is deleted
           - key: "{{ request.operation }}"
             operator: Equals
             value: DELETE
+          # Cover the case where the policy is updated
+          - key: "{{ request.object || `{}` | to_string(@) }}"
+            operator: Equals
+            value: "{}"
       context:
         # Get all configmaps that should be used to build the new configmap
         - name: ksm-configmaps
