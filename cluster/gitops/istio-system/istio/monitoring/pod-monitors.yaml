@@ -32,8 +32,6 @@ spec:
   podMetricsEndpoints:
     - interval: 15s
       port: metrics
-  podTargetLabels:
-    - app
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
