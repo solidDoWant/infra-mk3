@@ -58,6 +58,11 @@ spec:
             name: ksm-custom-resource-config
             namespace: monitoring
         patchStrategicMerge:
+          metadata:
+            labels:
+              # This is used to reload the deployment when the custom resource state
+              # metrics configuration changes.
+              kyverno.home.arpa/reload: "true"
           data:
             # Merge each separate CRSM configs into one
             config.yaml: |

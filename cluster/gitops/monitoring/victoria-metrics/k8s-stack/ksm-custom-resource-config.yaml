@@ -8,6 +8,9 @@ metadata:
     # but ignore changes to its contents.
     # The Kyverno policy must manage all aspects of this resource.
     kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+    # This is used to reload the deployment when the custom resource state
+    # metrics configuration changes.
+    kyverno.home.arpa/reload: "true"
 data:
   # This is just enough for KSM to not error when the configmap has not yet
   # been updated by Kyverno.

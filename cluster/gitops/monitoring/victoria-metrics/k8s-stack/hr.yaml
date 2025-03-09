@@ -492,18 +492,3 @@ spec:
               version: v1
               kind: Certificate
               name: victoria-metrics-operator-validation
-    # Add a Kyverno reload label to the KSM deployment. The chart does not
-    # currently support resource-specific labels.
-    # This is used to reload the deployment when the custom resource state
-    # metrics configuration changes.
-    - kustomize:
-        patches:
-          - patch: |
-              - op: add
-                path: /metadata/labels/kyverno.home.arpa~1reload
-                value: "true"
-            target:
-              group: apps
-              version: v1
-              kind: Deployment
-              name: kube-state-metrics
