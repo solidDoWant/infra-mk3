@@ -9,7 +9,6 @@ kind: ClusterPolicy
 metadata:
   name: ksm-custom-resource-aggregator
 spec:
-  mutateExistingOnPolicyUpdate: false
   rules:
     - name: ksm-custom-resource-aggregator
       match:
