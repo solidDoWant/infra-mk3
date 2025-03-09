@@ -30,6 +30,13 @@ spec:
       limits:
         memory: 128Mi
     external_services:
+      istio:
+        # If https://github.com/kiali/kiali/issues/8220 is addressed then this can be removed
+        gateway_api_classes:
+          - name: External gateways
+            class_name: external-gateways
+          - name: Internal gateways
+            class_name: internal-gateways
       prometheus:
         url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/select/0/prometheus/
       grafana:
