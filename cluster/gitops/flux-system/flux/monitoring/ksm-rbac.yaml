@@ -1,0 +1,50 @@
+---
+# Allow KSM to get Flux CR information
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-state-metrics:flux
+rules:
+  - &rule
+    apiGroups:
+      - source.toolkit.fluxcd.io
+    resources:
+      - gitrepositories
+      - buckets
+      - helmrepositories
+      - helmcharts
+      - ocirepositories
+    verbs:
+      - list
+      - watch
+  - <<: *rule
+    apiGroups:
+      - kustomize.toolkit.fluxcd.io
+    resources:
+      - kustomizations
+  - <<: *rule
+    apiGroups:
+      - helm.toolkit.fluxcd.io
+    resources:
+      - helmreleases
+  - <<: *rule
+    apiGroups:
+      - notification.toolkit.fluxcd.io
+    resources:
+      - alerts
+      - providers
+      - receivers
+---
+# Allow the KSM service account to assume the role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-state-metrics:flux
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics:flux
+subjects:
+  - kind: ServiceAccount
+    namespace: monitoring
+    name: kube-state-metrics
