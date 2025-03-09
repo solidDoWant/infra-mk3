@@ -50,18 +50,6 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: hubble-dns-overview
-spec:
-  instanceSelector:
-    matchLabels:
-      grafana.home.arpa/instance: grafana
-  configMapRef:
-    name: hubble-dns-namespace
-    key: hubble-dns-namespace.json
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDashboard
-metadata:
   name: hubble-l7-http-metrics
 spec:
   instanceSelector:
