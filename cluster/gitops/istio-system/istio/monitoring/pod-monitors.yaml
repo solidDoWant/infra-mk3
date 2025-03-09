@@ -11,7 +11,7 @@ spec:
   namespaceSelector:
     matchNames:
       - istio-system
-  endpoints:
+  podMetricsEndpoints:
     - interval: 15s
       port: http-monitoring
 ---
@@ -27,7 +27,7 @@ spec:
   namespaceSelector:
     matchNames:
       - istio-system
-  endpoints:
+  podMetricsEndpoints:
     - interval: 15s
       port: metrics
 ---
@@ -43,6 +43,6 @@ spec:
   namespaceSelector:
     matchNames:
       - istio-system
-  endpoints:
+  podMetricsEndpoints:
     - interval: 15s
       port: ztunnel-stats
