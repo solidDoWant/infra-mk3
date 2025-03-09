@@ -23,6 +23,15 @@ spec:
     server:
       web_fqdn: kiali.${SECRET_PUBLIC_DOMAIN_NAME}
       web_root: /
+    deployment:
+      replicas: 2
+      topology_spread_constraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: kiali
+          whenUnsatisfiable: DoNotSchedule
     resources:
       requests:
         cpu: 10m
