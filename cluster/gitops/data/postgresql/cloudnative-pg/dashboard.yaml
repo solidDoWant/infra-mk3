@@ -1,0 +1,13 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cnpg
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    key: cnp.json
+    name: cnpg-grafana-dashboard

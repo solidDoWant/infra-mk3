@@ -29,6 +29,7 @@ spec:
       podMonitorEnabled: true
       grafanaDashboard:
         create: true
+        sidecarLabel: "" # Unset this and load via operator resource
   postRenderers:
     # Add topology spread constraints
     - kustomize:
