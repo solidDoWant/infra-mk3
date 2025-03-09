@@ -1,0 +1,48 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istiod
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: istiod
+  jobLabel: istiod
+  namespaceSelector:
+    matchNames:
+      - istio-system
+  endpoints:
+    - interval: 15s
+      port: http-monitoring
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-cni
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: istio-cni
+  jobLabel: istio-cni
+  namespaceSelector:
+    matchNames:
+      - istio-system
+  endpoints:
+    - interval: 15s
+      port: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ztunnel
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ztunnel
+  jobLabel: ztunnel
+  namespaceSelector:
+    matchNames:
+      - istio-system
+  endpoints:
+    - interval: 15s
+      port: ztunnel-stats
