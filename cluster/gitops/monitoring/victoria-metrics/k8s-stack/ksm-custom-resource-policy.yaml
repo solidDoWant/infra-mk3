@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
+# This Kyverno policy pulls in configmaps from all namespaces, with a specific,
+# label and uses them to build a new configmap. This new configmap is used by
+# kube-state-metrics as the configuration for exporting custom resource
+# metrics.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: ksm-custom-resource-aggregator
+spec:
+  mutateExistingOnPolicyUpdate: false
+  rules:
+    - name: ksm-custom-resource-aggregator
+      match:
+        any:
+          - resources:
+              kinds:
+                - ConfigMap
+              operations:
+                - CREATE
+                - UPDATE
+                - DELETE
+              selector:
+                matchLabels:
+                  kyverno.home.arpa/ksm-custom-resource-config: "true"
+      preconditions:
+        # Only run if the contents have changed
+        # This ignores things like metadata and status changes
+        any:
+          - key: '{{ request.object.data."config.yaml" || `{}` | to_string(@) }}'
+            operator: NotEquals
+            value: '{{ request.object.data."config.yaml" || `{}` | to_string(@) }}'
+          - key: "{{ request.operation }}"
+            operator: Equals
+            value: DELETE
+      context:
+        # Get all configmaps that should be used to build the new configmap
+        - name: ksm-configmaps
+          apiCall:
+            urlPath: /api/v1/configmaps?labelSelector=kyverno.home.arpa/ksm-custom-resource-config=true
+            jmesPath: items[].data."config.yaml"
+            default: "`[]`"
+      # The config value is parsed into a Go struct here:
+      # https://github.com/kubernetes/kube-state-metrics/blob/3d73ddbd099fa537f0eb21dbe9b8c455aea8fb27/pkg/customresourcestate/config.go#L178
+      # The struct that it is parsed into (not well documented) is here:
+      # https://github.com/kubernetes/kube-state-metrics/blob/3d73ddbd099fa537f0eb21dbe9b8c455aea8fb27/pkg/customresourcestate/config.go#L39
+      mutate:
+        mutateExistingOnPolicyUpdate: true
+        targets:
+          - apiVersion: v1
+            kind: ConfigMap
+            name: ksm-custom-resource-config
+            namespace: monitoring
+        patchStrategicMerge:
+          data:
+            # Merge each separate CRSM configs into one
+            config.yaml: |
+              kind: CustomResourceStateMetrics
+              spec:
+                resources: {{ "ksm-configmaps"[].parse_yaml(@)[].spec.resources[] }}

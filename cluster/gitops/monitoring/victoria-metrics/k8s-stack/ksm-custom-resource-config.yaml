@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ksm-custom-resource-config
+  labels:
+    # Allow Flux to deploy the configmap (ensuring that it exists),
+    # but ignore changes to its contents.
+    # The Kyverno policy must manage all aspects of this resource.
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+data:
+  # This is just enough for KSM to not error when the configmap has not yet
+  # been updated by Kyverno.
+  config.yaml: |
+    kind: CustomResourceStateMetrics
+    spec:
+      resources: []

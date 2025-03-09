@@ -329,42 +329,19 @@ spec:
             matchLabels:
               app.kubernetes.io/name: kube-state-metrics
           whenUnsatisfiable: DoNotSchedule
-      customResourceState:
-        enabled: true
-        config:
-          # See https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/extend/customresourcestate-metrics.md
-          kind: CustomResourceStateMetrics
-          spec:
-            resources:
-              - groupVersionKind:
-                  group: cert-manager.io
-                  kind: Certificate
-                  version: v1
-                labelsFromPath:
-                  name:
-                    - metadata
-                    - name
-                  namespace:
-                    - metadata
-                    - namespace
-                metrics:
-                  - name: certificate_issuance_timestamp_seconds
-                    help: Certificate issuance timestamp in seconds from Unix Epoch time
-                    each:
-                      type: Gauge
-                      gauge:
-                        path:
-                          - status
-                          - notBefore
-      rbac:
-        extraRules:
-          - apiGroups:
-              - cert-manager.io
-            resources:
-              - certificates
-            verbs:
-              - list
-              - watch
+      # The chart does not currently support loading these from a pre-existing
+      # configmap. The args and volumes are explicitly set instead.
+      # customResourceState:
+      #   enabled: true
+      volumes:
+        - name: &ksm_custom_resource_config ksm-custom-resource-config
+          configMap:
+            name: ksm-custom-resource-config
+      volumeMounts:
+        - name: *ksm_custom_resource_config
+          mountPath: /etc/kube-state-metrics/custom-resource-state-metrics/
+      extraArgs:
+        - --custom-resource-state-config-file=/etc/kube-state-metrics/custom-resource-state-metrics/config.yaml
       vmScrape:
         spec:
           # This is a special case because multiple replicas (should)
@@ -504,3 +481,18 @@ spec:
               version: v1
               kind: Certificate
               name: victoria-metrics-operator-validation
+    # Add a Kyverno reload label to the KSM deployment. The chart does not
+    # currently support resource-specific labels.
+    # This is used to reload the deployment when the custom resource state
+    # metrics configuration changes.
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /metadata/labels/kyverno.home.arpa~1reload
+                value: "true"
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: kube-state-metrics
