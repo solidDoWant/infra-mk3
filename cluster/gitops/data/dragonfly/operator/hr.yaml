@@ -38,3 +38,18 @@ spec:
         enabled: true
         matchLabels:
           grafana.home.arpa/instance: grafana
+  postRenderers:
+    # Remove "dashboards: grafana" from dashboard matcher
+    # Why do chart devs keep adding this label?? It cannot be removed with Helm
+    # (because Helm _still_ can't properly remove default keys from values files)
+    # and it breaks matching if the desired Grafana instance doesn't have the
+    # label.
+    - kustomize:
+        patches:
+          - patch: |
+              - op: remove
+                path: /spec/instanceSelector/matchLabels/dashboards
+            target:
+              group: grafana.integreatly.org
+              version: v1beta1
+              kind: GrafanaDashboard
