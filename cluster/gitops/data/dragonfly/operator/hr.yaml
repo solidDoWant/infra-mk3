@@ -11,7 +11,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: dragonfly-operator-charts
-      version: v1.1.8
+      version: v1.1.10
   values:
     replicaCount: 2
     rbacProxy:
@@ -22,9 +22,6 @@ spec:
         requests:
           memory: 96Mi
     manager:
-      # image:
-      #   repository: ghcr.io/soliddowant/dragonfly-operator
-      #   tag: v1.1.8-hc.fix.1
       topologySpreadConstraints:
         - maxSkew: 1 # Skew of 1 allows for rolling updates
           topologyKey: kubernetes.io/hostname
@@ -36,3 +33,8 @@ spec:
       enabled: true
     grafanaDashboard:
       enabled: true
+      folder: ~
+      grafanaOperator:
+        enabled: true
+        matchLabels:
+          grafana.home.arpa/instance: grafana
