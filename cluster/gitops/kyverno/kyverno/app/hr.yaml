@@ -13,6 +13,11 @@ spec:
         name: kyverno-charts
       version: 3.3.3
   values:
+    features:
+      logging:
+        verbosity: 6
+      omitEvents:
+        eventTypes: []
     grafana:
       enabled: true
     admissionController: &controller_config
