@@ -11,7 +11,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: kyverno-charts
-      version: 3.3.3
+      version: 3.3.7
   values:
     features:
       logging:
@@ -74,6 +74,10 @@ spec:
         enabled: true
     backgroundController:
       <<: *controller_config
+      backgroundScan:
+        # TODO this may be too high... default value has changed upstream from 1h to 30s to 1h, back and forth.
+        # Shorter duration = more CPU usage, but changes are picked up faster.
+        backgroundScanInterval: 1m
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
