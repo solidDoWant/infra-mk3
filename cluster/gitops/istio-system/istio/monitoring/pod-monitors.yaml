@@ -14,6 +14,8 @@ spec:
   podMetricsEndpoints:
     - interval: 15s
       port: http-monitoring
+  podTargetLabels:
+    - app
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -30,6 +32,8 @@ spec:
   podMetricsEndpoints:
     - interval: 15s
       port: metrics
+  podTargetLabels:
+    - app
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -46,3 +50,5 @@ spec:
   podMetricsEndpoints:
     - interval: 15s
       port: ztunnel-stats
+  podTargetLabels:
+    - app
