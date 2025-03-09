@@ -2,12 +2,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ./certificate-request-policy-rbac.yaml
   - ./dashboard.yaml
-  - ./hr.yaml
 configMapGenerator:
   - name: certificate-manager-dashboard
     files:
       - dashboard.json=./dashboard.json
+  - name: certificate-manager-ksm-custom-metrics
+    options:
+      labels:
+        kyverno.home.arpa/ksm-custom-resource-config: "true"
+    files:
+      - config.yaml=./ksm-custom-metrics.yaml
 configurations:
   - ./hr-values-from-cm-transformer.yaml
