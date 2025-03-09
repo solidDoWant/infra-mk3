@@ -36,10 +36,10 @@ cni:
   # enableRouteMTUForCNIChaining: true
   # Needed for compatability with multus
   exclusive: false
-# TODO monitoring stack
 dashboards: &dashboards
   enabled: true
   namespace: cilium
+  label: "" # Remove the label, and use operator resources to load the dashboards.
 debug:
   enabled: true
 # Looks like the NIC on the ms-01 nodes does not support GRO :(
@@ -149,6 +149,7 @@ prometheus:
   enabled: true
 operator:
   rollOutPods: true
+  dashboards: *dashboards
 pmtuDiscovery:
   enabled: true
 rollOutCiliumPods: true
