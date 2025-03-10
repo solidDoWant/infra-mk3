@@ -34,7 +34,13 @@ spec:
     metrics:
       service:
         enabled: true
-    # topologySpreadConstraints:  # TODO
+    topologySpreadConstraints:
+      - maxSkew: 1 # Skew of 1 allows for rolling updates
+        topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: external-secrets-operator
+            app.kubernetes.io/name: external-secrets
     podDisruptionBudget:
       enabled: true
     webhook:
@@ -49,7 +55,14 @@ spec:
           issuerRef:
             name: security-intermediary-ca
           duration: 4h
-      # topologySpreadConstraints:  # TODO
+      topologySpreadConstraints:
+        - maxSkew: 1 # Skew of 1 allows for rolling updates
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: external-secrets-operator
+              app.kubernetes.io/name: external-secrets-webhook
+          whenUnsatisfiable: DoNotSchedule
       priorityClassName: system-cluster-critical
       podDisruptionBudget:
         enabled: true
