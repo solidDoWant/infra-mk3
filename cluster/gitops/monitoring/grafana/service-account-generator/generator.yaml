@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/CRDs-catalog/update-external-secret-crds-1/generators.external-secrets.io/clustergenerator_v1alpha1.json
+# TODO update schema URL once https://github.com/datreeio/CRDs-catalog/pull/481 merges
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: ClusterGenerator
+metadata:
+  name: grafana-service-account
+spec:
+  kind: Grafana
+  generator:
+    grafanaSpec:
+      auth:
+        basic:
+          username: admin
+          password:
+            name: grafana-admin-password
+            key: adminPassword
+      serviceAccount:
+        name:
+        role:
+      url: http://grafana-service.monitoring.svc:3000

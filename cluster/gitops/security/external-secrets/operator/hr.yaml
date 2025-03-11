@@ -41,6 +41,7 @@ spec:
           matchLabels:
             app.kubernetes.io/instance: external-secrets-operator
             app.kubernetes.io/name: external-secrets
+        whenUnsatisfiable: DoNotSchedule
     podDisruptionBudget:
       enabled: true
     webhook:
