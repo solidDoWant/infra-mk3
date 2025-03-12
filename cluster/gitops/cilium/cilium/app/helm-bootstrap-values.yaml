@@ -138,6 +138,8 @@ hubble:
                   - ERROR
           - name: all
             filePath: /var/run/cilium/hubble/logs/all.log
+            # This is the minimum needed for
+            # https://github.com/siegmund-heiss-ich/cilium-network-policy-generator
             fieldMask:
               - l4.TCP.source_port
               - l4.TCP.destination_port
@@ -152,7 +154,7 @@ hubble:
               - l7
 extraConfig:
   # There is not yet an option for this under the hubble config tree
-  hubble-export-file-compress: true
+  hubble-export-file-compress: "true"
 ipMasqAgent:
   enabled: false # TODO enable after bpf is re-enabled
   # enabled: true
