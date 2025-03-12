@@ -107,6 +107,52 @@ hubble:
       server:
         ipv6:
           enabled: false
+  export:
+    # Store up to 10GB worth of logs
+    # This can be tuned down once enough have been collected to generate netpols
+    fileMaxSizeMb: 1024
+    fileMaxBackups: 10
+    dynamic:
+      enabled: true
+      config:
+        createConfigMap: true
+        content:
+          - name: droppedAndErrored
+            # This is written to the host's disk and persisted across reboots
+            filePath: /var/run/cilium/hubble/logs/droppedAndErrored.log
+            fieldMask:
+              - time
+              - verdict
+              - IP.source
+              - IP.destination
+              - L4.source_port
+              - L4.destination_port
+              - source
+              - destination
+              - Type
+              - l7
+              - traffic_direction
+            includeFilters:
+              - verdict:
+                  - DROPPED
+                  - ERROR
+          - name: all
+            filePath: /var/run/cilium/hubble/logs/all.log
+            fieldMask:
+              - l4.TCP.source_port
+              - l4.TCP.destination_port
+              - l4.UDP.source_port
+              - l4.UDP.destination_port
+              - traffic_direction
+              - source.labels
+              - destination.labels
+              - verdict
+              - is_reply
+              - Type
+              - l7
+extraConfig:
+  # There is not yet an option for this under the hubble config tree
+  hubble-export-file-compress: true
 ipMasqAgent:
   enabled: false # TODO enable after bpf is re-enabled
   # enabled: true
