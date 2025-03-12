@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/cilium/cilium/refs/tags/v1.16.3/install/kubernetes/cilium/values.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cilium/cilium/refs/tags/v1.17.1/install/kubernetes/cilium/values.schema.json
 annotateK8sNode: true
 autoDirectNodeRoutes: true # Without this, requests will go through the firewall/router and have higher latency + cost
 bandwidthManager:
@@ -16,7 +16,7 @@ bpf:
   lbExternalClusterIP: true
   # This has caused multiple problems with:
   # * Path MTU discovery
-  # * Talos host DNS caching
+  # * Talos host DNS caching (https://github.com/cilium/cilium/pull/36852)
   # * Istio liveness probes (https://github.com/istio/istio/issues/52208)
   masquerade: false
   # masquerade: true # Enable eBPF for IP masquerading (SNAT)
