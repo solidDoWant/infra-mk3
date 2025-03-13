@@ -137,17 +137,24 @@ hubble:
                   - ERROR
           - name: all
             filePath: /var/run/cilium/hubble/logs/all.log
-            # This is the minimum needed for
-            # https://github.com/siegmund-heiss-ich/cilium-network-policy-generator
+            # This is the minimum needed for my policy generator
             fieldMask:
-              - l4
               - traffic_direction
+              - is_reply
+              - source.ID
+              - destination.ID
               - source.labels
               - destination.labels
-              - verdict
-              - is_reply
-              - Type
-              - l7
+              - IP.source
+              - IP.destination
+              - l4.ICMPv4
+              - l4.ICMPv6
+              - l4.TCP.source_port
+              - l4.TCP.destination_port
+              - l4.UDP.source_port
+              - l4.UDP.destination_port
+              - l4.SCTP.source_port
+              - l4.SCTP.destination_port
 extraConfig:
   # There is not yet an option for this under the hubble config tree
   # This will be available via `hubble.export.fileCompress` upon next release.
