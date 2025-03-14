@@ -1,0 +1,100 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+# cspell:words startupapicheck
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: certmanager
+# From https://cert-manager.io/docs/installation/best-practice/#network-requirements
+specs:
+  - description: cainjector
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/component: cainjector
+    ingress:
+      - &from_monitoring
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http-metrics
+                protocol: TCP
+    egress:
+      - &to_apiserver
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      - &to_dns_resolver
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+  - description: webhook
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/component: webhook
+    ingress:
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              # Webhook calls
+              - port: https
+                protocol: TCP
+              # Health check probes
+              - port: healthcheck
+                protocol: TCP
+      - *from_monitoring
+    egress:
+      - *to_apiserver
+      - *to_dns_resolver
+  - description: controller
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/component: controller
+    ingress:
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              # Health check probes
+              - port: healthcheck
+                protocol: TCP
+      - *from_monitoring
+    egress:
+      # Access to Cloudflare API, ACME providers, etc.
+      # TODO limit this further
+      - toCIDRSet:
+          - cidr: 0.0.0.0/8
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      - *to_apiserver
+      - *to_dns_resolver
+  - description: startupapicheck
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/component: startupapicheck
+    egress:
+      - *to_apiserver
+      - *to_dns_resolver
