@@ -26,6 +26,10 @@ specs:
               # Webhook calls
               - port: "10250"
                 protocol: TCP
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
               # Health check probes
               - port: "6060"
                 protocol: TCP
