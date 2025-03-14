@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: approver-policy
+specs:
+  - description: approver-policy
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: approver-policy
+    # TODO update ports when https://github.com/cert-manager/approver-policy/pull/599 is merged
+    ingress:
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9402"
+                protocol: TCP
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              # Webhook calls
+              - port: "10250"
+                protocol: TCP
+              # Health check probes
+              - port: "6060"
+                protocol: TCP
+    egress:
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
