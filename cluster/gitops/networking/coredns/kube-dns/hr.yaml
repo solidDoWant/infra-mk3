@@ -23,3 +23,17 @@ spec:
     prometheus:
       monitor:
         enabled: true
+  postRenderers:
+    # Add a label to the pods specifically that marks them as DNS resolvers
+    # for in-cluster resources. This is used by netpols for endpoint selection.
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/metadata/labels/endpoints.netpols.home.arpa~1cluster-dns
+                value: "true"
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: coredns-kube-dns
