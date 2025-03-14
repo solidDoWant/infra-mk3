@@ -1,0 +1,22 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: certmanager-cainjector
+spec:
+  description: cert-manager cainjector
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: cert-manager
+      app.kubernetes.io/component: cainjector
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            endpoints.netpols.home.arpa/metrics-scraper: "true"
+      toPorts:
+        - ports:
+            - port: http-metrics
+              protocol: TCP
+  egress:
+    - toEntities:
+        - kube-apiserver

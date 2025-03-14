@@ -305,6 +305,9 @@ spec:
           # Adding the same label on every single metric doesn't add any information
           - action: labeldrop
             regex: prometheus
+        podMetadata:
+          labels:
+            endpoints.netpols.home.arpa/metrics-scraper: "true"
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
