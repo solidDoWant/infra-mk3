@@ -1,0 +1,31 @@
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumCIDRGroup
+metadata:
+  name: unifi-aps
+spec:
+  externalCIDRs:
+    - 10.1.4.3/32
+---
+# From https://istio.io/latest/docs/ambient/install/platform-prerequisites/#cilium
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: unifi-controller-to-aps
+spec:
+  description: Only allow the UniFi controller to communicate with access points
+  enableDefaultDeny:
+    egress: false
+    ingress: false
+  endpointSelector:
+    matchExpressions:
+      - key: external.netpols.home.arpa/unifi-aps
+        operator: In
+        values:
+          - "true"
+  ingress:
+    - fromCIDRSet:
+        - cidrGroupRef: unifi-aps
+  egress:
+    - toCIDRSet:
+        - cidrGroupRef: unifi-aps
