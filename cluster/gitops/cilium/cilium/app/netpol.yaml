@@ -1,0 +1,108 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cilium
+specs:
+  # This uses host namespace networking, so netpols do not apply
+  # - description: cilium
+  # This uses host namespace networking, so netpols do not apply
+  # - description: cilium-operator
+  # This uses host namespace networking, so netpols do not apply
+  # - description: cilium-envoy
+  - description: hubble-ui
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: cilium
+        app.kubernetes.io/name: hubble-ui
+    egress:
+      # Access to Hubble flows
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/part-of: cilium
+              app.kubernetes.io/name: hubble-relay
+        toPorts:
+          - ports:
+              - port: "4245"
+                protocol: TCP
+      # k8s resource lookup
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # DNS resolution
+      - &to_dns_resolver
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+    ingress:
+      # Kubelet to webservice for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Gateway to webservice
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+  - description: hubble-relay
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: cilium
+        app.kubernetes.io/name: hubble-relay
+    egress:
+      - *to_dns_resolver
+      # Connection to the Hubble servers built in to the Cilium agents,
+      # which use host networking. The relay connects to all agents on
+      # all nodes, local and remote.
+      - toEntities:
+          - host
+          - remote-node
+        toPorts:
+          - ports:
+              - port: "4244"
+                protocol: TCP
+    ingress:
+      # Kubelet to webservice for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "4222"
+                protocol: TCP
+      # UI to GRPC server
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/part-of: cilium
+              app.kubernetes.io/name: hubble-ui
+        toPorts:
+          - ports:
+              - port: grpc
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: prometheus
+                protocol: TCP
