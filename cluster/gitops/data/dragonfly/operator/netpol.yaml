@@ -20,10 +20,17 @@ specs:
                 protocol: TCP
       # Instance management
       - toEndpoints:
-          - matchLabels:
-              io.kubernetes.pod.namespace: security
-              app.kubernetes.io/name: dragonfly
-              app.kubernetes.io/part-of: dragonfly
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - dragonfly
+              - key: app.kubernetes.io/part-of
+                operator: In
+                values:
+                  - dragonfly
         toPorts:
           - ports:
               - port: admin
