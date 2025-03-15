@@ -29,7 +29,7 @@ spec:
             matchLabels:
               app.kubernetes.io/instance: *app_name
           whenUnsatisfiable: DoNotSchedule
-    serviceManager:
+    serviceMonitor:
       enabled: true
     grafanaDashboard:
       enabled: true
