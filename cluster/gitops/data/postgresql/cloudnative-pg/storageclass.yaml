@@ -3,6 +3,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: postgres
+allowVolumeExpansion: true
 parameters:
   poolname: ${LOCAL_ZFS_POOL_NAME}/openebs/postgres
   fstype: zfs
