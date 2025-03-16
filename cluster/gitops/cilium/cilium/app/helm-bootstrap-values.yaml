@@ -15,9 +15,9 @@ bpf:
   # datapathMode: netkit
   lbExternalClusterIP: true
   # This has caused multiple problems with:
-  # * Path MTU discovery
-  # * Talos host DNS caching (https://github.com/cilium/cilium/pull/36852)
-  # * Istio liveness probes (https://github.com/istio/istio/issues/52208)
+  # * Path MTU discovery (https://github.com/cilium/cilium/issues/33844) - fixed now?
+  # * Talos host DNS caching (https://github.com/cilium/cilium/pull/36852) - not fixed
+  # * Istio liveness probes (https://github.com/istio/istio/issues/52208) - maybe fixed after binding link-local address to loopback interface
   masquerade: false
   # masquerade: true # Enable eBPF for IP masquerading (SNAT)
   preallocateMaps: true # Trade increased memory usage for latency reduction
