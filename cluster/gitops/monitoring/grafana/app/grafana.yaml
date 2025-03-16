@@ -91,6 +91,9 @@ spec:
     spec:
       replicas: 2
       template:
+        metadata:
+          labels:
+            endpoints.netpols.home.arpa/email-sender: "true"
         spec:
           # The volumes for dashboards and provisioning config
           volumes:

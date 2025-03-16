@@ -59,6 +59,8 @@ spec:
                 drop:
                   - ALL
         pod:
+          labels:
+            endpoints.netpols.home.arpa/email-sender: "true"
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
