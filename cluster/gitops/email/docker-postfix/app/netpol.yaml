@@ -33,7 +33,7 @@ specs:
               dns:
                 # Despite the service only forwarding email, it still
                 # performs lookups on all recipient address domains.
-                - matchName: "*"
+                - matchPattern: "*"
     ingress:
       # Kubelet to exporter for healthcheck
       - fromEntities:
