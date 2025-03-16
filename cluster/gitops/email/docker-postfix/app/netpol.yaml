@@ -16,7 +16,7 @@ specs:
           - matchName: ${SECRET_EMAIL_PROVIDER_HOSTNAME}
       - toPorts:
           - ports:
-              - port: "${SECRET_EMAIL_PROVIDER_PORT}"
+              - port: "'${SECRET_EMAIL_PROVIDER_PORT}'" # Needs to be wrapped twice because when the file is parsed, the first set of quotes are removed, and then the substitution occurs.
                 protocol: TCP
       # DNS resolution
       - toEndpoints:
