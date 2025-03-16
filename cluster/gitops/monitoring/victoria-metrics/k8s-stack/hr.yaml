@@ -80,7 +80,7 @@ spec:
         # determine the best backend to send traffic to than Cilium
         requestsLoadBalancer:
           enabled: true
-          spec: &ha_component
+          spec:
             image:
               # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
               tag: v1.112.0-enterprise
@@ -88,13 +88,13 @@ spec:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
                   - license.victoriametrics.com
+            podMetadata:
+              labels:
+                endpoints.netpols.home.arpa/time-series-supplier: "true"
             podDisruptionBudget:
               minAvailable: 1
             replicaCount: 2
             useStrictSecurity: true
-            podMetadata:
-              labels:
-                endpoints.netpols.home.arpa/time-series-supplier: "true"
             # If these components fail then there will be no notification that something is going wrong
             priorityClassName: system-cluster-critical
             topologySpreadConstraints:
@@ -117,7 +117,6 @@ spec:
                 mountPath: /etc/ssl/certs/tls.crt
                 subPath: tls.crt
         vmselect:
-          <<: *ha_component
           resources:
             requests:
               memory: 2Gi
@@ -130,6 +129,16 @@ spec:
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
             tag: v1.112.0-enterprise-cluster
+          hostAliases:
+            - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+              hostnames:
+                - license.victoriametrics.com
+          podDisruptionBudget:
+            minAvailable: 1
+          replicaCount: 2
+          useStrictSecurity: true
+          # If these components fail then there will be no notification that something is going wrong
+          priorityClassName: system-cluster-critical
           # TODO this will take som tuning and requires historic metrics to get right
           # Probably isn't needed at all given that two replicas min will be running
           # hpa:
@@ -151,8 +160,19 @@ spec:
                 matchLabels:
                   app.kubernetes.io/name: vmselect
               whenUnsatisfiable: DoNotSchedule
+          volumes:
+            - name: victoria-metrics-license-service-serving-cert
+              secret:
+                secretName: victoria-metrics-license-service-serving-cert
+                defaultMode: 0440
+                items:
+                  - key: tls.crt
+                    path: tls.crt
+          volumeMounts:
+            - name: victoria-metrics-license-service-serving-cert
+              mountPath: /etc/ssl/certs/tls.crt
+              subPath: tls.crt
         vminsert:
-          <<: *ha_component
           resources:
             requests:
               memory: 1Gi
@@ -163,6 +183,16 @@ spec:
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
             tag: v1.112.0-enterprise-cluster
+          hostAliases:
+            - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+              hostnames:
+                - license.victoriametrics.com
+          podDisruptionBudget:
+            minAvailable: 1
+          replicaCount: 2
+          useStrictSecurity: true
+          # If these components fail then there will be no notification that something is going wrong
+          priorityClassName: system-cluster-critical
           topologySpreadConstraints:
             - maxSkew: 1 # Skew of 1 allows for rolling updates
               topologyKey: kubernetes.io/hostname
@@ -170,12 +200,23 @@ spec:
                 matchLabels:
                   app.kubernetes.io/name: vminsert
               whenUnsatisfiable: DoNotSchedule
+          volumes:
+            - name: victoria-metrics-license-service-serving-cert
+              secret:
+                secretName: victoria-metrics-license-service-serving-cert
+                defaultMode: 0440
+                items:
+                  - key: tls.crt
+                    path: tls.crt
+          volumeMounts:
+            - name: victoria-metrics-license-service-serving-cert
+              mountPath: /etc/ssl/certs/tls.crt
+              subPath: tls.crt
           # This is outrageously high but I'd like to get the data in first so that I can
           # more easily tell which labels I can drop
           extraArgs:
             maxLabelsPerTimeseries: "150"
         vmstorage:
-          <<: *ha_component
           resources:
             requests:
               memory: 4Gi
@@ -186,6 +227,13 @@ spec:
           image:
             # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
             tag: v1.112.0-enterprise-cluster
+          hostAliases:
+            - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+              hostnames:
+                - license.victoriametrics.com
+          useStrictSecurity: true
+          # If these components fail then there will be no notification that something is going wrong
+          priorityClassName: system-cluster-critical
           # This must be set to at least three for high availability. Data must always
           # be accessible, even when at most one replica is unavailable. This means that
           # new data must be recorded at least twice, otherwise, when the only replica
@@ -226,12 +274,21 @@ spec:
                 matchLabels:
                   app.kubernetes.io/name: vmstorage
               whenUnsatisfiable: DoNotSchedule
+          volumes:
+            - name: victoria-metrics-license-service-serving-cert
+              secret:
+                secretName: victoria-metrics-license-service-serving-cert
+                defaultMode: 0440
+                items:
+                  - key: tls.crt
+                    path: tls.crt
+          volumeMounts:
+            - name: victoria-metrics-license-service-serving-cert
+              mountPath: /etc/ssl/certs/tls.crt
+              subPath: tls.crt
           # vmBackup: # TODO maybe. Metrics are not critical to back up.
     alertmanager:
       spec:
-        ############# ha_component #############
-        # The ha_component anchor currently requires image.tag to be set, but it shouldn't be here
-        # Remove this block once the linked issue is fixed
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
             hostnames:
@@ -242,7 +299,6 @@ spec:
         useStrictSecurity: true
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
-        ############# ha_component #############
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
@@ -281,7 +337,19 @@ spec:
       # Must be set when using multiple vminsert instances (which is the case when using a cluster)
       remoteWriteVMAgent: true
       spec:
-        <<: *ha_component
+        image:
+          # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
+          tag: v1.112.0-enterprise
+        hostAliases:
+          - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+            hostnames:
+              - license.victoriametrics.com
+        podDisruptionBudget:
+          minAvailable: 1
+        replicaCount: 2
+        useStrictSecurity: true
+        # If these components fail then there will be no notification that something is going wrong
+        priorityClassName: system-cluster-critical
         extraArgs:
           external.url: https://vm-alerts.${SECRET_PUBLIC_DOMAIN_NAME}
         topologySpreadConstraints:
@@ -291,10 +359,34 @@ spec:
               matchLabels:
                 app.kubernetes.io/name: vmalert
             whenUnsatisfiable: DoNotSchedule
+        volumes:
+          - name: victoria-metrics-license-service-serving-cert
+            secret:
+              secretName: victoria-metrics-license-service-serving-cert
+              defaultMode: 0440
+              items:
+                - key: tls.crt
+                  path: tls.crt
+        volumeMounts:
+          - name: victoria-metrics-license-service-serving-cert
+            mountPath: /etc/ssl/certs/tls.crt
+            subPath: tls.crt
     vmagent:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
-        <<: *ha_component
+        image:
+          # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
+          tag: v1.112.0-enterprise
+        hostAliases:
+          - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+            hostnames:
+              - license.victoriametrics.com
+        podDisruptionBudget:
+          minAvailable: 1
+        replicaCount: 2
+        useStrictSecurity: true
+        # If these components fail then there will be no notification that something is going wrong
+        priorityClassName: system-cluster-critical
         resources:
           requests:
             memory: 2Gi
@@ -320,6 +412,18 @@ spec:
               matchLabels:
                 app.kubernetes.io/name: vmagent
             whenUnsatisfiable: DoNotSchedule
+        volumes:
+          - name: victoria-metrics-license-service-serving-cert
+            secret:
+              secretName: victoria-metrics-license-service-serving-cert
+              defaultMode: 0440
+              items:
+                - key: tls.crt
+                  path: tls.crt
+        volumeMounts:
+          - name: victoria-metrics-license-service-serving-cert
+            mountPath: /etc/ssl/certs/tls.crt
+            subPath: tls.crt
     defaultDatasources:
       grafanaOperator: *grafana_operator
     grafana:
