@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cert-manager-istio-csr
+specs:
+  - description: cert-manager-istio-csr
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: cert-manager-istio-csr
+        app.kubernetes.io/instance: istio-csr
+    egress:
+      # k8s resource management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "6060"
+                protocol: TCP
+      # Incoming signing requests from Istio components
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/part-of: istio
+              app.kubernetes.io/name: istiod
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              gateway.istio.io/managed: istio.io-gateway-controller
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9402"
+                protocol: TCP
