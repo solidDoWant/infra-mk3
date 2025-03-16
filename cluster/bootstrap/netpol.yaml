@@ -1,0 +1,188 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: flux
+specs:
+  - description: source-controller
+    endpointSelector:
+      matchLabels:
+        app: source-controller
+    egress:
+      # Access to the Internet for downloading Helm charts, repo metadata, etc.
+      - toCIDRSet:
+          - cidr: 0.0.0.0/8
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        toPorts: &https_ports
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # DNS resolution
+      - &to_dns_resolver
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - &dns_resolver_ports
+            ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # k8s resource management
+      - &to_kube_apiserver
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # To notification controller
+      - toEndpoints:
+          - matchLabels:
+              app: notification-controller
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+    ingress:
+      # Communication with other flux components
+      - fromEndpoints:
+          - matchLabels:
+              app: kustomize-controller
+          - matchLabels:
+              app: helm-controller
+          - matchLabels:
+              app: notification-controller
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              # Liveness probe
+              - port: healthz
+                protocol: TCP
+              # Readiness probe
+              - port: http
+                protocol: TCP
+      # Metrics
+      - &from_metrics_scraper
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http-prom
+                protocol: TCP
+  - description: kustomize-controller
+    endpointSelector:
+      matchLabels:
+        app: kustomize-controller
+    egress:
+      # Access to download resources specified in kustomization files.
+      # This will usually be from GitHub, but could be from other sources.
+      - toFQDNs:
+          - matchName: github.com
+          - matchName: objects.githubusercontent.com
+          - matchName: raw.githubusercontent.com
+        toPorts: *https_ports
+      - <<: *to_dns_resolver
+        toPorts:
+          - <<: *dns_resolver_ports
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Communication with other flux components
+      - toEndpoints:
+          - matchLabels:
+              app: source-controller
+          - matchLabels:
+              app: notification-controller
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - *to_kube_apiserver
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: healthz
+                protocol: TCP
+      - *from_metrics_scraper
+  - description: helm-controller
+    endpointSelector:
+      matchLabels:
+        app: helm-controller
+    egress:
+      - *to_dns_resolver
+      # Communication with other flux components
+      - toEndpoints:
+          - matchLabels:
+              app: source-controller
+          - matchLabels:
+              app: notification-controller
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - *to_kube_apiserver
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: healthz
+                protocol: TCP
+      - *from_metrics_scraper
+  - description: notification-controller
+    endpointSelector:
+      matchLabels:
+        app: notification-controller
+    egress:
+      - *to_dns_resolver
+      - *to_kube_apiserver
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: healthz
+                protocol: TCP
+      # Communication with other flux components
+      - fromEndpoints:
+          - matchLabels:
+              app: source-controller
+          - matchLabels:
+              app: kustomize-controller
+          - matchLabels:
+              app: helm-controller
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Communication from external webhook callers
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: external-gateway
+        toPorts:
+          - ports:
+              - port: "15008" # Istio HBONE port
+                protocol: TCP
+      - *from_metrics_scraper
