@@ -24,6 +24,7 @@ spec:
     extraVolumes:
       - name: &secret_name upstream-relay-credentials
         secret:
+          defaultMode: 0440
           secretName: *secret_name
           items:
             - key: password
