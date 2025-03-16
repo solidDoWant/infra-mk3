@@ -14,10 +14,9 @@ specs:
       # Access to upstream relay
       - toFQDNs:
           - matchName: ${SECRET_EMAIL_PROVIDER_HOSTNAME}
-      - toPorts:
+        toPorts:
           - ports:
-              - port: >
-                  ${SECRET_EMAIL_PROVIDER_PORT}
+              - port: "587"
                 protocol: TCP
       # DNS resolution
       - toEndpoints:
