@@ -1,0 +1,114 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: istio-istiod
+specs:
+  - description: istiod
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: istio
+        app.kubernetes.io/name: istiod
+    egress:
+      # k8s resource management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http-debug
+                protocol: TCP
+      # Communication with the xDS API with components that integrate directly with Istio
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/part-of: istio
+              app.kubernetes.io/name: ztunnel
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              gateway.istio.io/managed: istio.io-gateway-controller
+        toPorts:
+          - ports:
+              - port: tls-xds
+                protocol: TCP
+              # This should be avoid if possible, as it's entirely plaintext.
+              # - port: grpc-xds
+              #   protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+          - matchLabels:
+              app.kubernetes.io/part-of: kiali
+              app.kubernetes.io/name: kiali
+        toPorts:
+          - ports:
+              - port: http-monitoring
+                protocol: TCP
+      # Webhook, called by the k8s API server
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: https-webhooks
+                protocol: TCP
+  - description: ztunnel
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: istio
+        app.kubernetes.io/name: ztunnel
+    egress:
+      # Control plane traffic
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/part-of: istio
+              app.kubernetes.io/name: istiod
+        toPorts:
+          - ports:
+              - port: tls-xds
+                protocol: TCP
+      # Cert issuance for workloads
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: cert-manager-istio-csr
+              app.kubernetes.io/instance: istio-csr
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "15021"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: ztunnel-stats
+                protocol: TCP
