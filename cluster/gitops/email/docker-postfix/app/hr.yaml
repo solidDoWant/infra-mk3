@@ -40,7 +40,7 @@ spec:
       general:
         ALLOWED_SENDER_DOMAINS: ${SECRET_PUBLIC_DOMAIN_NAME}
         LOG_FORMAT: json
-        RELAYHOST: ${SECRET_EMAIL_PROVIDER_HOSTNAME}:${SECRET_EMAIL_PROVIDER_PORT}
+        RELAYHOST: "${SECRET_EMAIL_PROVIDER_HOSTNAME}:${SECRET_EMAIL_PROVIDER_PORT}"
         # Provided via secret
         # RELAYHOST_USERNAME:
         RELAYHOST_PASSWORD_FILE: /etc/postfix/upstream-relay-credentials/password
@@ -49,6 +49,7 @@ spec:
         smtp_tls_security_level: encrypt
         myhostname: postfix
         message_size_limit: "104448" # 1MB
+        inet_protocols: ipv4
   valuesFrom:
     - kind: Secret
       name: upstream-relay-credentials
