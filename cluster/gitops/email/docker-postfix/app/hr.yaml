@@ -33,14 +33,15 @@ spec:
         mountPath: /etc/postfix/upstream-relay-credentials
         readOnly: true
     pod:
-      labels:
-        istio.io/dataplane-mode: ambient
+      # TODO enable this when migrating workloads to istio
+      # labels:
+      #   istio.io/dataplane-mode: ambient
     config:
       general:
         ALLOWED_SENDER_DOMAINS: ${SECRET_PUBLIC_DOMAIN_NAME}
         LOG_FORMAT: json
+        RELAYHOST: ${SECRET_EMAIL_PROVIDER_HOSTNAME}:${SECRET_EMAIL_PROVIDER_PORT}
         # Provided via secret
-        # RELAYHOST:
         # RELAYHOST_USERNAME:
         RELAYHOST_PASSWORD_FILE: /etc/postfix/upstream-relay-credentials/password
         SMTP_HEADER_CHECKS: "1"
@@ -49,10 +50,6 @@ spec:
         myhostname: postfix
         message_size_limit: "104448" # 1MB
   valuesFrom:
-    - kind: Secret
-      name: upstream-relay-credentials
-      valuesKey: host
-      targetPath: config.general.RELAYHOST
     - kind: Secret
       name: upstream-relay-credentials
       valuesKey: username
