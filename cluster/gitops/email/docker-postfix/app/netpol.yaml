@@ -31,7 +31,9 @@ specs:
                 protocol: TCP
             rules:
               dns:
-                - matchName: ${SECRET_EMAIL_PROVIDER_HOSTNAME}
+                # Despite the service only forwarding email, it still
+                # performs lookups on all recipient address domains.
+                - matchName: "*"
     ingress:
       # Kubelet to exporter for healthcheck
       - fromEntities:
