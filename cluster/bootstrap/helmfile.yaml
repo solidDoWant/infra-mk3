@@ -24,7 +24,7 @@ releases:
     namespace: cilium
     createNamespace: false # Handled by hook
     chart: cilium/cilium
-    version: 1.17.1
+    version: 1.17.2
     values:
       - ../gitops/cilium/cilium/app/helm-bootstrap-values.yaml
     # Until https://github.com/helm/helm/issues/3503#issuecomment-696712443 is addressed this will be required
