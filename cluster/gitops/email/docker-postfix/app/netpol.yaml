@@ -1,0 +1,64 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: docker-postfix
+specs:
+  - description: docker-postfix
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: mail
+        app.kubernetes.io/instance: docker-postfix
+    egress:
+      # Access to upstream relay
+      - toFQDNs:
+          - matchName: ${SECRET_EMAIL_PROVIDER_HOSTNAME}
+      - toPorts:
+          - ports:
+              - port: "${SECRET_EMAIL_PROVIDER_PORT}"
+                protocol: TCP
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchName: ${SECRET_EMAIL_PROVIDER_HOSTNAME}
+    ingress:
+      # Kubelet to exporter for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
+      # Incoming emails to forward
+      - fromEndpoints:
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/email-sender
+                operator: In
+                values:
+                  - "true"
+        toPorts:
+          - ports:
+              - port: smtp
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
