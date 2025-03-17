@@ -88,6 +88,7 @@ spec:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
                   - license.victoriametrics.com
+            # This will not work until https://github.com/VictoriaMetrics/operator/pull/1275 is merged and released
             podMetadata:
               labels:
                 endpoints.netpols.home.arpa/time-series-supplier: "true"
