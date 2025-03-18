@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: grafana-image-renderer
+specs:
+  - description: grafana-image-renderer
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: grafana-image-renderer
+        app.kubernetes.io/name: grafana-image-renderer
+    egress:
+      # Callbacks to Grafana
+      - toEndpoints:
+          - matchLabels:
+              app: grafana
+        toPorts:
+          - ports:
+              - port: grafana-http
+                protocol: TCP
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                # This is for request monitoring with Hubble.
+                # The image renderer calls "accounts.google.com" for some reason
+                # (chrome maybe?).
+                - matchPattern: "*" # TODO
+    ingress:
+      # Kubelet to exporter for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
+      # Web access
+      - fromEndpoints:
+          # Requests from Grafana
+          - matchLabels:
+              app: grafana
+          # Metrics
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+          # Callbacks from the image rendering service
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
