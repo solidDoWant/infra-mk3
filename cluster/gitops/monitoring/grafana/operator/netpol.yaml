@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: grafana-operator
+specs:
+  - description: grafana-operator
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: grafana-operator
+        app.kubernetes.io/name: grafana-operator
+    egress:
+      # Allow internet access for downloading resources like dashboards
+      - toFQDNs:
+          - matchName: grafana.com
+        #     - matchName: storage.googleapis.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Grafana access for configuration
+      - toEndpoints:
+          - matchLabels:
+              app: grafana
+        toPorts:
+          - ports:
+              - port: grafana-http
+                protocol: TCP
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                # This is for request monitoring with Hubble.
+                - matchPattern: "*"
+      # k8s resource management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet to exporter for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
