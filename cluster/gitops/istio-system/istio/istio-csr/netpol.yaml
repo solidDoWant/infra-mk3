@@ -32,6 +32,9 @@ specs:
               app.kubernetes.io/part-of: istio
               app.kubernetes.io/name: istiod
           - matchLabels:
+              app.kubernetes.io/part-of: istio
+              app.kubernetes.io/name: ztunnel
+          - matchLabels:
               io.kubernetes.pod.namespace: networking
               gateway.istio.io/managed: istio.io-gateway-controller
         toPorts:
