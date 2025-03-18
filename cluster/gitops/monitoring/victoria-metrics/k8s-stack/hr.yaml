@@ -406,6 +406,9 @@ spec:
         podMetadata:
           labels:
             endpoints.netpols.home.arpa/metrics-scraper: "true"
+            # This is a workaround for the hubble UI, which requires "prometheus" scrapers to be
+            # labeled like this, for filtering.
+            app: prometheus
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
