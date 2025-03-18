@@ -34,8 +34,9 @@ spec:
         mountPath: /etc/postfix/upstream-relay-credentials
         readOnly: true
     pod:
-      # TODO enable this when migrating workloads to istio
-      # labels:
+      labels:
+        endpoints.netpols.home.arpa/email-relay: "true"
+      #   TODO enable this when migrating workloads to istio
       #   istio.io/dataplane-mode: ambient
     config:
       general:
