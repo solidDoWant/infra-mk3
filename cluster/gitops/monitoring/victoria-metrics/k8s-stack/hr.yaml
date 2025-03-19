@@ -358,9 +358,9 @@ spec:
         # rather than the underlying r/w instances directly. This does not need
         # to target vmagent either, as multiple backing vmclusters are not used.
         remoteRead:
-          url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8428/select/0/prometheus
+          url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/select/0/prometheus
         remoteWrite:
-          url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8428/insert/0/prometheus
+          url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/insert/0/prometheus
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
