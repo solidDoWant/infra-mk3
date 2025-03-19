@@ -52,7 +52,6 @@ specs:
           # Metrics
           - matchLabels:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
-          # Callbacks from the image rendering service
         toPorts:
           - ports:
               - port: "8081"
