@@ -335,8 +335,6 @@ spec:
     # They should point at the vmclusterlb instance instead of vmselect and vminsert directly. For details, see
     # https://github.com/VictoriaMetrics/helm-charts/issues/2024
     vmalert:
-      # Must be set when using multiple vminsert instances (which is the case when using a cluster)
-      remoteWriteVMAgent: true
       spec:
         image:
           # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
@@ -353,6 +351,16 @@ spec:
         priorityClassName: system-cluster-critical
         extraArgs:
           external.url: https://vm-alerts.${SECRET_PUBLIC_DOMAIN_NAME}
+          # URLs do not contain anything sensitive, so they can be logged/displayed in UI
+          remoteRead.showURL: "true"
+          remoteWrite.showURL: "true"
+        # Send alert persistence and read it back from the application-aware LB,
+        # rather than the underlying r/w instances directly. This does not need
+        # to target vmagent either, as multiple backing vmclusters are not used.
+        remoteRead:
+          url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8428/select/0/prometheus
+        remoteWrite:
+          url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8428/insert/0/prometheus
         topologySpreadConstraints:
           - maxSkew: 1 # Skew of 1 allows for rolling updates
             topologyKey: kubernetes.io/hostname
@@ -407,7 +415,7 @@ spec:
           # The chart value does not match the architecture diagram here: https://docs.victoriametrics.com/cluster-victoriametrics/
           # or here: https://docs.victoriametrics.com/operator/resources/vmcluster/
           # Point this at the application-aware LB instead of the insert service directly.
-          - url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/insert/0/prometheus/api/v1/write
+          - url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/insert/0/prometheus/api/v1/write
         statefulMode:
         statefulStorage:
           # Temporarily store queued data when the process or pod is restarted.
