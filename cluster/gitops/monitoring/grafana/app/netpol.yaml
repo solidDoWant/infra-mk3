@@ -125,6 +125,14 @@ specs:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Services the embed dashboards
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/internal-dashboard-querier
+                operator: In
+                values:
+                  - "true"
           # Configuration via operator
           - matchLabels:
               app.kubernetes.io/instance: grafana-operator

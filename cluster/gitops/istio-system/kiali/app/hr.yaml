@@ -24,6 +24,9 @@ spec:
       web_fqdn: kiali.${SECRET_PUBLIC_DOMAIN_NAME}
       web_root: /
     deployment:
+      pod_labels:
+        endpoints.netpols.home.arpa/time-series-querier: "true"
+        endpoints.netpols.home.arpa/internal-dashboard-querier: "true"
       replicas: 2
       topology_spread_constraints:
         - maxSkew: 1 # Skew of 1 allows for rolling updates
