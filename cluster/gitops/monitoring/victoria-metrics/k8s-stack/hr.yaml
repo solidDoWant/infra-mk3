@@ -403,6 +403,11 @@ spec:
           # Adding the same label on every single metric doesn't add any information
           - action: labeldrop
             regex: prometheus
+        remoteWrite:
+          # The chart value does not match the architecture diagram here: https://docs.victoriametrics.com/cluster-victoriametrics/
+          # or here: https://docs.victoriametrics.com/operator/resources/vmcluster/
+          # Point this at the application-aware LB instead of the insert service directly.
+          - url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/insert/0/prometheus/api/v1/write
         podMetadata:
           labels:
             endpoints.netpols.home.arpa/metrics-scraper: "true"
