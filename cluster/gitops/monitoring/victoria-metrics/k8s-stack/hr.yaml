@@ -408,6 +408,21 @@ spec:
           # or here: https://docs.victoriametrics.com/operator/resources/vmcluster/
           # Point this at the application-aware LB instead of the insert service directly.
           - url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/insert/0/prometheus/api/v1/write
+        statefulMode:
+        statefulStorage:
+          # Temporarily store queued data when the process or pod is restarted.
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  # Not much storage is needed - just enough to store a few minutes of data.
+                  # 1Gi is _way_ more than is actually needed, but is still small enough to
+                  # not care about the overhead of overprovisioning.
+                  storage: 1Gi
+              # Avoid tying the pods to specific nodes with node-specific storage.
+              storageClassName: ssd-replicated-3x
         podMetadata:
           labels:
             endpoints.netpols.home.arpa/metrics-scraper: "true"
