@@ -12,11 +12,13 @@ specs:
     # Note: grafana will attempt to connect to the IP addresses of terminated instances upon startup,
     # resulting in blocked packets. This is a known issue and is not a security concern.
     egress:
-      # Allow internet access for plugin installation
-      # TODO build an image with plugins pre-installed so that this can be removed
       - toFQDNs:
+          # Allow internet access for plugin installation
+          # TODO build an image with plugins pre-installed so that this can be removed
           - matchName: grafana.com
           - matchName: storage.googleapis.com
+          # Download/use user "avatar" images
+          - matchName: secure.gravatar.com
         toPorts:
           - ports:
               - port: "443"
