@@ -1,0 +1,371 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: victoria-metrics-k8s-stack
+specs:
+  # VM operator resources
+  - description: victoria-metrics-operator
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+        app.kubernetes.io/name: victoria-metrics-operator
+    egress:
+      # k8s resource management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: probe
+                protocol: TCP
+      # Webhooks calls from the apiserver
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: webhook
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+  # VM instance resources
+  - description: vmagent
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vmagent
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      # Scraping access
+      # Agents need access to scrape basically all pods. Ports
+      # are not well-defined/standardized, so access to all ports
+      # must be allowed.
+      # Some packets will be blocked via the netpol rather than
+      # dropped, when a DNS response resolving to a terminated pod
+      # has been cached.
+      - toEntities:
+          - cluster
+        toPorts: &all_tcp_ports
+          - ports:
+              - port: "0"
+                protocol: TCP
+      # Access to cluster-external resources that should be scraped
+      - toCIDRSet:
+          - cidrGroupSelector:
+              matchLabels:
+                external.netpols.home.arpa/egress.metrics-scraping: "true"
+        toPorts: *all_tcp_ports
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # Access to the vmcluster load balancer for storing scraped metrics
+      - &to_vmcluster_lb
+        toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmclusterlb-vmauth-balancer
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Access to the license service
+      - &to_license_service
+        toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-license-service
+              app.kubernetes.io/name: victoria-metrics-license-service
+        toPorts:
+          - ports:
+              - port: https
+                protocol: TCP
+      # Access to the k8s API server for service discovery
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Webservice
+      - fromEntities:
+          # Kubelet for healthcheck
+          - host
+        fromEndpoints:
+          # Gateway to vmui
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Metrics (from other vmagent instances in HA setup)
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+  - description: vmalert
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vmalert
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      - *dns_resolution
+      - *to_vmcluster_lb
+      - *to_license_service
+      # Access to trigger alerts
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmalertmanager
+        toPorts:
+          - ports:
+              - port: web
+                protocol: TCP
+    ingress:
+      # Webservice
+      - fromEntities:
+          # Kubelet for healthcheck
+          - host
+        fromEndpoints:
+          # Active alerts queries proxied via vmselect, see
+          # https://docs.victoriametrics.com/cluster-victoriametrics/#vmalert
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmselect
+          # Gateway to vmui
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Metrics
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+  - description: vmalertmanager
+    endpointSelector: &alertmanager_matcher
+      matchLabels:
+        app.kubernetes.io/name: vmalertmanager
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      - *dns_resolution
+      # Gossip protocol between peers
+      - toEndpoints:
+          - *alertmanager_matcher
+        toPorts: &alertmanager_ports
+          - ports:
+              - port: mesh-udp
+                protocol: UDP
+              - port: mesh-tcp
+                protocol: TCP
+    ingress:
+      # Webservice
+      - fromEntities:
+          # Kubelet for healthcheck
+          - host
+        fromEndpoints:
+          # Gateway to web UI
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Alerts from vmalert
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmalert
+          # Alerts from Grafana
+          - matchLabels:
+              app: grafana
+          # Metrics
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: web
+                protocol: TCP
+      # Gossip protocol between peers
+      - fromEndpoints:
+          - *alertmanager_matcher
+        toPorts: *alertmanager_ports
+  - description: vmclusterlb-vmauth-balancer
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vmclusterlb-vmauth-balancer
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      - *dns_resolution
+      - *to_license_service
+      # Read metrics
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmselect
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Write metrics
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vminsert
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+    ingress:
+      # Webservice
+      - fromEntities:
+          # Kubelet for healthcheck
+          - host
+        fromEndpoints:
+          # Gateway to vmui
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Alert persistence
+          - *alertmanager_matcher
+          # Query clients
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/time-series-querier
+                operator: In
+                values:
+                  - "true"
+          # Metrics collection and pushing
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+  - description: vmselect
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vmselect
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      - *dns_resolution
+      - *to_license_service
+      # Access to query stored metrics
+      - &to_vmstorage
+        toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmstorage
+        toPorts:
+          - ports:
+              - port: vmselect
+                protocol: TCP
+      # Access to query active alerts, used by Grafana. See
+      # https://docs.victoriametrics.com/cluster-victoriametrics/#vmalert
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmalert
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+    ingress:
+      # Webservice
+      - fromEntities:
+          # Kubelet for healthcheck
+          - host
+        fromEndpoints:
+          # Application-aware load balancer
+          - matchLabels:
+              app.kubernetes.io/name: vmclusterlb-vmauth-balancer
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+          # Metrics
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+  - description: vminsert
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vminsert
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      - *dns_resolution
+      - *to_license_service
+      # Access to store ingested metrics
+      - *to_vmstorage
+    ingress:
+      # Webservice
+      - fromEntities:
+          # Kubelet for healthcheck
+          - host
+        fromEndpoints:
+          # Application-aware load balancer
+          - matchLabels:
+              app.kubernetes.io/name: vmclusterlb-vmauth-balancer
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+          # Metrics
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+  # Metric exporter resources
+  - description: kube-state-metrics
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: kube-state-metrics
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      # Query k8s API server for current state
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+              - port: "8081"
+                protocol: TCP
+          # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
