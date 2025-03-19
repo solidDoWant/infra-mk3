@@ -38,21 +38,11 @@ specs:
           - ports:
               - port: "8427"
                 protocol: TCP
-      # Allow access to alertmanager mesh
-      - toEndpoints:
-          - &alertmanager_labels
-            matchLabels:
-              app.kubernetes.io/instance: victoria-metrics-k8s-stack
-              app.kubernetes.io/name: vmalertmanager
-        toPorts: &alertmanager_ports
-          - ports:
-              - port: "9094"
-                protocol: UDP
-              - port: "9094"
-                protocol: TCP
       # Allow access to the alertmanager web service
       - toEndpoints:
-          - *alertmanager_labels
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+              app.kubernetes.io/name: vmalertmanager
         toPorts:
           - ports:
               - port: "9093"
@@ -99,7 +89,12 @@ specs:
       - toEndpoints:
           - matchLabels:
               app: grafana
-        toPorts: *alertmanager_ports
+        toPorts: &alertmanager_ports
+          - ports:
+              - port: "9094"
+                protocol: UDP
+              - port: "9094"
+                protocol: TCP
       # Allow emailing alerts via SMTP relay
       - toEndpoints:
           - matchLabels:
@@ -141,7 +136,3 @@ specs:
           - ports:
               - port: grafana-http
                 protocol: TCP
-      # Alert manager communication
-      - fromEndpoints:
-          - *alertmanager_labels
-        toPorts: *alertmanager_ports
