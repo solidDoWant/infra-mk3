@@ -1,6 +1,6 @@
 ---
 # Allow the k8s_gateway plugin to resolve resources in the cluster
-# cspell:words httproutes tlsroutes
+# cspell:words httproutes tlsroutes grpcroutes
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -30,6 +30,11 @@ rules:
       - gateways
       - httproutes
       - tlsroutes
+      # Despite the service not being configured f or this resource,
+      # it will _loudly_ and frequently complain if it cannot
+      # list/watch it. This is due to a bug in the plugin - see
+      # https://github.com/ori-edge/k8s_gateway/blob/5a8e7cfe5b32b8ce0e009980764907ba0905d5f6/kubernetes.go#L101
+      - grpcroutes
     verbs:
       - watch
       - list
