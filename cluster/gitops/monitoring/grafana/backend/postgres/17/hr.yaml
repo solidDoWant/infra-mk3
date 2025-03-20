@@ -29,3 +29,7 @@ spec:
             - infra-mk3
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selector:
+          app: grafana

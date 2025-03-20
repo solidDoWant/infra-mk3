@@ -92,3 +92,13 @@ bucket:
 backups:
   volumeSnapshot:
     className: postgres
+netpol:
+  dns:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: networking
+        endpoints.netpols.home.arpa/cluster-dns: "true"
+  applicationAccess:
+    selector:
+      # matchLabels:
+      #   app: some-application

@@ -1,0 +1,86 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "cluster-resource-name" . }}
+specs:
+  - description: instances
+    endpointSelector:
+      matchLabels:
+        cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+        cnpg.io/podRole: instance
+    egress:
+      # Replication between primary and replicas
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+              cnpg.io/podRole: instance
+        toPorts:
+          - ports:
+              - port: postgresql
+                protocol: TCP
+      # DNS resolution
+      - toEndpoints:
+          - {{ .Values.netpol.dns.selector | toYaml | nindent 12 | trim }}
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      {{- if .Values.bucket.endpoint }}
+            rules:
+              dns:
+                - matchPattern: "*"
+      {{- end }}
+      {{- if .Values.bucket.endpoint }}
+      # Access to S3 for WAL archiving
+      - toFQDNs:
+          - matchName: {{ include "bucket.hostname" . }}
+        toPorts:
+          - ports:
+              - port: {{ include "bucket.port" . }}
+                protocol: TCP
+      {{- end }}
+      # Access k8s resources (e.g. serving and client CA certificate secrets)
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: status
+                protocol: TCP
+      {{- if .Values.netpol.applicationAccess.selector }}
+      # Access from the application
+      - fromEndpoints:
+          - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
+        toPorts:
+          - ports:
+              - port: postgresql
+                protocol: TCP
+      {{- end }}
+      # Replication between primary and replicas
+      - fromEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+              cnpg.io/podRole: instance
+              cnpg.io/instanceRole: application
+        toPorts:
+          - ports:
+              - port: postgresql
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP

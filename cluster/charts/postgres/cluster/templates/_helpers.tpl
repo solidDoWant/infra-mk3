@@ -30,3 +30,15 @@
 {{- define "db-registration-configmap-name" -}}
 {{ include "cluster-resource-name" .}}-db-registration
 {{- end }}
+
+{{- define "bucket.hostname" -}}
+{{- if .Values.bucket.endpoint -}}
+{{ regexSplit ":" (urlParse .Values.bucket.endpoint).host 2 | first | quote }}
+{{- end -}}
+{{- end -}}
+
+{{- define "bucket.port" -}}
+{{- if .Values.bucket.endpoint -}}
+{{ default 443 (regexSplit ":" (urlParse .Values.bucket.endpoint).host 2 | rest | first) | quote }}
+{{- end -}}
+{{- end -}}

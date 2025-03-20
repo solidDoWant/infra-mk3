@@ -42,3 +42,9 @@ spec:
             login: true
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selector:
+          app.kubernetes.io/instance: teleport-cluster
+          app.kubernetes.io/name: teleport-cluster
+          app.kubernetes.io/component: auth
