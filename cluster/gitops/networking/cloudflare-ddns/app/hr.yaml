@@ -39,6 +39,11 @@ spec:
               capabilities:
                 drop:
                   - ALL
+            ports:
+              - containerPort: 8080
+                name: metrics
+              - containerPort: 9000
+                name: admin
             probes:
               liveness:
                 enabled: true
@@ -46,14 +51,14 @@ spec:
                 spec:
                   httpGet:
                     path: /health/alive
-                    port: &healthPort 8080
+                    port: metrics
               readiness:
                 enabled: true
                 custom: true
                 spec:
                   httpGet:
                     path: /health/ready
-                    port: *healthPort
+                    port: metrics
             resources:
               requests:
                 memory: 64Mi
@@ -65,30 +70,16 @@ spec:
         controller: *app_name
         ports:
           http:
-            port: 9000
+            port: admin
             primary: true
-          health:
-            port: *healthPort
+          metrics:
+            port: metrics
     serviceMonitor:
       app:
         serviceName: *app_name
         endpoints:
-          - port: health
+          - port: metrics
             scheme: http
             path: /metrics
             interval: 30s
             scrapeTimeout: 30s
-    # The current endpoints don't provide any tangible value to users,
-    # but expose some information that shouldn't be public.
-    # route:
-    #   app:
-    #     enabled: true
-    #     parentRefs:
-    #       - name: internal-gateway
-    #         namespace: networking
-    #         sectionName: https
-    #     hostnames:
-    #       - cloudflare-ddns.${SECRET_PUBLIC_DOMAIN_NAME}
-    #     rules:
-    #       - backendRefs:
-    #           - name: app
