@@ -14,10 +14,6 @@ spec:
         kind: HelmRepository
         name: coredns-charts
       version: 1.36.1
-  # These values are used for the initial deployment
-  valuesFrom:
-    - kind: ConfigMap
-      name: helm-bootstrap-values
   # These values are added now that the cluster has been bootstrapped
   values:
     image:
