@@ -1,0 +1,46 @@
+---
+# Allow the k8s_gateway plugin to resolve resources in the cluster
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: coredns-k8s-gateway
+  labels:
+    app.kubernetes.io/instance: coredns-k8s-gateway
+    app.kubernetes.io/name: coredns
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - namespaces
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - "*"
+    verbs:
+      - watch
+      - list
+---
+# Allow the k8s_gateway service account to assume the associated cluster role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: coredns-k8s-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: coredns-k8s-gateway
+subjects:
+  - kind: ServiceAccount
+    namespace: networking
+    name: coredns-k8s-gateway

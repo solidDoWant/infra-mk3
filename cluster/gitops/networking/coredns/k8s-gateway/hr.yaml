@@ -3,63 +3,101 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: &app_name coredns-k8s-gateway
+  name: coredns-k8s-gateway
 spec:
   interval: 1h
   chart:
     spec:
-      chart: k8s-gateway
+      chart: coredns
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
-        name: kuxabeast-charts
-      version: 2.4.1
+        name: coredns-charts
+      version: 1.36.1
+  # These values are used for the initial deployment
+  valuesFrom:
+    - kind: ConfigMap
+      name: helm-bootstrap-values
+  # These values are added now that the cluster has been bootstrapped
   values:
-    domain: ${SECRET_PUBLIC_DOMAIN_NAME}
-    # Needed until https://github.com/ori-edge/k8s_gateway/pull/306 is merged
-    # And one of:
-    # * https://github.com/ori-edge/k8s_gateway/issues/36
-    # * https://github.com/ori-edge/k8s_gateway/pull/308
     image:
-      registry: ghcr.io
-      repository: kuxabeast/k8s_gateway
+      # Needed until https://github.com/ori-edge/k8s_gateway/pull/306 is merged
+      # And one of:
+      # * https://github.com/ori-edge/k8s_gateway/issues/36
+      # * https://github.com/ori-edge/k8s_gateway/pull/308
+      repository: ghcr.io/kuxabeast/k8s_gateway
       tag: latest@sha256:79038025967f7f5ae08e22836ddc5df85f271d72d439b60fdec5e09e2a256c56
-    # Only use the internal gateways
-    filters:
-      gatewayClasses:
-        - internal-gateways
-    # Chart defaults + rewrite for PTR responses
-    extraZonePlugins:
-      - name: log
-      - name: errors
-      # Serves a /health endpoint on :8080, required for livenessProbe
-      - name: health
-        configBlock: |-
-          lameduck 5s
-      # Serves a /ready endpoint on :8181, required for readinessProbe
-      - name: ready
-      # Serves a /metrics endpoint on :9153, required for serviceMonitor
-      - name: prometheus
-        parameters: 0.0.0.0:9153
-      - name: forward
-        parameters: . /etc/resolv.conf
-      - name: rewrite
-        parameters: stop
-        configBlock: |-
-          name suffix .in-addr.arpa. .in-addr.arpa.
-          answer name auto
-          answer value (.*)\.cluster\.local\. {1}.${SECRET_PUBLIC_DOMAIN_NAME}
-      - name: loop
-      - name: reload
-      - name: loadbalance
-    service:
-      loadBalancerIP: 10.34.0.10
-      useTcp: true
     replicaCount: 2
+    serviceType: LoadBalancer
+    prometheus:
+      service:
+        enabled: true
+      monitor:
+        enabled: true
+    service:
+      loadBalancerIP: 10.34.0.10 # By convention, set the last octet to 10
+      trafficDistribution: PreferClose
+      name: k8s-gateway
+    serviceAccount:
+      # TODO RBAC patch
+      create: true
+    isClusterService: false
+    priorityClassName: system-cluster-critical
+    # Containerd 2.0 enables binding to port numbers <= 1024 by default, so the
+    # NET_BIND_SERVICE capability is not needed
+    securityContext:
+      capabilities:
+        add: []
+    servers:
+      - zones:
+          - zone: .
+            scheme: dns://
+            use_tcp: true
+        port: 53
+        plugins:
+          - name: errors
+          - name: health
+            configBlock: lameduck 5s
+          - name: ready
+          - name: log
+          - name: prometheus
+            parameters: 0.0.0.0:9153 # Default is localhost only
+          - name: reload
+          - name: loop
+          - name: loadbalance
+          # Reject requests from public IP space
+          # This shouldn't happen - this config is just a precaution
+          - name: acl
+            configBlock: |-
+              allow net 10.0.0.0/8
+              drop
+          - name: k8s_gateway
+            parameters: ${SECRET_PUBLIC_DOMAIN_NAME}
+            configBlock: |-
+              apex coredns-k8s-gateway.networking
+              ttl 300
+              resources Ingress Service HTTPRoute TLSRoute
+              gatewayClasses internal-gateways
+          # Fix PTR record lookups
+          - name: rewrite
+            parameters: stop
+            configBlock: |-
+              name suffix .in-addr.arpa. .in-addr.arpa.
+              answer name auto
+              answer value (.*)\.cluster\.local\. {1}.${SECRET_PUBLIC_DOMAIN_NAME}
+    livenessProbe:
+      initialDelaySeconds: 5
+    readinessProbe:
+      initialDelaySeconds: 5
+    # Spread the pods out to mitigate the impact of a host failure
     topologySpreadConstraints:
-      - maxSkew: 1 # Skew of 1 allows for rolling updates
-        topologyKey: kubernetes.io/hostname
-        labelSelector:
+      - labelSelector:
           matchLabels:
-            app.kubernetes.io/instance: *app_name
-        whenUnsatisfiable: DoNotSchedule
+            app.kubernetes.io/name: '{{ template "coredns.name" . }}'
+            app.kubernetes.io/instance: "{{ .Release.Name }}"
+        topologyKey: kubernetes.io/hostname
+        maxSkew: 1
+        whenUnsatisfiable: ScheduleAnyway
+    podDisruptionBudget:
+      minAvailable: 1
+    k8sAppLabelOverride: k8s-gateway
