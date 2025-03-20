@@ -75,8 +75,12 @@ spec:
               resources Ingress Service HTTPRoute TLSRoute
               gatewayClasses internal-gateways
           # Resolve PTR records for load-balanced services
-          - name: k8s_external
-            parameters: 34.10.in-addr.arpa
+          # The currently-used image does not have k8s_external, so forward requests instead.
+          # TODO raise an issue upstream once the k8s_gateway project moves to a new maintainer
+          # - name: k8s_external
+          #   parameters: 34.10.in-addr.arpa
+          - name: forward
+            parameters: 34.10.in-addr.arpa /etc/resolv.conf
           # Fix PTR record lookups
           - name: rewrite
             parameters: stop
