@@ -78,8 +78,7 @@ specs:
                 protocol: TCP
       # Metrics
       - fromEndpoints:
-          - matchLabels:
-              endpoints.netpols.home.arpa/metrics-scraper: "true"
+          - {{ .Values.netpol.metricsScraper.selector | toYaml | nindent 12 | trim }}
         toPorts:
           - ports:
               - port: metrics

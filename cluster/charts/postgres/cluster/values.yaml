@@ -98,6 +98,11 @@ netpol:
       matchLabels:
         io.kubernetes.pod.namespace: networking
         endpoints.netpols.home.arpa/cluster-dns: "true"
+  metricsScraper:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: monitoring
+        endpoints.netpols.home.arpa/metrics-scraper: "true"
   applicationAccess:
     selector:
       # matchLabels:
