@@ -32,5 +32,6 @@ spec:
     netpol:
       applicationAccess:
         selector:
-          app.kubernetes.io/instance: authentik
-          app.kubernetes.io/name: authentik
+          matchLabels:
+            app.kubernetes.io/instance: authentik
+            app.kubernetes.io/name: authentik

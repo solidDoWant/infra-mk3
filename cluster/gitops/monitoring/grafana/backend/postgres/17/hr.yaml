@@ -32,4 +32,5 @@ spec:
     netpol:
       applicationAccess:
         selector:
-          app: grafana
+          matchLabels:
+            app: grafana

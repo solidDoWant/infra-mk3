@@ -45,6 +45,7 @@ spec:
     netpol:
       applicationAccess:
         selector:
-          app.kubernetes.io/instance: teleport-cluster
-          app.kubernetes.io/name: teleport-cluster
-          app.kubernetes.io/component: auth
+          matchLabels:
+            app.kubernetes.io/instance: teleport-cluster
+            app.kubernetes.io/name: teleport-cluster
+            app.kubernetes.io/component: auth

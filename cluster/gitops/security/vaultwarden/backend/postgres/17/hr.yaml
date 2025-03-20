@@ -32,5 +32,6 @@ spec:
     netpol:
       applicationAccess:
         selector:
-          app.kubernetes.io/instance: vaultwarden
-          app.kubernetes.io/name: vaultwarden
+          matchLabels:
+            app.kubernetes.io/instance: vaultwarden
+            app.kubernetes.io/name: vaultwarden
