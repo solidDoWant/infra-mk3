@@ -33,7 +33,7 @@ specs:
                   - dragonfly
         toPorts:
           - ports:
-              - port: admin
+              - port: "9999"
                 protocol: TCP
     ingress:
       # Kubelet to webservice for healthcheck
