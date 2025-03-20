@@ -177,6 +177,8 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
     server:
       replicas: 2
+      podLabels:
+        endpoints.netpols.home.arpa/external-ingress-enabled: "true"
       pdb:
         enabled: true
         minAvailable: 1
