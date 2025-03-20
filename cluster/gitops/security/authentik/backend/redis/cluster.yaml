@@ -6,7 +6,6 @@ metadata:
   name: authentik-dragonfly
 spec:
   replicas: 2
-  image: ghcr.io/soliddowant/dragonfly:v1.24.0-hc.fix.1
   args:
     - --proactor_threads=2 # Dragonfly requires 256MB of RAM per core
   authentication:
