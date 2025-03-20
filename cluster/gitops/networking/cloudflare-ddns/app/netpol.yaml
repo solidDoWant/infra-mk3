@@ -27,10 +27,11 @@ specs:
               dns:
                 # This is for request monitoring with Hubble.
                 - matchPattern: "*"
-      # External IP lookup
       - toFQDNs:
+          # External IP lookup
           - matchName: ipv4.icanhazip.com
           - matchName: api64.ipify.org
+          # Update record
           - matchName: api.cloudflare.com
         toPorts:
           - ports:
