@@ -9,6 +9,10 @@ spec:
       path: /metrics
       port: metrics
       scrapeTimeout: 10s
+    - interval: 1m
+      path: /metrics
+      port: http-envoy-prom
+      scrapeTimeout: 10s
   jobLabel: internal-gateway
   selector:
     matchLabels:
@@ -24,6 +28,10 @@ spec:
     - interval: 1m
       path: /metrics
       port: metrics
+      scrapeTimeout: 10s
+    - interval: 1m
+      path: /metrics
+      port: http-envoy-prom
       scrapeTimeout: 10s
   jobLabel: external-gateway
   selector:
