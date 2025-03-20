@@ -54,13 +54,14 @@ specs:
       - fromEntities:
           # kubelet for healthcheck
           - host
-        fromEndpoints:
-          # Operator access for maintenance
-          - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
-        toPorts:
+        toPorts: &status_ports
           - ports:
               - port: status
                 protocol: TCP
+      - fromEndpoints:
+          # Operator access for maintenance
+          - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
+        toPorts: *status_ports
       # Postgres client access
       - fromEndpoints:
           # Replication between primary and replicas
