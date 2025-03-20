@@ -103,3 +103,11 @@ patches:
     target:
       kind: Deployment
       name: helm-controller
+  # Allow the notification controller to received external webhook calls
+  - patch: |
+      - op: add
+        path: /spec/template/metadata/labels/endpoints.netpols.home.arpa~1external-ingress-enabled
+        value: "true"
+    target:
+      kind: Deployment
+      name: notification-controller
