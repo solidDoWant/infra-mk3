@@ -35,8 +35,9 @@ spec:
       trafficDistribution: PreferClose
       name: k8s-gateway
     serviceAccount:
-      # TODO RBAC patch
       create: true
+    rbac:
+      create: false
     isClusterService: false
     priorityClassName: system-cluster-critical
     # Containerd 2.0 enables binding to port numbers <= 1024 by default, so the
