@@ -103,6 +103,12 @@ netpol:
       matchLabels:
         io.kubernetes.pod.namespace: monitoring
         endpoints.netpols.home.arpa/metrics-scraper: "true"
+  operator:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: data
+        app.kubernetes.io/name: cloudnative-pg
+        app.kubernetes.io/instance: cloudnative-pg
   applicationAccess:
     selector:
       # matchLabels:

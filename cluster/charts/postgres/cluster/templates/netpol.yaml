@@ -50,28 +50,30 @@ specs:
               - port: "6443"
                 protocol: TCP
     ingress:
-      # kubelet for healthcheck
+      # Status check
       - fromEntities:
+          # kubelet for healthcheck
           - host
+        fromEndpoints:
+          # Operator access for maintenance
+          - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
         toPorts:
           - ports:
               - port: status
                 protocol: TCP
-      {{- if .Values.netpol.applicationAccess.selector }}
-      # Access from the application
+      # Postgres client access
       - fromEndpoints:
-          - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
-        toPorts:
-          - ports:
-              - port: postgresql
-                protocol: TCP
-      {{- end }}
-      # Replication between primary and replicas
-      - fromEndpoints:
+          # Replication between primary and replicas
           - matchLabels:
               cnpg.io/cluster: {{ include "cluster-resource-name" . }}
               cnpg.io/podRole: instance
               cnpg.io/instanceRole: application
+          # Configuration and maintenance from the operator
+          - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
+          {{- if .Values.netpol.applicationAccess.selector }}
+          # Access from the application
+          - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
+          {{- end }}
         toPorts:
           - ports:
               - port: postgresql
