@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+# cspell:words icanhazip ipify
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: coredns-kube-dns
+specs:
+  - description: coredns-kube-dns
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: coredns-kube-dns
+        app.kubernetes.io/name: coredns
+    egress:
+      # DNS resolution to upstream resolvers
+      - toCIDRSet:
+          - cidrGroupRef: upstream-dns-resolvers
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # Watch k8s resources
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+              - port: "8081"
+                protocol: TCP
+      # DNS requests from everything in the cluster
+      - fromEntities:
+          - cluster
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9153"
+                protocol: TCP

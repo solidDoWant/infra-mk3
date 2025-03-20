@@ -7,3 +7,11 @@ spec:
   externalCIDRs:
     - 10.3.0.1/32
     - 10.3.0.2/32
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumCIDRGroup
+metadata:
+  name: upstream-dns-resolvers
+spec:
+  externalCIDRs:
+    - 10.3.0.254/32
