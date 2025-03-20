@@ -98,6 +98,12 @@ netpol:
       matchLabels:
         io.kubernetes.pod.namespace: networking
         endpoints.netpols.home.arpa/cluster-dns: "true"
+  bucket:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: networking
+        app.kubernetes.io/name: ingress-gateways
+        gateway.networking.k8s.io/gateway-name: internal-gateway
   metricsScraper:
     selector:
       matchLabels:

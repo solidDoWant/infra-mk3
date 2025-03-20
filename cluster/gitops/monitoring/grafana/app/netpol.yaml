@@ -81,8 +81,11 @@ specs:
               - port: "6443"
                 protocol: TCP
       # Allow access to S3
-      - toFQDNs:
-          - matchName: s3.${SECRET_PUBLIC_DOMAIN_NAME}
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
         toPorts:
           - ports:
               - port: "443"

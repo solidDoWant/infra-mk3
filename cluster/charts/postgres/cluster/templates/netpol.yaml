@@ -29,14 +29,9 @@ specs:
               - port: "53"
                 protocol: TCP
       {{- if .Values.bucket.endpoint }}
-            rules:
-              dns:
-                - matchPattern: "*"
-      {{- end }}
-      {{- if .Values.bucket.endpoint }}
       # Access to S3 for WAL archiving
-      - toFQDNs:
-          - matchName: {{ include "bucket.hostname" . }}
+      - toEndpoints:
+          - {{ .Values.netpol.bucket.selector | toYaml | nindent 12 | trim }}
         toPorts:
           - ports:
               - port: {{ include "bucket.port" . }}
