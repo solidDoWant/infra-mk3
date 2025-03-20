@@ -10,7 +10,7 @@ spec:
       port: metrics
       scrapeTimeout: 10s
     - interval: 1m
-      path: /metrics
+      path: /stats/prometheus
       port: http-envoy-prom
       scrapeTimeout: 10s
   jobLabel: internal-gateway
@@ -30,7 +30,7 @@ spec:
       port: metrics
       scrapeTimeout: 10s
     - interval: 1m
-      path: /metrics
+      path: /stats/prometheus
       port: http-envoy-prom
       scrapeTimeout: 10s
   jobLabel: external-gateway
