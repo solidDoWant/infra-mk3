@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: external-dns
+specs:
+  - description: external-dns
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: external-dns
+        app.kubernetes.io/name: external-dns
+    egress:
+      # Access to update Cloudflare
+      - toFQDNs:
+          - matchName: api.cloudflare.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Watch k8s resources
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
