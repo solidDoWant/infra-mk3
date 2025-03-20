@@ -1,0 +1,32 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: internal-gateway
+spec:
+  podMetricsEndpoints:
+    - interval: 1m
+      path: /metrics
+      port: metrics
+      scrapeTimeout: 10s
+  jobLabel: internal-gateway
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-gateways
+      gateway.networking.k8s.io/gateway-name: internal-gateway
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: external-gateway
+spec:
+  podMetricsEndpoints:
+    - interval: 1m
+      path: /metrics
+      port: metrics
+      scrapeTimeout: 10s
+  jobLabel: external-gateway
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-gateways
+      gateway.networking.k8s.io/gateway-name: external-gateway
