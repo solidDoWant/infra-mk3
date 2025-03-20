@@ -65,10 +65,12 @@ spec:
                 cpu: 10m
               limits:
                 memory: 64Mi
-    # This is just for service discovery
     service:
       app:
         controller: *app_name
+        ports:
+          metrics:
+            port: 8080
     serviceMonitor:
       app:
         serviceName: *app_name
