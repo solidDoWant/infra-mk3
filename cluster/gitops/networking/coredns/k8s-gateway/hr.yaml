@@ -74,6 +74,9 @@ spec:
               ttl 300
               resources Ingress Service HTTPRoute TLSRoute
               gatewayClasses internal-gateways
+          # Resolve PTR records for load-balanced services
+          - name: k8s_external
+            parameters: 34.10.in-addr.arpa
           # Fix PTR record lookups
           - name: rewrite
             parameters: stop
