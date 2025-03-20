@@ -33,6 +33,8 @@
 # * Internal DNS forwarding for public and internal domains to coredns-k8s-gateway
 # * Internal DNS forwarding for 34.10.in-addr.arpa to coredns-k8s-gateway
 # * NAT port forwarding to external-gateway ingress gateway
+# * GeoIP database loaded via instructions at https://docs.opnsense.org/manual/how-tos/maxmind_geo_ip.html
+# * Whitelist NA countries for HTTP access via firewall alias
 
 # This was a PITA to get working. It needs a lot of cleanup and refactoring,
 # some other time.
