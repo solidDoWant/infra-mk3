@@ -67,7 +67,6 @@ specs:
           - matchLabels:
               cnpg.io/cluster: {{ include "cluster-resource-name" . }}
               cnpg.io/podRole: instance
-              cnpg.io/instanceRole: application
           # Configuration and maintenance from the operator
           - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
           {{- if .Values.netpol.applicationAccess.selector }}
