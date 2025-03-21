@@ -2,6 +2,14 @@
 apiVersion: cilium.io/v2alpha1
 kind: CiliumCIDRGroup
 metadata:
+  name: intranet
+spec:
+  externalCIDRs:
+    - 10.0.0.0/8
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumCIDRGroup
+metadata:
   name: routers
 spec:
   externalCIDRs:

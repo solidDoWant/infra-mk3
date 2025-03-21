@@ -1,0 +1,125 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ingress-gateways
+specs:
+  - description: external
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: ingress-gateways
+        gateway.networking.k8s.io/gateway-name: external-gateway
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                # This is for request monitoring with Hubble.
+                - matchPattern: "*"
+      # Allow forwarding traffic to cluster services, if they explicitly allow it.
+      - toEndpoints:
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/external-ingress-enabled
+                operator: In
+                values:
+                  - "true"
+      # Istio Control plane traffic
+      - &to_istio_control_plane
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: istio-system
+              app.kubernetes.io/part-of: istio
+              app.kubernetes.io/name: istiod
+        toPorts:
+          - ports:
+              - port: tls-xds
+                protocol: TCP
+      # Istio workload cert issuance
+      - &to_istio_workload_cert_issuance
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: istio-system
+              app.kubernetes.io/name: cert-manager-istio-csr
+              app.kubernetes.io/instance: istio-csr
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Allow access to GHCR for installing the WAF WASM plugin
+      - toFQDNs:
+          - matchName: ghcr.io
+          - matchName: pkg-containers.githubusercontent.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - &healthcheck
+        fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: status-port
+                protocol: TCP
+      # Traffic
+      - fromEntities:
+          - all
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Metrics
+      - &metrics
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
+              - port: http-envoy-prom
+                protocol: TCP
+  - description: internal
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: ingress-gateways
+        gateway.networking.k8s.io/gateway-name: internal-gateway
+    egress:
+      - *dns_resolution
+      - *to_istio_control_plane
+      - *to_istio_workload_cert_issuance
+      # Allow access to everything in the cluster.
+      # This still requires target's netpol to allow the traffic.
+      # TODO label everything and use a label instead
+      - toEntities:
+          - cluster
+    ingress:
+      - *healthcheck
+      - *metrics
+      # Access from everything but the internet
+      - fromCIDRSet:
+          - cidrGroupRef: intranet
+        toPorts: &internal_ingress_ports
+          - ports:
+              - port: "443"
+                protocol: TCP
+              - port: "80"
+                protocol: TCP
+      - fromEntities:
+          - cluster
+        toPorts: *internal_ingress_ports
