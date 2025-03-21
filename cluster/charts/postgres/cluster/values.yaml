@@ -117,13 +117,9 @@ netpol:
         app.kubernetes.io/instance: cloudnative-pg
   teleportAccess:
     selector:
-      matchExpressions:
-        - key: io.kubernetes.pod.namespace
-          operator: Exists
-        - key: app
-          operator: In
-          values:
-            - teleport-agent
+      matchLabels:
+        io.kubernetes.pod.namespace: security
+        app: teleport-agent
   applicationAccess:
     selector:
       # matchLabels:
