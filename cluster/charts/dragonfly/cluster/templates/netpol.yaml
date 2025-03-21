@@ -25,8 +25,9 @@ specs:
           # Metrics
           - {{ .Values.netpol.metricsScraper.selector | toYaml | nindent 12 | trim }}
         toPorts:
-          - port: admin
-            protocol: TCP
+          - ports:
+            - port: admin
+              protocol: TCP
       # Redis port access
       - fromEndpoints:
           # Access from Teleport
@@ -36,5 +37,6 @@ specs:
           - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
           {{- end }}
         toPorts:
-          - port: redis
-            protocol: TCP
+          - ports:
+            - port: redis
+              protocol: TCP
