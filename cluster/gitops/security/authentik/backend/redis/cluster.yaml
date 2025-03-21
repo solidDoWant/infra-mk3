@@ -3,9 +3,14 @@
 apiVersion: dragonflydb.io/v1alpha1
 kind: Dragonfly
 metadata:
+  # The "dragonfly" suffix is needed so that the pods are named uniquely.
+  # The created statefulset will match the cluster name exactly, which
+  # can conflict with the application itself.
   name: authentik-dragonfly
 spec:
   replicas: 2
+  labels:
+    app.kubernetes.io/instance: authentik-dragonfly
   args:
     - --proactor_threads=2 # Dragonfly requires 256MB of RAM per core
   authentication:
