@@ -1,0 +1,106 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authentik
+specs:
+  - description: authentik
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: authentik
+        app.kubernetes.io/instance: authentik
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                # This is for request monitoring with Hubble.
+                - matchPattern: "*"
+      # - # Access to discord, gravatar
+      # Access to the backing CNPG cluster
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: authentik-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Access to the backing Dragonfly cluster
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: dragonfly
+              app.kubernetes.io/instance: authentik-dragonfly
+        toPorts:
+          - ports:
+              - port: redis
+                protocol: TCP
+      # Allow emailing alerts via SMTP relay
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/email-relay: "true"
+        toPorts:
+          - ports:
+              - port: "25"
+                protocol: TCP
+      # Access to media storage in S3
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Access to the k8s api server for the sidecar that pulls blueprint configmaps
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Access to web
+      - toFQDNs:
+          # IdP
+          - matchName: discord.com
+          - matchName: cdn.discordapp.com
+          # Gravatar
+          - matchName: gravatar.com
+          # Cloudflare for captcha
+          - matchName: challenges.cloudflare.com
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Traffic
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP

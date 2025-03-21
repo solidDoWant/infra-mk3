@@ -7,6 +7,7 @@ resources:
   - ./hr.yaml
   - ./httproute.yaml
   - ./k8s-sidecar-rbac.yaml
+  - ./netpol.yaml
 configMapGenerator:
   - name: authentik-python-user-settings
     files:
