@@ -24,7 +24,7 @@ specs:
           - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
           # Metrics
           - {{ .Values.netpol.metricsScraper.selector | toYaml | nindent 12 | trim }}
-        ports:
+        toPorts:
           - port: admin
             protocol: TCP
       # Redis port access
@@ -35,6 +35,6 @@ specs:
           # Access from the application
           - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
           {{- end }}
-        ports:
+        toPorts:
           - port: redis
             protocol: TCP
