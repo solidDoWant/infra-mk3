@@ -13,7 +13,7 @@ specs:
           - matchLabels: {{ include "pod-selector-labels" . | nindent 14 }}
         toPorts:
           - ports:
-              - port: admin
+              - port: "9999"
                 protocol: TCP
     ingress:
       # Admin port access
@@ -26,7 +26,7 @@ specs:
           - {{ .Values.netpol.metricsScraper.selector | toYaml | nindent 12 | trim }}
         toPorts:
           - ports:
-            - port: admin
+            - port: "9999"
               protocol: TCP
       # Redis port access
       - fromEndpoints:
@@ -38,5 +38,5 @@ specs:
           {{- end }}
         toPorts:
           - ports:
-            - port: redis
+            - port: "6379"
               protocol: TCP
