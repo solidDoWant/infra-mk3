@@ -8,6 +8,15 @@ specs:
     endpointSelector:
       matchLabels: {{ include "pod-selector-labels" . | nindent 8 }}
     egress:
+      # DNS resolution
+      - toEndpoints:
+          - {{ .Values.netpol.dns.selector | toYaml | nindent 12 | trim }}
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
       # Communication between instances
       - toEndpoints:
           - matchLabels: {{ include "pod-selector-labels" . | nindent 14 }}

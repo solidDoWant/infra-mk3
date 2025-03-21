@@ -32,6 +32,11 @@ users:
   # example-application:
   #   username: application_username
 netpol:
+  dns:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: networking
+        endpoints.netpols.home.arpa/cluster-dns: "true"
   operator:
     selector:
       matchLabels:
