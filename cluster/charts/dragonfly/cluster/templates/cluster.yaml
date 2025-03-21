@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/dragonflydb.io/dragonfly_v1alpha1.json
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  name: {{ include "cluster-resource-name" . }}
+spec:
+  replicas: {{ .Values.instances }}
+  labels: {{ include "pod-selector-labels" . | nindent 4 }}
+  args: {{ .Values.args | toYaml | nindent 4 }}
+  authentication:
+    clientCaCertSecret:
+      key: ca.crt
+      name: {{ include "auth.ca-secret-name" . }}
+  tlsSecretRef:
+    name: {{ include "serving-cert-name" . }}
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      labelSelector:
+        matchLabels: {{ include "pod-selector-labels" . | nindent 10 }}
+      whenUnsatisfiable: DoNotSchedule
+  resources: {{ .Values.resources | toYaml | nindent 4 }}

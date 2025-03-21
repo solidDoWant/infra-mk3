@@ -1,0 +1,15 @@
+---
+kind: db
+version: v3
+metadata:
+  name: '{{ include "cluster-resource-name" . }}'
+  description: '{{ include "cluster-readable-name" . }}'
+  labels:
+    teleport.home.arpa/database.enabled: "true"
+spec:
+  protocol: redis
+  uri: rediss://{{ include "cluster-resource-name" . }}.{{ .Release.Namespace }}.svc.cluster.local:6379/0
+  tls:
+    mode: verify-full
+    # The agent will have the cluster PKI root CA public cert loaded
+    trust_system_cert_pool: true

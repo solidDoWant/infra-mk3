@@ -1,0 +1,21 @@
+{{ range $name, $info := .Values.users }}
+---
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: {{ $.Values.serviceName }}-dragonfly-auth-ca-{{ $name }}-user
+spec:
+  selector:
+    issuerRef: {{ include "auth.ca-issuer-ref" $ | nindent 6 }}
+    namespace:
+      matchNames:
+        - {{ $.Release.Namespace }}
+  allowed:
+    commonName:
+      required: true
+      value: {{ $info.username }}
+    usages:
+      - client auth
+  constraints:
+    maxDuration: 1h
+{{ end }}

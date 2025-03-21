@@ -1,0 +1,10 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "cluster-resource-name" . }}
+spec:
+  selector:
+    matchLabels: {{ include "pod-selector-labels" . | nindent 6 }}
+  podMetricsEndpoints:
+    - port: admin

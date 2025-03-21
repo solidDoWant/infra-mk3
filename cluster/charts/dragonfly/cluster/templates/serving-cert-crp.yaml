@@ -1,0 +1,31 @@
+---
+# Approve the the {{ include "cluster-resource-name" . }} serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: {{ .Values.certificates.serving.issuerRef.name }}-{{ include "cluster-resource-name" . }}-serving-cert
+spec:
+  selector:
+    issuerRef: {{ .Values.certificates.serving.issuerRef | toYaml | nindent 6 }}
+    namespace:
+      matchNames:
+        - {{ .Release.Namespace }}
+  allowed:
+    commonName:
+      required: true
+      value: {{ include "cluster-readable-name" . }}
+    dnsNames:
+      required: true
+      values: {{ include "serving-domain-names" . | nindent 8 }}
+    {{- if .Values.certificates.serving.subject }}
+    subject:
+      {{- range $field, $value := .Values.certificates.serving.subject }}
+      {{ $field }}:
+        required: true
+        values: {{ $value | toYaml | nindent 10 }}
+      {{- end }}
+    {{- end }}
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 720h # One month

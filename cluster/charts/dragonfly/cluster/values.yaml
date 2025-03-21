@@ -1,0 +1,62 @@
+---
+serviceName: ""
+instances: 2
+certificates:
+  clientCA:
+    # This is currently only supported for the CA certificate (TODO add support for user certs)
+    subject:
+      countries:
+        - US
+      provinces:
+        - ${SECRET_STATE}
+      organizations:
+        - infra-mk3
+    issuerRef:
+      name: self-signed
+      kind: ClusterIssuer
+      group: cert-manager.io
+  serving:
+    issuerRef:
+      name: ""
+      kind: Issuer
+      group: cert-manager.io
+    subject:
+      countries:
+        - US
+      provinces:
+        - ${SECRET_STATE}
+      organizations:
+        - infra-mk3
+teleportDomainName: ""
+users:
+  # example-application:
+  #   username: application_username
+netpol:
+  operator:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: data
+        app.kubernetes.io/name: dragonfly-operator
+  metricsScraper:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: monitoring
+        endpoints.netpols.home.arpa/metrics-scraper: "true"
+  teleportAccess:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: security
+        app: teleport-agent
+  applicationAccess:
+    selector:
+      # matchLabels:
+      #   app: some-application
+resources:
+  requests:
+    cpu: 100m
+    # Needs (thread_count * 256Mi) / 0.8
+    memory: 640Mi
+  limits:
+    memory: 640Mi
+args:
+  - --proactor_threads=2 # Dragonfly requires 256MB of RAM per core
