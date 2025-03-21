@@ -119,6 +119,13 @@ spec:
         # Authentik
         - name: AUTHENTIK_DISABLE_UPDATE_CHECK
           value: "true"
+        # Disable phoning home
+        - name: AUTHENTIK_DISABLE_STARTUP_ANALYTICS
+          value: "true"
+        - name: AUTHENTIK_DISABLE_UPDATE_CHECK
+          value: "true"
+        - name: AUTHENTIK_ERROR_REPORTING__ENABLED
+          value: "false"
       envFrom:
         - configMapRef:
             name: authentik-media
