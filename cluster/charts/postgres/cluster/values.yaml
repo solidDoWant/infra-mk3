@@ -115,6 +115,15 @@ netpol:
         io.kubernetes.pod.namespace: data
         app.kubernetes.io/name: cloudnative-pg
         app.kubernetes.io/instance: cloudnative-pg
+  teleportAccess:
+    selector:
+      matchExpressions:
+        - key: io.kubernetes.pod.namespace
+          operator: Exists
+        - key: app
+          operator: In
+          values:
+            - teleport-agent
   applicationAccess:
     selector:
       # matchLabels:

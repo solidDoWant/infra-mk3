@@ -65,6 +65,8 @@ specs:
               cnpg.io/podRole: instance
           # Configuration and maintenance from the operator
           - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
+          # Access from Teleport
+          - {{ .Values.netpol.teleportAccess.selector | toYaml | nindent 12 | trim }}
           {{- if .Values.netpol.applicationAccess.selector }}
           # Access from the application
           - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
