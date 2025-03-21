@@ -15,6 +15,9 @@ spec:
   values:
     serviceName: authentik
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    certificates:
+      serving:
+        issuerRef: security-intermediary-ca
     users:
       authentik:
         username: authentik
