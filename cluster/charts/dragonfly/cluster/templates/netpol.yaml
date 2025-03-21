@@ -6,11 +6,11 @@ metadata:
 specs:
   - description: {{ include "cluster-resource-name" . }}
     endpointSelector:
-      matchLabels: {{ include "pod-selector-labels" . | nindent 6 }}
+      matchLabels: {{ include "pod-selector-labels" . | nindent 8 }}
     egress:
       # Communication between instances
       - toEndpoints:
-          - matchLabels: {{ include "pod-selector-labels" . | nindent 12 }}
+          - matchLabels: {{ include "pod-selector-labels" . | nindent 14 }}
         toPorts:
           - ports:
               - port: admin
@@ -19,7 +19,7 @@ specs:
       # Admin port access
       - fromEndpoints:
           # Communication between instances
-          - matchLabels: {{ include "pod-selector-labels" . | nindent 12 }}
+          - matchLabels: {{ include "pod-selector-labels" . | nindent 14 }}
           # Access from operator
           - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
           # Metrics
