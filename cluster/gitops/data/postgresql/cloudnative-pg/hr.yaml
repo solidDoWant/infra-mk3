@@ -18,12 +18,9 @@ spec:
     replicaCount: 2
     nameOverride: *app_name
     fullnameOverride: *app_name
-    # TODO set if needed
-    # config:
-    #   data:
-    #     INHERITED_ANNOTATIONS:
-    #     INHERITED_LABELS:
-    # TODO create a new class for this. Below critical, higher than normal pods
+    config:
+      data:
+        INHERITED_LABELS: app.kubernetes.io/name, app.kubernetes.io/component, app.kubernetes.io/instance
     priorityClassName: system-cluster-critical
     monitoring:
       podMonitorEnabled: true
