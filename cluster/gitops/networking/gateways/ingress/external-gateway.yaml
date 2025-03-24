@@ -19,6 +19,8 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          # TODO switch this with a CF origin cert, and setup automation for
+          # providing CF with a client cert (mTLS between CF and gateway)
           - name: wildcard-public-domain-name-cert
       allowedRoutes:
         namespaces:
