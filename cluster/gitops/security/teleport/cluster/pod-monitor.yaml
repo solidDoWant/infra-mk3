@@ -1,0 +1,16 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: teleport-operator
+spec:
+  podMetricsEndpoints:
+    - interval: 1m
+      path: /metrics
+      port: op-metrics
+      scrapeTimeout: 10s
+  jobLabel: teleport-operator
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: teleport-cluster
+      app.kubernetes.io/component: operator
