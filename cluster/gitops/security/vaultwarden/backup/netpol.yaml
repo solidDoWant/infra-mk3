@@ -1,0 +1,105 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: teleport-backup
+specs:
+  - description: backup-tool
+    endpointSelector: &backup_tool_selector
+      matchLabels:
+        app.kubernetes.io/name: dr-job
+        app.kubernetes.io/instance: teleport-backup
+        app.kubernetes.io/component: backup-tool
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # k8s API
+      - &to_k8s_api
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Access backup-tool GRPC server pod
+      - toEndpoints:
+          - &backup_tool_grpc_server_selector
+            matchLabels:
+              app.kubernetes.io/name: dr-job
+              app.kubernetes.io/instance: teleport-backup
+              app.kubernetes.io/component: backup-tool-grpc-server
+        toPorts:
+          - ports:
+              - port: "40983"
+                protocol: TCP
+  - description: backup-tool-grpc-server
+    endpointSelector: *backup_tool_grpc_server_selector
+    egress:
+      - *dns_resolution
+      # Access to the cloned database
+      - toEndpoints:
+          - &cnpg_cluster_selector
+            matchLabels:
+              app.kubernetes.io/name: dr-job
+              app.kubernetes.io/instance: teleport-backup
+              app.kubernetes.io/component: cnpg-cluster
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "40983"
+                protocol: TCP
+      # backup-tool for calling remote procedures
+      - fromEndpoints:
+          - *backup_tool_selector
+        toPorts:
+          - ports:
+              - port: "40983"
+                protocol: TCP
+  - description: cnpg-cluster
+    endpointSelector: *cnpg_cluster_selector
+    egress:
+      # Access to the k8s api for watching for credential secret changes
+      - *to_k8s_api
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8000"
+                protocol: TCP
+      # Operator access for maintenance
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: data
+              app.kubernetes.io/name: cloudnative-pg
+              app.kubernetes.io/instance: cloudnative-pg
+        toPorts:
+          - ports:
+              - port: "8000"
+                protocol: TCP
+      # backup-tool-grpc-server for backing up the database
+      - fromEndpoints:
+          - *backup_tool_grpc_server_selector
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
