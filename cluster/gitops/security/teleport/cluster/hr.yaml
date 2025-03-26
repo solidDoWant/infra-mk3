@@ -97,6 +97,37 @@ spec:
           # TODO limit access to proxy to only gateways per RFD 123:
           # https://github.com/gravitational/teleport/blob/master/rfd/0123-tls-routing-behind-layer7-lb.md
           trust_x_forwarded_for: true
+          https_keypairs:
+            - cert_file: /etc/teleport/secrets/serving-certs/public/tls.crt
+              key_file: /etc/teleport/secrets/serving-certs/public/tls.key
+            - cert_file: /etc/teleport/secrets/serving-certs/internal/tls.crt
+              key_file: /etc/teleport/secrets/serving-certs/internal/tls.key
+      extraVolumes:
+        # Access from outside the cluster
+        - name: teleport-proxy-public-cert
+          secret:
+            secretName: teleport-proxy-public-cert
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        # Access from inside the cluster
+        - name: teleport-proxy-internal-cert
+          secret:
+            secretName: teleport-proxy-internal-cert
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+      extraVolumeMounts:
+        - name: teleport-proxy-public-cert
+          mountPath: /etc/teleport/secrets/serving-certs/public
+        - name: teleport-proxy-internal-cert
+          mountPath: /etc/teleport/secrets/serving-certs/internal
     # In HA mode this is entirely handled via DB/S3/etc.
     persistence:
       enabled: false
@@ -124,13 +155,6 @@ spec:
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
-      # Needed for proxy only per chart
-      certManager:
-        enabled: true
-        addCommonName: true
-        addPublicAddrs: true
-        issuerKind: ClusterIssuer
-        issuerName: letsencrypt-production
     service:
       type: LoadBalancer
       spec:
@@ -154,24 +178,6 @@ spec:
               version: v1
               kind: Deployment
               name: teleport-cluster-auth
-    # Add additional information to cert
-    - kustomize:
-        patches:
-          - patch: |
-              - op: add
-                path: /spec/subject
-                value:
-                  countries:
-                    - US
-                  provinces:
-                    - ${SECRET_STATE}
-                  organizations:
-                    - infra-mk3
-            target:
-              group: cert-manager.io
-              version: v1
-              kind: Certificate
-              name: teleport-cluster
     # Add TSCs
     - kustomize:
         patches:
