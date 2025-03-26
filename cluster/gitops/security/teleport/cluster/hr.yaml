@@ -127,6 +127,9 @@ spec:
         - name: teleport-proxy-internal-cert
           mountPath: /etc/ssl/certs/ca.crt
           subPath: ca.crt
+      extraEnv:
+        - name: SSL_CERT_DIR
+          value: /etc/ssl/certs
     # In HA mode this is entirely handled via DB/S3/etc.
     persistence:
       enabled: false
