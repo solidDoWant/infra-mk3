@@ -108,11 +108,6 @@ spec:
           secret:
             secretName: teleport-proxy-public-cert
             defaultMode: 0440
-            items:
-              - key: tls.crt
-                path: tls.crt
-              - key: tls.key
-                path: tls.key
         # Access from inside the cluster
         - name: teleport-proxy-internal-cert
           secret:
@@ -128,6 +123,10 @@ spec:
           mountPath: /etc/teleport/secrets/serving-certs/public
         - name: teleport-proxy-internal-cert
           mountPath: /etc/teleport/secrets/serving-certs/internal
+        # Proxy will fail to start when the serving cert is not inherently trusted
+        - name: teleport-proxy-internal-cert
+          mountPath: /etc/ssl/certs/ca.crt
+          subPath: ca.crt
     # In HA mode this is entirely handled via DB/S3/etc.
     persistence:
       enabled: false
