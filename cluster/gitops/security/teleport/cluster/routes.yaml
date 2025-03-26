@@ -1,54 +1,23 @@
+# Teleport does not support connections to the proxy without application-aware TLS.
+# This is a problem when using Istio with the k8s gateway API, because Istio does
+# not support the BackendTLSPolicy resource. This means that the gateway controller
+# (Istio) cannot connect to the backend (Teleport proxy) with TLS.
+#
+# A simple `TLSRoute` in passthrough mode doesn't work either, because the gateway
+# uses a wildcard cert. When browsers connect to the gateway for another service
+# that runs on port 443 (such as the IdP), the gateway provides the wildcard cert.
+# Then, when the IdP redirects to the Teleport proxy, the browser reuses the TLS
+# connection to the gateway. The connection uses the wrong SNI (on both firefox
+# and chromium-based browsers), so the gateway sees the wrong host, and fails to
+# route the connection to the Teleport proxy.
+#
+# Because of this, Teleport cannot be used in TLS routing mode, and every different
+# service must use a separate port. This is obviously a PITA, but it's the only way
+# to make Teleport work. I will revisit this when/if Istio supports BackendTLSPolicy.
 ---
-# Route TLS connections to the Teleport proxy and let it handle TLS termination
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: TLSRoute
-metadata:
-  name: teleport
-  # labels:
-  #   external-dns.home.arpa/publish: "true"
-spec:
-  hostnames:
-    - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
-    - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
-    - teleport.cluster.local
-    - "*.teleport.cluster.local"
-  parentRefs:
-    - name: internal-gateway
-      namespace: networking
-      sectionName: teleport-tls
-    - name: internal-gateway
-      namespace: networking
-      sectionName: teleport-tls-wildcard
-    - name: internal-gateway
-      namespace: networking
-      sectionName: teleport-cluster-tls
-    - name: internal-gateway
-      namespace: networking
-      sectionName: teleport-cluster-wildcard-tls
-    # - name: external-gateway
-    #   namespace: networking
-  rules:
-    - backendRefs:
-        - name: teleport-cluster
-          port: 443
-# This doesn't work because istio does not yet support the BackendTLSPolicy resource
-# ---
-# apiVersion: gateway.networking.k8s.io/v1alpha3
-# kind: BackendTLSPolicy
-# metadata:
-#   name: enable-teleport-backend-tls
-# spec:
-#   targetRefs:
-#     - group: ""
-#       kind: Service
-#       name: teleport-cluster
-#       sectionName: tls
-#   validation:
-#     wellKnownCACertificates: System
-#     hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
-# ---
-# # This is needed as browsers may reuse TLS connections to the ingress gateway,
-# # so the ingress gateway sees the wrong host.
+# Send proxy web traffic to the Teleport proxy HTTP port.
+# The proxy service is configured as a LB, and clients should connect directly to it
+# for other services (i.e. postgresql)
 # apiVersion: gateway.networking.k8s.io/v1
 # kind: HTTPRoute
 # metadata:

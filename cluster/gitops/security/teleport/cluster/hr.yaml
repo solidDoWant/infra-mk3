@@ -88,6 +88,9 @@ spec:
         - name: AWS_DEFAULT_REGION
           value: dummy-value
     proxy:
+      # See note in routes.yaml
+      annotations:
+        coredns.io/hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
       teleportConfig:
         proxy_service:
           # TODO limit access to proxy to only gateways per RFD 123:
@@ -103,7 +106,10 @@ spec:
       lockingMode: strict
       # Apparently "off" just errors now???
       # secondFactor: off # This is handled by Authentik. TODO consider additional enforcement
-    proxyListenerMode: multiplex
+    # See note in routes.yaml
+    proxyListenerMode: separate
+    separatePostgresListener: true
+    separateMongoListener: true
     sessionRecording: node-sync
     enterprise: true
     licenseSecretName: teleport-license
@@ -125,10 +131,13 @@ spec:
         issuerKind: ClusterIssuer
         issuerName: letsencrypt-production
     service:
-      type: ClusterIP
+      type: LoadBalancer
+      spec:
+        loadBalancerIP: 10.34.0.3
     ingress:
       # enabled: true
-      useExisting: true
+      # See note in routes.yaml
+      # useExisting: true
   postRenderers:
     # Add env vars for audit session logging S3 bucket access
     - kustomize:
