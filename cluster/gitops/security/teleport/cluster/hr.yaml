@@ -50,6 +50,7 @@ spec:
               sslmode=verify-full"
         auth_service:
           tunnel_strategy:
+            type: proxy_peering
             # When operating in proxy peering mode (instead of mesh mode), agents don't have to connect to
             # all proxies. This tells agents that they should attempt to connect to two or more proxies,
             # so that service is not impacted when one fails.
