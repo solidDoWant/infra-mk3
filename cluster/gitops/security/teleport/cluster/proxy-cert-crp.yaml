@@ -1,9 +1,9 @@
 ---
-# Approve the the wildcard-public-domain-name-cert certificate specifically.
+# Approve the the Teleport Proxy public certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: letsencrypt-production-wildcard-public-domain-name-cert
+  name: letsencrypt-production-teleport-proxy-public-cert
 spec:
   selector:
     issuerRef:
@@ -22,6 +22,47 @@ spec:
       values:
         - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
         - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
+---
+# Approve the the Teleport Proxy internal certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: security-intermediary-ca-teleport-proxy-internal-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: security-intermediary-ca
+    namespace:
+      matchNames:
+        - security
+  allowed:
+    commonName:
+      required: true
+      value: teleport.security.svc.cluster.local
+    dnsNames:
+      required: true
+      values:
+        - teleport.security.svc.cluster.local
+        - "*.teleport.security.svc.cluster.local"
+        - teleport.security.svc
+        - "*.teleport.security.svc"
     subject:
       countries:
         required: true
