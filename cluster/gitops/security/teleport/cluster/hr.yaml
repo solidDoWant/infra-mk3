@@ -90,7 +90,8 @@ spec:
     proxy:
       # See note in routes.yaml
       annotations:
-        coredns.io/hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+        service:
+          coredns.io/hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
       teleportConfig:
         proxy_service:
           # TODO limit access to proxy to only gateways per RFD 123:
