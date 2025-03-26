@@ -7,7 +7,7 @@ spec:
   commonName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
   dnsNames:
     - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
-    - "*.${SECRET_PUBLIC_DOMAIN_NAME}"
+    - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
   subject:
     countries:
       - US
