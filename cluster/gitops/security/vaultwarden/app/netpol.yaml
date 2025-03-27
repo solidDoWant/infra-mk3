@@ -31,16 +31,6 @@ specs:
           - ports:
               - port: postgresql
                 protocol: TCP
-      # S3 for file "sends" storage
-      - toEndpoints:
-          - matchLabels:
-              io.kubernetes.pod.namespace: networking
-              app.kubernetes.io/name: ingress-gateways
-              gateway.networking.k8s.io/gateway-name: internal-gateway
-        toPorts:
-          - ports:
-              - port: "443"
-                protocol: TCP
       # Emails for sending invites and notifications via SMTP relay
       - toEndpoints:
           - matchLabels:
