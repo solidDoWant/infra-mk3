@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: democratic-csi-zfs-generic-nfs
+specs:
+  - description: controller-linux
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: democratic-csi
+        app.kubernetes.io/instance: democratic-csi-zfs-generic-nfs
+        app.kubernetes.io/component: controller-linux
+    egress:
+      # Access to the storage host
+      - toCIDRSet:
+          - cidrGroupRef: storage-hosts
+        toPorts:
+          - ports:
+              # SSH access
+              # TODO remove this when/if https://github.com/democratic-csi/democratic-csi/issues/454 is resolved
+              - port: "22"
+                protocol: TCP
+      # Access to k8s API for CSI components
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP

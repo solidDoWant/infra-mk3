@@ -13,8 +13,8 @@ metadata:
   name: routers
 spec:
   externalCIDRs:
-    - 10.3.0.1/32
-    - 10.3.0.2/32
+    - 10.3.0.1/32 # router-01
+    - 10.3.0.2/32 # router-02
 ---
 apiVersion: cilium.io/v2alpha1
 kind: CiliumCIDRGroup
@@ -22,7 +22,7 @@ metadata:
   name: upstream-dns-resolvers
 spec:
   externalCIDRs:
-    - 10.3.0.254/32
+    - 10.3.0.254/32 # router virtual IP
 ---
 apiVersion: cilium.io/v2alpha1
 kind: CiliumCIDRGroup
@@ -33,3 +33,11 @@ spec:
     - 10.2.2.1/32 # proxmox-vm-host-01
     - 10.2.3.1/32 # ubuntu-storage-host-01
     - 10.4.0.128/32 # ubuntu-development-01
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumCIDRGroup
+metadata:
+  name: storage-hosts
+spec:
+  externalCIDRs:
+    - 10.2.3.1/32 # ubuntu-storage-host-01
