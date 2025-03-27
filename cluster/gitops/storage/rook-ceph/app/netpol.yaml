@@ -1,0 +1,85 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+# cspell:words cephclusters
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: rook-ceph-operator
+specs:
+  - description: rook-ceph-operator
+    endpointSelector:
+      matchLabels:
+        app: rook-ceph-operator
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # Access to k8s API for Ceph cluster resource management
+      - &to_k8s_api_server
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Access to monitors
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: ceph-mon
+              app.kubernetes.io/component: cephclusters.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: tcp-msgr2
+                protocol: TCP
+      # Access to managers
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: ceph-mgr
+              app.kubernetes.io/component: cephclusters.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: mgr
+                protocol: TCP
+      # Access to OSDs
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: ceph-osd
+              app.kubernetes.io/component: cephclusters.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: "6800"
+                protocol: TCP
+      # Access to the S3 endpoint
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+  # One-off jobs that the operator creates
+  - description: operator jobs
+    endpointSelector:
+      matchExpressions:
+        - key: app
+          operator: In
+          values:
+            - ceph-file-controller-detect-version
+            - ceph-object-controller-detect-version
+            - rook-ceph-detect-version
+            - rook-ceph-osd-prepare
+      matchLabels:
+        app: rook-ceph-osd-prepare
+    egress:
+      # Load the rook-ceph configuration configmap
+      - *to_k8s_api_server
