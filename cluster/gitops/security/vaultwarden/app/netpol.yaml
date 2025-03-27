@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: vaultwarden
+specs:
+  - description: vaultwarden
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vaultwarden
+        app.kubernetes.io/instance: vaultwarden
+        app.kubernetes.io/component: vaultwarden
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # Backing CNPG cluster
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: vaultwarden-postgres-17
+        toPorts:
+          - ports:
+              - port: postgresql
+                protocol: TCP
+      # S3 for file "sends" storage
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Emails for sending invites and notifications via SMTP relay
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: email
+              endpoints.netpols.home.arpa/email-relay: "true"
+        toPorts:
+          - ports:
+              - port: smtp
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Traffic from ingress gateway
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
+      # Metrics (TODO)
