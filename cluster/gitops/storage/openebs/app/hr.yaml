@@ -53,6 +53,8 @@ spec:
         replicas: 2
         resources: *resources
         nodeSelector: *node_selector
+      analytics:
+        enabled: false
       # Disable zfs-localpv-installed volume snapshot CRDs entirely
       crds: *crds
   postRenderers:
