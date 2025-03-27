@@ -148,6 +148,18 @@ spec:
     proxyListenerMode: separate
     separatePostgresListener: true
     separateMongoListener: true
+    # These need to be explicitly specified so that other agents within the k8s cluster
+    # can connect to the proxy. If they are not specified, then the proxy acts as if the
+    # domain refers to an application, and redirects to https://publicAddr[0]/web/launch/<domain>.
+    # Bug maybe?
+    # Teleport really doesn't seem to support this well, with most of the docs and a lot
+    # of the code assuming that there is only one address. If this continuously causes
+    # problems then I may just remove this config. It's useful here so that in-cluster
+    # services don't need to connect through the gateway, removing a point of failure.
+    publicAddr:
+      - teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+      - teleport-cluster.security.svc:443
+      - teleport-cluster.security.svc.cluster.local:443
     sessionRecording: node-sync
     enterprise: true
     licenseSecretName: teleport-license
