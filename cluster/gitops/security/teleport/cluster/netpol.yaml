@@ -175,11 +175,7 @@ specs:
               app.kubernetes.io/component: teleport-resource-applier
         toPorts: &agent_ports
           - ports:
-              # Access the webapi find endpoint
               - port: tls
-                protocol: TCP
-              # Cluster traffic
-              - port: sshtun
                 protocol: TCP
       # Cluster joining access from out-of-cluster services
       - fromCIDRSet:
@@ -192,12 +188,3 @@ specs:
           - ports:
               - port: tls
                 protocol: TCP
-              - port: sshproxy
-                protocol: TCP
-              - port: kube
-                protocol: TCP
-              - port: mysql
-                protocol: TCP
-              - port: postgres
-                protocol: TCP
-              - port: mongo

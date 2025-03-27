@@ -41,11 +41,7 @@ specs:
               app.kubernetes.io/component: proxy
         toPorts:
           - ports:
-              # Access the webapi find endpoint
               - port: tls
-                protocol: TCP
-              # Cluster traffic (required for tbot as it acts as an agent)
-              - port: sshtun
                 protocol: TCP
       # Access to download dependencies (TODO build image and remove this)
       - toFQDNs:

@@ -145,9 +145,8 @@ spec:
       # Apparently "off" just errors now???
       # secondFactor: off # This is handled by Authentik. TODO consider additional enforcement
     # See note in routes.yaml
-    proxyListenerMode: separate
-    separatePostgresListener: true
-    separateMongoListener: true
+    # This can be multiplex as long as connections flow directly to the LB and not through the gateway
+    proxyListenerMode: mutiplex
     # These need to be explicitly specified so that other agents within the k8s cluster
     # can connect to the proxy. If they are not specified, then the proxy acts as if the
     # domain refers to an application, and redirects to https://publicAddr[0]/web/launch/<domain>.
@@ -173,6 +172,7 @@ spec:
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
+    # See note in routes.yaml
     service:
       type: LoadBalancer
       spec:

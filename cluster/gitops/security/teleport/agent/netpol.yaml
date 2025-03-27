@@ -59,11 +59,7 @@ specs:
               app.kubernetes.io/component: proxy
         toPorts:
           - ports:
-              # TLS port to access the webapi find endpoint
-              - port: "3080"
-                protocol: TCP
-              # SSH reverse tunnel port
-              - port: "3024"
+              - port: tls
                 protocol: TCP
       # Access to get the agent state secret
       - toEntities:
