@@ -15,7 +15,7 @@ spec:
       version: 17.2.9
   values:
     roles: db
-    proxyAddr: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+    proxyAddr: teleport-cluster.security.svc.cluster.local:443
     enterprise: true
     joinParams:
       method: kubernetes

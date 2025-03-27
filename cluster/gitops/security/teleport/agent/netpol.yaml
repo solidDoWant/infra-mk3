@@ -51,15 +51,19 @@ specs:
           - ports:
               - port: "6379"
                 protocol: TCP
-      # Access to the proxy server via gateway
+      # Access to the proxy server
       - toEndpoints:
           - matchLabels:
-              io.kubernetes.pod.namespace: networking
-              app.kubernetes.io/name: ingress-gateways
-              gateway.networking.k8s.io/gateway-name: internal-gateway
+              app.kubernetes.io/name: teleport-cluster
+              app.kubernetes.io/instance: teleport-cluster
+              app.kubernetes.io/component: proxy
         toPorts:
           - ports:
-              - port: "443"
+              # TLS port to access the webapi find endpoint
+              - port: "3080"
+                protocol: TCP
+              # SSH reverse tunnel port
+              - port: "3024"
                 protocol: TCP
       # Access to get the agent state secret
       - toEntities:
