@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: teleport-resource-applier
+specs:
+  - description: teleport-resource-applier
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: teleport-resource-applier
+        app.kubernetes.io/instance: teleport-resource-applier
+        app.kubernetes.io/component: teleport-resource-applier
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # k8s API for watching and retrieving configmap/secret resources containing Teleport manifests
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Teleport cluster access to manage resources
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: teleport-cluster
+              app.kubernetes.io/instance: teleport-cluster
+              app.kubernetes.io/component: proxy
+        toPorts:
+          - ports:
+              # Access the webapi find endpoint
+              - port: tls
+                protocol: TCP
+              # Cluster traffic (required for tbot as it acts as an agent)
+              - port: sshtun
+                protocol: TCP
+      # Access to download dependencies (TODO build image and remove this)
+      - toFQDNs:
+          # curl
+          - matchName: archive.ubuntu.com
+          - matchName: security.ubuntu.com
+        toPorts:
+          - ports:
+              # Apt still uses http by default...
+              - port: "80"
+                protocol: TCP
+      - toFQDNs:
+          # yq
+          - matchName: github.com
+          - matchName: objects.githubusercontent.com
+          # Kubectl
+          - matchName: dl.k8s.io
+          - matchName: cdn.dl.k8s.io
+          # Teleport
+          - matchName: apt.releases.teleport.dev
+          - matchName: apt.releases.development.teleport.dev
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
