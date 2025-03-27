@@ -29,12 +29,12 @@ kind: Certificate
 metadata:
   name: teleport-proxy-internal-cert
 spec:
-  commonName: teleport.security.svc.cluster.local
+  commonName: teleport-cluster.security.svc.cluster.local
   dnsNames:
-    - teleport.security.svc.cluster.local
-    - "*.teleport.security.svc.cluster.local"
-    - teleport.security.svc
-    - "*.teleport.security.svc"
+    - teleport-cluster.security.svc.cluster.local
+    - "*.teleport-cluster.security.svc.cluster.local"
+    - teleport-cluster.security.svc
+    - "*.teleport-cluster.security.svc"
   subject:
     countries:
       - US

@@ -59,10 +59,10 @@ spec:
     dnsNames:
       required: true
       values:
-        - teleport.security.svc.cluster.local
-        - "*.teleport.security.svc.cluster.local"
-        - teleport.security.svc
-        - "*.teleport.security.svc"
+        - teleport-cluster.security.svc.cluster.local
+        - "*.teleport-cluster.security.svc.cluster.local"
+        - teleport-cluster.security.svc
+        - "*.teleport-cluster.security.svc"
     subject:
       countries:
         required: true
