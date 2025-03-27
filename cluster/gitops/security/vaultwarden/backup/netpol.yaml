@@ -3,13 +3,13 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: teleport-backup
+  name: vaultwarden-backup
 specs:
   - description: backup-tool
     endpointSelector: &backup_tool_selector
       matchLabels:
         app.kubernetes.io/name: dr-job
-        app.kubernetes.io/instance: teleport-backup
+        app.kubernetes.io/instance: vaultwarden-backup
         app.kubernetes.io/component: backup-tool
     egress:
       # DNS resolution
@@ -37,7 +37,7 @@ specs:
           - &backup_tool_grpc_server_selector
             matchLabels:
               app.kubernetes.io/name: dr-job
-              app.kubernetes.io/instance: teleport-backup
+              app.kubernetes.io/instance: vaultwarden-backup
               app.kubernetes.io/component: backup-tool-grpc-server
         toPorts:
           - ports:
@@ -52,7 +52,7 @@ specs:
           - &cnpg_cluster_selector
             matchLabels:
               app.kubernetes.io/name: dr-job
-              app.kubernetes.io/instance: teleport-backup
+              app.kubernetes.io/instance: vaultwarden-backup
               app.kubernetes.io/component: cnpg-cluster
         toPorts:
           - ports:
