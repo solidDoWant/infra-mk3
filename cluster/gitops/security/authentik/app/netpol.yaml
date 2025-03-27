@@ -47,10 +47,11 @@ specs:
       # Allow emailing alerts via SMTP relay
       - toEndpoints:
           - matchLabels:
+              io.kubernetes.pod.namespace: email
               endpoints.netpols.home.arpa/email-relay: "true"
         toPorts:
           - ports:
-              - port: "25"
+              - port: smtp
                 protocol: TCP
       # Access to media storage in S3
       - toEndpoints:
