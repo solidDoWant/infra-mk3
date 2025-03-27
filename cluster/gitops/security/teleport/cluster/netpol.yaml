@@ -1,0 +1,203 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: teleport-cluster
+specs:
+  - description: operator
+    endpointSelector: &operator_selector
+      matchLabels:
+        app.kubernetes.io/name: operator
+        app.kubernetes.io/instance: teleport-cluster
+        app.kubernetes.io/component: operator
+    egress:
+      # DNS resolution
+      - &to_dns_resolver
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # Manage CRs
+      - &to_kube_apiserver
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Manage resources via auth server
+      - toEndpoints:
+          - &auth_selector
+            matchLabels:
+              app.kubernetes.io/name: teleport-cluster
+              app.kubernetes.io/instance: teleport-cluster
+              app.kubernetes.io/component: auth
+        toPorts:
+          - ports:
+              - port: auth
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: op-health
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - &metrics_scraper_selector
+            matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: op-metrics
+                protocol: TCP
+  - description: auth
+    endpointSelector: *auth_selector
+    egress:
+      - *to_dns_resolver
+      # k8s API access for verifying k8s-based join tokens
+      - *to_kube_apiserver
+      # To backing core postgres cluster
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: teleport-core-postgres-17
+        toPorts:
+          - ports:
+              - port: postgresql
+                protocol: TCP
+      # To backing audit logging postgres cluster
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: teleport-audit-postgres-17
+        toPorts:
+          - ports:
+              - port: postgresql
+                protocol: TCP
+      # To backing session recording S3 bucket
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - &from_kubelet_for_cluster_healthcheck
+        fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: diag
+                protocol: TCP
+      # Metrics
+      - &from_metrics_scraper_for_cluster_metrics
+        fromEndpoints:
+          - *metrics_scraper_selector
+        toPorts:
+          - ports:
+              - port: diag
+                protocol: TCP
+      # Auth service access
+      - fromEndpoints:
+          - *operator_selector
+          # Proxy
+          - &proxy_selector
+            matchLabels:
+              app.kubernetes.io/name: teleport-cluster
+              app.kubernetes.io/instance: teleport-cluster
+              app.kubernetes.io/component: proxy
+        toPorts:
+          - ports:
+              - port: auth
+                protocol: TCP
+      # k8s service access
+      - fromEndpoints:
+          - *proxy_selector
+        toPorts:
+          - ports:
+              - port: kube
+                protocol: TCP
+  - description: proxy
+    endpointSelector: *proxy_selector
+    egress:
+      - *to_dns_resolver
+      # k8s API access for k8s-based join token
+      - *to_kube_apiserver
+      # Access to the auth service
+      - toEndpoints:
+          - *auth_selector
+        toPorts:
+          - ports:
+              - port: auth
+                protocol: TCP
+              - port: kube
+                protocol: TCP
+      # Proxy to proxy communication (peering)
+      - toEndpoints:
+          - *proxy_selector
+        toPorts:
+          - ports:
+              - port: proxypeering
+                protocol: TCP
+    ingress:
+      - *from_kubelet_for_cluster_healthcheck
+      - *from_metrics_scraper_for_cluster_metrics
+      # Proxy to auth service
+      # Proxy to proxy communication (peering)
+      - fromEndpoints:
+          - *proxy_selector
+        toPorts:
+          - ports:
+              - port: proxypeering
+                protocol: TCP
+      # Cluster joining access from in-cluster services
+      - fromEndpoints:
+          # Agents
+          - matchLabels:
+              app: teleport-agent
+          # Resource applier
+          - matchLabels:
+              app.kubernetes.io/name: teleport-resource-applier
+              app.kubernetes.io/instance: teleport-resource-applier
+              app.kubernetes.io/component: teleport-resource-applier
+        toPorts: &agent_ports
+          - ports:
+              # Access the webapi find endpoint
+              - port: tls
+                protocol: TCP
+              # Cluster traffic
+              - port: sshtun
+                protocol: TCP
+      # Cluster joining access from out-of-cluster services
+      - fromCIDRSet:
+          - cidrGroupRef: external-nodes
+        toPorts: *agent_ports
+      # Access to proxied resources from clients
+      - fromCIDRSet:
+          - cidrGroupRef: intranet
+        toPorts:
+          - ports:
+              - port: tls
+                protocol: TCP
+              - port: sshproxy
+                protocol: TCP
+              - port: kube
+                protocol: TCP
+              - port: mysql
+                protocol: TCP
+              - port: postgres
+                protocol: TCP
+              - port: mongo

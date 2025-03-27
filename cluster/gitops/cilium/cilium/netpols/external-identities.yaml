@@ -23,3 +23,13 @@ metadata:
 spec:
   externalCIDRs:
     - 10.3.0.254/32
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumCIDRGroup
+metadata:
+  name: external-nodes
+spec:
+  externalCIDRs:
+    - 10.2.2.1/32 # proxmox-vm-host-01
+    - 10.2.3.1/32 # ubuntu-storage-host-01
+    - 10.4.0.128/32 # ubuntu-development-01
