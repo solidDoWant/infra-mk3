@@ -44,7 +44,7 @@ spec:
               - start
               - --data-dir=/var/lib/teleport/bot
               - --destination-dir=/opt/machine-id
-              - --proxy-server=teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+              - --proxy-server=teleport-cluster.security.svc.cluster.local:443
               - --token=teleport-resource-applier
               - --join-method=kubernetes
           # 2. Watch for configmaps
@@ -69,7 +69,7 @@ spec:
             command:
               - /script/applier.sh
             env:
-              TELEPORT_PROXY_ADDRESS: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+              TELEPORT_PROXY_ADDRESS: teleport-cluster.security.svc.cluster.local:443
               TELEPORT_IDENTITY_FILE: /opt/machine-id/identity
               RESOURCES_DIRECTORY: /resources
     defaultPodOptions:
@@ -103,6 +103,21 @@ spec:
               - path: /opt/machine-id
             resource-applier:
               - path: /opt/machine-id
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0440
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          teleport-resource-applier:
+            tbot:
+              - path: /etc/ssl/certs/root-ca.crt
+                subPath: ca.crt
+            resource-applier:
+              - path: /etc/ssl/certs/root-ca.crt
+                subPath: ca.crt
     serviceAccount:
       create: true
     rbac:
