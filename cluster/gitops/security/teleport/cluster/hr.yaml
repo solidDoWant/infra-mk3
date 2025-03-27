@@ -219,4 +219,17 @@ spec:
               version: v1
               kind: Deployment
               labelSelector: app.kubernetes.io/component = proxy
+    # Deploy multiple proxy replicas
+    # See https://github.com/gravitational/teleport/issues/53478
+    - kustomize:
+        patches:
+          - patch: |
+              - op: replace
+                path: /spec/replicas
+                value: 2
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              labelSelector: app.kubernetes.io/component = proxy
     # TODO add affinity for auth and postgres primary to attract to the same nodes
