@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: metrics-server
+specs:
+  - description: metrics-server
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: metrics-server
+    egress:
+      # To k8s api to watch pods and nodes
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # To kubelet api to get resource usage
+      - toEntities:
+          - host
+          - remote-node
+        toPorts:
+          - ports:
+              - port: "10250"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: https
+                protocol: TCP
+      # Queries from kubelets
+      - fromEntities:
+          - host
+          - remote-node
+        toPorts:
+          - ports:
+              - port: https
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: https
+                protocol: TCP
