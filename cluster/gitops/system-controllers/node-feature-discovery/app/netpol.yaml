@@ -1,0 +1,64 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: metrics-server
+specs:
+  - &nfd_master
+    description: node-feature-discovery-master
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: node-feature-discovery
+        role: master
+    egress:
+      # To k8s api to watch nodes and set labels
+      - &to_k8s_api_server
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # NOTE: v0.18 will combine the port names to a shared "http" port
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: health
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
+  - <<: *nfd_master
+    description: node-feature-discovery-worker
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: node-feature-discovery
+        role: worker
+  - description: node-feature-discovery-gc
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: node-feature-discovery
+        role: gc
+    egress:
+      # Access to k8s api to cleanup stale NFD resources
+      - *to_k8s_api_server
+    ingress:
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
