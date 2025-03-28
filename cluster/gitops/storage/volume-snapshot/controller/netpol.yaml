@@ -1,0 +1,35 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: volume-snapshot-controller
+specs:
+  - description: volume-snapshot-controller
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: snapshot-controller
+    egress:
+      # k8s API for resource management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # From kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
