@@ -18,9 +18,18 @@ specs:
               - port: "6443"
                 protocol: TCP
     ingress:
+      # Kubelet for healthcheck
       - fromEntities:
-          # Kubelet for healthcheck
           - host
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
               - port: metrics
