@@ -20,5 +20,6 @@ spec:
       name: helm-bootstrap-values
   # These values are added now that the cluster has been bootstrapped
   values:
-    serviceMonitor:
-      enabled: true
+    metrics:
+      serviceMonitor:
+        enabled: true
