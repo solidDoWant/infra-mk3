@@ -1,0 +1,243 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: rook-ceph-cluster
+specs:
+  - description: csi-cephfsplugin-provisioner
+    endpointSelector: &csi_cephfsplugin_provisioner_selector
+      matchLabels:
+        app: csi-cephfsplugin-provisioner
+    egress:
+      # DNS resolution
+      - &to_dns_resolver
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # To k8s api server for updating PVC statuses
+      - &to_k8s_api_server
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Allow access to the backing Ceph cluster
+      # Access to monitors
+      - &to_monitors
+        toEndpoints:
+          - &mon_selector
+            matchLabels:
+              app.kubernetes.io/name: ceph-mon
+              app.kubernetes.io/component: cephclusters.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: "6789"
+                protocol: TCP
+              - port: "3300"
+                protocol: TCP
+      # Access to managers
+      - &to_managers
+        toEndpoints:
+          - &managers_selector
+            matchLabels:
+              app.kubernetes.io/name: ceph-mgr
+              app.kubernetes.io/component: cephclusters.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: "6800"
+                protocol: TCP
+      # Access to OSDs
+      - &to_osds
+        toEndpoints:
+          - &osd_selector
+            matchLabels:
+              app.kubernetes.io/name: ceph-osd
+              app.kubernetes.io/component: cephclusters.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: "6800"
+                protocol: TCP
+              - port: "6801"
+                protocol: TCP
+      # Access to MDS
+      - &to_mds
+        toEndpoints:
+          - &mds_selector
+            matchLabels:
+              app.kubernetes.io/name: ceph-mds
+              app.kubernetes.io/component: cephfilesystems.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: "6800"
+                protocol: TCP
+              - port: "6801"
+                protocol: TCP
+  - description: csi-rbdplugin-provisioner
+    endpointSelector: &csi_rbdplugin_provisioner_selector
+      matchLabels:
+        app: csi-rbdplugin-provisioner
+    egress:
+      - *to_dns_resolver
+      - *to_k8s_api_server
+      - *to_monitors
+      - *to_managers
+      - *to_osds
+  - description: rook-ceph-exporter
+    endpointSelector: &rook_ceph_exporter_selector
+      matchLabels:
+        app: rook-ceph-exporter
+    egress:
+      - *to_monitors
+    ingress:
+      # Metrics
+      - fromEndpoints: &metrics_scraper_endpoint
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9926"
+                protocol: TCP
+  - description: rook-ceph-mds
+    endpointSelector: *mds_selector
+    egress:
+      - *to_monitors
+      - *to_managers
+      - *to_osds
+    ingress:
+      - fromEndpoints:
+          - *csi_cephfsplugin_provisioner_selector
+          - *managers_selector
+          - &csi_cephfsplugin_selector
+            matchLabels:
+              app: csi-cephfsplugin
+        toPorts:
+          - ports:
+              - port: "6800"
+                protocol: TCP
+              - port: "6801"
+                protocol: TCP
+  - description: rook-ceph-mgr
+    endpointSelector: *managers_selector
+    egress:
+      - *to_k8s_api_server
+      - *to_monitors
+      - *to_managers
+      - *to_osds
+      - *to_mds
+    ingress:
+      # Communication with Ceph cluster services
+      - fromEndpoints:
+          - *mon_selector
+          - *managers_selector
+          - *osd_selector
+          - *mds_selector
+          - *csi_cephfsplugin_provisioner_selector
+          - *csi_rbdplugin_provisioner_selector
+          - *csi_cephfsplugin_selector
+          - &rgw_selector
+            matchLabels:
+              app.kubernetes.io/name: ceph-rgw
+              app.kubernetes.io/component: cephobjectstores.ceph.rook.io
+          - &operator_selector
+            matchLabels:
+              app: rook-ceph-operator
+          - &csi_rbdplugin_selector
+            matchLabels:
+              app: csi-rbdplugin
+        toPorts:
+          - ports:
+              - port: "6800"
+                protocol: TCP
+      # Dashboard
+      - fromEndpoints:
+          - &gateway_selector
+            matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: dashboard
+                protocol: TCP
+      # Metrics
+      - fromEndpoints: *metrics_scraper_endpoint
+        toPorts:
+          - ports:
+              - port: http-metrics
+                protocol: TCP
+  - description: rook-ceph-mon
+    endpointSelector: *mon_selector
+    egress:
+      - *to_managers
+      - *to_monitors
+    ingress:
+      # Communication with Ceph cluster services
+      - fromEndpoints:
+          - *mon_selector
+          - *managers_selector
+          - *osd_selector
+          - *mds_selector
+          - *rgw_selector
+          - *operator_selector
+          - *csi_rbdplugin_selector
+          - *csi_cephfsplugin_selector
+          - *csi_rbdplugin_provisioner_selector
+          - *csi_cephfsplugin_provisioner_selector
+          - *rook_ceph_exporter_selector
+          - &rook_ceph_crashcollector_selector
+            matchLabels:
+              app: rook-ceph-crashcollector
+        toPorts:
+          - ports:
+              - port: "3300"
+                protocol: TCP
+              - port: "6789"
+                protocol: TCP
+  - description: rook-ceph-osd
+    endpointSelector: *osd_selector
+    egress:
+      - *to_monitors
+      - *to_managers
+      # All ports
+      # OSDs can communicate over hundreds of different ports
+      - <<: *to_osds
+        toPorts: ~
+    ingress:
+      # Communication with Ceph cluster services
+      - fromEndpoints:
+          - *managers_selector
+          - *osd_selector
+          - *rgw_selector
+          - *csi_rbdplugin_selector
+          - *mds_selector
+          - *csi_cephfsplugin_selector
+          - *csi_cephfsplugin_provisioner_selector
+          - *csi_rbdplugin_provisioner_selector
+  - description: rook-ceph-rgw
+    endpointSelector: *rgw_selector
+    egress:
+      - *to_monitors
+      - *to_managers
+      - *to_osds
+    ingress:
+      # Communication with Ceph cluster services
+      - fromEndpoints:
+          - *gateway_selector
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+  - description: rook-ceph-crashcollector
+    endpointSelector: *rook_ceph_crashcollector_selector
+    egress:
+      - *to_monitors

@@ -1,0 +1,22 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: &name csi-cephfsplugin-provisioner
+  labels: &labels
+    app: *name
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: &name csi-rbdplugin-provisioner
+  labels: &labels
+    app: *name
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
