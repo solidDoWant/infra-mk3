@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: spegel
+specs:
+  - description: spegel
+    endpointSelector: &spegel_selector
+      matchLabels:
+        app.kubernetes.io/name: spegel
+    egress:
+      # TODO whatever world:5001 is - old router pod maybe?
+      # To k8s api for lease management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # To other spegel pods for transceiving images
+      - toEndpoints:
+          - *spegel_selector
+        toPorts:
+          - ports:
+              - port: router
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: registry
+                protocol: TCP
+      # Image pull requests from the container runtime
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: registry
+                protocol: TCP
+      # From other spegel pods for transceiving images
+      - fromEndpoints:
+          - *spegel_selector
+        toPorts:
+          - ports:
+              - port: router
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: metrics
+                protocol: TCP
