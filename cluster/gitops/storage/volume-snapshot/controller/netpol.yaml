@@ -28,6 +28,7 @@ specs:
       # Metrics
       - fromEndpoints:
           - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
