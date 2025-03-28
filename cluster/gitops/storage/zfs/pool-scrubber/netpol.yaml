@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: zfs-pool-scrubber
+specs:
+  - description: zfs-pool-scrubber-labeler
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: zfs-pool-scrubber-labeler
+    egress:
+      # k8s API to label nodes, triggering the dataset on supported nodes
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+  - description: zfs-pool-scrubber
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: zfs-pool-scrubber
+    egress:
+      # k8s API to label node, preventing the pod from running forever
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
