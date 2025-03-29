@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: system-upgrade-controller
+specs:
+  - description: system-upgrade-controller
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: system-upgrade-controller
+    egress:
+      # Manage resources for upgrades
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
