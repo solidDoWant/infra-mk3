@@ -10,15 +10,16 @@ spec:
   minAvailable: 1
   selector:
     matchLabels: *labels
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: node-feature-discovery-gc
-  labels: &labels
-    app.kubernetes.io/instance: node-feature-discovery
-    role: gc
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels: *labels
+# Not currently needed
+# ---
+# apiVersion: policy/v1
+# kind: PodDisruptionBudget
+# metadata:
+#   name: node-feature-discovery-gc
+#   labels: &labels
+#     app.kubernetes.io/instance: node-feature-discovery
+#     role: gc
+# spec:
+#   minAvailable: 1
+#   selector:
+#     matchLabels: *labels
