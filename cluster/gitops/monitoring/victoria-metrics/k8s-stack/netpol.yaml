@@ -60,7 +60,8 @@ specs:
           - cluster
         toPorts: &all_tcp_ports
           - ports:
-              - port: "0"
+              - port: "1"
+                endPort: 65535
                 protocol: TCP
       # Access to cluster-external resources that should be scraped
       - toCIDRSet:
