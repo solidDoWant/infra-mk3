@@ -214,8 +214,8 @@ specs:
       - *to_managers
       # All ports
       # OSDs can communicate over hundreds of different ports
-      - <<: *to_osds
-        toPorts: ~
+      - toEndpoints:
+          - *osd_selector
     ingress:
       # Communication with Ceph cluster services
       - fromEndpoints:
