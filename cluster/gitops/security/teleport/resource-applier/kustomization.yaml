@@ -3,13 +3,13 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./hr.yaml
+  - ./netpol.yaml
   - ./teleport-bot.yaml
 configMapGenerator:
   - name: applier-scripts
     files:
       - ./applier.sh
       - ./lib.sh
-      - ./netpol.sh
       - ./user-setup.sh
     options:
       annotations:
