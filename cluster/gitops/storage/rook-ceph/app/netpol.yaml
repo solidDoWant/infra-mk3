@@ -78,8 +78,6 @@ specs:
             - ceph-object-controller-detect-version
             - rook-ceph-detect-version
             - rook-ceph-osd-prepare
-      matchLabels:
-        app: rook-ceph-osd-prepare
     egress:
       # Load the rook-ceph configuration configmap
       - *to_k8s_api_server
