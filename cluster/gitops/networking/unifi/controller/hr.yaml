@@ -1,0 +1,115 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# TODO pull all unifi stuff - there is _a lot_ of phoning
+# home/analytics/telemetry. On top of that, there is no
+# HA support, and more importantly, basically all config
+# requires clickops/UI mangement. Need a product with
+# declarative config, and centralized management with HA
+# support.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: unifi-controller
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.5.1
+  values:
+    # This is not HA in any sense because the controller does not support
+    # multiple concurrent instances, and I don't want to take the time to
+    # write something to handle active/passive failover.
+    controllers:
+      unifi-controller:
+        type: statefulset
+        containers:
+          app:
+            image:
+              repository: goofball222/unifi
+              tag: 9.0.114
+            env:
+              RUN_CHOWN: "false"
+              LOGSTDOUT: "true"
+              # LB IP address
+              SYSTEM_IP: 10.34.0.3
+            resources:
+              requests:
+                cpu: 100m
+                memory: 2Gi
+              limits:
+                cpu: 1
+                memory: 2Gi
+            # See https://help.ui.com/hc/en-us/articles/218506997-Required-Ports-Reference
+            ports:
+              - name: http
+                containerPort: 8080
+                protocol: TCP
+              - name: https
+                containerPort: 8443
+                protocol: TCP
+              - name: speedtest
+                containerPort: 6789
+                protocol: TCP
+              - name: stun
+                containerPort: 3478
+                protocol: UDP
+              - name: discovery
+                containerPort: 10001
+                protocol: UDP
+            probes:
+              liveness: &probe
+                enabled: true
+                port: http
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: RuntimeDefault
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999 # Unifi user
+            runAsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+        labels:
+          endpoints.netpols.home.arpa/email-sender: "true"
+        # Using a STS prevents a new pod from starting when the old one is terminating,
+        # which can cause DB consistency issues when the pods are scheduled on the same
+        # node.
+        statefulset:
+          volumeClaimTemplates:
+            - name: unifi-data
+              size: 5Gi
+              accessMode: ReadWriteOnce
+              storageClass: ssd-replicated-3x
+              globalMounts:
+                - path: /usr/lib/unifi/data
+    service:
+      unifi-controller:
+        controller: unifi-controller
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.34.0.3
+        ports:
+          http:
+            port: 80
+            targetPort: 8080
+          https:
+            port: 443
+            targetPort: 8443
+          speedtest:
+            port: 6789
+          stun:
+            port: 3478
+          discovery:
+            port: 10001

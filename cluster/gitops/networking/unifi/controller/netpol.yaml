@@ -1,0 +1,93 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: unifi-controller
+specs:
+  - description: unifi-controller
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: unifi-controller
+        app.kubernetes.io/component: unifi-controller
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchName: fw-update.ubnt.com
+                - matchName: static.ui.com
+                - matchName: static.ubnt.com
+                - matchName: docker-postfix-mail.email.svc.cluster.local
+      # Send emails via SMTP relay
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: email
+              endpoints.netpols.home.arpa/email-relay: "true"
+        toPorts:
+          - ports:
+              - port: smtp
+                protocol: TCP
+      # Internet access for specific functions
+      - toFQDNs:
+          # Allow access to download firmware updates
+          - matchName: fw-update.ubnt.com
+          # Allow access to static assets
+          - matchName: static.ui.com
+          - matchName: static.ubnt.com
+          # Disabled - do not phone home
+          # - matchName: crash-report-service.svc.ui.com
+          # - matchName: trace.svc.ui.com
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # # UI access via ingress gateway
+      # This doesn't work - see httproute for details
+      # - fromEndpoints:
+      #     - matchLabels:
+      #         app.kubernetes.io/name: ingress-gateways
+      #         gateway.networking.k8s.io/gateway-name: internal-gateway
+      #   toPorts:
+      #     - ports:
+      #         - port: "8443"
+      #           protocol: TCP
+      #
+      # UI access from intranet
+      - fromCIDRSet:
+          - cidrGroupRef: intranet
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+      # Access from the APs
+      - fromCIDRSet:
+          - cidrGroupRef: unifi-aps
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+          - ports:
+              - port: "8443"
+                protocol: TCP
+          - ports:
+              - port: "6789"
+                protocol: TCP
+          - ports:
+              - port: "3478"
+                protocol: UDP
+          - ports:
+              - port: "10001"
+                protocol: UDP
