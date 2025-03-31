@@ -3,7 +3,7 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: metrics-server
+  name: node-feature-discovery
 specs:
   - &nfd_master
     description: node-feature-discovery-master
