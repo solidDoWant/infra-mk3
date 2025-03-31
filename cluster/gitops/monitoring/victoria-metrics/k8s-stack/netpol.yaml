@@ -173,7 +173,7 @@ specs:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: http
+              - port: "8080"
                 protocol: TCP
   - description: vmalertmanager
     endpointSelector: &alertmanager_matcher
@@ -306,7 +306,7 @@ specs:
           - *vmalert_matcher
         toPorts:
           - ports:
-              - port: http
+              - port: "8080"
                 protocol: TCP
     ingress:
       # Webservice
