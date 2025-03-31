@@ -113,7 +113,11 @@ specs:
       - fromEntities:
           # Kubelet for healthcheck
           - host
-        fromEndpoints:
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - fromEndpoints:
           # Gateway to vmui
           - matchLabels:
               io.kubernetes.pod.namespace: networking
@@ -149,7 +153,11 @@ specs:
       - fromEntities:
           # Kubelet for healthcheck
           - host
-        fromEndpoints:
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - fromEndpoints:
           # Active alerts queries proxied via vmselect, see
           # https://docs.victoriametrics.com/cluster-victoriametrics/#vmalert
           - matchLabels:
@@ -188,7 +196,11 @@ specs:
       - fromEntities:
           # Kubelet for healthcheck
           - host
-        fromEndpoints:
+        toPorts:
+          - ports:
+              - port: web
+                protocol: TCP
+      - fromEndpoints:
           # Gateway to web UI
           - matchLabels:
               io.kubernetes.pod.namespace: networking
@@ -243,7 +255,11 @@ specs:
       - fromEntities:
           # Kubelet for healthcheck
           - host
-        fromEndpoints:
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - fromEndpoints:
           # Gateway to vmui
           - matchLabels:
               io.kubernetes.pod.namespace: networking
@@ -299,7 +315,11 @@ specs:
       - fromEntities:
           # Kubelet for healthcheck
           - host
-        fromEndpoints:
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - fromEndpoints:
           # Application-aware load balancer
           - matchLabels:
               app.kubernetes.io/name: vmclusterlb-vmauth-balancer
@@ -326,7 +346,11 @@ specs:
       - fromEntities:
           # Kubelet for healthcheck
           - host
-        fromEndpoints:
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - fromEndpoints:
           # Application-aware load balancer
           - matchLabels:
               app.kubernetes.io/name: vmclusterlb-vmauth-balancer
