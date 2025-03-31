@@ -23,6 +23,11 @@ spec:
           name: victoria-metrics-license-key
           key: licenseKey
     victoria-metrics-operator:
+      # Deploy an image version with https://github.com/VictoriaMetrics/operator/pull/1275
+      # This can be reverted after next release
+      image:
+        registry: quay.io
+        tag: 625c1cd@sha256:934925fc9dce329f8c13c9335f3f5a8c31e391b6d838a1241cca148b5360ba6b
       fullnameOverride: victoria-metrics-operator
       crds:
         enabled: false
