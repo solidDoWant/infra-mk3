@@ -96,6 +96,14 @@ spec:
               storageClass: ssd-replicated-3x
               globalMounts:
                 - path: /usr/lib/unifi/data
+    persistence:
+      # Make this directory RW
+      unifi-run:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 128Mi
+        globalMounts:
+          - path: /usr/lib/unifi/run
     service:
       unifi-controller:
         controller: unifi-controller
