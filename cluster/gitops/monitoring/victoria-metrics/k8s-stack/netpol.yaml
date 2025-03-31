@@ -99,7 +99,7 @@ specs:
               app.kubernetes.io/name: victoria-metrics-license-service
         toPorts:
           - ports:
-              - port: https
+              - port: "443"
                 protocol: TCP
       # Access to the k8s API server for service discovery
       - toEntities:
