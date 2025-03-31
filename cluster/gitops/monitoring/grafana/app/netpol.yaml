@@ -34,8 +34,7 @@ specs:
       # Allow access to VictoriaMetrics (load balancer endpoint)
       - toEndpoints:
           - matchLabels:
-              app.kubernetes.io/instance: victoria-metrics-k8s-stack
-              app.kubernetes.io/name: vmclusterlb-vmauth-balancer
+              endpoints.netpols.home.arpa/time-series-supplier: "true"
         toPorts:
           - ports:
               - port: "8427"
