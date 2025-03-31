@@ -89,7 +89,7 @@ specs:
               app.kubernetes.io/name: vmclusterlb-vmauth-balancer
         toPorts:
           - ports:
-              - port: http
+              - port: "8427"
                 protocol: TCP
       # Access to the license service
       - &to_license_service
@@ -131,7 +131,7 @@ specs:
               - port: http
                 protocol: TCP
   - description: vmalert
-    endpointSelector:
+    endpointSelector: &vmalert_matcher
       matchLabels:
         app.kubernetes.io/name: vmalert
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
@@ -207,9 +207,7 @@ specs:
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
           # Alerts from vmalert
-          - matchLabels:
-              app.kubernetes.io/instance: victoria-metrics-k8s-stack
-              app.kubernetes.io/name: vmalert
+          - *vmalert_matcher
           # Alerts from Grafana
           - matchLabels:
               app: grafana
@@ -239,7 +237,7 @@ specs:
               app.kubernetes.io/name: vmselect
         toPorts:
           - ports:
-              - port: http
+              - port: "8481"
                 protocol: TCP
       # Write metrics
       - toEndpoints:
@@ -248,7 +246,7 @@ specs:
               app.kubernetes.io/name: vminsert
         toPorts:
           - ports:
-              - port: http
+              - port: "8480"
                 protocol: TCP
     ingress:
       # Webservice
@@ -267,6 +265,8 @@ specs:
               gateway.networking.k8s.io/gateway-name: internal-gateway
           # Alert persistence
           - *alertmanager_matcher
+          # Query metrics to to trigger alerts
+          - *vmalert_matcher
           # Query clients
           - matchExpressions:
               - key: io.kubernetes.pod.namespace
@@ -303,9 +303,7 @@ specs:
       # Access to query active alerts, used by Grafana. See
       # https://docs.victoriametrics.com/cluster-victoriametrics/#vmalert
       - toEndpoints:
-          - matchLabels:
-              app.kubernetes.io/instance: victoria-metrics-k8s-stack
-              app.kubernetes.io/name: vmalert
+          - *vmalert_matcher
         toPorts:
           - ports:
               - port: http
@@ -340,7 +338,11 @@ specs:
       - *dns_resolution
       - *to_license_service
       # Access to store ingested metrics
-      - *to_vmstorage
+      - <<: *to_vmstorage
+        toPorts:
+          - ports:
+              - port: vminsert
+                protocol: TCP
     ingress:
       # Webservice
       - fromEntities:
