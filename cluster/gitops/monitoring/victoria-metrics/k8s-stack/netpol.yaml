@@ -283,7 +283,7 @@ specs:
               - port: http
                 protocol: TCP
   - description: vmselect
-    endpointSelector:
+    endpointSelector: &vmselect_matcher
       matchLabels:
         app.kubernetes.io/name: vmselect
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
@@ -298,7 +298,7 @@ specs:
               app.kubernetes.io/name: vmstorage
         toPorts:
           - ports:
-              - port: vmselect
+              - port: "8401"
                 protocol: TCP
       # Access to query active alerts, used by Grafana. See
       # https://docs.victoriametrics.com/cluster-victoriametrics/#vmalert
@@ -330,7 +330,7 @@ specs:
               - port: http
                 protocol: TCP
   - description: vminsert
-    endpointSelector:
+    endpointSelector: &vminsert_matcher
       matchLabels:
         app.kubernetes.io/name: vminsert
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
@@ -341,7 +341,7 @@ specs:
       - <<: *to_vmstorage
         toPorts:
           - ports:
-              - port: vminsert
+              - port: "8400"
                 protocol: TCP
     ingress:
       # Webservice
@@ -363,6 +363,43 @@ specs:
         toPorts:
           - ports:
               - port: http
+                protocol: TCP
+  - description: vmstorage
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vmstorage
+        app.kubernetes.io/instance: victoria-metrics-k8s-stack
+    egress:
+      - *to_license_service
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8482"
+                protocol: TCP
+      # vminsert
+      - fromEndpoints:
+          - *vminsert_matcher
+        toPorts:
+          - ports:
+              - port: "8400"
+                protocol: TCP
+      # vmselect
+      - fromEndpoints:
+          - *vmselect_matcher
+        toPorts:
+          - ports:
+              - port: "8401"
+                protocol: TCP
+      # Metrics (vmagent)
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8482"
                 protocol: TCP
   # Metric exporter resources
   - description: kube-state-metrics
