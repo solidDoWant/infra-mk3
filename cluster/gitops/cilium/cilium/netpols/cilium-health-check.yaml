@@ -1,0 +1,16 @@
+---
+# See https://docs.cilium.io/en/latest/security/policy/kubernetes/#example-add-health-endpoint
+apiVersion: "cilium.io/v2"
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: "cilium-health-checks"
+spec:
+  endpointSelector:
+    matchLabels:
+      "reserved:health": ""
+  ingress:
+    - fromEntities:
+        - remote-node
+  egress:
+    - toEntities:
+        - remote-node

@@ -31,7 +31,7 @@ specs:
           - ports:
               - port: postgresql
                 protocol: TCP
-      # Allow access to VictoriaMetrics (load balancer endpoint)
+      # Allow access to query time series
       - toEndpoints:
           - matchLabels:
               endpoints.netpols.home.arpa/time-series-supplier: "true"
