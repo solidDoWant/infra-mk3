@@ -95,3 +95,12 @@ specs:
           - ports:
               - port: "10001"
                 protocol: UDP
+      # Access from poller
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: unifi-poller
+              app.kubernetes.io/instance: unifi-poller
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
