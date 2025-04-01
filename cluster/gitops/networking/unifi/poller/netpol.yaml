@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: unifi-poller
+specs:
+  - description: unifi-poller
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: unifi-poller
+        app.kubernetes.io/component: unifi-poller
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # Access to the unifi controller
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: unifi-controller
+              app.kubernetes.io/instance: unifi-controller
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "9130"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9130"
+                protocol: TCP
