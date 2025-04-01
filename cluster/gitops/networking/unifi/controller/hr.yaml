@@ -83,8 +83,8 @@ spec:
             fsGroupChangePolicy: OnRootMismatch
             seccompProfile:
               type: RuntimeDefault
-        labels:
-          endpoints.netpols.home.arpa/email-sender: "true"
+          labels:
+            endpoints.netpols.home.arpa/email-sender: "true"
         # Using a STS prevents a new pod from starting when the old one is terminating,
         # which can cause DB consistency issues when the pods are scheduled on the same
         # node.
@@ -104,6 +104,13 @@ spec:
         sizeLimit: 128Mi
         globalMounts:
           - path: /usr/lib/unifi/run
+      # TODO this does nothing - see https://github.com/goofball222/unifi/issues/148
+      # root-ca:
+      #   type: secret
+      #   name: root-ca-pub-cert
+      #   globalMounts:
+      #     - path: /etc/ssl/certs/root-ca.crt
+      #       subPath: ca.crt
     service:
       unifi-controller:
         controller: unifi-controller
