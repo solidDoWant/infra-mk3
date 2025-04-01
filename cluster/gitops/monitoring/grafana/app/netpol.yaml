@@ -42,8 +42,7 @@ specs:
       # Allow access to the alertmanager web service
       - toEndpoints:
           - matchLabels:
-              app.kubernetes.io/instance: victoria-metrics-k8s-stack
-              app.kubernetes.io/name: vmalertmanager
+              endpoints.netpols.home.arpa/alertmanager-server: "true"
         toPorts:
           - ports:
               - port: "9093"

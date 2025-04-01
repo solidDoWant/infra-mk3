@@ -208,9 +208,14 @@ specs:
               gateway.networking.k8s.io/gateway-name: internal-gateway
           # Alerts from vmalert
           - *vmalert_matcher
-          # Alerts from Grafana
-          - matchLabels:
-              app: grafana
+          # Other in-cluster clients
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/alertmanager-client
+                operator: In
+                values:
+                  - "true"
           # Metrics
           - matchLabels:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
