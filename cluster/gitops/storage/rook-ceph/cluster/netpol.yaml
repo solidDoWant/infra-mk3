@@ -138,6 +138,7 @@ specs:
       # Alertmanager access for the dashboard
       - toEndpoints:
           - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/alertmanager-server: "true"
         toPorts:
           - ports:
@@ -146,6 +147,7 @@ specs:
       # Prometheus access for the dashboard
       - toEndpoints:
           - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/time-series-supplier: "true"
         toPorts:
           - ports:
