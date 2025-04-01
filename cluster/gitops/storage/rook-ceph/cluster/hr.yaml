@@ -28,6 +28,10 @@ spec:
     pspEnable: false
     cephClusterSpec:
       cephConfig:
+        labels:
+          mgr:
+            endpoints.netpols.home.arpa/alertmanager-client: "true"
+            endpoints.netpols.home.arpa/time-series-querier: "true"
         # Allow the pool to operate when one node is offline
         global:
           osd_pool_default_min_size: "2"

@@ -134,6 +134,22 @@ specs:
       - *to_managers
       - *to_osds
       - *to_mds
+      # Alertmanager access for the dashboard
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/alertmanager-server: "true"
+        toPorts:
+          - ports:
+              - port: "9093"
+                protocol: TCP
+      # Prometheus access for the dashboard
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/time-series-supplier: "true"
+        toPorts:
+          - ports:
+              - port: "8427"
+                protocol: TCP
     ingress:
       # Communication with Ceph cluster services
       - fromEndpoints:
