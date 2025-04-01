@@ -45,7 +45,7 @@ specs:
               endpoints.netpols.home.arpa/time-series-supplier: "true"
         toPorts:
           - ports:
-              - port: http
+              - port: "8427"
                 protocol: TCP
       # Access dashboards in Grafana
       - toEndpoints:
