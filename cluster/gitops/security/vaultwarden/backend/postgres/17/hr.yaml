@@ -31,7 +31,10 @@ spec:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:
       applicationAccess:
-        selector:
-          matchLabels:
+        selectors:
+          - matchLabels:
             app.kubernetes.io/instance: vaultwarden
             app.kubernetes.io/name: vaultwarden
+          - matchLabels:
+            app.kubernetes.io/instance: vaultwarden-metrics
+            app.kubernetes.io/name: vaultwarden-metrics
