@@ -14,6 +14,7 @@ specs:
       # Allow internet access for downloading resources like dashboards
       - toFQDNs:
           - matchName: grafana.com
+          - matchName: raw.githubusercontent.com
         #     - matchName: storage.googleapis.com
         toPorts:
           - ports:
