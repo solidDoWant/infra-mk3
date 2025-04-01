@@ -17,3 +17,6 @@ spec:
     kind: GitRepository
     name: infra-mk3
   wait: true
+  dependsOn:
+    - name: prometheus-crds
+    - name: grafana-crds

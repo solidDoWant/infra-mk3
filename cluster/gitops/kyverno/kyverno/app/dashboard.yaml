@@ -1,0 +1,11 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: kyverno
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/kyverno/kyverno/refs/tags/kyverno-chart-3.3.7/charts/kyverno/charts/grafana/dashboard/kyverno-dashboard.json

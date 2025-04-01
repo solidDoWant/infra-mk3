@@ -13,8 +13,6 @@ spec:
         name: kyverno-charts
       version: 3.3.7
   values:
-    grafana:
-      enabled: true
     admissionController: &controller_config
       replicas: 2
       # TODO tune this, setting because kyverno is choking
