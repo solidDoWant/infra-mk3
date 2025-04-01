@@ -135,6 +135,15 @@ specs:
       - *to_managers
       - *to_osds
       - *to_mds
+      - toEndpoints:
+          - &rgw_selector
+            matchLabels:
+              app.kubernetes.io/name: ceph-rgw
+              app.kubernetes.io/component: cephobjectstores.ceph.rook.io
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
       # Alertmanager access for the dashboard
       - toEndpoints:
           - matchLabels:
@@ -163,10 +172,7 @@ specs:
           - *csi_cephfsplugin_provisioner_selector
           - *csi_rbdplugin_provisioner_selector
           - *csi_cephfsplugin_selector
-          - &rgw_selector
-            matchLabels:
-              app.kubernetes.io/name: ceph-rgw
-              app.kubernetes.io/component: cephobjectstores.ceph.rook.io
+          - *rgw_selector
           - &operator_selector
             matchLabels:
               app: rook-ceph-operator
@@ -257,6 +263,7 @@ specs:
       # Communication with Ceph cluster services
       - fromEndpoints:
           - *gateway_selector
+          - *managers_selector
         toPorts:
           - ports:
               - port: "8080"
