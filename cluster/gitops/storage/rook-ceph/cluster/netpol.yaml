@@ -129,6 +129,7 @@ specs:
   - description: rook-ceph-mgr
     endpointSelector: *managers_selector
     egress:
+      - *to_dns_resolver
       - *to_k8s_api_server
       - *to_monitors
       - *to_managers
