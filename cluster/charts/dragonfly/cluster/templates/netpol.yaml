@@ -45,6 +45,10 @@ specs:
           # Access from the application
           - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
           {{- end }}
+          {{- if .Values.netpol.applicationAccess.selectors }}
+          # Access from applications
+          {{ .Values.netpol.applicationAccess.selectors | toYaml | nindent 10 | trim }}
+          {{- end }}
         toPorts:
           - ports:
             - port: "6379"
