@@ -334,6 +334,9 @@ spec:
                   storage: 1Gi # Probably way larger than needed, but still pretty small.
               storageClassName: ssd-replicated-3x
               volumeMode: Filesystem
+        podMetadata:
+          labels:
+            endpoints.netpols.home.arpa/alertmanager-server: "true"
       # config: # TODO
       # TODO discord receiver(s). Send different priority and/or labeled alerts to different channels, with different notification settings.
     # vmagent and vmalert instances point at the wrong service, but there isn't an easy workaround for this.
