@@ -46,6 +46,10 @@ specs:
           # Disabled - do not phone home
           # - matchName: crash-report-service.svc.ui.com
           # - matchName: trace.svc.ui.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:

@@ -35,6 +35,8 @@
 # * NAT port forwarding to external-gateway ingress gateway
 # * GeoIP database loaded via instructions at https://docs.opnsense.org/manual/how-tos/maxmind_geo_ip.html
 # * Whitelist Cloudflare for HTTP access via firewall alias (https://www.cloudflare.com/ips-v4)
+# * Alias for UniFi Controller
+# * Firewall rules from management VLAN to UniFi Controller (see unifi-controller netpol)
 
 # This was a PITA to get working. It needs a lot of cleanup and refactoring,
 # some other time.

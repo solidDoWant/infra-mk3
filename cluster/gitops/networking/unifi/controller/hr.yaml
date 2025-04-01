@@ -97,13 +97,16 @@ spec:
               globalMounts:
                 - path: /usr/lib/unifi/data
     persistence:
-      # Make this directory RW
-      unifi-run:
+      # Make these directories RW
+      writable-dirs:
         type: emptyDir
         medium: Memory
         sizeLimit: 128Mi
         globalMounts:
           - path: /usr/lib/unifi/run
+            subPath: run
+          - path: /tmp
+            subPath: tmp
       # TODO this does nothing - see https://github.com/goofball222/unifi/issues/148
       # root-ca:
       #   type: secret
