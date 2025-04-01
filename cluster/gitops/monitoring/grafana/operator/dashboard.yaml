@@ -7,6 +7,11 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
+  # TODO switch this to helm chart dashboard after fix is merged:
+  # https://github.com/grafana/grafana-operator/pull/1927
   grafanaCom:
     # https://grafana.com/grafana/dashboards/22785-grafana-operator/
     id: 22785
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
