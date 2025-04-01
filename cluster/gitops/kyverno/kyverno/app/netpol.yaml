@@ -12,7 +12,8 @@ specs:
         app.kubernetes.io/part-of: kyverno
     egress:
       # Manage k8s resources
-      - toEntities:
+      - &to_kube_api_server
+        toEntities:
           - kube-apiserver
         toPorts:
           - ports:
@@ -63,6 +64,12 @@ specs:
                 protocol: TCP
               - port: metrics
                 protocol: TCP
+  - description: kyverno-clean-reports
+    endpointSelector:
+      matchLabels:
+        job-name: kyverno-clean-reports
+    egress:
+      - *to_kube_api_server
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
 apiVersion: cilium.io/v2
