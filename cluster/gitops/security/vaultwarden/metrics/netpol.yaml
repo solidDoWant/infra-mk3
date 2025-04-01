@@ -3,14 +3,14 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: vaultwarden
+  name: vaultwarden-metrics
 specs:
   - description: vaultwarden
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: vaultwarden
-        app.kubernetes.io/instance: vaultwarden
-        app.kubernetes.io/component: vaultwarden
+        app.kubernetes.io/name: vaultwarden-metrics
+        app.kubernetes.io/instance: vaultwarden-metrics
+        app.kubernetes.io/component: vaultwarden-metrics
     egress:
       # DNS resolution
       - toEndpoints:
@@ -31,30 +31,20 @@ specs:
           - ports:
               - port: postgresql
                 protocol: TCP
-      # Emails for sending invites and notifications via SMTP relay
-      - toEndpoints:
-          - matchLabels:
-              io.kubernetes.pod.namespace: email
-              endpoints.netpols.home.arpa/email-relay: "true"
-        toPorts:
-          - ports:
-              - port: smtp
-                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
           - host
         toPorts:
           - ports:
-              - port: http
+              - port: "3040"
                 protocol: TCP
-      # Traffic from ingress gateway
+      # Metrics
       - fromEndpoints:
           - matchLabels:
-              io.kubernetes.pod.namespace: networking
-              app.kubernetes.io/name: ingress-gateways
-              gateway.networking.k8s.io/gateway-name: internal-gateway
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: "80"
+              - port: "3040"
                 protocol: TCP

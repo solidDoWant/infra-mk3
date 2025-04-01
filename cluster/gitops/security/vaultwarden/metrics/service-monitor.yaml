@@ -1,0 +1,21 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: vaultwarden-metrics
+  labels:
+    app.kubernetes.io/part-of: vaultwarden-metrics
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vaultwarden-metrics
+      app.kubernetes.io/service: vaultwarden-metrics
+      app.kubernetes.io/instance: vaultwarden-metrics
+  endpoints:
+    - port: metrics
+      interval: 1m
+  jobLabel: vaultwarden-metrics
+  # Exports are HA, and will always contain the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service

@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: &app_name vaultwarden-metrics
+  labels: &labels
+    app.kubernetes.io/name: *app_name
+    app.kubernetes.io/component: *app_name
+    app.kubernetes.io/instance: *app_name
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

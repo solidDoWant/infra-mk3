@@ -1,0 +1,101 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden-metrics
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        # TODO
+        namespace: flux-system
+      version: 3.5.1
+  values:
+    controllers:
+      vaultwarden-metrics:
+        replicas: 2
+        containers:
+          vwmetrics:
+            image:
+              repository: ghcr.io/tricked-dev/vwmetrics
+              tag: 71b7637@sha256:e178e4668860d722617072dc2d111ddd062433e71e57763f06bf618855d97619
+            env:
+              DATABASE_URL: "\
+                postgresql://vaultwarden-metrics@vaultwarden-postgres-17-rw.security.svc:5432/vaultwarden?\
+                sslrootcert=/certs/postgres/serving/ca.crt&\
+                sslcert=/certs/postgres/user/tls.crt&\
+                sslkey=/certs/postgres/user/tls.key&\
+                sslmode=verify-full"
+            ports:
+              - name: metrics
+                containerPort: 3040
+                protocol: TCP
+            probes:
+              liveness: &probe
+                enabled: true
+                port: metrics
+                path: /metrics
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: RuntimeDefault
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: vaultwarden-metrics
+                  app.kubernetes.io/component: vaultwarden-metrics
+                  app.kubernetes.io/instance: vaultwarden-metrics
+              whenUnsatisfiable: DoNotSchedule
+    persistence:
+      postgres-serving-cert:
+        type: secret
+        name: vaultwarden-postgres-17-serving-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          vaultwarden-metrics:
+            vwmetrics:
+              - path: /certs/postgres/serving
+      postgres-user-cert:
+        type: secret
+        name: vaultwarden-postgres-vaultwarden-metrics-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          vaultwarden-metrics:
+            vwmetrics:
+              - path: /certs/postgres/user
+    service:
+      vaultwarden-metrics:
+        controller: vaultwarden-metrics
+        ports:
+          metrics:
+            port: 3040
