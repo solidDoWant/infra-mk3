@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: email-intermediate-ca-docker-postfix-serving-cert
+spec:
+  commonName: Docker Postfix serving cert
+  dnsNames:
+    - docker-postfix.email.svc
+    - docker-postfix.email.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  duration: 24h # One day
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: email-intermediary-ca
+  secretName: email-intermediate-ca-docker-postfix-serving-cert
+  secretTemplate:
+    labels:
+      kyverno.home.arpa/reload: "true"
+---
+# Approve the the Docker Postfix serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: email-intermediate-ca-docker-postfix-serving-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: email-intermediary-ca
+    namespace:
+      matchNames:
+        - email
+  allowed:
+    commonName:
+      required: true
+      value: Docker Postfix serving cert
+    dnsNames:
+      required: true
+      values:
+        - docker-postfix.email.svc
+        - docker-postfix.email.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
