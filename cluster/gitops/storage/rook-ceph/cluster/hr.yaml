@@ -51,6 +51,8 @@ spec:
           # Amount of time before clearing the warning about recent crashes, in seconds.
           # Default value is 2 weeks.
           mgr/crash/warn_recent_interval: "7200" # 2 hours
+          mgr/dashboard/ALERTMANAGER_API_HOST: http://vmalertmanager-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:9093
+          mgr/dashboard/PROMETHEUS_API_HOST: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/select/0/prometheus/
       mgr:
         modules:
           - name: rook
