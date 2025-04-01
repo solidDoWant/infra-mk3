@@ -41,4 +41,5 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
+    - name: grafana-crds
     - name: unifi-controller
