@@ -38,3 +38,19 @@ spec:
           - matchLabels:
               app.kubernetes.io/instance: vaultwarden-metrics
               app.kubernetes.io/name: vaultwarden-metrics
+    additionalClusterConfig:
+      # Add the vaultwarden-metrics user to the vaultwarden database
+      # This unfortunately has the same perms as the vaultwarden user
+      # but audit trails will show this user separately from the VW
+      # user.
+      managed:
+        roles:
+          - name: vaultwarden-metrics
+            comment: VaultWarden metrics
+            disablePassword: true # TLS auth only
+            login: true
+            inRoles:
+              # This is way too permissive, but it's the best that can be done
+              # declaratively after the DB is deployed.
+              # See https://github.com/cloudnative-pg/cloudnative-pg/issues/7133
+              - vaultwarden
