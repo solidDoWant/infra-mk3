@@ -70,6 +70,12 @@ specs:
         job-name: kyverno-clean-reports
     egress:
       - *to_kube_api_server
+  - description: kyverno-migrate-resources
+    endpointSelector:
+      matchLabels:
+        job-name: kyverno-migrate-resources
+    egress:
+      - *to_kube_api_server
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
 apiVersion: cilium.io/v2
