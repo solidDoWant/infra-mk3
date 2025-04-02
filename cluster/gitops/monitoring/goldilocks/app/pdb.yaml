@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: goldilocks-dashboard
+  labels: &labels
+    app.kubernetes.io/name: goldilocks
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/instance: goldilocks
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
