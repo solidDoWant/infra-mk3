@@ -500,7 +500,6 @@ spec:
           mountPath: /etc/kube-state-metrics/custom-resource-state-metrics/
       extraArgs:
         - --custom-resource-state-config-file=/etc/kube-state-metrics/custom-resource-state-metrics/config.yaml
-        -
       rbac:
         extraRules:
           # This is needed when custom resource state metrics are enabled but the
