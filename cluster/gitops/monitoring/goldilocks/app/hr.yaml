@@ -1,0 +1,84 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: goldilocks
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: goldilocks
+      sourceRef:
+        kind: HelmRepository
+        name: fairwinds-charts
+        # TODO
+        namespace: flux-system
+      version: 9.0.1
+  values:
+    image:
+      tag: v4.13.4
+    controller:
+      flags:
+        on-by-default: true
+      rbac:
+        enableArgoproj: false
+        # These are needed so that goldilocks can access the top-level controller for each pod
+        # This can be regenerated with:
+        # kubectl logs -n monitoring deployments/goldilocks-controller -c goldilocks | \
+        #   grep "Error retrieving parent object" | \
+        #   sed -r 's/.+cannot ([^ ]+?) resource \\"([^ ]+)\\" in API group \\"([^ ]+)\\".*/{"apiGroups": ["\3"],"resources":["\2"],"verbs":["\1"]}/' | \
+        #   sort -u \
+        #   jq -s \
+        #   yq -P
+        extraRules:
+          - apiGroups:
+              - ceph.rook.io
+            resources:
+              - cephclusters
+              - cephfilesystems
+              - cephobjectstores
+            verbs:
+              - list
+          - apiGroups:
+              - dragonflydb.io
+            resources:
+              - dragonflies
+            verbs:
+              - list
+          - apiGroups:
+              - gateway.networking.k8s.io
+            resources:
+              - gateways
+            verbs:
+              - list
+          - apiGroups:
+              - grafana.integreatly.org
+            resources:
+              - grafanas
+            verbs:
+              - list
+          - apiGroups:
+              - operator.victoriametrics.com
+            resources:
+              - vmagents
+              - vmalertmanagers
+              - vmalerts
+              - vmclusters
+            verbs:
+              - list
+          - apiGroups:
+              - postgresql.cnpg.io
+            resources:
+              - clusters
+            verbs:
+              - list
+    dashboard:
+      flags:
+        on-by-default: true
+        enable-cost: false
+      excludeContainers: ""
+      rbac:
+        enableArgoproj: false
+      # topologySpreadConstraints:
+      # TODO PDB
+      # TODO HTTPRoute
