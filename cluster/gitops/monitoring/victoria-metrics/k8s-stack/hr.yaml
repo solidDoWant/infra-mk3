@@ -471,6 +471,12 @@ spec:
       forceDeployDatasource: true
     kube-state-metrics:
       fullnameOverride: kube-state-metrics
+      # Needed for VPA.
+      # This is probably an _awful_ idea - will need to watch churn rate and cardinality.
+      # This can be decreased significantly, and I'll need to do so if performance tanks
+      # or storage goes through the roof.
+      metricLabelsAllowlist:
+        - pods=[*]
       replicas: 2
       podDisruptionBudget:
         minAvailable: 1
@@ -494,6 +500,7 @@ spec:
           mountPath: /etc/kube-state-metrics/custom-resource-state-metrics/
       extraArgs:
         - --custom-resource-state-config-file=/etc/kube-state-metrics/custom-resource-state-metrics/config.yaml
+        -
       rbac:
         extraRules:
           # This is needed when custom resource state metrics are enabled but the
