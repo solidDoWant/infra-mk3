@@ -1,0 +1,43 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: proxmox-vm-host-01
+  labels:
+    app.kubernetes.io/name: node-exporter
+    app.kubernetes.io/instance: proxmox-vm-host-01
+    app.kubernetes.io/component: monitoring
+spec:
+  jobName: node-exporter
+  targetEndpoints:
+    - targets:
+        - 10.2.2.1/32 # proxmox-vm-host-01
+        - 10.2.3.1/32 # ubuntu-storage-host-01
+        - 10.3.0.1/32 # router-01
+        - 10.3.0.2/32 # router-02
+        - 10.4.0.128/32 # ubuntu-development-01
+      interval: 1m
+      scrapeTimeout: 10s
+      # This is the only way to relabel the instances with hostname
+      # until I setup DNS for non-k8s nodes.
+      relabelConfigs:
+        - action: replace
+          target_label: instance
+          regex: 10\.2\.2\.1
+          replacement: proxmox-vm-host-01
+        - action: replace
+          target_label: instance
+          regex: 10\.2\.3\.1
+          replacement: ubuntu-storage-host-01
+        - action: replace
+          target_label: instance
+          regex: 10\.3\.0\.1
+          replacement: router-01
+        - action: replace
+          target_label: instance
+          regex: 10\.3\.0\.2
+          replacement: router-02
+        - action: replace
+          target_label: instance
+          regex: 10\.4\.0\.128
+          replacement: ubuntu-development-01
