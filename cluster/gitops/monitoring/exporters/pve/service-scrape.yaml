@@ -1,0 +1,39 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: pve-exporter
+  labels:
+    app.kubernetes.io/part-of: pve-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pve-exporter
+      app.kubernetes.io/service: pve-exporter
+      app.kubernetes.io/instance: pve-exporter
+  endpoints:
+    # Proxmox metrics
+    - port: metrics
+      interval: 1m
+      scrapeTimeout: 10s
+      path: /pve
+      params:
+        module:
+          - default
+        target:
+          - 10.2.2.1:8006
+        cluster:
+          - "1"
+        node:
+          - "1"
+      metricRelabelConfigs:
+        # Drop this label until https://github.com/prometheus-pve/prometheus-pve-exporter/pull/326
+        # is merged and released.
+        - action: labeldrop
+          regex: content
+          if: '{__name__="pve_storage_info"}'
+  jobLabel: pve-exporter
+  # Exports are HA, and will always contain the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service

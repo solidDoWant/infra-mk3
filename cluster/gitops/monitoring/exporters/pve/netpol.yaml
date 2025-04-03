@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: pve-exporter
+specs:
+  - description: pve-exporter
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: pve-exporter
+        app.kubernetes.io/component: pve-exporter
+        app.kubernetes.io/instance: pve-exporter
+    egress:
+      # To Proxmox
+      - toCIDRSet:
+          - cidrGroupRef: proxmox-nodes
+        toPorts:
+          - ports:
+              - port: "8006"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9221"
+                protocol: TCP

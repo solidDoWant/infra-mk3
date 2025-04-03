@@ -1,0 +1,15 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: pve
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  grafanaCom:
+    id: 10347
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS

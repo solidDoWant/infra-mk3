@@ -1,0 +1,92 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: pve-exporter
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.7.1
+  values:
+    controllers:
+      pve-exporter:
+        replicas: 2
+        containers:
+          app:
+            image:
+              # TODO next release will support GHCR. Switch registries then.
+              repository: prompve/prometheus-pve-exporter
+              tag: 3.5.2
+            args:
+              - --web.listen-address=:9221 # No IPv6
+            env:
+              # Proxmox is not currently integrated with infra PKI
+              # TODO switch this to Teleport with openssh backend
+              PVE_VERIFY_SSL: "false"
+            envFrom:
+              - secretRef:
+                  name: pve-exporter-credentials
+            ports:
+              - name: metrics
+                containerPort: 9221
+            probes:
+              liveness: &probe
+                enabled: true
+                port: metrics
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 101
+              runAsGroup: 101
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            seccompProfile:
+              type: RuntimeDefault
+          topologySpreadConstraints:
+            - maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: pve-exporter
+                  app.kubernetes.io/component: pve-exporter
+                  app.kubernetes.io/instance: pve-exporter
+              whenUnsatisfiable: DoNotSchedule
+    persistence:
+      # Make /tmp RW for HTTP webserver (gunicorn) heartbeat file
+      tmp:
+        type: emptyDir
+        sizeLimit: 32Mi
+        globalMounts:
+          - path: /tmp
+    service:
+      pve-exporter:
+        controller: pve-exporter
+        ports:
+          metrics:
+            port: 9221
+    serviceMonitor:
+      # These expose metrics for the exporter itself,
+      # not the proxmox nodes. All pods are scraped
+      # by this config, but only one pod is scraped for
+      # actual proxmox metrics.
+      pve-exporter-self:
+        nameOverride: self
+        serviceName: pve-exporter
+        endpoints:
+          - interval: 1m
+            scrapeTimeout: 10s

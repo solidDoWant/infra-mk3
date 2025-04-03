@@ -49,3 +49,11 @@ metadata:
 spec:
   externalCIDRs:
     - 10.1.0.160/31 # ap-01, ap-02
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumCIDRGroup
+metadata:
+  name: proxmox-nodes
+spec:
+  externalCIDRs:
+    - 10.2.2.1/32 # proxmox-vm-host-01
