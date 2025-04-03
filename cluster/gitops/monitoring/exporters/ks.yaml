@@ -55,7 +55,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/monitoring/exporters/ cluster-external
+  path: /cluster/gitops/monitoring/exporters/cluster-external
   prune: true
   sourceRef:
     kind: GitRepository
