@@ -11,11 +11,11 @@ spec:
   jobName: node-exporter
   targetEndpoints:
     - targets:
-        - 10.2.2.1/32 # proxmox-vm-host-01
-        - 10.2.3.1/32 # ubuntu-storage-host-01
-        - 10.3.0.1/32 # router-01
-        - 10.3.0.2/32 # router-02
-        - 10.4.0.128/32 # ubuntu-development-01
+        - 10.2.2.1:9100 # proxmox-vm-host-01
+        - 10.2.3.1:9100 # ubuntu-storage-host-01
+        - 10.3.0.1:9100 # router-01
+        - 10.3.0.2:9100 # router-02
+        - 10.4.0.128:9100 # ubuntu-development-01
       interval: 1m
       scrapeTimeout: 10s
       # This is the only way to relabel the instances with hostname
