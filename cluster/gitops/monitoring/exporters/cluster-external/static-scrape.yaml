@@ -22,22 +22,23 @@ spec:
       # until I setup DNS for non-k8s nodes.
       relabelConfigs:
         - action: replace
+          if: '{__address__="10.2.2.1:9100"}'
           target_label: instance
-          regex: 10\.2\.2\.1
           replacement: proxmox-vm-host-01
         - action: replace
+          if: '{__address__="10.2.3.1:9100"}'
           target_label: instance
-          regex: 10\.2\.3\.1
           replacement: ubuntu-storage-host-01
         - action: replace
+          if: '{__address__="10.3.0.1:9100"}'
           target_label: instance
           regex: 10\.3\.0\.1
           replacement: router-01
         - action: replace
+          if: '{__address__="10.3.0.2:9100"}'
           target_label: instance
-          regex: 10\.3\.0\.2
           replacement: router-02
         - action: replace
+          if: '{__address__="10.4.0.128:9100"}'
           target_label: instance
-          regex: 10\.4\.0\.128
           replacement: ubuntu-development-01
