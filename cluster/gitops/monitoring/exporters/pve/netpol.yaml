@@ -22,10 +22,10 @@ specs:
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
-          - kube-apiserver
+          - host
         toPorts:
           - ports:
-              - port: "6443"
+              - port: "9221"
                 protocol: TCP
       # Metrics
       - fromEndpoints:
