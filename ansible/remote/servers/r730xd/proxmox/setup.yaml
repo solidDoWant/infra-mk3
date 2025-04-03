@@ -289,9 +289,11 @@
       ansible.builtin.include_role:
         name: encrypt_dataset
 
-    # # TODO setup mail daemon once relay is setup
+    # TODO setup mail daemon once relay is setup
 
-    # # TODO setup node exporter once monitoring stack is deployed
+    - name: Install exporters
+      ansible.builtin.include_role:
+        name: install_exporters
 
 - name: Storage VM setup tasks
   hosts: r730xd:&proxmox
