@@ -32,7 +32,6 @@ spec:
         - action: replace
           if: '{__address__="10.3.0.1:9100"}'
           target_label: instance
-          regex: 10\.3\.0\.1
           replacement: router-01
         - action: replace
           if: '{__address__="10.3.0.2:9100"}'
