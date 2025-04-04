@@ -1,0 +1,187 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+# cspell:words pgmajfault
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-metrics-anomaly
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: victoria-metrics-anomaly
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: victoria-metrics-charts
+      version: 1.9.0
+  values:
+    podDisruptionBudget:
+      enabled: true
+      # See k8s-stack for details on why this can't be
+      # set to 1
+      minAvailable: 2
+    podMonitor:
+      enabled: true
+    podLabels:
+      endpoints.netpols.home.arpa/time-series-querier: "true"
+    config:
+      # This is based on the node-exporter example config, tuned for my cluster
+      schedulers:
+        1d_1m:
+          class: periodic
+          infer_every: 1m
+          fit_every: 2h
+          fit_window: 1d
+        2w_1m:
+          class: periodic
+          infer_every: 1m
+          fit_every: 6h
+          fit_window: 14d
+      models:
+        z-score:
+          class: zscore
+          schedulers: &schedulers
+            - 1d_1m
+            - 2w_1m
+          queries: &queries_1
+            - context_switch
+            - cpu_seconds_total
+            - receive_bytes
+            - transmit_bytes
+          threshold: 3.5 # the higher, the less anomalies will be detected
+          provide_series: &provided_series
+            - anomaly_score
+        mad:
+          class: mad
+          schedulers: *schedulers
+          queries: *queries_1
+          threshold: 3.8 # the higher, the less anomalies will be detected
+          provide_series: *provided_series
+        prophet:
+          class: prophet
+          schedulers: *schedulers
+          queries: *queries_1
+          provide_series: *provided_series
+          args:
+            interval_width: 0.999
+            yearly_seasonality: False
+        z-score-above-direction:
+          class: zscore
+          schedulers: *schedulers
+          detection_direction: "above_expected"
+          queries: &queries_2
+            - page_faults
+            - host_network_receive_errors
+            - host_network_transmit_errors
+            - read_latency
+            - write_latency
+          threshold: 3.5 # the higher, the less anomalies will be detected
+          provide_series: *provided_series
+        mad-above-direction:
+          class: mad
+          schedulers: *schedulers
+          detection_direction: "above_expected"
+          queries: *queries_2
+          threshold: 3.8 # the higher, the less anomalies will be detected
+          provide_series: *provided_series
+        prophet-above-direction:
+          class: prophet
+          schedulers: *schedulers
+          detection_direction: "above_expected"
+          queries: *queries_2
+          provide_series: *provided_series
+          args:
+            interval_width: 0.999
+            yearly_seasonality: False
+      reader:
+        datasource_url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427
+        tenant_id: "0"
+        queries:
+          page_faults:
+            expr: rate(node_vmstat_pgmajfault[3m])
+          context_switch:
+            expr: rate(node_context_switches_total[3m])
+          cpu_seconds_total:
+            expr: avg(rate(node_cpu_seconds_total[3m])) by (instance, mode)
+          # Important: the container network interfaces must be filtered out. They don't typically indicate an issue
+          # with the node itself, and they cause the time series returned by node_network* queries to explode.
+          # Filtering these out reduces the number of time series returned by node_network* queries by 100x or more.
+          host_network_receive_errors:
+            expr: rate(node_network_receive_errs_total{device!~"lxc.*"}[3m]) / rate(node_network_receive_packets_total[3m])
+          host_network_transmit_errors:
+            expr: rate(node_network_transmit_errs_total{device!~"lxc.*"}[3m]) / rate(node_network_transmit_packets_total[3m])
+          receive_bytes:
+            expr: sum(rate(node_network_receive_bytes_total{device!~"lxc.*"}[3m])) by (instance, device)
+          transmit_bytes:
+            expr: sum(rate(node_network_transmit_bytes_total{device!~"lxc.*"}[3m])) by (instance, device)
+          read_latency:
+            expr: sum(rate(node_disk_read_time_seconds_total[3m]) / rate(node_disk_reads_completed_total[3m])) by (instance, device)
+          write_latency:
+            expr: sum(rate(node_disk_write_time_seconds_total[3m]) / rate(node_disk_writes_completed_total[3m])) by (instance, device)
+        sampling_period: "1m" # should be <= the model's `infer_every` and should be =~ alerting frequency
+      writer:
+        datasource_url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427
+        tenant_id: "0"
+      monitoring:
+        pull: # Enable /metrics endpoint.
+          enabled: true
+          port: 8080
+    shardsCount: 3
+    replicationFactor: 2
+    persistentVolume:
+      enabled: true
+      storageClassName: victoria-metrics-anomaly
+      size: 1Gi # This should be plenty large. Current usage is a few hundred MB.
+    env:
+      - name: REQUESTS_CA_BUNDLE
+        value: /etc/ssl/certs/ca.crt
+    license:
+      keyRef:
+        name: victoria-metrics-license-key
+        key: licenseKey
+    extraVolumes:
+      - name: victoria-metrics-license-service-serving-cert
+        secret:
+          secretName: victoria-metrics-license-service-serving-cert
+          defaultMode: 0440
+          items:
+            - key: ca.crt
+              path: ca.crt
+    extraVolumeMounts:
+      - name: victoria-metrics-license-service-serving-cert
+        mountPath: /etc/ssl/certs/ca.crt
+        subPath: ca.crt
+  postRenderers:
+    # Add TSCs
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/topologySpreadConstraints
+                value:
+                  - maxSkew: 1 # Skew of 1 allows for rolling updates
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: victoria-metrics-anomaly
+                        app.kubernetes.io/instance: victoria-metrics-anomaly
+                    whenUnsatisfiable: DoNotSchedule
+            target:
+              group: apps
+              version: v1
+              kind: StatefulSet
+    # Add host DNS entries
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/hostAliases
+                value:
+                  - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+                    hostnames:
+                      - license.victoriametrics.com
+            target:
+              group: apps
+              version: v1
+              kind: StatefulSet

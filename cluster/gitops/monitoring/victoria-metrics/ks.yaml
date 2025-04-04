@@ -89,3 +89,32 @@ spec:
     - name: approver-policy
     - name: rook-ceph-cluster
     - name: openebs
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name victoria-metrics-anomaly
+spec:
+  targetNamespace: monitoring
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/monitoring/victoria-metrics/anomaly
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: victoria-metrics-storage-classes
+    - name: victoria-metrics-license-service
+    - name: monitoring-namespace-issuer
+    - name: grafana-crds
+    - name: prometheus-crds
+    - name: cert-manager
+    - name: approver-policy
+    - name: openebs
+    - name: victoria-metrics-k8s-stack

@@ -1,0 +1,25 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: anomaly-statistics
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/VictoriaMetrics/VictoriaMetrics/refs/heads/master/deployment/docker/vmanomaly/vmanomaly-default/dashboard.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_VM
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: anomaly-node-exporter-guide
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/VictoriaMetrics/VictoriaMetrics/refs/heads/master/deployment/docker/vmanomaly/vmanomaly-integration/vmanomaly_guide_dashboard.json
