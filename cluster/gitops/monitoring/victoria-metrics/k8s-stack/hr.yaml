@@ -120,10 +120,10 @@ spec:
         vmselect:
           resources:
             requests:
-              memory: 16Gi
+              memory: 8Gi
               cpu: 1000m
             limits:
-              memory: 16Gi
+              memory: 8Gi
               cpu: 8000m
           extraArgs:
             # Metrics from the last few weeks show a very low average memory usage (~5%). Increasing this
