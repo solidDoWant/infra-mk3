@@ -116,12 +116,12 @@ spec:
                   secretName: victoria-metrics-license-service-serving-cert
                   defaultMode: 0440
                   items:
-                    - key: tls.crt
-                      path: tls.crt
+                    - key: ca.crt
+                      path: ca.crt
             volumeMounts:
               - name: victoria-metrics-license-service-serving-cert
-                mountPath: /etc/ssl/certs/tls.crt
-                subPath: tls.crt
+                mountPath: /etc/ssl/certs/ca.crt
+                subPath: ca.crt
         vmselect:
           resources:
             requests:
@@ -172,12 +172,12 @@ spec:
                 secretName: victoria-metrics-license-service-serving-cert
                 defaultMode: 0440
                 items:
-                  - key: tls.crt
-                    path: tls.crt
+                  - key: ca.crt
+                    path: ca.crt
           volumeMounts:
             - name: victoria-metrics-license-service-serving-cert
-              mountPath: /etc/ssl/certs/tls.crt
-              subPath: tls.crt
+              mountPath: /etc/ssl/certs/ca.crt
+              subPath: ca.crt
         vminsert:
           resources:
             requests:
@@ -212,12 +212,12 @@ spec:
                 secretName: victoria-metrics-license-service-serving-cert
                 defaultMode: 0440
                 items:
-                  - key: tls.crt
-                    path: tls.crt
+                  - key: ca.crt
+                    path: ca.crt
           volumeMounts:
             - name: victoria-metrics-license-service-serving-cert
-              mountPath: /etc/ssl/certs/tls.crt
-              subPath: tls.crt
+              mountPath: /etc/ssl/certs/ca.crt
+              subPath: ca.crt
           # This is outrageously high but I'd like to get the data in first so that I can
           # more easily tell which labels I can drop
           extraArgs:
@@ -286,12 +286,12 @@ spec:
                 secretName: victoria-metrics-license-service-serving-cert
                 defaultMode: 0440
                 items:
-                  - key: tls.crt
-                    path: tls.crt
+                  - key: ca.crt
+                    path: ca.crt
           volumeMounts:
             - name: victoria-metrics-license-service-serving-cert
-              mountPath: /etc/ssl/certs/tls.crt
-              subPath: tls.crt
+              mountPath: /etc/ssl/certs/ca.crt
+              subPath: ca.crt
           # vmBackup: # TODO maybe. Metrics are not critical to back up.
     alertmanager:
       spec:
@@ -382,12 +382,12 @@ spec:
               secretName: victoria-metrics-license-service-serving-cert
               defaultMode: 0440
               items:
-                - key: tls.crt
-                  path: tls.crt
+                - key: ca.crt
+                  path: ca.crt
         volumeMounts:
           - name: victoria-metrics-license-service-serving-cert
-            mountPath: /etc/ssl/certs/tls.crt
-            subPath: tls.crt
+            mountPath: /etc/ssl/certs/ca.crt
+            subPath: ca.crt
     vmagent:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
@@ -458,12 +458,12 @@ spec:
               secretName: victoria-metrics-license-service-serving-cert
               defaultMode: 0440
               items:
-                - key: tls.crt
-                  path: tls.crt
+                - key: ca.crt
+                  path: ca.crt
         volumeMounts:
           - name: victoria-metrics-license-service-serving-cert
-            mountPath: /etc/ssl/certs/tls.crt
-            subPath: tls.crt
+            mountPath: /etc/ssl/certs/ca.crt
+            subPath: ca.crt
     defaultDatasources:
       grafanaOperator: *grafana_operator
     grafana:

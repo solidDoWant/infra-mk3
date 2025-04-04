@@ -1,3 +1,4 @@
+# Due to https://github.com/cert-manager/cert-manager/issues/7660, this must be split into separate certs for now.
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
 # This is self signed because it should be explicitly trusted where needed, and
@@ -5,9 +6,91 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: victoria-metrics-license-service-serving-cert
+  name: victoria-metrics-license-service-serving-issuing-cert
 spec:
   isCA: true # Self-signed cert must be a CA
+  commonName: VictoriaMetrics License Service Issuing Cert
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - cert sign
+    - crl sign
+  # Allow only signing for the license domain name
+  nameConstraints:
+    critical: true
+    permitted:
+      dnsDomains:
+        - license.victoriametrics.com
+  duration: 9240h # One year
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: victoria-metrics-license-service-serving-issuing-cert
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/clusterissuer_v1.json
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: victoria-metrics-license-service-serving-issuer
+spec:
+  ca:
+    secretName: victoria-metrics-license-service-serving-issuing-cert
+---
+# Approve the the license service serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: victoria-metrics-license-service-serving-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: victoria-metrics-license-service-serving-issuer
+    namespace:
+      matchNames:
+        - monitoring
+  allowed:
+    commonName:
+      required: true
+      value: license.victoriametrics.com
+    dnsNames:
+      required: true
+      values:
+        - license.victoriametrics.com
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: victoria-metrics-license-service-serving-cert
+spec:
   commonName: license.victoriametrics.com
   dnsNames:
     - license.victoriametrics.com
@@ -20,15 +103,6 @@ spec:
       - infra-mk3
   usages:
     - server auth
-    # Self-signed cert must be able to sign itself
-    - cert sign
-    - crl sign
-  # Allow only signing for the license domain name
-  nameConstraints:
-    critical: true
-    permitted:
-      dnsDomains:
-        - license.victoriametrics.com
   duration: 720h # One month
   privateKey:
     algorithm: RSA
@@ -36,7 +110,10 @@ spec:
     encoding: PKCS8
     rotationPolicy: Always
   issuerRef:
-    name: self-signed
-    kind: ClusterIssuer
+    name: victoria-metrics-license-service-serving-issuer
+    kind: Issuer
     group: cert-manager.io
   secretName: victoria-metrics-license-service-serving-cert
+  secretTemplate:
+    labels:
+      kyverno.home.arpa/reload: "true"
