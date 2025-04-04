@@ -120,18 +120,16 @@ spec:
         vmselect:
           resources:
             requests:
-              memory: 12Gi
+              memory: 16Gi
               cpu: 1000m
             limits:
-              memory: 12Gi
+              memory: 16Gi
               cpu: 8000m
           extraArgs:
-            # Note: this is more than the total allocated ram / the maximum number of concurrent requests.
-            # This can cause the process to OOM error if there are a large number of heavy queries.
-            # These should be relatively uncommon, so this is a reasonable tradeoff for now.
-            # This is mostly for vmanomaly, which queries 2 weeks worth of metric in some queries, with
-            # a 1 minute resolution.
-            search.maxMemoryPerQuery: 8Gi
+            # Metrics from the last few weeks show a very low average memory usage (~5%). Increasing this
+            # from the default of 60% should not increase the cache eviction rate, while allowing for
+            # heavier queries.
+            memory.allowedPercent: "90"
           hostAliases:
             - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
               hostnames:
