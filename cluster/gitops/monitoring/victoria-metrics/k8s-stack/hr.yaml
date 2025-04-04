@@ -80,6 +80,9 @@ spec:
         # determine the best backend to send traffic to than Cilium
         requestsLoadBalancer:
           enabled: true
+          image:
+            # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
+            tag: v1.114.0-enterprise
           spec:
             hostAliases:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
