@@ -26,6 +26,8 @@ specs:
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/instance: victoria-metrics-k8s-stack
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-anomaly
         toPorts:
           - ports:
               - port: https
