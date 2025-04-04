@@ -1,0 +1,108 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: opnsense-exporter
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.7.1
+  values:
+    controllers:
+      router-01: &router_controller
+        replicas: 2
+        containers:
+          app: &router_app
+            image:
+              repository: ghcr.io/athennamind/opnsense-exporter
+              tag: 0.0.8
+            env:
+              OPNSENSE_EXPORTER_OPS_PROTOCOL: https
+              # OPNsense isn't integrated with infra PKI yet
+              OPNSENSE_EXPORTER_OPS_INSECURE: "true"
+              # Firmware collector is disabled until https://github.com/AthennaMind/opnsense-exporter/pull/57 is merged
+              OPNSENSE_EXPORTER_DISABLE_FIRMWARE: "true"
+            envFrom:
+              - secretRef:
+                  name: opnsense-credentials-router-01
+              - configMapRef:
+                  identifier: opnsense-config-router-01
+            ports:
+              - name: metrics
+                containerPort: 8080
+            probes:
+              liveness: &probe
+                enabled: true
+                port: metrics
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+        pod: &router_pod
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          topologySpreadConstraints:
+            - &router_tsc
+              maxSkew: 1 # Skew of 1 allows for rolling updates
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels: &router_labels
+                  app.kubernetes.io/name: opnsense-exporter
+                  app.kubernetes.io/component: router-01
+                  app.kubernetes.io/instance: opnsense-exporter
+              whenUnsatisfiable: DoNotSchedule
+      router-02:
+        <<: *router_controller
+        containers:
+          app:
+            <<: *router_app
+            envFrom:
+              - secretRef:
+                  name: opnsense-credentials-router-02
+              - configMapRef:
+                  identifier: opnsense-config-router-02
+        pod:
+          <<: *router_pod
+          topologySpreadConstraints:
+            - <<: *router_tsc
+              labelSelector:
+                matchLabels:
+                  <<: *router_labels
+                  app.kubernetes.io/component: router-02
+    configMaps:
+      opnsense-config-router-01:
+        data:
+          OPNSENSE_EXPORTER_OPS_API: 10.3.0.1
+          OPNSENSE_EXPORTER_INSTANCE_LABEL: router-01
+      opnsense-config-router-02:
+        data:
+          OPNSENSE_EXPORTER_OPS_API: 10.3.0.2
+          OPNSENSE_EXPORTER_INSTANCE_LABEL: router-02
+    service:
+      router-01:
+        controller: router-01
+        ports:
+          metrics:
+            port: 8080
+      router-02:
+        controller: router-02
+        ports:
+          metrics:
+            port: 8080

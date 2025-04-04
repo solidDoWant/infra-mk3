@@ -1,0 +1,77 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: opnsense-exporter-router-01
+  labels:
+    app.kubernetes.io/part-of: opnsense-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opnsense-exporter
+      app.kubernetes.io/service: opnsense-exporter-router-01
+      app.kubernetes.io/instance: opnsense-exporter
+  endpoints:
+    - port: metrics
+      interval: 1m
+      scrapeTimeout: 10s
+      metricRelabelConfigs:
+        # Drop metrics that are specific to each exporter instance.
+        # These will be collected by another scrape config.
+        - action: drop
+          if: '{opnsense_instance=""}'
+  jobLabel: opnsense-exporter
+  # Exports are HA, and will always contain the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: opnsense-exporter-router-02
+  labels:
+    app.kubernetes.io/part-of: opnsense-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opnsense-exporter
+      app.kubernetes.io/service: opnsense-exporter-router-02
+      app.kubernetes.io/instance: opnsense-exporter
+  endpoints:
+    - port: metrics
+      interval: 1m
+      scrapeTimeout: 10s
+      metricRelabelConfigs:
+        # Drop metrics that are specific to each exporter instance.
+        # These will be collected by another scrape config.
+        - action: drop
+          if: '{opnsense_instance=""}'
+  jobLabel: opnsense-exporter
+  # Exports are HA, and will always contain the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: opnsense-exporter-self
+  labels:
+    app.kubernetes.io/part-of: opnsense-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opnsense-exporter
+      app.kubernetes.io/instance: opnsense-exporter
+  endpoints:
+    - port: metrics
+      interval: 1m
+      scrapeTimeout: 10s
+      metricRelabelConfigs:
+        # Drop metrics that are not specific to each exporter instance.
+        # These will be collected by another scrape config.
+        - action: drop
+          if: '{opnsense_instance!=""}'
+  jobLabel: opnsense-exporter

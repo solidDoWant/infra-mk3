@@ -1,0 +1,26 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: opnsense-exporter
+  labels: &labels
+    app.kubernetes.io/name: opnsense-exporter
+    app.kubernetes.io/component: router-01
+    app.kubernetes.io/instance: opnsense-exporter
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: opnsense-exporter
+  labels: &labels
+    app.kubernetes.io/name: opnsense-exporter
+    app.kubernetes.io/component: router-02
+    app.kubernetes.io/instance: opnsense-exporter
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
