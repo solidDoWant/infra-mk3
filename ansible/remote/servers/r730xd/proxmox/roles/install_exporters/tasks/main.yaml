@@ -77,3 +77,11 @@
         name: prometheus-node-exporter
         state: restarted
       when: config_file.changed
+    # This is all kinds of broken on nvme-cli v2.8
+    # This PR fixed compat with v2.11 and broke everything earlier:
+    # https://github.com/prometheus-community/node-exporter-textfile-collector-scripts/pull/227
+    - name: Disable the prometheus-node-exporter-nvme timer
+      ansible.builtin.systemd:
+        name: prometheus-node-exporter-nvme.timer
+        enabled: false
+        state: stopped
