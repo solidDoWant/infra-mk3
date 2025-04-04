@@ -27,8 +27,6 @@ spec:
               OPNSENSE_EXPORTER_OPS_PROTOCOL: https
               # OPNsense isn't integrated with infra PKI yet
               OPNSENSE_EXPORTER_OPS_INSECURE: "true"
-              # Firmware collector is disabled until https://github.com/AthennaMind/opnsense-exporter/pull/57 is merged
-              OPNSENSE_EXPORTER_DISABLE_FIRMWARE: "true"
             envFrom:
               - secretRef:
                   name: opnsense-credentials-router-01
@@ -86,6 +84,60 @@ spec:
                 matchLabels:
                   <<: *router_labels
                   app.kubernetes.io/component: router-02
+      # This can be removed if https://github.com/AthennaMind/opnsense-exporter/pull/57 is merged
+      firmware-update-check-router-01: &firmware_update_check_controller
+        type: cronjob
+        cronjob:
+          schedule: "@daily"
+        containers:
+          app: &firmware_update_check_app
+            image:
+              repository: alpine/curl
+              tag: 8.12.1
+            args:
+              - --fail
+              - --silent
+              - --show-error
+              - --location
+              - --insecure
+              - --request
+              - POST
+              - --user
+              - "$(OPNSENSE_EXPORTER_OPS_API_KEY):$(OPNSENSE_EXPORTER_OPS_API_SECRET)"
+              - --data
+              - "{}"
+              - https://$(OPNSENSE_EXPORTER_OPS_API)/api/core/firmware/status
+            envFrom:
+              - secretRef:
+                  name: opnsense-credentials-router-01
+              - configMapRef:
+                  identifier: opnsense-config-router-01
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+      firmware-update-check-router-02:
+        <<: *firmware_update_check_controller
+        containers:
+          app:
+            <<: *firmware_update_check_app
+            envFrom:
+              - secretRef:
+                  name: opnsense-credentials-router-02
+              - configMapRef:
+                  identifier: opnsense-config-router-02
     configMaps:
       opnsense-config-router-01:
         data:
