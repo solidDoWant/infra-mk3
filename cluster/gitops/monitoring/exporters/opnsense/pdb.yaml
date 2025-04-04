@@ -2,7 +2,7 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: opnsense-exporter
+  name: opnsense-exporter-router-01
   labels: &labels
     app.kubernetes.io/name: opnsense-exporter
     app.kubernetes.io/component: router-01
@@ -15,7 +15,7 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: opnsense-exporter
+  name: opnsense-exporter-router-02
   labels: &labels
     app.kubernetes.io/name: opnsense-exporter
     app.kubernetes.io/component: router-02
