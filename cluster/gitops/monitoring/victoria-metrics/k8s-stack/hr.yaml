@@ -131,7 +131,7 @@ spec:
             # These should be relatively uncommon, so this is a reasonable tradeoff for now.
             # This is mostly for vmanomaly, which queries 2 weeks worth of metric in some queries, with
             # a 1 minute resolution.
-            search.maxMemoryPerRequest: 8Gi
+            search.maxMemoryPerQuery: 8Gi
           hostAliases:
             - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
               hostnames:
