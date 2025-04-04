@@ -13,7 +13,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics-charts
-      version: 0.38.0
+      version: 0.41.3
   values:
     global:
       cluster:
@@ -23,11 +23,6 @@ spec:
           name: victoria-metrics-license-key
           key: licenseKey
     victoria-metrics-operator:
-      # Deploy an image version with https://github.com/VictoriaMetrics/operator/pull/1275
-      # This can be reverted after next release
-      image:
-        registry: quay.io
-        tag: 625c1cd@sha256:934925fc9dce329f8c13c9335f3f5a8c31e391b6d838a1241cca148b5360ba6b
       fullnameOverride: victoria-metrics-operator
       crds:
         enabled: false
@@ -86,9 +81,6 @@ spec:
         requestsLoadBalancer:
           enabled: true
           spec:
-            image:
-              # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
-              tag: v1.112.0-enterprise
             hostAliases:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
@@ -132,9 +124,6 @@ spec:
               cpu: 1000m
           extraArgs:
             memory.allowedPercent:
-          image:
-            # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
-            tag: v1.112.0-enterprise-cluster
           hostAliases:
             - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
               hostnames:
@@ -186,9 +175,6 @@ spec:
             limits:
               memory: 1Gi
               cpu: 1500m
-          image:
-            # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
-            tag: v1.112.0-enterprise-cluster
           hostAliases:
             - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
               hostnames:
@@ -230,9 +216,6 @@ spec:
             limits:
               memory: 4Gi
               cpu: 2000m
-          image:
-            # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
-            tag: v1.112.0-enterprise-cluster
           hostAliases:
             - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
               hostnames:
@@ -344,9 +327,6 @@ spec:
     # https://github.com/VictoriaMetrics/helm-charts/issues/2024
     vmalert:
       spec:
-        image:
-          # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
-          tag: v1.112.0-enterprise
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
             hostnames:
@@ -391,9 +371,6 @@ spec:
     vmagent:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
-        image:
-          # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
-          tag: v1.112.0-enterprise
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
             hostnames:
