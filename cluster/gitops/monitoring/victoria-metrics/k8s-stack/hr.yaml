@@ -13,7 +13,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics-charts
-      version: 0.41.3
+      version: 0.41.4
   values:
     global:
       cluster:
@@ -81,9 +81,6 @@ spec:
         requestsLoadBalancer:
           enabled: true
           spec:
-            image:
-              # This needs to be specified manually until https://github.com/VictoriaMetrics/helm-charts/issues/2023 is fixed
-              tag: v1.114.0-enterprise
             hostAliases:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
