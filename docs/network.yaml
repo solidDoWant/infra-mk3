@@ -458,6 +458,7 @@ ip-space:
         10.3.254.1/32:
           description: Bootstrap cluster API VIP
       10.4.0.0/16:
+        description: User devices
         vlan: 400
         gateway: 10.4.0.254/32
         10.4.0.0/24:
@@ -469,6 +470,7 @@ ip-space:
         10.4.1.0/24:
           description: DHCP range
       10.5.0.0/16:
+        description: Guest devices
         vlan: 500
         gateway: 10.5.0.254/32
         10.5.0.0/24:
@@ -478,12 +480,23 @@ ip-space:
         10.5.1.0/24:
           description: DHCP range
       10.6.0.0/16:
+        description: IoT devices
         vlan: 600
         gateway: 10.6.0.254/32
         10.6.0.0/24:
           description: Network devices
           10.6.0.254/32:
             description: OPNsense VIP
+          10.6.1.0/24:
+            description: Printers
+            10.6.1.0/25:
+              description: Paper printers
+              10.6.1.1/32:
+                hostname: printer-01
+            10.6.1.128/25:
+              description: 3D printers
+              10.6.1.128/32:
+                hostname: printer-3d-01
     10.32.0.0/11:
       description: Kubernetes services
       10.32.0.0/16:
