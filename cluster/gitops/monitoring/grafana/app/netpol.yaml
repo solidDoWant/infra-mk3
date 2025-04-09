@@ -39,6 +39,14 @@ specs:
           - ports:
               - port: "8427"
                 protocol: TCP
+      # Allow access to query logs
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/logs-supplier: "true"
+        toPorts:
+          - ports:
+              - port: "9428"
+                protocol: TCP
       # Allow access to the alertmanager web service
       - toEndpoints:
           - matchLabels:
