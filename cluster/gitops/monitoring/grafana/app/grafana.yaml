@@ -94,10 +94,11 @@ spec:
       template:
         metadata:
           labels:
-            endpoints.netpols.home.arpa/email-sender: "true"
-            endpoints.netpols.home.arpa/time-series-querier: "true"
-            endpoints.netpols.home.arpa/internal-dashboard-supplier: "true"
             endpoints.netpols.home.arpa/alertmanager-client: "true"
+            endpoints.netpols.home.arpa/email-sender: "true"
+            endpoints.netpols.home.arpa/internal-dashboard-supplier: "true"
+            endpoints.netpols.home.arpa/logs-querier: "true"
+            endpoints.netpols.home.arpa/time-series-querier: "true"
         spec:
           # The volumes for dashboards and provisioning config
           volumes:
