@@ -8,7 +8,7 @@ spec:
   hostAliases:
     - hostnames:
         - license.victoriametrics.com
-      ip: 10.33.0.20
+      ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
   license:
     keyRef:
       key: licenseKey
