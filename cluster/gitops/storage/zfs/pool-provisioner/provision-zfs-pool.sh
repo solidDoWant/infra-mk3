@@ -116,6 +116,8 @@ provision_datasets() {
         "/victoria-metrics/vmstorage"
         "/victoria-metrics/anomaly"
         "/victoria-metrics/logs"
+        "/vector"
+        "/vector/aggregator"
     )
     DATASETS=("${DATASETS[@]/#/${POOL_NAME}/openebs}")
 
