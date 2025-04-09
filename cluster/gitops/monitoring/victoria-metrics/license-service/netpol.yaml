@@ -28,6 +28,9 @@ specs:
               app.kubernetes.io/instance: victoria-metrics-k8s-stack
           - matchLabels:
               app.kubernetes.io/instance: victoria-metrics-anomaly
+          # TODO migrate existing components to this label
+          - matchLabels:
+              endpoints.netpols.home.arpa/victoriametrics-enterprise-component: "true"
         toPorts:
           - ports:
               - port: https
