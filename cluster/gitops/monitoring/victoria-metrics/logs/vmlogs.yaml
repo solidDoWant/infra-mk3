@@ -1,0 +1,66 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VLogs
+metadata:
+  name: victoria-logs-1
+spec:
+  # Needed until https://github.com/VictoriaMetrics/operator/pull/1305 merges and releases
+  image:
+    tag: v1.17.0-victorialogs
+  priorityClassName: system-cluster-critical
+  # This cannot be set until https://github.com/VictoriaMetrics/operator/issues/1306 is addressed
+  # replicaCount: 2
+  retentionPeriod: 1w
+  podMetadata:
+    labels:
+      app.kubernetes.io/part-of: victoria-logs
+  topologySpreadConstraints:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: victoria-logs
+          app.kubernetes.io/name: vlogs
+      maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Gi # TODO I have no idea how big this should be
+    # TODO this needs tuning and benchmarking.
+    storageClassName: victoria-logs
+    volumeMode: Filesystem
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VLogs
+metadata:
+  name: victoria-logs-2
+spec:
+  # Needed until https://github.com/VictoriaMetrics/operator/pull/1305 merges and releases
+  image:
+    tag: v1.17.0-victorialogs
+  priorityClassName: system-cluster-critical
+  # This cannot be set until https://github.com/VictoriaMetrics/operator/issues/1306 is addressed
+  # replicaCount: 2
+  retentionPeriod: 1w
+  podMetadata:
+    labels:
+      app.kubernetes.io/part-of: victoria-logs
+  topologySpreadConstraints:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: victoria-logs
+          app.kubernetes.io/name: vlogs
+      maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Gi # TODO I have no idea how big this should be
+    # TODO this needs tuning and benchmarking.
+    storageClassName: victoria-logs
+    volumeMode: Filesystem

@@ -1,0 +1,54 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAuth
+metadata:
+  name: victoria-logs
+spec:
+  port: "9428"
+  hostAliases:
+    - hostnames:
+        - license.victoriametrics.com
+      ip: 10.33.0.20
+  license:
+    keyRef:
+      key: licenseKey
+      name: victoria-metrics-license-key
+  image:
+    tag: v1.110.5-enterprise # Using enterprise requires setting the tag explicitly
+  podDisruptionBudget:
+    minAvailable: 1
+  priorityClassName: system-cluster-critical
+  replicaCount: 2
+  podMetadata:
+    labels:
+      app.kubernetes.io/part-of: victoria-logs
+      endpoints.netpols.home.arpa/victoriametrics-enterprise-component: "true"
+      endpoints.netpols.home.arpa/logs-supplier: "true"
+  topologySpreadConstraints:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: vmauth
+          app.kubernetes.io/part-of: victoria-logs
+      maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+  useStrictSecurity: true
+  volumeMounts:
+    - mountPath: /etc/ssl/certs/ca.crt
+      name: victoria-metrics-license-service-serving-cert
+      subPath: ca.crt
+  volumes:
+    - name: victoria-metrics-license-service-serving-cert
+      secret:
+        defaultMode: 288
+        items:
+          - key: ca.crt
+            path: ca.crt
+        secretName: victoria-metrics-license-service-serving-cert
+  # TODO figure out auth and ideally multitenancy
+  unauthorizedUserAccessSpec:
+    url_map:
+      - src_paths:
+          - ".*"
+        url_prefix: "http://srv+victoria-logs.monitoring.svc:9428"
+        discover_backend_ips: true

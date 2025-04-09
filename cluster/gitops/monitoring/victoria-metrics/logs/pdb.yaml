@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: victoria-logs
+  labels: &labels
+    app.kubernetes.io/part-of: victoria-logs
+    app.kubernetes.io/name: vlogs
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

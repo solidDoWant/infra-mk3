@@ -1,0 +1,12 @@
+---
+# This is needed because currently all instances must be deployed separately due to lack of STS support
+apiVersion: v1
+kind: Service
+metadata:
+  name: victoria-logs
+spec:
+  selector:
+    app.kubernetes.io/part-of: victoria-logs
+    app.kubernetes.io/name: vlogs
+  ports:
+    - port: 9428

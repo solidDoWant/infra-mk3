@@ -1,0 +1,93 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: victoria-logs
+specs:
+  - description: vlogs
+    endpointSelector: &vlogs_selector
+      matchLabels:
+        app.kubernetes.io/part-of: victoria-logs
+        app.kubernetes.io/name: vlogs
+    # egress:
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "9428"
+                protocol: TCP
+      - fromEndpoints:
+          # Metrics
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+          # Ingress from vmauth
+          - &vmauth_selector
+            matchLabels:
+              app.kubernetes.io/part-of: victoria-logs
+              app.kubernetes.io/name: vmauth
+        toPorts:
+          - ports:
+              - port: "9428"
+                protocol: TCP
+  - description: vmauth
+    endpointSelector: *vmauth_selector
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # To vlogs
+      - toEndpoints:
+          - *vlogs_selector
+        toPorts:
+          - ports:
+              - port: "9428"
+                protocol: TCP
+      # To license service
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: victoria-metrics-license-service
+              app.kubernetes.io/name: victoria-metrics-license-service
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "9428"
+                protocol: TCP
+      - fromEndpoints:
+          # Metrics
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+          # Ingress from the internal gateway
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Ingress from Grafana
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/logs-querier
+                operator: In
+                values:
+                  - "true"
+        toPorts:
+          - ports:
+              - port: "9428"
+                protocol: TCP
