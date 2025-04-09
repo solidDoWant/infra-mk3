@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vector-operator
+  labels: &labels
+    app.kubernetes.io/name: vector-operator
+    app.kubernetes.io/instance: vector-operator
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

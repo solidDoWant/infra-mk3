@@ -1,0 +1,23 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vector-operator
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: vector-operator
+      sourceRef:
+        kind: HelmRepository
+        name: vector-operator-charts
+        # TODO
+        namespace: flux-system
+      version: "0.6"
+  values:
+    createCRD: false
+    args:
+      - -leader-elect=true
+      - -metrics-bind-address=:8080
+    replicaCount: 2
+    # TODO TSC, probes
