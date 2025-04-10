@@ -105,6 +105,15 @@ specs:
         cnpg.io/cluster: {{ include "cluster-resource-name" . }}
         cnpg.io/jobRole: join
     egress:
+      # DNS resolution
+      - toEndpoints:
+          - {{ .Values.netpol.dns.selector | toYaml | nindent 12 | trim }}
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
       # Kubelet to get cluster info
       - toEntities:
           - kube-apiserver
