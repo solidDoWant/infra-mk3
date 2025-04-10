@@ -63,6 +63,10 @@ specs:
           - matchLabels:
               cnpg.io/cluster: {{ include "cluster-resource-name" . }}
               cnpg.io/podRole: instance
+          # Replica joining
+          - matchLabels:
+              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+              cnpg.io/jobRole: join
           # Configuration and maintenance from the operator
           - {{ .Values.netpol.operator.selector | toYaml | nindent 12 | trim }}
           # Access from Teleport
@@ -120,4 +124,14 @@ specs:
         toPorts:
           - ports:
               - port: "6443"
+                protocol: TCP
+      # Allow access to other instances
+      - toEndpoints:
+          # Replication between primary and replicas
+          - matchLabels:
+              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+              cnpg.io/podRole: instance
+        toPorts:
+          - ports:
+              - port: postgresql
                 protocol: TCP
