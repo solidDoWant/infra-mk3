@@ -99,3 +99,16 @@ specs:
           - ports:
               - port: "6443"
                 protocol: TCP
+  - description: join
+    endpointSelector:
+      matchLabels:
+        cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+        cnpg.io/jobRole: join
+    egress:
+      # Kubelet to get cluster info
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
