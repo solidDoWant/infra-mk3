@@ -86,3 +86,16 @@ specs:
           - ports:
               - port: metrics
                 protocol: TCP
+  - description: initdb
+    endpointSelector:
+      matchLabels:
+        cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+        cnpg.io/jobRole: initdb
+    egress:
+      # Kubelet to get cluster info
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP

@@ -8,10 +8,10 @@ spec:
   chart:
     spec:
       chart: ./cluster/charts/postgres/cluster
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: infra-mk3
-        namespace: flux-system
   dependsOn:
     - name: grafana-postgres-auth
   values:
