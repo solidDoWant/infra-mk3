@@ -155,7 +155,7 @@ configure_datasets() {
     # * This disables sync writes. Data will be written at least as frequently *
     # * as zfs_txg_timeout, which is 1 seconds by default.                     *
     # **************************************************************************
-    configure_dataset "${POOL_NAME}/fluent/bit" "sync" "off"
+    configure_dataset "${POOL_NAME}/openebs/fluent/bit" "sync" "disabled"
 }
 
 finalize() {
