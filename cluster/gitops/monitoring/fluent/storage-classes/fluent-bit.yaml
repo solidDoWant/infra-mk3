@@ -1,0 +1,26 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fluent-bit
+allowVolumeExpansion: true
+parameters:
+  # ****************************** IMPORTANT *******************************
+  # * This dataset has sync writes disabled. This reduces the I/O overhead *
+  # * of writes, but increases the risk of data loss. ZFS will sync data   *
+  # * to disk at least every zfs_txg_timeout (1) seconds. However, more    *
+  # * data can be lost. Fluent Bit aggregates events in "chunks", so the   *
+  # * actual data loss is equal to the time from the first event is        *
+  # * generated upstream, to when the last event in a chunk is processed + *
+  # * zfs_txg_timeout.                                                     *
+  # ************************************************************************
+  poolname: ${LOCAL_ZFS_POOL_NAME}/openebs/fluent/bit
+  fstype: zfs
+  # TODO tune these. These are just a rough guess at what might possibly be good.
+  # Block size probably needs to be the memory mapped page size, or maybe the
+  # chunk size.
+  compression: zstd
+  dedup: off
+provisioner: zfs.csi.openebs.io
+# This is important so that PVCs get bound to pods satisfying the TSCs.
+volumeBindingMode: WaitForFirstConsumer

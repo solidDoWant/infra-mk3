@@ -116,8 +116,8 @@ provision_datasets() {
         "/victoria-metrics/vmstorage"
         "/victoria-metrics/anomaly"
         "/victoria-metrics/logs"
-        "/vector"
-        "/vector/aggregator"
+        "/fluent"
+        "/fluent/bit"
     )
     DATASETS=("${DATASETS[@]/#/${POOL_NAME}/openebs}")
 
@@ -151,6 +151,11 @@ configure_dataset() {
 configure_datasets() {
     # cSpell:words primarycache
     configure_dataset "${POOL_NAME}/openebs/postgres" "primarycache" "metadata"
+    # ******************************* IMPORTANT ********************************
+    # * This disables sync writes. Data will be written at least as frequently *
+    # * as zfs_txg_timeout, which is 1 seconds by default.                     *
+    # **************************************************************************
+    configure_dataset "${POOL_NAME}/fluent/bit" "sync" "off"
 }
 
 finalize() {

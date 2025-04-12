@@ -4,14 +4,14 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name vector-storage-classes
+  name: &app_name fluent-storage-classes
 spec:
   targetNamespace: monitoring
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/monitoring/vector/storage-classes
+  path: /cluster/gitops/monitoring/fluent/storage-classes
   prune: true
   sourceRef:
     kind: GitRepository

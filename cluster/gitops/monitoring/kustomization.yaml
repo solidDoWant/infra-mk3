@@ -4,9 +4,9 @@ kind: Kustomization
 resources:
   - ./namespace.yaml
   - ./exporters/ks.yaml
+  - ./fluent/ks.yaml
   - ./goldilocks/ks.yaml
   - ./grafana/ks.yaml
   - ./issuers/ks.yaml
   - ./prometheus/ks.yaml
   - ./victoria-metrics/ks.yaml
-  - ./vector/ks.yaml
