@@ -341,7 +341,9 @@ spec:
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
         extraArgs:
-          external.url: https://vm-alerts.${SECRET_PUBLIC_DOMAIN_NAME}
+          # This will be used in the "source" links in the alert messages.
+          # This will add grafana links to alerts.
+          external.url: https://grafana.${SECRET_PUBLIC_DOMAIN_NAME}
           # URLs do not contain anything sensitive, so they can be logged/displayed in UI
           remoteRead.showURL: "true"
           remoteWrite.showURL: "true"
