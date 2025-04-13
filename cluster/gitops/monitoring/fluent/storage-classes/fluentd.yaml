@@ -1,0 +1,20 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fluentd
+allowVolumeExpansion: true
+parameters:
+  poolname: ${LOCAL_ZFS_POOL_NAME}/openebs/fluent/d
+  fstype: zfs
+  # TODO tune these. These are just a rough guess at what might possibly be good.
+  # Block size probably needs to be the memory mapped page size, or maybe the
+  # chunk size.
+  compression: zstd
+  # There might be a benefit to enabling dedup here, because different outputs
+  # don't share a buffer. This will likely result in duplicated data for each
+  # output. I need to collect duplication metrics before enabling this.
+  dedup: off
+provisioner: zfs.csi.openebs.io
+# This is important so that PVCs get bound to pods satisfying the TSCs.
+volumeBindingMode: WaitForFirstConsumer

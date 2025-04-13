@@ -118,6 +118,7 @@ provision_datasets() {
         "/victoria-metrics/logs"
         "/fluent"
         "/fluent/bit"
+        "/fluent/d"
     )
     DATASETS=("${DATASETS[@]/#/${POOL_NAME}/openebs}")
 
