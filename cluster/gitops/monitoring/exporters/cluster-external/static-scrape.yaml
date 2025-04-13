@@ -2,10 +2,10 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMStaticScrape
 metadata:
-  name: proxmox-vm-host-01
+  name: external-hosts
   labels:
     app.kubernetes.io/name: node-exporter
-    app.kubernetes.io/instance: proxmox-vm-host-01
+    app.kubernetes.io/instance: external-hosts
     app.kubernetes.io/component: monitoring
 spec:
   jobName: node-exporter
