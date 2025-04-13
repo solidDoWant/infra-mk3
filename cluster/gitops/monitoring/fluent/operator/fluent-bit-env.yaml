@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-operator-fluent-bit-env
+data:
+  fluent-bit.env: |
+    # This is just used to avoid an init container that sets this value.
+    # See the helmrelease for details.
+    CONTAINER_ROOT_DIR=/var/log

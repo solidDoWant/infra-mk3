@@ -1,0 +1,14 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fluent-operator
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fluent-operator
+      app.kubernetes.io/component: operator
+  endpoints:
+    - interval: 1m
+      port: metrics
+      scrapeTimeout: 10s

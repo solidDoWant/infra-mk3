@@ -1,0 +1,128 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fluent-operator
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: fluent-operator
+      sourceRef:
+        kind: HelmRepository
+        name: fluent-charts
+      version: 3.3.0
+  values:
+    containerRuntime: containerd
+    Kubernetes: false # Don't deploy the built-in k8s pipeline
+    operator:
+      container:
+        # The chart values in the Helm chart git repo does not match the
+        # chart values in the upstream fluent-operator repo (WTF?)
+        # The tag points to "latest", and the registry/repo points to
+        # someplace completely different
+        repository: ghcr.io/fluent/fluent-operator/fluent-operator
+        # Needed until https://github.com/fluent/helm-charts/issues/596 is fixed
+        tag: v3.3.0
+      extraArgs:
+        - --leader-elect=true
+    fluentbit:
+      crdsEnable: false
+    fluentd:
+      crdsEnable: false
+  postRenderers:
+    # Add the configmap volume that sets "/fluent-operator/fluent-bit.env" to
+    # "CONTAINER_ROOT_DIR=/var/log"
+    - kustomize:
+        patches:
+          - patch: |
+              - op: replace
+                path: /spec/template/spec/volumes
+                value:
+                  - name: fluent-bit-env
+                    configMap:
+                      name: fluent-operator-fluent-bit-env
+                      defaultMode: 0440
+                      items:
+                        - key: fluent-bit.env
+                          path: fluent-bit.env
+              - op: replace
+                path: /spec/template/spec/containers/0/volumeMounts
+                value:
+                  - name: fluent-bit-env
+                    mountPath: /fluent-operator/fluent-bit.env
+                    subPath: fluent-bit.env
+                    readOnly: true
+              - op: remove
+                path: /spec/template/spec/initContainers
+            target: &patch_deployment_target
+              group: apps
+              version: v1
+              kind: Deployment
+    # Unset the resource requests and limits. Due to Helm limitations, this cannot
+    # be done with Helm alone. These need to be unbounded (or set to a very high limit)
+    # so that I can estimate what the actually needed resources are.
+    - kustomize:
+        patches:
+          - patch: |
+              - op: remove
+                path: /spec/template/spec/containers/0/resources
+            target: *patch_deployment_target
+    # Add missing container ports
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/containers/0/ports
+                value:
+                  - name: metrics
+                    containerPort: 8080
+                  - name: healthcheck
+                    containerPort: 8081
+            target: *patch_deployment_target
+    # Add missing health check probes
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/containers/0/startupProbe
+                value:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+              - op: add
+                path: /spec/template/spec/containers/0/readinessProbe
+                value:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+              - op: add
+                path: /spec/template/spec/containers/0/livenessProbe
+                value:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+            target: *patch_deployment_target
+    # Add TSCs
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/topologySpreadConstraints
+                value:
+                  - maxSkew: 1 # Skew of 1 allows for rolling updates
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: fluent-operator
+                        app.kubernetes.io/component: operator
+                    whenUnsatisfiable: DoNotSchedule
+            target: *patch_deployment_target
+    # Deploy a replica
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/replicas
+                value: 2
+            target: *patch_deployment_target

@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fluent-operator
+  labels: &labels
+    app.kubernetes.io/name: fluent-operator
+    app.kubernetes.io/component: operator
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
