@@ -327,3 +327,18 @@ patches:
       apiServer:
         extraArgs:
           enable-aggregator-routing: "true"
+  # Enable cluster-level topology spread constraints for supported controllers
+  - |-
+    cluster:
+      scheduler:
+        config:
+          profiles:
+            - schedulerName: default-scheduler
+              pluginConfig:
+                - name: PodTopologySpread
+                  args:
+                    defaultConstraints:
+                      - maxSkew: 1 # Skew of 1 allows for rolling updates
+                        topologyKey: kubernetes.io/hostname
+                        whenUnsatisfiable: DoNotSchedule
+                    defaultingType: List
