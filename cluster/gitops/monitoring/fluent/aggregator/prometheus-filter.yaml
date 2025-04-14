@@ -6,6 +6,7 @@ metadata:
   name: prometheus-filter
   labels:
     config.fluentd.fluent.io/enabled: "true"
+    kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   filters:
     - customPlugin:
