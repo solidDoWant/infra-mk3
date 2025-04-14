@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/clusterfilter_v1alpha1.json
+apiVersion: fluentd.fluent.io/v1alpha1
+kind: ClusterFilter
+metadata:
+  name: prometheus-filter
+  labels:
+    config.fluentd.fluent.io/enabled: "true"
+spec:
+  filters:
+    - customPlugin:
+        config: |
+          <filter **>
+            @type prometheus
+            @id prometheus_filter
+            <metric>
+              name fluentd_input_status_num_records_total
+              type counter
+              desc The total number of incoming records
+              <labels>
+                hostname ${hostname}
+                worker_id ${worker_id}
+                tag ${tag_parts[0]}
+              </labels>
+            </metric>
+          </filter>

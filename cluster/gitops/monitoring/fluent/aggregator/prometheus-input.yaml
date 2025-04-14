@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/clusterinput_v1alpha1.json
+apiVersion: fluentd.fluent.io/v1alpha1
+kind: ClusterInput
+metadata:
+  name: prometheus
+  labels:
+    config.fluentd.fluent.io/enabled: "true"
+spec:
+  inputs:
+    - customPlugin:
+        config: |
+          <source>
+            @type prometheus
+            port 2021 # This must match what the operator deploys (not configurable)
+            metrics_path /worker_metrics
+            aggregated_metrics_path /metrics
+          </source>
+          <source>
+            @type prometheus_monitor
+            <labels>
+              hostname ${hostname}
+              worker_id ${worker_id}
+            </labels>
+          </source>
+          <source>
+            @type prometheus_output_monitor
+            <labels>
+              hostname ${hostname}
+              worker_id ${worker_id}
+            </labels>
+          </source>

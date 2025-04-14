@@ -1,0 +1,93 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/clusteroutput_v1alpha1.json
+apiVersion: fluentd.fluent.io/v1alpha1
+kind: ClusterOutput
+metadata:
+  name: victoria-logs
+  labels:
+    config.fluentd.fluent.io/enabled: "true"
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  outputs:
+    # # Only accept logs that have been validated by the validator filter.
+    # - tag: vl-validated
+    #   copy:
+    #     copyMode: no_copy
+    # - http: &http_config
+    #     endpoint: http://vlogs-victoria-logs-1.monitoring.svc:9428/insert/jsonline
+    #     headersFromPlaceholders: >2-
+    #       {
+    #       "VL-Msg-Field": "log",
+    #       "VL-Time-Field": "time",
+    #       "VL-Stream-Fields": "${$._meta.stream_fields}",
+    #       "VL-Ignore-Fields": "_meta"
+    #       }
+    #     # Pending merge and release of https://github.com/fluent/fluent-operator/pull/1560
+    #     # compress: gzip
+    #   # All placeholder values must be included in the chunk key
+    #   buffer: &buffer_config
+    #     type: file
+    #     # Despite this being "tag", this handles both tags and chunk keys.
+    #     tag: vl-validated,$._meta.stream_fields
+    #     totalLimitSize: 4GB
+    #     compress: gzip
+    #     # Only flush periodically to reduce IO load
+    #     flushAtShutdown: true
+    #     flushMode: interval
+    #     flushInterval: 5s
+    #     delayedCommitTimeout: 15s
+    #     # This is relative to the /buffers mounted directory
+    #     # This is really really IO expensive. All events could be stored up to twice,
+    #     # _per replica_. They could also be written to disk by the agent in many
+    #     # cases. Lastly they'll be stored twice by the recording service (VL). The end
+    #     # result is pretty large write amplification. This could be worse if the
+    #     # underlying storage also duplicates data (i.e. mirrors, erasure coding, etc).
+    #     path: output/cluster/victoria-logs/1
+    # - http:
+    #     <<: *http_config
+    #     endpoint: http://vlogs-victoria-logs-2.monitoring.svc:9428/insert/jsonline
+    #   buffer:
+    #     <<: *buffer_config
+    #     path: output/cluster/victoria-logs/2
+    # The above does not work because of some bug with how `copy` is implemented. If a custom output is used,
+    # then it seems to completely break `copy`.
+    - customPlugin:
+        config: |
+          <match vl-validated>
+            @type copy
+            @id victoria-logs-copy
+            <store ignore_error>
+              @type http
+              @id victoria-logs-1
+              endpoint http://vlogs-victoria-logs-1.monitoring.svc:9428/insert/jsonline
+              headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta"}
+              compress gzip
+              <buffer tag,$._meta.stream_fields>
+                @type file
+                compress gzip
+                total_limit_size 4GB
+                flush_at_shutdown true
+                flush_mode interval
+                flush_interval 5s
+                delayed_commit_timeout 15s
+                path /buffers/output/cluster/victoria-logs/1
+              </buffer>
+            </store>
+            <store ignore_error>
+              @type http
+              @id victoria-logs-2
+              endpoint http://vlogs-victoria-logs-2.monitoring.svc:9428/insert/jsonline
+              headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta"}
+              compress gzip
+              <buffer tag,$._meta.stream_fields>
+                @type file
+                compress gzip
+                total_limit_size 4GB
+                flush_at_shutdown true
+                flush_mode interval
+                flush_interval 5s
+                delayed_commit_timeout 15s
+                path /buffers/output/cluster/victoria-logs/2
+              </buffer>
+            </store>
+          </match>

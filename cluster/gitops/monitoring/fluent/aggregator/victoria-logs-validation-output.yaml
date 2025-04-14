@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/clusteroutput_v1alpha1.json
+# Ensures that all incoming logs have the required fields set.
+apiVersion: fluentd.fluent.io/v1alpha1
+kind: ClusterOutput
+metadata:
+  name: victoria-logs-validator
+  labels:
+    config.fluentd.fluent.io/enabled: "true"
+spec:
+  outputs:
+    - customPlugin:
+        config: |
+          <match /^(?!clear|vl-validated).*$/>
+            @type rewrite_tag_filter
+            @id victoria-logs-validator
+            # Match any set value
+            <rule>
+              key $._meta.stream_fields
+              pattern /.+/
+              tag vl-validated
+            </rule>
+            # Match everything else (unset field value)
+            <rule>
+              key $._meta.stream_fields
+              pattern /.*/
+              tag clear
+            </rule>
+          </match>

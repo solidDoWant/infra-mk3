@@ -1,0 +1,15 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fluentd-aggregator
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fluentd-aggregator
+      app.kubernetes.io/component: fluentd
+      app.kubernetes.io/instance: fluentd
+  endpoints:
+    - interval: 1m
+      targetPort: metrics
+      scrapeTimeout: 10s

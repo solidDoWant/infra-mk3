@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/clusteroutput_v1alpha1.json
+apiVersion: fluentd.fluent.io/v1alpha1
+kind: ClusterOutput
+metadata:
+  name: clear
+  labels:
+    config.fluentd.fluent.io/enabled: "true"
+spec:
+  outputs:
+    # Discard logs matching the tag
+    - tag: clear
+      # For debugging
+      stdout: {}

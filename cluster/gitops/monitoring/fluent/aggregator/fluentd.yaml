@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/fluentd_v1alpha1.json
+apiVersion: fluentd.fluent.io/v1alpha1
+kind: Fluentd
+metadata:
+  name: fluentd-aggregator
+spec:
+  buffer:
+    pvc:
+      spec:
+        storageClassName: fluentd
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            # This may be a ton or it may be tiny - I have no idea
+            storage: 10Gi
+  globalInputs:
+    - forward:
+        addTagPrefix: forward
+        sourceAddressKey: _input.source_address
+        sourceHostnameKey: _input.source_hostname
+        # Needed until https://github.com/fluent/fluent-operator/pull/1563 merges and releases
+        port: 24224
+  fluentdCfgSelector:
+    matchLabels:
+      config.fluentd.fluent.io/enabled: "true"
+  image: ghcr.io/fluent/fluent-operator/fluentd:v1.17.1-1
+  mode: collector
+  priorityClassName: system-cluster-critical
+  replicas: 2
+  workers: 2
+  livenessProbe: &probe
+    tcpSocket:
+      port: 24224
+  readinessProbe: *probe
+  # Not supported until https://github.com/fluent/fluent-operator/pull/1564 is merged and released
+  # service:
+  #   type: LoadBalancer
+  #   annotations:
+  #     lbipam.cilium.io/ips: 10.34.0.5

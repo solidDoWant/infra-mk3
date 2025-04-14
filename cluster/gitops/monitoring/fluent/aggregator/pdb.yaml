@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fluentd-aggregator
+  labels: &labels
+    app.kubernetes.io/name: fluentd-aggregator
+    app.kubernetes.io/component: fluentd
+    app.kubernetes.io/instance: fluentd
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
