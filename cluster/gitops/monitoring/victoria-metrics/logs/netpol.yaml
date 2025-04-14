@@ -28,6 +28,13 @@ specs:
             matchLabels:
               app.kubernetes.io/part-of: victoria-logs
               app.kubernetes.io/name: vmauth
+          # Ingress from fluentd aggregator
+          # The aggregator should connect to each instance for data
+          # durability and availability.
+          - matchLabels:
+              app.kubernetes.io/name: fluentd-aggregator
+              app.kubernetes.io/component: fluentd
+              app.kubernetes.io/instance: fluentd
         toPorts:
           - ports:
               - port: "9428"
