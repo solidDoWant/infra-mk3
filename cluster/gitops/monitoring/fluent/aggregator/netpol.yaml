@@ -40,6 +40,14 @@ specs:
           - ports:
               - port: "24224"
                 protocol: TCP
+      # Records from agents
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/record-agent: "true"
+        toPorts:
+          - ports:
+              - port: "24224"
+                protocol: TCP
       # Metrics
       - fromEndpoints:
           - matchLabels:
