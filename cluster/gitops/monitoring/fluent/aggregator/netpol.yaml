@@ -36,7 +36,7 @@ specs:
       # Kubelet for healthcheck
       - fromEntities:
           - host
-        toPorts:
+        toPorts: &forward_port
           - ports:
               - port: "24224"
                 protocol: TCP
@@ -44,10 +44,11 @@ specs:
       - fromEndpoints:
           - matchLabels:
               endpoints.netpols.home.arpa/record-agent: "true"
-        toPorts:
-          - ports:
-              - port: "24224"
-                protocol: TCP
+        toPorts: *forward_port
+      # Records from agents with host networking enabled
+      - fromEntities:
+          - remote-node
+        toPorts: *forward_port
       # Metrics
       - fromEndpoints:
           - matchLabels:
