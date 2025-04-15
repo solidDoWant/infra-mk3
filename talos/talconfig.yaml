@@ -181,12 +181,6 @@ patches:
       time:
         servers:
           - 10.3.0.254
-  # Disable IPv6
-  - |-
-    machine:
-      sysctls:
-        net.ipv6.conf.all.disable_ipv6: "1"
-        net.ipv6.conf.default.disable_ipv6: "1"
   # Root FS disk encryption
   # TODO: implement disk encryption. Use a HA KMS server implementation
   # for the first key, hosted in the cluster. If that isn't available
