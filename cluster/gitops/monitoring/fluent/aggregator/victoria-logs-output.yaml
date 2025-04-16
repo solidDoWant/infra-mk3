@@ -60,7 +60,7 @@ spec:
               @type http
               @id victoria-logs-1
               endpoint http://vlogs-victoria-logs-1.monitoring.svc:9428/insert/jsonline
-              headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta"}
+              headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta*"}
               compress gzip
               <buffer tag,$._meta.stream_fields>
                 @type file
@@ -77,7 +77,7 @@ spec:
               @type http
               @id victoria-logs-2
               endpoint http://vlogs-victoria-logs-2.monitoring.svc:9428/insert/jsonline
-              headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta"}
+              headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta*"}
               compress gzip
               <buffer tag,$._meta.stream_fields>
                 @type file
