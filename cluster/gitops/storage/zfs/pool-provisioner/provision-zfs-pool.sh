@@ -132,6 +132,7 @@ provision_datasets() {
     DAEMONSET_DATASETS=("${DAEMONSET_DATASETS[@]/#/daemonset}")
 
     DATASETS=("${OPENEBS_DATASETS[@]}" "${DAEMONSET_DATASETS[@]}")
+    DATASETS=("${DATASETS[@]/#/${POOL_NAME}/}")
 
     for DATASET in "${DATASETS[@]}"; do
         provision_dataset "${DATASET}"
