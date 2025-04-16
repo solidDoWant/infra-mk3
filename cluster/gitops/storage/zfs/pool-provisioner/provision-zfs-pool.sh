@@ -175,7 +175,7 @@ configure_datasets() {
 }
 
 mount_datasets() {
-    run_rootfs_cmd zfs mount -f -a
+    run_rootfs_cmd zfs mount -v -a
 }
 
 finalize() {
