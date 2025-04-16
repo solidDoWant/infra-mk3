@@ -174,6 +174,10 @@ configure_datasets() {
     configure_dataset "${POOL_NAME}/daemonset/monitoring/fluent/node-agent" "quota" "10G"
 }
 
+mount_datasets() {
+    run_rootfs_cmd zfs mount -f -a
+}
+
 finalize() {
     echo "Provisioning complete"
     run_rootfs_cmd zpool list
@@ -188,4 +192,5 @@ finalize() {
 run_checks
 provision
 configure_datasets
+mount_datasets
 finalize
