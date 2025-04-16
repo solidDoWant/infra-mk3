@@ -4,5 +4,6 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: cnpg-charts
+  namespace: flux-system # Needed for https://kubesearch.dev/ indexing
 spec:
   url: https://cloudnative-pg.github.io/charts

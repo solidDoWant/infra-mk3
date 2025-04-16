@@ -4,5 +4,6 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: rook-ceph-charts
+  namespace: flux-system # Needed for https://kubesearch.dev/ indexing
 spec:
   url: https://charts.rook.io/release

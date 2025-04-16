@@ -4,6 +4,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: kuxabeast-charts
+  namespace: flux-system # Needed for https://kubesearch.dev/ indexing
 spec:
   url: oci://ghcr.io/kuxabeast/charts
   type: oci

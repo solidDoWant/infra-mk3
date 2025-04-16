@@ -4,5 +4,6 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: kiali-charts
+  namespace: flux-system # Needed for https://kubesearch.dev/ indexing
 spec:
   url: https://kiali.org/helm-charts

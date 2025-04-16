@@ -4,5 +4,6 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: ori-edge-charts
+  namespace: flux-system # Needed for https://kubesearch.dev/ indexing
 spec:
   url: https://ori-edge.github.io/k8s_gateway
