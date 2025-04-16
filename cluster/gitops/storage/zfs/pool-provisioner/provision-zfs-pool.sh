@@ -109,7 +109,7 @@ provision_dataset() {
 
 provision_datasets() {
     # This cross-cutting logic isn't great, but I'm not sure where else to put it
-    DATASETS=(
+    OPENEBS_DATASETS=(
         ""
         "/postgres"
         "/victoria-metrics"
@@ -120,7 +120,18 @@ provision_datasets() {
         "/fluent/bit"
         "/fluent/d"
     )
-    DATASETS=("${DATASETS[@]/#/${POOL_NAME}/openebs}")
+    OPENEBS_DATASETS=("${OPENEBS_DATASETS[@]/#/openebs}")
+
+    # Used for workloads that must run on each node
+    DAEMONSET_DATASETS=(
+        ""
+        "/monitoring"
+        "/monitoring/fluent"
+        "/monitoring/fluent/node-agent"
+    )
+    DAEMONSET_DATASETS=("${DAEMONSET_DATASETS[@]/#/daemonset}")
+
+    DATASETS=("${OPENEBS_DATASETS[@]}" "${DAEMONSET_DATASETS[@]}")
 
     for DATASET in "${DATASETS[@]}"; do
         provision_dataset "${DATASET}"
