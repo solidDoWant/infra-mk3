@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: talos-kernel
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  match: talos.kernel
+  filters:
+    - parser:
+        parser: talos
+        keyName: log
+    # Add the name of the node
+    - recordModifier:
+        records:
+          - talos-node ${NODE_NAME}
+    # Add the type of log
+    - recordModifier:
+        records:
+          - logging_type talos.kernel
+    # Restructure fields
+    - nest:
+        operation: nest
+        wildcard:
+          - talos-*
+        removePrefix: talos-
+        nestUnder: talos
+    - nest:
+        operation: nest
+        wildcard:
+          - logging_*
+        removePrefix: logging_
+        nestUnder: logging
+    - modify:
+        rules:
+          - rename:
+              msg: log
+    # Add stream field tags
+    - modify:
+        rules:
+          - add:
+              _meta_stream_fields: logging.type,talos.node
+    - nest:
+        operation: nest
+        wildcard:
+          - _meta_*
+        removePrefix: _meta_
+        nestedUnder: _meta

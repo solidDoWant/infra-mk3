@@ -1,0 +1,14 @@
+# ---
+# # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusteroutput_v1alpha2.json
+# apiVersion: fluentbit.fluent.io/v1alpha2
+# kind: ClusterOutput
+# metadata:
+#   name: debug
+#   labels:
+#     config.fluentbit.fluent.io/enabled: "true"
+#     config.fluentbit.fluent.io/agent: node
+# spec:
+#   # Avoid a positive feedback loop
+#   matchRegex: ^(?!kube.var.log.containers.node-agent|kube.monitoring.node-agent).*$
+#   stdout:
+#     format: json

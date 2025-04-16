@@ -1,0 +1,21 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fluentbit-node-agent
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fluentbit-node-agent
+      app.kubernetes.io/component: fluentbit
+      app.kubernetes.io/instance: fluentbit
+  endpoints:
+    - interval: 1m
+      targetPort: metrics
+      path: /api/v2/metrics/prometheus
+      scrapeTimeout: 10s
+      relabelings:
+        - action: replace
+          sourceLabels:
+            - __meta_kubernetes_pod_node_name
+          targetLabel: instance

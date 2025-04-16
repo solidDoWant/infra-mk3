@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfluentbitconfig_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFluentBitConfig
+metadata:
+  name: fluentbit-node-agent-config
+spec:
+  inputSelector: &selector
+    matchLabels:
+      config.fluentbit.fluent.io/enabled: "true"
+      config.fluentbit.fluent.io/agent: node
+  outputSelector: *selector
+  filterSelector: *selector
+  multilineParserSelector: *selector
+  parserSelector: *selector
+  service:
+    parsersFiles:
+      - /fluent-bit/etc/parsers.conf # Default parsers
+      # Parsers provided by the operator
+      - /fluent-bit/config/parsers.conf
+      - /fluent-bit/config/parsers_multiline.conf
+    httpServer: true
+    storage:
+      path: /fluent-bit/chunks
+      deleteIrrecoverableChunks: "on"
+      checksum: "on"
+      sync: full
+      metrics: "on"
+    # logLevel: trace

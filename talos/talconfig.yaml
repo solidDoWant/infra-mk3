@@ -108,6 +108,8 @@ nodes:
           # Disable ipv6 via command line parameter
           # This one actually works
           - ipv6.disable=1
+          # Log forwarding to the node agent
+          - talos.logging.kernel=tcp://127.0.0.1:5171/
     isoSchematic:
       customization:
         <<: *schematic_customization
@@ -336,3 +338,10 @@ patches:
                         topologyKey: kubernetes.io/hostname
                         whenUnsatisfiable: DoNotSchedule
                     defaultingType: List
+  # Ship logs to each node's agent
+  - |-
+    machine:
+      logging:
+        destinations:
+          - endpoint: tcp://127.0.0.1:5170
+            format: json_lines

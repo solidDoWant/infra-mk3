@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/fluentbit_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: FluentBit
+metadata:
+  name: fluentbit-node-agent
+  labels:
+    app.kubernetes.io/name: fluentbit-node-agent
+    app.kubernetes.io/component: fluentbit
+    app.kubernetes.io/instance: fluentbit
+spec:
+  image: ghcr.io/fluent/fluent-operator/fluent-bit:v4.0.0
+  labels:
+    app.kubernetes.io/name: fluentbit-node-agent
+    app.kubernetes.io/component: fluentbit
+    app.kubernetes.io/instance: fluentbit
+    endpoints.netpols.home.arpa/record-agent: "true"
+  positionDB:
+    hostPath:
+      path: /var/mnt/local-storage/daemonset/monitoring/fluent/node-agent/position-db
+      type: DirectoryOrCreate
+  fluentBitConfigName: fluentbit-node-agent-config
+  priorityClassName: system-node-critical
+  # Needed for kubelet access
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  volumes:
+    - name: chunks
+      hostPath:
+        path: /var/mnt/local-storage/daemonset/monitoring/fluent/node-agent/chunks
+        type: DirectoryOrCreate
+  volumesMounts:
+    - name: chunks
+      mountPath: /fluent-bit/chunks
+  readinessProbe: &probe
+    httpGet:
+      port: 2020
+      path: /api/v1/health
+  livenessProbe: *probe

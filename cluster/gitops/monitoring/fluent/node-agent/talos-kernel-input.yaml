@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterinput_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: talos-kernel
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  customPlugin:
+    # `Tag` is not yet supported on `tcp`.
+    # TODO file a PR for this after https://github.com/fluent/fluent-operator/pull/1568 merges
+    config: |
+      Name tcp
+      Port 5171
+      Listen 127.0.0.1
+      Format none
+      Tag talos.kernel
+      storage.type filesystem

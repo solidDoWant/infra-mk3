@@ -1,0 +1,95 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: kubernetes
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: kube.*
+  filters:
+    - kubernetes:
+        mergeLog: true
+        mergeLogKey: log_fields
+        k8sLoggingParser: true
+        k8sLoggingExclude: true
+        useKubelet: true
+        bufferSize: 10MB
+        kubeTagPrefix: kube.
+        regexParser: kube-tag-parser
+        # Pending merge/release of https://github.com/fluent/fluent-operator/pull/1565
+        # useTagForMeta: true
+        cacheUseDockerId: true
+        # Pending merge/release of https://github.com/fluent/fluent-operator/pull/1566
+        # ownerReferences: true
+    # This is a "trick" to work around the `modify` filter not supporting record accessors
+    # on the action itself (only conditionals)
+    - nest:
+        operation: lift
+        nestedUnder: kubernetes
+        addPrefix: kubernetes_
+    - modify:
+        rules:
+          # Drop unnecessary fields
+          - remove: kubernetes_docker_id
+          - remove: kubernetes_container_image
+          # Rename some fields
+          - rename:
+              kubernetes_pod_id: kubernetes_pod_uid
+              kubernetes_container_hash: kubernetes_container_image
+              kubernetes_host: kubernetes_pod_node_name
+              kubernetes_labels: kubernetes_pod_labels
+              kubernetes_annotations: kubernetes_pod_annotations
+          # Add the type of log
+          - add:
+              logging_type: kube
+    # Restructure some fields
+    - nest:
+        operation: nest
+        wildcard:
+          - kubernetes_container_*
+        removePrefix: kubernetes_container_
+        nestedUnder: kubernetes_pod_container
+    - nest:
+        operation: nest
+        wildcard:
+          - kubernetes_pod_node_*
+        removePrefix: kubernetes_pod_node_
+        nestedUnder: kubernetes_pod_node
+    - nest:
+        operation: nest
+        wildcard:
+          - kubernetes_pod_*
+        removePrefix: kubernetes_pod_
+        nestedUnder: kubernetes_pod
+    - nest:
+        operation: nest
+        wildcard:
+          - kubernetes_namespace_*
+        removePrefix: kubernetes_namespace_
+        nestedUnder: kubernetes_namespace
+    - nest:
+        operation: nest
+        wildcard:
+          - kubernetes_*
+        nestedUnder: kubernetes
+        removePrefix: kubernetes_
+    - nest:
+        operation: nest
+        wildcard:
+          - logging_*
+        removePrefix: logging_
+        nestUnder: logging
+    # Add stream field tags
+    - modify:
+        rules:
+          - add:
+              _meta_stream_fields: logging.type,kubernetes.namespace.name,kubernetes.pod.node.name,kubernetes.pod.name,kubernetes.pod.container.name
+    - nest:
+        operation: nest
+        wildcard:
+          - _meta_*
+        removePrefix: _meta_
+        nestedUnder: _meta

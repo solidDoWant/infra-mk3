@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterinput_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: containers
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  tail:
+    # Decode the file name and store it in the tag for downstream filtering
+    tag: kube.<namespace_name>.<pod_name>.<container_name>.<container_id>
+    tagRegex: ^\/var\/log\/containers\/(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<container_id>[a-z0-9]{64})\.log$
+    path: /var/log/containers/*.log
+    parser: cri
+    multilineParser: cri
+    refreshIntervalSeconds: 3
+    memBufLimit: 64MB
+    skipLongLines: true
+    db: /fluent-bit/tail/containers.db
+    # Pending merge/release of https://github.com/fluent/fluent-operator/pull/1567
+    # dbLocking: true
+    readFromHead: true
+    storageType: filesystem
