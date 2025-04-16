@@ -169,6 +169,9 @@ configure_datasets() {
     # * as zfs_txg_timeout, which is 1 seconds by default.                     *
     # **************************************************************************
     configure_dataset "${POOL_NAME}/openebs/fluent/bit" "sync" "disabled"
+
+    # Daemonset quotas
+    configure_dataset "${POOL_NAME}/daemonset/monitoring/fluent/node-agent" "quota" "10G"
 }
 
 finalize() {
