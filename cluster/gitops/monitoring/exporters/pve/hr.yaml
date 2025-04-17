@@ -22,8 +22,9 @@ spec:
         containers:
           app:
             image:
-              repository: ghcr.io/prompve/prometheus-pve-exporter
-              tag: 3.5.3
+              # TODO next release will support GHCR. Switch registries then.
+              repository: prompve/prometheus-pve-exporter
+              tag: 3.5.2
             args:
               - --web.listen-address=:9221 # No IPv6
             env:
