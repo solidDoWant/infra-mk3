@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-messaging-topology-operator-webhook
+spec:
+  commonName: RabbitMQ Messaging Topology Operator
+  dnsNames:
+    - rabbitmq-messaging-topology-operator.data.svc
+    - rabbitmq-messaging-topology-operator.data.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  duration: 4h
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: data-intermediary-ca
+  secretName: rabbitmq-messaging-topology-operator-webhook
+  secretTemplate:
+    labels:
+      kyverno.home.arpa/reload: "true"

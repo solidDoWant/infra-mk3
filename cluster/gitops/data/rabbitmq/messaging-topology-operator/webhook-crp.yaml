@@ -1,0 +1,42 @@
+---
+# Approve the the rabbitmq-messaging-topology-operator-webhook certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  # This must be abbreviated to 63 characters or less.
+  name: monitoring-intermediary-ca-rabbitmq-mto-webhook
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: data-intermediary-ca
+    namespace:
+      matchNames:
+        - data
+  allowed:
+    commonName:
+      required: true
+      value: RabbitMQ Messaging Topology Operator
+    dnsNames:
+      required: true
+      values:
+        - rabbitmq-messaging-topology-operator.data.svc
+        - rabbitmq-messaging-topology-operator.data.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 4h

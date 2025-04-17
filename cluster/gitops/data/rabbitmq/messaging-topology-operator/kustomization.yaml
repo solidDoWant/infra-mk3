@@ -1,0 +1,66 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./certificate.yaml
+  - ./hr.yaml
+  - ./netpol.yaml
+  - ./pdb.yaml
+  - ./webhook-crp.yaml
+  # Webhook
+  # This is large, complex, and coupled closely enough with the operator that I don't want
+  # to maintain it myself.
+  - https://raw.githubusercontent.com/rabbitmq/messaging-topology-operator/refs/tags/v1.16.0/config/webhook/manifests.yaml
+
+# Update the webhook to target the operator service, and inject the serving cert
+replacements:
+  - source:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      version: v2
+      name: rabbitmq-messaging-topology-operator
+      fieldPath: spec.values.service.messaging-topology-operator.ports.webhook.port
+    targets:
+      - select:
+          group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+        fieldPaths:
+          - webhooks.*.clientConfig.service.port
+        options:
+          create: true
+  - source:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      version: v2
+      name: rabbitmq-messaging-topology-operator
+      fieldPath: metadata.namespace
+    targets:
+      - select:
+          group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+        fieldPaths:
+          - webhooks.*.clientConfig.service.namespace
+        options:
+          create: true
+patches:
+  # Inject the serving cert into the webhook configuration
+  - target:
+      group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      version: v1
+      name: .*
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          cert-manager.io/inject-ca-from: data/rabbitmq-messaging-topology-operator-webhook
+  # Rename the webhook configuration
+  - target:
+      group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      version: v1
+      name: validating-webhook-configuration
+    patch: |-
+      - op: add
+        path: /metadata/name
+        value: rabbitmq-messaging-topology-operator-validating-webhook-cfg

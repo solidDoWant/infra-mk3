@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rabbitmq-messaging-topology-operator
+  labels: &labels
+    app.kubernetes.io/name: rabbitmq-messaging-topology-operator
+    app.kubernetes.io/instance: rabbitmq-messaging-topology-operator
+    app.kubernetes.io/component: messaging-topology-operator
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

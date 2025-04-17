@@ -1,0 +1,228 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# The bitnami chart is built around their own images, bundles CRD installation, and has a bad changelog.
+# The project itself does not have a chart, and recommends installation via static manifests that don't meet my needs.
+# There isn't a decent preexisting chart for the operator, so I am using the app-template chart to install it.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rabbitmq-messaging-topology-operator
+  # This is a dumb workaround so that kustomization can replace the namespace in the
+  # webhook service configuration.
+  namespace: data
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        # TODO
+        namespace: flux-system
+      version: 3.5.1
+  values:
+    controllers:
+      messaging-topology-operator:
+        replicas: 2
+        containers:
+          operator:
+            image:
+              # Pulling from quay.io needs https://github.com/rabbitmq/messaging-topology-operator/issues/978
+              # repository: quay.io/rabbitmqoperator/messaging-topology-operator
+              repository: rabbitmqoperator/messaging-topology-operator
+              tag: 1.16.0
+            env:
+              OPERATOR_NAMESPACE:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            ports:
+              - name: metrics
+                containerPort: 8080
+              - name: webhook-server
+                containerPort: 9443
+            probes:
+              liveness: &probe
+                enabled: true
+                port: 8080
+                path: /metrics
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            fsGroup: 1001
+            fsGroupChangePolicy: OnRootMismatch
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+    persistence:
+      webhook-certificate:
+        type: secret
+        name: rabbitmq-messaging-topology-operator-webhook
+        defaultMode: 0440
+        globalMounts:
+          - path: /tmp/k8s-webhook-server/serving-certs
+            readOnly: true
+    serviceAccount:
+      create: true
+    rbac:
+      roles:
+        rabbitmq-messaging-topology-operator:
+          type: ClusterRole
+          rules:
+            # Pulled from https://github.com/rabbitmq/messaging-topology-operator/blob/eaf18b8a867b2866ef5a2921a802bb469bca20a0/config/rbac/role.yaml
+            - apiGroups:
+                - ""
+              resources:
+                - events
+              verbs:
+                - create
+                - get
+                - patch
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              verbs:
+                - create
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - ""
+              resources:
+                - services
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - bindings
+                - exchanges
+                - federations
+                - operatorpolicies
+                - permissions
+                - policies
+                - queues
+                - schemareplications
+                - shovels
+                - superstreams
+                - topicpermissions
+                - users
+                - vhosts
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - bindings/finalizers
+                - exchanges/finalizers
+                - federations/finalizers
+                - operatorpolicies/finalizers
+                - permissions/finalizers
+                - policies/finalizers
+                - queues/finalizers
+                - schemareplications/finalizers
+                - shovels/finalizers
+                - superstreams/finalizers
+                - topicpermissions/finalizers
+                - users/finalizers
+                - vhosts/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - bindings/status
+                - exchanges/status
+                - federations/status
+                - operatorpolicies/status
+                - permissions/status
+                - policies/status
+                - queues/status
+                - schemareplications/status
+                - shovels/status
+                - superstreams/status
+                - topicpermissions/status
+                - users/status
+                - vhosts/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - rabbitmqclusters
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - rabbitmqclusters/status
+              verbs:
+                - get
+        rabbitmq-messaging-topology-operator-lease:
+          type: Role
+          rules:
+            - apiGroups:
+                - coordination.k8s.io
+              resources:
+                - leases
+              verbs:
+                - create
+                - update
+                - get
+            # Needed to omit events related to leader election
+            - apiGroups:
+                - ""
+              resources:
+                - events
+              verbs:
+                - create
+      bindings:
+        rabbitmq-messaging-topology-operator:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: rabbitmq-messaging-topology-operator
+          subjects:
+            - identifier: default
+        rabbitmq-messaging-topology-operator-lease:
+          type: RoleBinding
+          roleRef:
+            identifier: rabbitmq-messaging-topology-operator-lease
+          subjects:
+            - identifier: default
+    service:
+      messaging-topology-operator:
+        controller: messaging-topology-operator
+        ports:
+          metrics:
+            port: 8080
+          webhook:
+            port: 9443
+    serviceMonitor:
+      messaging-topology-operator:
+        serviceName: rabbitmq-messaging-topology-operator
+        endpoints:
+          - interval: 1m
+            scrapeTimeout: 10s
+            port: metrics
