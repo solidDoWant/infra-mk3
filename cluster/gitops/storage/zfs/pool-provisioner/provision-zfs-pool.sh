@@ -111,14 +111,16 @@ provision_datasets() {
     # This cross-cutting logic isn't great, but I'm not sure where else to put it
     OPENEBS_DATASETS=(
         ""
+        "/fluent"
+        "/fluent/bit"
+        "/fluent/d"
         "/postgres"
+        "/rabbitmq"
+        "/rabbitmq/default"
         "/victoria-metrics"
         "/victoria-metrics/vmstorage"
         "/victoria-metrics/anomaly"
         "/victoria-metrics/logs"
-        "/fluent"
-        "/fluent/bit"
-        "/fluent/d"
     )
     OPENEBS_DATASETS=("${OPENEBS_DATASETS[@]/#/openebs}")
 

@@ -1,0 +1,17 @@
+---
+# RabbitMQ handles data availability and durability, so there's no need to
+# use a distributed storage system. Use local storage instead.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rabbitmq-default
+allowVolumeExpansion: true
+parameters:
+  poolname: ${LOCAL_ZFS_POOL_NAME}/openebs/rabbitmq/default
+  fstype: zfs
+  # TODO tune these. These are just a rough guess at what might possibly be good.
+  compression: zstd
+  dedup: off
+provisioner: zfs.csi.openebs.io
+# This is important so that PVCs get bound to pods satisfying the TSCs.
+volumeBindingMode: WaitForFirstConsumer
