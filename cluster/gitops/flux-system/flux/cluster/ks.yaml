@@ -139,11 +139,11 @@ spec:
             #         spec:
             #           sourceRef:
             #             namespace: flux-system
-              target:
-                group: helm.toolkit.fluxcd.io
-                version: v2
-                kind: HelmRelease
-                labelSelector: patches.flux.home.arpa/helmrelease.default-src-namespace != false
+              # target:
+              #   group: helm.toolkit.fluxcd.io
+              #   version: v2
+              #   kind: HelmRelease
+              #   labelSelector: patches.flux.home.arpa/helmrelease.default-src-namespace != false
             # Add a patch that adds a patch that allows drift detection to ignore the
             # desired number of replicas on deployments and statefulsets
             # This is another level of meta patching
