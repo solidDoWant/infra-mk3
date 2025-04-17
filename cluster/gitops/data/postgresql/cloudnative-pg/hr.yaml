@@ -11,6 +11,7 @@ spec:
       chart: cloudnative-pg
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: cnpg-charts
       version: 0.22.1
   values:

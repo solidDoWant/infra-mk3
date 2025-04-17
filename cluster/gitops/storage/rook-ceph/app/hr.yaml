@@ -10,6 +10,7 @@ spec:
       chart: rook-ceph
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: rook-ceph-charts
       version: v1.16.4
   values:

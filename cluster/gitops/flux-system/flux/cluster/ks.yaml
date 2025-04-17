@@ -128,16 +128,17 @@ spec:
                 kind: HelmRelease
                 labelSelector: patches.flux.home.arpa/helmrelease.skip-crds == true
             # Set HelmRelease source ref to flux-system namespace
-            - patch: |
-                apiVersion: placeholder-value-does-not-matter
-                kind: placeholder-value-does-not-matter
-                metadata:
-                  name: placeholder-value-does-not-matter
-                spec:
-                  chart:
-                    spec:
-                      sourceRef:
-                        namespace: flux-system
+            # I am now handling this manually so that my HelmReleases show up on kubesearch.dev
+            # - patch: |
+            #     apiVersion: placeholder-value-does-not-matter
+            #     kind: placeholder-value-does-not-matter
+            #     metadata:
+            #       name: placeholder-value-does-not-matter
+            #     spec:
+            #       chart:
+            #         spec:
+            #           sourceRef:
+            #             namespace: flux-system
               target:
                 group: helm.toolkit.fluxcd.io
                 version: v2

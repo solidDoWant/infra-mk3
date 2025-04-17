@@ -11,6 +11,7 @@ spec:
       chart: app-template
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: bjw-s-charts
       version: 3.5.1
   values:

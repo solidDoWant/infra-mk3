@@ -13,6 +13,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: victoria-metrics-charts
       version: 1.9.0
   values:

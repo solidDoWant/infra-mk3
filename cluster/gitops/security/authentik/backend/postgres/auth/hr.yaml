@@ -10,8 +10,8 @@ spec:
       chart: ./cluster/charts/postgres/auth
       sourceRef:
         kind: GitRepository
-        name: infra-mk3
         namespace: flux-system
+        name: infra-mk3
   values:
     serviceName: authentik
     certificates:

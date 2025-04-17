@@ -12,6 +12,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: bjw-s-charts
       version: 3.7.1
   values:

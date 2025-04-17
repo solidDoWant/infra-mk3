@@ -10,6 +10,7 @@ spec:
       chart: goldilocks
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: fairwinds-charts
       version: 9.0.1
   values:

@@ -11,6 +11,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: k8tz-charts
       version: 0.17.1
   values:

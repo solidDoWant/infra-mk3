@@ -10,6 +10,7 @@ spec:
       chart: mail
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: bokysan-charts
       version: v4.3.0
   values:

@@ -10,6 +10,7 @@ spec:
       chart: openebs
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: openebs-charts
       version: 4.1.1
   values:

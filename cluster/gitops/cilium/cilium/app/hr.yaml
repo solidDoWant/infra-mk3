@@ -12,6 +12,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: cilium-charts
       version: 1.17.2
   # These values are used for the initial deployment

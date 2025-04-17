@@ -10,6 +10,7 @@ spec:
       chart: vpa
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: fairwinds-charts
       version: 4.7.2
   values:

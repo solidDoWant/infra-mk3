@@ -12,6 +12,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: spegel-charts
       version: v0.0.27
   # These values are used for the initial deployment

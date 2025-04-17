@@ -12,6 +12,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: coredns-charts
       version: 1.36.1
   # These values are added now that the cluster has been bootstrapped

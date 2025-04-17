@@ -10,5 +10,6 @@ spec:
       chart: prometheus-operator-crds
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: prometheus-community-charts
       version: 16.0.0

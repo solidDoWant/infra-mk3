@@ -12,6 +12,7 @@ spec:
       chart: snapshot-controller
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: piraeus-charts
       version: 4.0.0
   values:

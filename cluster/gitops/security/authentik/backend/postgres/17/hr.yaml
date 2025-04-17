@@ -11,6 +11,7 @@ spec:
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
+        namespace: flux-system
         name: infra-mk3
   dependsOn:
     - name: authentik-postgres-auth

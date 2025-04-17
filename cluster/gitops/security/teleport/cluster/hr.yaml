@@ -12,6 +12,7 @@ spec:
       chart: teleport-cluster
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: teleport-charts
       version: 17.2.9
   valuesFrom:

@@ -11,6 +11,7 @@ spec:
       chart: authentik
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: goauthentik-charts
       version: 2024.10.2
   values:

@@ -10,6 +10,7 @@ spec:
       chart: descheduler
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: descheduler-charts
       version: 0.31.0
   values:

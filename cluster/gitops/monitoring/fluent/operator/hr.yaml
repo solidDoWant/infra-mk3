@@ -10,6 +10,7 @@ spec:
       chart: fluent-operator
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: fluent-charts
       version: 3.3.0
   values:

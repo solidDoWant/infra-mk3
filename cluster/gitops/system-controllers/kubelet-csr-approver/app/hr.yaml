@@ -12,6 +12,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: postfinance-charts
       version: 1.2.3
   # These values are used for the initial deployment

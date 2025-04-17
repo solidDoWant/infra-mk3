@@ -11,6 +11,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: metrics-server-charts
       version: 3.12.2
   values:

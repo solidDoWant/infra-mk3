@@ -10,6 +10,7 @@ spec:
       chart: prometheus-smartctl-exporter
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: prometheus-community-charts
       version: 0.13.0
   values:

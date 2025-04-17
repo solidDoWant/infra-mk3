@@ -10,6 +10,7 @@ spec:
       chart: kyverno
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: kyverno-charts
       version: 3.3.7
   values:

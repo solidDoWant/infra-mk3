@@ -10,6 +10,7 @@ spec:
       chart: dragonfly-operator
       sourceRef:
         kind: HelmRepository
+        namespace: flux-system
         name: dragonfly-operator-charts
       version: v1.1.10
   values:
