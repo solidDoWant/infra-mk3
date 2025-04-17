@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: rabbitmq-cluster-operator
+specs:
+  - description: rabbitmq-cluster-operator
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: rabbitmq-cluster-operator
+        app.kubernetes.io/instance: rabbitmq-cluster-operator
+        app.kubernetes.io/component: cluster-operator
+    egress:
+      # k8s API for resource management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "9782"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9782"
+                protocol: TCP

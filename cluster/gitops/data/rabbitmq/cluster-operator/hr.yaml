@@ -1,0 +1,197 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# The bitnami chart is built around their own images, bundles CRD installation, and has a bad changelog.
+# The project itself does not have a chart, and recommends installation via static manifests that don't meet my needs.
+# There isn't a decent preexisting chart for the operator, so I am using the app-template chart to install it.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rabbitmq-cluster-operator
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+      version: 3.5.1
+  values:
+    controllers:
+      cluster-operator:
+        replicas: 2
+        containers:
+          operator:
+            image:
+              repository: quay.io/rabbitmqoperator/cluster-operator
+              tag: 2.12.1
+            env:
+              OPERATOR_NAMESPACE:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            ports:
+              - name: metrics
+                containerPort: 9782
+            probes:
+              liveness: &probe
+                enabled: true
+                port: 9782
+                path: /metrics
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+    serviceAccount:
+      create: true
+    rbac:
+      roles:
+        rabbitmq-cluster-operator:
+          type: ClusterRole
+          rules:
+            # Pulled from https://github.com/rabbitmq/cluster-operator/blob/7136c29d75ecb8f4fc42946a12c292daa6e8f90f/config/rbac/role.yaml
+            - apiGroups:
+                - ""
+              resources:
+                - configmaps
+                - persistentvolumeclaims
+                - secrets
+                - serviceaccounts
+                - services
+              verbs:
+                - create
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - ""
+              resources:
+                - endpoints
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - ""
+              resources:
+                - events
+              verbs:
+                - create
+                - get
+                - patch
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+              verbs:
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - ""
+              resources:
+                - pods/exec
+              verbs:
+                - create
+            - apiGroups:
+                - apps
+              resources:
+                - statefulsets
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - rabbitmqclusters
+              verbs:
+                - create
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - rabbitmqclusters/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - rabbitmq.com
+              resources:
+                - rabbitmqclusters/status
+              verbs:
+                - get
+                - update
+            - apiGroups:
+                - rbac.authorization.k8s.io
+              resources:
+                - rolebindings
+                - roles
+              verbs:
+                - create
+                - get
+                - list
+                - update
+                - watch
+        rabbitmq-cluster-operator-lease:
+          type: Role
+          rules:
+            - apiGroups:
+                - coordination.k8s.io
+              resources:
+                - leases
+              verbs:
+                - create
+                - update
+                - get
+            # Needed to omit events related to leader election
+            - apiGroups:
+                - ""
+              resources:
+                - events
+              verbs:
+                - create
+      bindings:
+        rabbitmq-cluster-operator:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: rabbitmq-cluster-operator
+          subjects:
+            - identifier: default
+        rabbitmq-cluster-operator-lease:
+          type: RoleBinding
+          roleRef:
+            identifier: rabbitmq-cluster-operator-lease
+          subjects:
+            - identifier: default
+    service:
+      cluster-operator:
+        controller: cluster-operator
+        ports:
+          metrics:
+            port: 9782
+    serviceMonitor:
+      cluster-operator:
+        serviceName: rabbitmq-cluster-operator
+        endpoints:
+          - interval: 1m
+            scrapeTimeout: 10s
