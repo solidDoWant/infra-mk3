@@ -12,12 +12,40 @@ specs:
         app.kubernetes.io/instance: rabbitmq-messaging-topology-operator
         app.kubernetes.io/component: messaging-topology-operator
     egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
       # k8s API for resource management
       - toEntities:
           - kube-apiserver
         toPorts:
           - ports:
               - port: "6443"
+                protocol: TCP
+      # Instance management
+      - toEndpoints:
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: app.kubernetes.io/part-of
+                operator: In
+                values:
+                  - rabbitmq
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - rabbitmq
+        toPorts:
+          - ports:
+              - port: "15671"
                 protocol: TCP
     ingress:
       # Kubelet for healthcheck
