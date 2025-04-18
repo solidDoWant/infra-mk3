@@ -1,0 +1,43 @@
+---
+# Approve the the kyoo-rabbitmq serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: media-intermediary-ca-kyoo-rabbitmq-serving-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: media-intermediary-ca
+    namespace:
+      matchNames:
+        - media
+  allowed:
+    commonName:
+      required: true
+      value: kyoo-rabbitmq
+    dnsNames:
+      required: true
+      values:
+        - kyoo-rabbitmq.media.svc
+        - kyoo-rabbitmq.media.svc.cluster.local
+        - "*.kyoo-rabbitmq-nodes.media.svc"
+        - "*.kyoo-rabbitmq-nodes.media.svc.cluster.local"
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 1h

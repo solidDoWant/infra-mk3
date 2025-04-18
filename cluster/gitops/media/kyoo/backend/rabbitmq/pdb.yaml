@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kyoo-rabbitmq
+  labels: &labels
+    app.kubernetes.io/name: kyoo-rabbitmq
+    app.kubernetes.io/component: rabbitmq
+    app.kubernetes.io/part-of: rabbitmq
+spec:
+  minAvailable: 2 # 2 is required to maintain a quorum
+  selector:
+    matchLabels: *labels

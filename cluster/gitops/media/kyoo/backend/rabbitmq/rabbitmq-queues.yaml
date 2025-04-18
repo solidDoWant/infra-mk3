@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/queue_v1beta1.json
+apiVersion: rabbitmq.com/v1beta1
+kind: Queue
+metadata:
+  name: kyoo-scanner
+spec:
+  name: scanner
+  type: quorum
+  autoDelete: false
+  durable: true
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/queue_v1beta1.json
+apiVersion: rabbitmq.com/v1beta1
+kind: Queue
+metadata:
+  name: kyoo-scanner-rescan
+spec:
+  name: scanner.rescan
+  type: quorum
+  autoDelete: false
+  durable: true
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/queue_v1beta1.json
+apiVersion: rabbitmq.com/v1beta1
+kind: Queue
+metadata:
+  name: kyoo-autosync
+spec:
+  name: autosync
+  type: quorum
+  autoDelete: false
+  durable: true
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq

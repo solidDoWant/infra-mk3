@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/rabbitmqcluster_v1beta1.json
+# TODO:
+# * Deploy application users and permissions
+# * HTTPRoute to management interface (internal access only)
+# * OIDC auth for management interface
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: kyoo-rabbitmq
+spec:
+  persistence:
+    storageClassName: rabbitmq-default
+    storage: 10Gi
+  replicas: 3
+  tls:
+    # Enabling this blocks metrics over HTTP, and HTTP between ingress gateway and RabbitMQ.
+    # Access will be restricted via netpol instead.
+    # disableNonTLSListeners: true
+    secretName: kyoo-rabbitmq-serving-cert
+    caSecretName: kyoo-rabbitmq-auth-ca
+  rabbitmq:
+    additionalConfig: |
+      # Enforce mTLS for all connections
+      ssl_options.fail_if_no_peer_cert = true
+  # image: # TODO don't pull from dockerhub (requires a mirror)
+  override:
+    service:
+      metadata:
+        labels:
+          app.kubernetes.io/name: kyoo-rabbitmq
+          app.kubernetes.io/component: rabbitmq
+          app.kubernetes.io/part-of: rabbitmq
+          # Needed to separate the "main" service from the headless service
+          metrics: "true"
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers: [] # Required by the spec, meaningless here.
+            # For some reason the cluster-level PodTopologySpread configuration
+            # does not work with STSs that rely on a zone-specific CSI.
+            # Maybe it's because the STS is "owned" by this resource?
+            # The TSC must be explicitly set on the STS spec to work correctly.
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: kyoo-rabbitmq
+                    app.kubernetes.io/component: rabbitmq
+                    app.kubernetes.io/part-of: rabbitmq

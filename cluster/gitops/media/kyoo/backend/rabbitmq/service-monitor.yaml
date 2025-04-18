@@ -1,0 +1,23 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kyoo-rabbitmq
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kyoo-rabbitmq
+      app.kubernetes.io/component: rabbitmq
+      app.kubernetes.io/part-of: rabbitmq
+      metrics: "true"
+  endpoints:
+    - interval: 1m
+      targetPort: prometheus
+      path: /metrics/per-object
+      scrapeTimeout: 10s
+    # This may end up producing way to many samples
+    # TODO compare this to other targets
+    - interval: 1m
+      targetPort: prometheus
+      path: /metrics/memory-breakdown
+      scrapeTimeout: 10s

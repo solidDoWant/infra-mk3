@@ -1,0 +1,8 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: kyoo-rabbitmq-auth-ca
+spec:
+  ca:
+    secretName: kyoo-rabbitmq-auth-ca

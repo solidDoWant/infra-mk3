@@ -1,0 +1,37 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kyoo-rabbitmq-serving-cert
+spec:
+  commonName: kyoo-rabbitmq
+  dnsNames:
+    - kyoo-rabbitmq.media.svc
+    - kyoo-rabbitmq.media.svc.cluster.local
+    - "*.kyoo-rabbitmq-nodes.media.svc"
+    - "*.kyoo-rabbitmq-nodes.media.svc.cluster.local"
+  subject:
+    countries:
+      - US
+    organizations:
+      - infra-mk3
+    provinces:
+      - ${SECRET_STATE}
+  usages:
+    - server auth
+  duration: 1h
+  privateKey:
+    algorithm: Ed25519
+    encoding: PKCS8
+    rotationPolicy: Always
+  # This is not necessary because rabbitmq will automatically reload the certificate
+  # from disk within a few minutes of it changing. See
+  # https://www.rabbitmq.com/kubernetes/operator/using-operator#tls-conf
+  # secretTemplate:
+  #   labels:
+  #     kyverno.home.arpa/reload: "true"
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: media-intermediary-ca
+  secretName: kyoo-rabbitmq-serving-cert

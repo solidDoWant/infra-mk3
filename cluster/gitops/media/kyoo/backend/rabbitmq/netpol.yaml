@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyoo-rabbitmq
+specs:
+  - description: kyoo-rabbitmq
+    endpointSelector: &rabbitmq_selector
+      matchLabels:
+        app.kubernetes.io/name: kyoo-rabbitmq
+        app.kubernetes.io/component: rabbitmq
+        app.kubernetes.io/part-of: rabbitmq
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # k8s API access for RabbitMQ node discovery
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Peer to peer communication
+      - toEndpoints:
+          - *rabbitmq_selector
+        toPorts: &p2p_ports
+          - ports:
+              - port: "4369"
+                protocol: TCP
+              - port: "25672"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "5672"
+                protocol: TCP
+      # Peer to peer communication
+      - fromEndpoints:
+          - *rabbitmq_selector
+        toPorts: *p2p_ports
+      # RabbitMQ messaging topology operator management
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: data
+              app.kubernetes.io/name: rabbitmq-messaging-topology-operator
+              app.kubernetes.io/instance: rabbitmq-messaging-topology-operator
+              app.kubernetes.io/component: messaging-topology-operator
+        toPorts:
+          - ports:
+              - port: "15671"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "15692"
+                protocol: TCP
