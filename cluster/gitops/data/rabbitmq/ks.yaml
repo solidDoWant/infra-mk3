@@ -59,6 +59,7 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
+    - name: grafana-crds
     - name: rabbitmq-crds
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
