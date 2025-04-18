@@ -70,6 +70,12 @@ spec:
         globalMounts:
           - path: /tmp/k8s-webhook-server/serving-certs
             readOnly: true
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        globalMounts:
+          - path: /etc/ssl/certs/root-ca.crt
+            subPath: ca.crt
     serviceAccount:
       create: true
     rbac:
