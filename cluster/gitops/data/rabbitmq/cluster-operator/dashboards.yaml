@@ -14,18 +14,6 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: erlang-distribution
-spec:
-  allowCrossNamespaceImport: true
-  instanceSelector:
-    matchLabels:
-      grafana.home.arpa/instance: grafana
-  grafanaCom:
-    id: 11352
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDashboard
-metadata:
   name: erlang-memory-allocators
 spec:
   allowCrossNamespaceImport: true
