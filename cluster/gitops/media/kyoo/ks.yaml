@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
   name: &app_name kyoo-backend
 spec:
-  targetNamespace: data
+  targetNamespace: media
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
@@ -20,7 +20,7 @@ spec:
   dependsOn:
     - name: prometheus-crds
     - name: cluster-issuers
-    - name: data-namespace-issuer
+    - name: media-namespace-issuer
     - name: rabbitmq-cluster-operator
     - name: rabbitmq-messaging-topology-operator
     - name: rabbitmq-storage-classes
