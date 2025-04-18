@@ -14,6 +14,7 @@ spec:
     # * volume, env, envFrom
     - &configmap_rule
       name: restart-workload-on-configmap-volume-change
+      skipBackgroundRequests: false
       match:
         any:
           - resources: &configmap_resources
