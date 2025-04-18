@@ -27,12 +27,6 @@ spec:
           - "1"
         node:
           - "1"
-      metricRelabelConfigs:
-        # Drop this label until https://github.com/prometheus-pve/prometheus-pve-exporter/pull/326
-        # is merged and released.
-        - action: labeldrop
-          regex: content
-          if: '{__name__="pve_storage_info"}'
   jobLabel: pve-exporter
   # Exports are HA, and will always contain the same data.
   # Only scrape one of them to prevent duplicate metrics.
