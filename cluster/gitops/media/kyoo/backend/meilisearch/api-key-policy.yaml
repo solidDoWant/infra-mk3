@@ -1,0 +1,103 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
+# Generate and maintain rotating MeiliSearch API keys.
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: &name kyoo-meilisearch-api-key
+spec:
+  rules:
+    - # Trigger on change of any of these resources
+      name: *name
+      match:
+        any:
+          - resources:
+              kinds:
+                - Secret
+              selector:
+                matchLabels:
+                  kyverno.home.arpa/application: kyoo-meilisearch-api-key
+      preconditions:
+        any:
+          # Only run if 24 hours of more have passed since the last update
+          - key: "{{ time_after('{{ nowTime }}', '{{ replacementTime }}') }}"
+            operator: Equals
+            value: true
+      context:
+        # Capture the current time for consistency
+        - name: nowTime
+          variable:
+            jmesPath: time_now()
+        # How long to wait until attempting to replace the API key
+        - name: noReplacementDuration
+          variable:
+            value: 24h
+        # When the API key was last updated, or the beginning of time if it was never updated
+        - name: lastUpdateTime
+          variable:
+            jmesPath: request.object.metadata.annotations."kyverno.home.arpa/update-time"
+            default: "0000-01-01T00:00:00Z"
+        # Time time after which the API key should be replaced
+        - name: replacementTime
+          variable:
+            jmesPath: time_add(lastUpdateTime, noReplacementDuration)
+        # Time after the replacement time that the API key should still
+        # be valid. The policy won't run right when the replacement time ends,
+        # and the pod may not be restarted immediately either.
+        - name: gracePeriod
+          variable:
+            value: 4h
+        - name: masterAPIKey
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/media/secrets/kyoo-meilisearch-master-key
+            jmesPath: base64_decode(data.MEILI_MASTER_KEY)
+        - name: actions
+          variable:
+            jmesPath: request.object.metadata.annotations."kyverno.home.arpa/kyoo-meilisearch-api-key.actions"
+            default: "*"
+        - name: indexes
+          variable:
+            jmesPath: request.object.metadata.annotations."kyverno.home.arpa/kyoo-meilisearch-api-key.indexes"
+            default: "*"
+        - name: description
+          variable:
+            jmesPath: request.object.metadata.annotations."kyverno.home.arpa/kyoo-meilisearch-api-key.description"
+            default: "{{ request.object.metadata.name }}"
+        # Generate a new API key
+        # This relies on lazy evaluation to not prematurely create a new key
+        - name: newAPIKey
+          apiCall:
+            method: POST
+            service:
+              url: http://kyoo-meilisearch.media.svc:7700/keys
+              headers:
+                - key: Authorization
+                  value: Bearer {{ masterAPIKey }}
+                - key: Content-Type
+                  value: application/json
+            data:
+              - key: actions
+                value: "{{ split(actions, ',') }}"
+              - key: indexes
+                value: "{{ split(indexes, ',') }}"
+              - key: expiresAt
+                value: "{{ time_add(time_add(nowTime, noReplacementDuration), gracePeriod) }}"
+              - key: name
+                value: "{{ request.object.metadata.name }}"
+              - key: description
+                value: "{{ description }}"
+            jmesPath: key
+      mutate:
+        targets:
+          - apiVersion: v1
+            kind: Secret
+            namespace: media
+            name: "{{ request.object.metadata.name }}"
+        patchStrategicMerge:
+          metadata:
+            annotations:
+              kyverno.home.arpa/update-time: "{{ nowTime }}"
+          data:
+            MEILI_API_KEY: "{{ base64_encode(newAPIKey) }}"
+        mutateExistingOnPolicyUpdate: true

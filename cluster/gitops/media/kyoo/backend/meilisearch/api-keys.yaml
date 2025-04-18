@@ -1,0 +1,28 @@
+# The actual API keys will be handled by Kyverno. The labels and annotations
+# are used to configure the keys.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kyoo-meilisearch-api-key-application
+  labels:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+    kyverno.home.arpa/reload: "true"
+    kyverno.home.arpa/application: kyoo-meilisearch-api-key
+type: Opaque
+stringData:
+  MEILI_API_KEY: placeholder
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kyoo-meilisearch-api-key-metrics
+  labels:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+    kyverno.home.arpa/reload: "true"
+    kyverno.home.arpa/application: kyoo-meilisearch-api-key
+  annotations:
+    kyverno.home.arpa/kyoo-meilisearch-api-key.actions: "metrics.get"
+type: Opaque
+stringData:
+  MEILI_API_KEY: placeholder

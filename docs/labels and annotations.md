@@ -12,8 +12,9 @@ The following labels are used across multiple applications in the cluster:
 | `external-dns.home.arpa`      | `publish`                              | `true`   | Networks               | No       | Opt-in to allow publishing a DNS record to Cloudflare.                                            |
 | `grafana.home.arpa`           | `instance`                             | String   | Grafana                | Yes      | Name of the Grafana instance, for CR selection.                                                   |
 | `k8s-sidecar.home.arpa`       | `application`                          | String   | ConfigMaps and Secrets | No       | Opt-in to load the resource into the configured application.                                      |
-| `kyverno.home.arpa`           | `ksm-custom-resource-config`           | `true`   | ConfigMaps             | No       | True to load the file as a kube-state-metrics custom resource state metric config                 |
-| `kyverno.home.arpa`           | `reload`                               | `true`   | ConfigMaps and Secrets | No       | True to reload attached workloads when changed                                                    |
+| `kyverno.home.arpa`           | `application`                          | String   | ConfigMaps and Secrets | No       | Kyverno "application" that a resource belongs to.                                                 |
+| `kyverno.home.arpa`           | `ksm-custom-resource-config`           | `true`   | ConfigMaps             | No       | True to load the file as a kube-state-metrics custom resource state metric config.                |
+| `kyverno.home.arpa`           | `reload`                               | `true`   | ConfigMaps and Secrets | No       | True to reload attached workloads when changed.                                                   |
 | `patches.flux.home.arpa`      | `deployment.ignore-replicas`           | `true`   | Deployment             | No       | Opt-in to allow the HelmRelease owning a deployment from reverting changes to the replica count.  |
 | `patches.flux.home.arpa`      | `helmrelease.append-drift-detection`   | `true`   | HelmRelease            | No       | Opt-in to append HelmRelease drift detection rules, to avoid overwriting existing values.         |
 | `patches.flux.home.arpa`      | `helmrelease.defaults`                 | `false`  | HelmRelease            | No       | Opt-out to prevent a HelmRelease from receiving "standard" defaults.                              |
@@ -54,8 +55,12 @@ The following labels are used across multiple applications in the cluster:
 
 The following annotations are used across multiple applications in the cluster:
 
-| Key prefix          | Key name                  | Values | Valid resources | Required | Description                                                        |
-| ------------------- | ------------------------- | ------ | --------------- | -------- | ------------------------------------------------------------------ |
-| `kyverno.home.arpa` | `reload-tag`              | String | Workloads       | No       | Random value added by Kyverno to trigger a reload of a workflow    |
-| `talos.home.arpa`   | `installer-image`         | String | Node            | Yes      | Full image name (without tag) for auto updates                     |
-| `zfs.home.arpa`     | `node.pool-drive-matcher` | String | Node            | No       | File path matcher for drives that should be included in a ZFS pool |
+| Key prefix          | Key name                               | Values | Valid resources        | Required | Description                                                          |
+| ------------------- | -------------------------------------- | ------ | ---------------------- | -------- | -------------------------------------------------------------------- |
+| `kyverno.home.arpa` | `reload-tag`                           | String | Workloads              | No       | Random value added by Kyverno to trigger a reload of a workflow.     |
+| `kyverno.home.arpa` | `update-time`                          | String | Secrets and ConfigMaps | No       | Timestamp added by Kyverno to mark when a resource was last updated. |
+| `kyverno.home.arpa` | `kyoo-meilisearch-api-key.actions`     | String | Secrets and ConfigMaps | No       | Actions that a Meilisearch API key should be able to take.           |
+| `kyverno.home.arpa` | `kyoo-meilisearch-api-key.description` | String | Secrets and ConfigMaps | No       | Description of a Meilisearch API key.                                |
+| `kyverno.home.arpa` | `kyoo-meilisearch-api-key.indexes`     | String | Secrets and ConfigMaps | No       | Indexes that a Meilisearch API key should be able to access.         |
+| `talos.home.arpa`   | `installer-image`                      | String | Node                   | Yes      | Full image name (without tag) for auto updates.                      |
+| `zfs.home.arpa`     | `node.pool-drive-matcher`              | String | Node                   | No       | File path matcher for drives that should be included in a ZFS pool.  |

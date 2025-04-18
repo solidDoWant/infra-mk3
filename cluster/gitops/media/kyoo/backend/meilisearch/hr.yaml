@@ -1,0 +1,104 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyoo-meilisearch
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 3.7.1
+  values:
+    controllers:
+      meilisearch:
+        containers:
+          meilisearch:
+            image:
+              repository: getmeili/meilisearch
+              # WARNING: automated updates are not supported
+              tag: v1.14.0
+            env:
+              MEILI_DB_PATH: /data/database/data.ms/
+              MEILI_ENV: production
+              MEILI_MASTER_KEY: # TODO
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-meilisearch-master-key
+                    key: MEILI_MASTER_KEY
+              MEILI_NO_ANALYTICS: "true"
+              MEILI_EXPERIMENTAL_ENABLE_METRICS: "true"
+              # TODO
+              # MEILI_EXPERIMENTAL_DUMPLESS_UPGRADE: "true"
+              MEILI_DUMP_DIR: /data/dumps
+              # MEILI_IMPORT_DUMP: /meili_data/dumps/some-dump
+              # MEILI_IGNORE_MISSING_DUMP: "true
+              # MEILI_IGNORE_DUMP_IF_DB_EXISTS: "true"
+            ports:
+              - name: http
+                containerPort: 7700
+            probes:
+              startup: &probe
+                enabled: true
+                path: /health
+                port: http
+              readiness: *probe
+              liveness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 100m
+                memory: 1Gi
+              limits:
+                memory: 1Gi
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+    persistence:
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+        sizeLimit: 1Gi
+        medium: Memory
+      data:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 10Gi # No idea how big this needs to be
+        storageClass: ssd-replicated-3x
+        globalMounts:
+          - path: /data
+    service:
+      kyoo-meilisearch:
+        controller: meilisearch
+        ports:
+          http:
+            port: 7700
+    serviceMonitor:
+      kyoo-meilisearch:
+        serviceName: kyoo-meilisearch
+        endpoints:
+          - interval: 1m
+            scrapeTimeout: 10s
+            authorization:
+              type: Bearer
+              credentials:
+                name: kyoo-meilisearch-api-key-metrics
+                key: MEILI_API_KEY

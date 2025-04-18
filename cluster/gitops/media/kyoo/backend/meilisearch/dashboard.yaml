@@ -1,0 +1,16 @@
+---
+# The variables selectors for this dashboard are pretty screwed up.
+# TODO file a PR to fix this.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: meilisearch
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/meilisearch/meilisearch/refs/tags/v1.14.0/assets/grafana-dashboard.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS

@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyoo-meilisearch
+specs:
+  - description: kyoo-meilisearch
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/component: meilisearch
+        app.kubernetes.io/instance: kyoo-meilisearch
+        app.kubernetes.io/name: kyoo-meilisearch
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "7700"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "7700"
+                protocol: TCP
