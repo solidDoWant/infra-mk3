@@ -92,7 +92,6 @@ spec:
         targets:
           - apiVersion: v1
             kind: Secret
-            namespace: media
             name: "{{ request.object.metadata.name }}"
         patchStrategicMerge:
           metadata:
