@@ -14,20 +14,7 @@ resources:
 
 # Update the webhook to target the operator service, and inject the serving cert
 replacements:
-  - source:
-      group: helm.toolkit.fluxcd.io
-      kind: HelmRelease
-      version: v2
-      name: rabbitmq-messaging-topology-operator
-      fieldPath: spec.values.service.messaging-topology-operator.ports.webhook.port
-    targets:
-      - select:
-          group: admissionregistration.k8s.io
-          kind: ValidatingWebhookConfiguration
-        fieldPaths:
-          - webhooks.*.clientConfig.service.port
-        options:
-          create: true
+  # Service namespace
   - source:
       group: helm.toolkit.fluxcd.io
       kind: HelmRelease
@@ -40,6 +27,36 @@ replacements:
           kind: ValidatingWebhookConfiguration
         fieldPaths:
           - webhooks.*.clientConfig.service.namespace
+        options:
+          create: true
+  # Service name
+  - source:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      version: v2
+      name: rabbitmq-messaging-topology-operator
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+        fieldPaths:
+          - webhooks.*.clientConfig.service.name
+        options:
+          create: true
+  # Service port
+  - source:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      version: v2
+      name: rabbitmq-messaging-topology-operator
+      fieldPath: spec.values.service.messaging-topology-operator.ports.webhook.port
+    targets:
+      - select:
+          group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+        fieldPaths:
+          - webhooks.*.clientConfig.service.port
         options:
           create: true
 patches:
