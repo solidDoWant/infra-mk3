@@ -32,8 +32,12 @@ spec:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:
       applicationAccess:
-        selector:
-          matchLabels:
-            app.kubernetes.io/name: kyoo
-            app.kubernetes.io/component: backend
-            app.kubernetes.io/instance: kyoo
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: kyoo
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/instance: kyoo
+          - matchLabels:
+              app.kubernetes.io/name: kyoo
+              app.kubernetes.io/component: backend-migrations
+              app.kubernetes.io/instance: kyoo
