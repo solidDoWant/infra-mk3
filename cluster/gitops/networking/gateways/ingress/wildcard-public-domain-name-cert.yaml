@@ -9,6 +9,9 @@ spec:
   dnsNames:
     - ${SECRET_PUBLIC_DOMAIN_NAME}
     - "*.${SECRET_PUBLIC_DOMAIN_NAME}"
+    # Required for S3 virtual host-style bucket access
+    # The .net core AWS SDK  does not support path-style bucket access
+    - "*.s3.${SECRET_PUBLIC_DOMAIN_NAME}"
   subject:
     countries:
       - US
@@ -52,6 +55,7 @@ spec:
       values:
         - ${SECRET_PUBLIC_DOMAIN_NAME}
         - "*.${SECRET_PUBLIC_DOMAIN_NAME}"
+        - "*.s3.${SECRET_PUBLIC_DOMAIN_NAME}"
     subject:
       countries:
         required: true

@@ -9,6 +9,7 @@ spec:
   commonName: s3.${SECRET_PUBLIC_DOMAIN_NAME}
   dnsNames:
     - s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    - "*.s3.${SECRET_PUBLIC_DOMAIN_NAME}"
   subject:
     countries:
       - US
@@ -51,6 +52,7 @@ spec:
       required: true
       values:
         - s3.${SECRET_PUBLIC_DOMAIN_NAME}
+        - "*.s3.${SECRET_PUBLIC_DOMAIN_NAME}"
     subject:
       countries:
         required: true

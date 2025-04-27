@@ -24,6 +24,7 @@ metadata:
     app.kubernetes.io/part-of: rook-ceph-cluster
 spec:
   hostnames:
+    - "*.s3.${SECRET_PUBLIC_DOMAIN_NAME}"
     - s3.${SECRET_PUBLIC_DOMAIN_NAME}
   parentRefs:
     - name: internal-gateway
