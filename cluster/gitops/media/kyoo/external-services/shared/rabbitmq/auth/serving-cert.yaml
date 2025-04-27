@@ -21,7 +21,8 @@ spec:
     - server auth
   duration: 1h
   privateKey:
-    algorithm: Ed25519
+    algorithm: ECDSA
+    size: 384
     encoding: PKCS8
     rotationPolicy: Always
   # This is not necessary because rabbitmq will automatically reload the certificate
