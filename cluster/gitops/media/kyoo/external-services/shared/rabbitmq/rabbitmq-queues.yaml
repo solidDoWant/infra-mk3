@@ -9,6 +9,7 @@ spec:
   type: quorum
   autoDelete: false
   durable: true
+  vhost: /kyoo
   rabbitmqClusterReference:
     name: kyoo-rabbitmq
 ---
@@ -22,6 +23,7 @@ spec:
   type: quorum
   autoDelete: false
   durable: true
+  vhost: /kyoo
   rabbitmqClusterReference:
     name: kyoo-rabbitmq
 ---
@@ -35,5 +37,6 @@ spec:
   type: quorum
   autoDelete: false
   durable: true
+  vhost: /kyoo
   rabbitmqClusterReference:
     name: kyoo-rabbitmq

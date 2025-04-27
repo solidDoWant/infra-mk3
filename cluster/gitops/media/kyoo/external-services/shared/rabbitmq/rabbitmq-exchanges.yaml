@@ -9,6 +9,7 @@ spec:
   type: topic
   autoDelete: false
   durable: true
+  vhost: /kyoo
   rabbitmqClusterReference:
     name: kyoo-rabbitmq
 ---
@@ -22,6 +23,8 @@ spec:
   destination: "autosync"
   destinationType: queue
   routingKey: "#"
+  vhost: /kyoo
+
   rabbitmqClusterReference:
     name: kyoo-rabbitmq
 ---
@@ -35,5 +38,6 @@ spec:
   type: topic
   autoDelete: false
   durable: true
+  vhost: /kyoo
   rabbitmqClusterReference:
     name: kyoo-rabbitmq
