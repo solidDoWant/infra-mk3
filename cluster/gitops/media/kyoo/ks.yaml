@@ -19,8 +19,11 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
+    - name: grafana-crds
     - name: cluster-issuers
     - name: media-namespace-issuer
     - name: rabbitmq-cluster-operator
     - name: rabbitmq-messaging-topology-operator
     - name: rabbitmq-storage-classes
+    - name: rook-ceph-cluster
+    - name: cloudnative-pg

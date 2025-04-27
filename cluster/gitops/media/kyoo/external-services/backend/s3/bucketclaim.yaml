@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/objectbucket.io/objectbucketclaim_v1alpha1.json
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: kyoo-backend-bucket
+spec:
+  generateBucketName: kyoo-backend
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    maxObjects: "1000"
+    maxSize: 10G
