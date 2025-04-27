@@ -33,6 +33,9 @@ spec:
       uriDomains: *domains
   duration: 87660h # 10 years
   privateKey:
+    # .net core somehow still doesn't support Ed25519, despite there being multiple
+    # decade-old requests for it. C# service cannot verify cert chains that contain
+    # ANY Ed25519 certs, so it can't be used for the root CA.
     algorithm: ECDSA
     size: 384
     encoding: PKCS8
