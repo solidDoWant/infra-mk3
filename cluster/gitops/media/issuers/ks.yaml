@@ -15,6 +15,7 @@ spec:
   postBuild:
     substitute:
       NAMESPACE: *namespace
+      CERT_ALGORITHM: ECDSA
   prune: true
   sourceRef:
     kind: GitRepository

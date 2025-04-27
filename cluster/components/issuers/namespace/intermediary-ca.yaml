@@ -30,7 +30,8 @@ spec:
         - .${NAMESPACE}.svc.cluster.local
   duration: 8766h # 1 year
   privateKey:
-    algorithm: Ed25519
+    algorithm: ${CERT_ALGORITHM:=Ed25519}
+    size: ${CERT_SIZE:=384} # This is ignored for Ed25519 (the default), so set the default size for ECDSA certs
     encoding: PKCS8
     rotationPolicy: Always
   issuerRef:
