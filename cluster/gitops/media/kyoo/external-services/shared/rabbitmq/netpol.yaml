@@ -62,6 +62,15 @@ specs:
           - ports:
               - port: "15671"
                 protocol: TCP
+      # Connections from Kyoo services
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: kyoo
+              app.kubernetes.io/instance: kyoo
+        toPorts:
+          - ports:
+              - port: "5671"
+                protocol: TCP
       # Metrics
       - fromEndpoints:
           - matchLabels:
