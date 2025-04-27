@@ -19,6 +19,16 @@ specs:
           - ports:
               - port: "7700"
                 protocol: TCP
+      # Ingress from the backend
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: kyoo
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/instance: kyoo
+        toPorts:
+          - ports:
+              - port: "7700"
+                protocol: TCP
       # Metrics
       - fromEndpoints:
           - matchLabels:
