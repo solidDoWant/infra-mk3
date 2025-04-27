@@ -33,7 +33,8 @@ spec:
       uriDomains: *domains
   duration: 87660h # 10 years
   privateKey:
-    algorithm: Ed25519
+    algorithm: ECDSA
+    size: 384
     encoding: PKCS8
     rotationPolicy: Never
   issuerRef:
