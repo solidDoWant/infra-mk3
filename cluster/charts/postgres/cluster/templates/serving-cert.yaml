@@ -10,10 +10,7 @@ spec:
   usages:
     - server auth
   duration: 720h # One month
-  privateKey:
-    algorithm: Ed25519
-    encoding: PKCS8
-    rotationPolicy: Always
+  privateKey: {{ .Values.certificates.serving.privateKey | toYaml | nindent 4 }}
   secretTemplate:
     labels:
       cnpg.io/reload: "true"

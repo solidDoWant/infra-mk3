@@ -22,6 +22,10 @@ certificates:
         - ${SECRET_STATE}
       organizations:
         - infra-mk3
+    privateKey:
+      algorithm: Ed25519
+      encoding: PKCS8
+      rotationPolicy: Always
 storage:
   size: 5Gi
   storageClass: postgres
