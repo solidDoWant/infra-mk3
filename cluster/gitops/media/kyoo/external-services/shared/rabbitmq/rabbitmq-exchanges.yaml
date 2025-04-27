@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/exchange_v1beta1.json
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata:
+  name: kyoo-events-watched
+spec:
+  name: events.watched
+  type: topic
+  autoDelete: false
+  durable: true
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/binding_v1beta1.json
+apiVersion: rabbitmq.com/v1beta1
+kind: Binding
+metadata:
+  name: kyoo-events-watched-to-autosync
+spec:
+  source: events.watched
+  destination: "autosync"
+  destinationType: queue
+  routingKey: "#"
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/exchange_v1beta1.json
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata:
+  name: kyoo-events-resource
+spec:
+  name: events.resource
+  type: topic
+  autoDelete: false
+  durable: true
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq

@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/media/kyoo/backend
+  path: /cluster/gitops/media/kyoo/external-services
   prune: true
   sourceRef:
     kind: GitRepository
