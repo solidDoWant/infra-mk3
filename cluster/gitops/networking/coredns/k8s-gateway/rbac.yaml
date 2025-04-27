@@ -38,6 +38,12 @@ rules:
     verbs:
       - watch
       - list
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
 ---
 # Allow the k8s_gateway service account to assume the associated cluster role
 apiVersion: rbac.authorization.k8s.io/v1

@@ -18,12 +18,11 @@ spec:
   # These values are added now that the cluster has been bootstrapped
   values:
     image:
-      # Needed until https://github.com/ori-edge/k8s_gateway/pull/306 is merged
-      # And one of:
-      # * https://github.com/ori-edge/k8s_gateway/issues/36
-      # * https://github.com/ori-edge/k8s_gateway/pull/308
-      repository: ghcr.io/kuxabeast/k8s_gateway
-      tag: latest@sha256:79038025967f7f5ae08e22836ddc5df85f271d72d439b60fdec5e09e2a256c56
+      # Needed until https://github.com/k8s-gateway/k8s_gateway/pull/67 is merged and released
+      # repository: ghcr.io/k8s-gateway/k8s_gateway
+      # tag: 1.1.1
+      repository: ghcr.io/soliddowant/k8s_gateway
+      tag: next@sha256:554ae3a2c62e23deb741629ce49582035ba77c2a6e0a7c4353f920624603e647
     replicaCount: 2
     serviceType: LoadBalancer
     prometheus:
