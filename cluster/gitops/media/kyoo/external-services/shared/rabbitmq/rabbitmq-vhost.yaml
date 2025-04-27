@@ -1,18 +1,10 @@
-# This doesn't currently do anything. Vhosts cannot be edited, so I cannot reconfigure
-# the default vhost. Kyoo does not yet support specifying a non-default vhost. See
-# https://github.com/zoriya/Kyoo/issues/537.
-# Once this is supported, I will add a vhost that sets the default queue type to "quorum".
-# This will remove the need to managing queues declaratively before the application is
-# deployed, reducing the coupling between the backend and the application.
-# The operator does not currently support managing this. I'll need to file a PR for this
-# functionality at a later date.
-# ---
-# # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/vhost_v1beta1.json
-# apiVersion: rabbitmq.com/v1beta1
-# kind: Vhost
-# metadata:
-#   name: kyoo-rabbitmq-default
-# spec:
-#   name: /
-#   rabbitmqClusterReference:
-#     name: kyoo-rabbitmq
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/vhost_v1beta1.json
+apiVersion: rabbitmq.com/v1beta1
+kind: Vhost
+metadata:
+  name: kyoo-rabbitmq
+spec:
+  name: /kyoo
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq
