@@ -20,9 +20,14 @@ spec:
     secretName: kyoo-rabbitmq-serving-cert
     caSecretName: kyoo-rabbitmq-auth-ca
   rabbitmq:
+    additionalPlugins:
+      - rabbitmq_auth_mechanism_ssl
     additionalConfig: |
       # Enforce mTLS for all connections
       ssl_options.fail_if_no_peer_cert = true
+      ssl_options.verify = verify_peer
+      # Enable x509 authentication
+      auth_mechanisms.1 = EXTERNAL
   # image: # TODO don't pull from dockerhub (requires a mirror)
   override:
     service:
