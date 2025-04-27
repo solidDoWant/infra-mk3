@@ -28,6 +28,14 @@ spec:
             - ${SECRET_STATE}
           organizations:
             - infra-mk3
+        # This is needed for anything that C# services talk to because
+        # .net core does not support Ed25519, despite there being multiple
+        # decade-old requests for it.
+        privateKey:
+          algorithm: ECDSA
+          size: 384
+          encoding: PKCS8
+          rotationPolicy: Always
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:
