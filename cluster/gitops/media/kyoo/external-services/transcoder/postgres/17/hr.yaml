@@ -1,0 +1,38 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyoo-transcoder-postgres-17
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  dependsOn:
+    - name: kyoo-transcoder-postgres-auth
+  values:
+    clusterName: kyoo-transcoder
+    certificates:
+      serving:
+        issuerRef:
+          name: media-intermediary-ca
+        subject:
+          countries:
+            - US
+          provinces:
+            - ${SECRET_STATE}
+          organizations:
+            - infra-mk3
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selector:
+          app.kubernetes.io/name: kyoo
+          app.kubernetes.io/component: transcoder
+          app.kubernetes.io/instance: kyoo
