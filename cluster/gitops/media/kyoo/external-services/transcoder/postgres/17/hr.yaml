@@ -33,6 +33,7 @@ spec:
     netpol:
       applicationAccess:
         selector:
-          app.kubernetes.io/name: kyoo
-          app.kubernetes.io/component: transcoder
-          app.kubernetes.io/instance: kyoo
+          matchLabels:
+            app.kubernetes.io/name: kyoo
+            app.kubernetes.io/component: transcoder
+            app.kubernetes.io/instance: kyoo
