@@ -1,0 +1,10 @@
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: User
+metadata:
+  name: kyoo-rabbitmq-kyoo-matcher-user
+spec:
+  importCredentialsSecret:
+    name: kyoo-rabbitmq-kyoo-matcher-user-credentials
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq
