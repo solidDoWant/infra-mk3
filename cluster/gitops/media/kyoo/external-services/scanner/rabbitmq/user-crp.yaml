@@ -1,0 +1,22 @@
+---
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: kyoo-rabbitmq-auth-ca-kyoo-scanner-user
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: kyoo-rabbitmq-auth-ca
+    namespace:
+      matchNames:
+        - media
+  allowed:
+    commonName:
+      required: true
+      value: kyoo-scanner
+    usages:
+      - client auth
+  constraints:
+    maxDuration: 1h

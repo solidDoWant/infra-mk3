@@ -1,0 +1,10 @@
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: User
+metadata:
+  name: kyoo-rabbitmq-kyoo-scanner-user
+spec:
+  importCredentialsSecret:
+    name: kyoo-rabbitmq-kyoo-scanner-user-credentials
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq

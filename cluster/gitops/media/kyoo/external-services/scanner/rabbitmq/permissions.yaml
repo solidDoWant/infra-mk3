@@ -1,0 +1,15 @@
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Permission
+metadata:
+  name: kyoo-rabbitmq-kyoo-scanner-user
+spec:
+  vhost: /kyoo
+  permissions:
+    write: .*
+    configure: .*
+    read: .*
+  userReference:
+    name: kyoo-rabbitmq-kyoo-scanner-user
+  rabbitmqClusterReference:
+    name: kyoo-rabbitmq
