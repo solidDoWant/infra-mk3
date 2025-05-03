@@ -242,6 +242,8 @@ patches:
           imageGCLowThresholdPercent: 20
           maxPods: 128  # Probably higher than will realistically be scheduled
           serializeImagePulls: false
+          # Feature enablement
+          feature-gates: DynamicResourceAllocation=true
         nodeIP:
           validSubnets:
             - 10.3.1.0/16
@@ -283,7 +285,9 @@ patches:
     cluster:
       controllerManager:
         extraArgs:
-         bind-address: 0.0.0.0
+          bind-address: 0.0.0.0
+          # Feature enablement
+          feature-gates: kube:DynamicResourceAllocation=true
   # Configure the scheduler
   - |-
     cluster:
@@ -315,18 +319,25 @@ patches:
   - |-
     cluster:
       allowSchedulingOnControlPlanes: true
-  # Load balance requests to metrics-server and other API server
-  # services/extensions by sending traffic to each endpoint instead of the
-  # service cluster IP
+  # API server configuration
   - |-
     cluster:
       apiServer:
         extraArgs:
+          # Load balance requests to metrics-server and other API server
+          # services/extensions by sending traffic to each endpoint instead of the
+          # service cluster IP
           enable-aggregator-routing: "true"
-  # Enable cluster-level topology spread constraints for supported controllers
+          # Feature enablement
+          feature-gates: kube:DynamicResourceAllocation=true
+          # Resource enablement
+          # Enable everything but alpha and legacy features
+          runtime-config: "api/all=true,api/legacy=false"
+  # Scheduler configuration
   - |-
     cluster:
       scheduler:
+        # Enable cluster-level topology spread constraints for supported controllers
         config:
           profiles:
             - schedulerName: default-scheduler
@@ -338,6 +349,9 @@ patches:
                         topologyKey: kubernetes.io/hostname
                         whenUnsatisfiable: DoNotSchedule
                     defaultingType: List
+        extraArgs:
+          # Feature enablement
+          feature-gates: DynamicResourceAllocation=true
   # Ship logs to each node's agent
   - |-
     machine:
