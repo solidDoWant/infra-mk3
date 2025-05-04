@@ -4,7 +4,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name system-controllers-intel-resource-drivers-gpu
+  name: &app_name intel-resource-drivers-gpu
 spec:
   targetNamespace: &namespace system-controllers
   commonMetadata:
