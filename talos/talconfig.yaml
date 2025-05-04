@@ -266,24 +266,13 @@ patches:
           permissions: 0o644
           content: |
             [plugins]
+              # Spegel setup
               [plugins.'io.containerd.cri.v1.images']
                 discard_unpacked_layers = false
-  # Configure containerd container device interface
-  # This only marks /etc/cdi as a CDI spec dir, not /var/run/cdi.
-  # This prevents a bad config file from bricking containerd on the node,
-  # which Talos requires to boot.
-  # TODO after upgrade
-  # - |-
-  #   machine:
-  #     files:
-  #       - op: create
-  #         path: /etc/cri/conf.d/20-customization.part
-  #         permissions: 0o644
-  #         content: |
-  #           [plugins]
-  #             [plugins."io.containerd.grpc.v1.cri"]
-  #               enable_cdi = true
-  #               cdi_spec_dirs = ["/etc/cdi"]
+              # Enable the Container Device Interface
+              [plugins."io.containerd.grpc.v1.cri"]
+                enable_cdi = true
+                cdi_spec_dirs = ["/var/run/cdi"]
   # Configure containerd metrics
   # Disabled for now, this destroyed my cluster somehow last time it was enabled
   # - |-
