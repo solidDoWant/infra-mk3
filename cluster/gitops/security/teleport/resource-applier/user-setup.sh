@@ -14,7 +14,7 @@ REQUIRED_ENV_VARS=(NAMESPACE AUTH_SERVER_DEPLOYMENT_NAME BOT_NAME ROLE_NAME TOKE
 additional_setup() {
     # Install kubectl
     echo "Installing kubectl..."
-    KUBECTL_VERSION="v1.31.2"
+    KUBECTL_VERSION="v1.32.3"
     curl -fsSL -o /usr/local/bin/kubectl \
         "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/${KERNEL}/${PRETTY_ARCH}/kubectl"
     chmod +x /usr/local/bin/kubectl

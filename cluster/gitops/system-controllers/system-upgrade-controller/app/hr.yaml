@@ -30,7 +30,7 @@ spec:
               repository: docker.io/rancher/system-upgrade-controller
               tag: v0.14.2
             env:
-              SYSTEM_UPGRADE_JOB_KUBECTL_IMAGE: registry.k8s.io/kubectl:v1.31.2
+              SYSTEM_UPGRADE_JOB_KUBECTL_IMAGE: registry.k8s.io/kubectl:v1.32.3
               #   SYSTEM_UPGRADE_JOB_POD_REPLACEMENT_POLICY: Failed # Required for Talos
               SYSTEM_UPGRADE_CONTROLLER_NAME: *app_name
               SYSTEM_UPGRADE_CONTROLLER_NODE_NAME:

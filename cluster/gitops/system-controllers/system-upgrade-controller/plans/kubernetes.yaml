@@ -29,7 +29,7 @@ spec:
   # TODO enable this after next controller/crd release
   # window:
   prepare: &prepare
-    image: alpine/k8s:1.31.2
+    image: alpine/k8s:1.32.3
     envs:
       - name: NODE_NAME
         valueFrom:

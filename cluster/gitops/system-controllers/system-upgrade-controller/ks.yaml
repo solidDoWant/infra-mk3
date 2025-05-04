@@ -59,7 +59,7 @@ spec:
   wait: true
   postBuild:
     substitute:
-      TALOS_VERSION: v1.8.2
-      KUBERNETES_VERSION: 1.31.2
+      TALOS_VERSION: v1.9.5
+      KUBERNETES_VERSION: 1.32.3
   dependsOn:
     - name: system-upgrade-controller-crds

@@ -32,10 +32,10 @@ nodes:
         interface: enp89s0
         dummy: true
       - &10g_1
-        interface: &10g_1_name enp2s0f0
+        interface: &10g_1_name enp2s0f0np0
         mtu: &jumbo_mtu 9000
       - &10g_2
-        interface: &10g_2_name enp2s0f1
+        interface: &10g_2_name enp2s0f1np1
         mtu: *jumbo_mtu
       - &bond_0
         interface: bond0
@@ -89,7 +89,7 @@ nodes:
         systemExtensions:
           officialExtensions:
             # Needed or the node will not boot
-            - siderolabs/i915-ucode
+            - siderolabs/i915
             - siderolabs/intel-ucode
             - siderolabs/mei
             - siderolabs/thunderbolt
@@ -110,12 +110,13 @@ nodes:
           - ipv6.disable=1
           # Log forwarding to the node agent
           - talos.logging.kernel=tcp://127.0.0.1:5171/
-    isoSchematic:
+    imageSchematic:
       customization:
         <<: *schematic_customization
         extraKernelArgs:
-          - &bond bond=bond0:enp2s0f0,enp2s0f1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
+          - &bond bond=bond0:enp2s0f0np0,enp2s0f1np1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
           - ip=10.3.1.1::10.3.0.254:255.255.0.0:talos-k8s-mixed-01:bond0:off:10.3.0.254::10.3.0.254
+          - &halt_if_installed -talos.halt_if_installed # Negate this option to allow the installer to run. Needed for recovery
     kernelModules:
       - name: zfs
   - <<: *talos-k8s-mixed
@@ -131,12 +132,13 @@ nodes:
           - 10.3.1.2/16
           - 10.3.2.2/32
       - *loopback
-    isoSchematic:
+    imageSchematic:
       customization:
         <<: *schematic_customization
         extraKernelArgs:
           - *bond
           - ip=10.3.1.2::10.3.0.254:255.255.0.0:talos-k8s-mixed-02:bond0:off:10.3.0.254::10.3.0.254
+          - *halt_if_installed
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-03
     ipAddress: 10.3.1.3
@@ -150,14 +152,15 @@ nodes:
           - 10.3.1.3/16
           - 10.3.2.3/32
       - *loopback
-    isoSchematic:
+    imageSchematic:
       customization:
         <<: *schematic_customization
         extraKernelArgs:
           - *bond
           - ip=10.3.1.3::10.3.0.254:255.255.0.0:talos-k8s-mixed-03:bond0:off:10.3.0.254::10.3.0.254
-talosVersion: v1.8.2
-kubernetesVersion: v1.31.2
+          - *halt_if_installed
+talosVersion: v1.9.5
+kubernetesVersion: v1.32.3
 allowSchedulingOnMasters: true
 allowSchedulingOnControlPlanes: true
 additionalApiServerCertSans: &sans
@@ -242,12 +245,19 @@ patches:
           imageGCLowThresholdPercent: 20
           maxPods: 128  # Probably higher than will realistically be scheduled
           serializeImagePulls: false
+        extraArgs:
           # Feature enablement
-          feature-gates: DynamicResourceAllocation=true
+          feature-gates: DynamicResourceAllocation=true,UserNamespacesSupport=true,UserNamespacesPodSecurityStandards=true
         nodeIP:
           validSubnets:
             - 10.3.1.0/16
-  # Configure containerd for spegel
+  # Set user namespace sysctls
+  # See https://www.talos.dev/v1.9/kubernetes-guides/configuration/usernamespace/#enabling-usernamespaces
+  - |-
+    machine:
+      sysctls:
+        user.max_user_namespaces: "11255"
+  # Configure containerd
   - |-
     machine:
       files:
@@ -258,6 +268,22 @@ patches:
             [plugins]
               [plugins.'io.containerd.cri.v1.images']
                 discard_unpacked_layers = false
+  # Configure containerd container device interface
+  # This only marks /etc/cdi as a CDI spec dir, not /var/run/cdi.
+  # This prevents a bad config file from bricking containerd on the node,
+  # which Talos requires to boot.
+  # TODO after upgrade
+  # - |-
+  #   machine:
+  #     files:
+  #       - op: create
+  #         path: /etc/cri/conf.d/20-customization.part
+  #         permissions: 0o644
+  #         content: |
+  #           [plugins]
+  #             [plugins."io.containerd.grpc.v1.cri"]
+  #               enable_cdi = true
+  #               cdi_spec_dirs = ["/etc/cdi"]
   # Configure containerd metrics
   # Disabled for now, this destroyed my cluster somehow last time it was enabled
   # - |-
@@ -329,7 +355,13 @@ patches:
           # service cluster IP
           enable-aggregator-routing: "true"
           # Feature enablement
-          feature-gates: kube:DynamicResourceAllocation=true
+          # TODO remove AuthorizeNodeWithSelectors=false after Cilium adds load-balanced, HA
+          # kube-apiserver support (close: https://github.com/cilium/cilium/issues/29323).
+          # Sidero Labs pulled the rug out from under customers and just suddenly stopped
+          # Talos etcd-backed "Cluster Discovery" support, which is required for kubeprism.
+          # Disabling this flag allows kubeprism to continue to work.
+          # See https://github.com/siderolabs/talos/issues/9980
+          feature-gates: kube:DynamicResourceAllocation=true,kube:AuthorizeNodeWithSelectors=false
           # Resource enablement
           # Enable everything but alpha and legacy features
           runtime-config: "api/all=true,api/legacy=false"
