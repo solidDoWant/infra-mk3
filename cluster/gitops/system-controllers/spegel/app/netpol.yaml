@@ -25,6 +25,8 @@ specs:
           - ports:
               - port: router
                 protocol: TCP
+              - port: registry
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -46,6 +48,8 @@ specs:
         toPorts:
           - ports:
               - port: router
+                protocol: TCP
+              - port: registry
                 protocol: TCP
       # Metrics
       - fromEndpoints:
