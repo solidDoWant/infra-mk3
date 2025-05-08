@@ -299,7 +299,7 @@ spec:
       media:
         type: nfs
         server: ${NFS_ADDRESS}
-        path: ${NFS_MEDIA_PATH}
+        path: ${NFS_MEDIA_PATH}/library
         advancedMounts:
           transcoder:
             transcoder: &media_mount_paths
