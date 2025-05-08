@@ -1,0 +1,424 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyoo
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 3.7.3
+  values:
+    controllers:
+      frontend:
+        replicas: 2
+        strategy: RollingUpdate
+        containers:
+          frontend:
+            image:
+              repository: ghcr.io/soliddowant/kyoo_front
+              tag: &tag 4.8.0-dev.62
+            env:
+              KYOO_URL: &public_url http://kyoo-backend.media.svc.cluster.local/api
+            ports:
+              - containerPort: 8901
+                name: http
+                protocol: TCP
+            probes:
+              liveness: &probe
+                enabled: true
+                port: http
+              readiness: *probe
+            securityContext: &container_security_context
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+      backend-migrations:
+        type: job
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+        job:
+          backoffLimit: 2
+          suspend: false
+          activeDeadlineSeconds: 1200 # 20 minutes
+          ttlSecondsAfterFinished: 43200 # 12 hours
+        containers:
+          migrations:
+            image:
+              repository: ghcr.io/soliddowant/kyoo_migrations
+              tag: *tag
+            env:
+              # https://www.npgsql.org/doc/connection-string-parameters.html
+              # Max pool size must be a little less than 100 / (replica count + migration + rolling update)
+              # because Postgres + the operator needs some slots for replication and management. Default is 100.
+              POSTGRES_URL: &backend_postgres_url >
+                Server=kyoo-backend-postgres-17-rw.media.svc;
+                Database=kyoo-backend;
+                Username=kyoo-backend;
+                SSLMode=VerifyCA;
+                RootCertificate=/certs/root-ca/ca.crt;
+                SSLCertificate=/certs/postgres/user/tls.crt;
+                SSLKey=/certs/postgres/user/tls.key;
+                Pooling=true;
+                MinPoolSize=2;
+                Maximum Pool Size=20;
+              POSTGRES_SCHEMA: disabled
+            securityContext: *container_security_context
+      backend:
+        replicas: 2
+        strategy: RollingUpdate
+        containers:
+          backend:
+            image:
+              repository: ghcr.io/soliddowant/kyoo_back
+              tag: *tag
+            env:
+              # Postgres config
+              POSTGRES_URL: *backend_postgres_url
+              POSTGRES_SCHEMA: disabled
+              # RabbitMQ config
+              # The actual vhost is "/kyoo", but the .net library will just extract
+              # the contents after the '/'. %2f is the URL-encoded version of '/',
+              # making the extracted value '/kyoo'.
+              RABBITMQ_URL: "\
+                amqps://kyoo-rabbitmq.media.svc/%2fkyoo?\
+                cacertfile=/certs/root-ca/ca.crt&\
+                certfile=/certs/rabbitmq/user/tls.crt&\
+                keyfile=/certs/rabbitmq/user/tls.key&\
+                auth_mechanism=external"
+              # Meilisearch config
+              MEILI_HOST: http://kyoo-meilisearch.media.svc:7700
+              # This is not actually the master key, rather, it is an API key
+              # tht is periodically rotated by Kyverno.
+              MEILI_MASTER_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-meilisearch-api-key-application
+                    key: MEILI_API_KEY
+              # S3 config (thumbnail storage)
+              S3_BUCKET_NAME:
+                valueFrom:
+                  configMapKeyRef:
+                    name: kyoo-backend-bucket
+                    key: BUCKET_NAME
+              # Helm unmarshals this YAML object into a map, losing the env var order.
+              # It is later marshaled back into a YAML object in alphabetical order.
+              # The 'AA_' prefix is a workaround to ensure that these vars appear before
+              # the AWS_ENDPOINT_URL_S3 var. Without this, they will appear after it,
+              # causing the env var string interpolation to fail.
+              AA_S3_BUCKET_HOST:
+                valueFrom:
+                  configMapKeyRef:
+                    name: kyoo-backend-bucket
+                    key: BUCKET_HOST
+              AA_S3_BUCKET_PORT:
+                valueFrom:
+                  configMapKeyRef:
+                    name: kyoo-backend-bucket
+                    key: BUCKET_PORT
+              AWS_ENDPOINT_URL_S3: https://$(AA_S3_BUCKET_HOST):$(AA_S3_BUCKET_PORT)
+              # Don't try to contact the EC2 metadata service, this delays startup significantly due to timeouts (netpols block access)
+              AWS_EC2_METADATA_DISABLED: "true"
+              # Breaking change to all AWS SDKs, see https://tracker.ceph.com/issues/71183
+              AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+              # Kyoo config
+              TRANSCODER_URL: http://kyoo-transcoder.media.svc/video
+              KYOO_PREFIX: /api
+              PUBLIC_URL: *public_url
+              AA_SCANNER_APIKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-credentials
+                    key: SCANNER_APIKEY
+              AA_MATCHER_APIKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-credentials
+                    key: MATCHER_APIKEY
+              KYOO_APIKEYS: $(AA_SCANNER_APIKEY),$(AA_MATCHER_APIKEY)
+              # OIDC config
+              OIDC_AUTHENTIK_NAME: Authentik
+              OIDC_AUTHENTIK_LOGO: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/static/dist/assets/icons/icon.svg
+              OIDC_AUTHENTIK_CLIENTID: ${SECRET_KYOO_AUTHENTIK_OIDC_CLIENT_ID}
+              OIDC_AUTHENTIK_SECRET: ${SECRET_KYOO_AUTHENTIK_OIDC_CLIENT_SECRET}
+              OIDC_AUTHENTIK_AUTHORIZATION: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/authorize/
+              OIDC_AUTHENTIK_TOKEN: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/token/
+              OIDC_AUTHENTIK_PROFILE: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}//application/o/userinfo/
+              OIDC_AUTHENTIK_SCOPE: email openid profile
+              OIDC_AUTHENTIK_AUTHMETHOD: ClientSecretPost
+            envFrom:
+              - secretRef:
+                  name: kyoo-backend-bucket
+            ports:
+              - containerPort: 5000
+                name: http
+                protocol: TCP
+            probes:
+              liveness: &probe
+                enabled: true
+                port: http
+                path: /health
+              readiness: *probe
+            securityContext: *container_security_context
+      transcoder:
+        # The transcoder does not support multiple replicas. This is something that I am actively working on,
+        # but won't be ready for a bit.
+        replicas: 1
+        containers:
+          transcoder:
+            image:
+              repository: ghcr.io/soliddowant/kyoo_transcoder
+              tag: *tag
+            env:
+              # Transcoder config
+              GOCODER_CACHE_ROOT: /tmp/cache # RW. This will be lost on pod restart.
+              GOCODER_PREFIX: /video
+              # TODO replace the logic that uses this with the new os.Root Go 1.24 feature
+              GOCODER_SAFE_PATH: /mnt/media/
+              GOCODER_HWACCEL: vaapi
+              # Postgres config
+              POSTGRES_URL: "\
+                postgresql://kyoo-transcoder@kyoo-transcoder-postgres-17-rw.media.svc:5432/kyoo-transcoder?\
+                sslrootcert=/certs/root-ca/ca.crt&\
+                sslcert=/certs/postgres/user/tls.crt&\
+                sslkey=/certs/postgres/user/tls.key&\
+                sslmode=verify-full"
+              POSTGRES_SCHEMA: disabled
+              # S3 config (metadata storage)
+              S3_BUCKET_NAME:
+                valueFrom:
+                  configMapKeyRef:
+                    name: kyoo-transcoder-bucket
+                    key: BUCKET_NAME
+              AA_S3_BUCKET_HOST:
+                valueFrom:
+                  configMapKeyRef:
+                    name: kyoo-transcoder-bucket
+                    key: BUCKET_HOST
+              AA_S3_BUCKET_PORT:
+                valueFrom:
+                  configMapKeyRef:
+                    name: kyoo-transcoder-bucket
+                    key: BUCKET_PORT
+              AWS_ENDPOINT_URL_S3: https://$(AA_S3_BUCKET_HOST):$(AA_S3_BUCKET_PORT)
+              # Don't try to contact the EC2 metadata service, this delays startup significantly due to timeouts (netpols block access)
+              AWS_EC2_METADATA_DISABLED: "true"
+              # Placeholder value is required
+              AWS_DEFAULT_REGION: dummy-placeholder-region
+              # Breaking change to all AWS SDKs, see https://tracker.ceph.com/issues/71183
+              AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+            envFrom:
+              - secretRef:
+                  name: kyoo-transcoder-bucket
+            ports:
+              - containerPort: 7666
+                name: http
+                protocol: TCP
+            # Not currently supported, TODO add a health check endpoint
+            # probes:
+            #   liveness: &probe
+            #     enabled: true
+            #     port: http
+            #   readiness: *probe
+            securityContext: *container_security_context
+      # Not deployed. I don't need the feature it supports, and it looks like it's going away in v5.
+      # autosync
+      scanner:
+        replicas: 2
+        strategy: RollingUpdate
+        containers:
+          scanner:
+            resources:
+              limits:
+                memory: 2Gi
+            image:
+              repository: ghcr.io/soliddowant/kyoo_scanner
+              tag: *tag
+            env:
+              # RabbitMQ config
+              RABBITMQ_URL: &python_rabbitmq_url "\
+                amqps://kyoo-rabbitmq.media.svc/%2Fkyoo?\
+                cafile=/certs/root-ca/ca.crt&\
+                certfile=/certs/rabbitmq/user/tls.crt&\
+                keyfile=/certs/rabbitmq/user/tls.key&\
+                auth=external"
+              # Kyoo config
+              SCANNER_LIBRARY_ROOT: /mnt/media/
+              KYOO_APIKEYS:
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-credentials
+                    key: SCANNER_APIKEY
+              KYOO_URL: http://kyoo-backend.media.svc.cluster.local/api
+              LIBRARY_LANGUAGES: en
+      matcher:
+        # Needs to be able to keep up with the scanner. Each instance is independent.
+        # Alternatively just wait for the scanner and matcher to be joined into one service.
+        # PR pending
+        replicas: 10
+        strategy: RollingUpdate
+        containers:
+          matcher:
+            image:
+              repository: ghcr.io/soliddowant/kyoo_scanner
+              tag: *tag
+            args: matcher
+            env:
+              # RabbitMQ config
+              RABBITMQ_URL: *python_rabbitmq_url
+              # Kyoo config
+              KYOO_URL: http://kyoo-backend.media.svc.cluster.local/api
+              KYOO_APIKEYS:
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-credentials
+                    key: MATCHER_APIKEY
+              LIBRARY_LANGUAGES: en
+              THEMOVIEDB_APIKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-credentials
+                    key: THEMOVIEDB_APIKEY
+              TVDB_APIKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: kyoo-credentials
+                    key: TVDB_APIKEY
+    persistence:
+      media:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        advancedMounts:
+          transcoder:
+            transcoder: &media_mount_paths
+              - path: /mnt/media/Movies
+                subPath: Movies
+              - path: /mnt/media/Shows
+                subPath: Shows
+          scanner:
+            scanner: *media_mount_paths
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        globalMounts:
+          - path: /certs/root-ca
+      kyoo-backend-postgres-backend-user-cert: &cert_mount
+        type: secret
+        name: kyoo-backend-postgres-kyoo-backend-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          backend-migrations:
+            migrations: &postgres_user_cert_mount_paths
+              - path: /certs/postgres/user
+          backend:
+            backend: *postgres_user_cert_mount_paths
+      kyoo-rabbitmq-backend-user-cert:
+        <<: *cert_mount
+        name: kyoo-rabbitmq-kyoo-backend-user
+        advancedMounts:
+          backend:
+            backend:
+              - path: /certs/rabbitmq/user
+      kyoo-transcoder-postgres-transcoder-user-cert:
+        <<: *cert_mount
+        name: kyoo-transcoder-postgres-kyoo-transcoder-user
+        advancedMounts:
+          transcoder:
+            transcoder: *postgres_user_cert_mount_paths
+      kyoo-rabbitmq-scanner-user-cert:
+        <<: *cert_mount
+        name: kyoo-rabbitmq-kyoo-scanner-user
+        advancedMounts:
+          scanner:
+            scanner: &rabbitmq_user_cert_mount_paths
+              - path: /certs/rabbitmq/user
+      kyoo-rabbitmq-matcher-user-cert:
+        <<: *cert_mount
+        name: kyoo-rabbitmq-kyoo-matcher-user
+        advancedMounts:
+          matcher:
+            matcher: *rabbitmq_user_cert_mount_paths
+      # Make /tmp writable for select services
+      backend-temp-data:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 100Mi
+        advancedMounts:
+          # This is currently only needed to change profile pictures
+          # Pictures uploaded are written to /tmp
+          backend:
+            backend:
+              - path: /tmp
+      # This contains transcoded video data, and temporary files for
+      # thumbnail, subtitle, and attachment extraction.
+      transcoder-temp-data:
+        type: emptyDir
+        sizeLimit: 50Gi
+        advancedMounts:
+          transcoder:
+            transcoder:
+              - path: /tmp
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 2000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    service:
+      frontend: &http_service
+        controller: frontend
+        ports:
+          http:
+            port: 80
+            targetPort: http
+      backend:
+        <<: *http_service
+        controller: backend
+      transcoder:
+        <<: *http_service
+        controller: transcoder
+  postRenderers:
+    # Add the resource claim to the transcoder.
+    # This is not currently supported by the app-template chart (TODO).
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/resourceClaims
+                value:
+                  - name: gpu
+                    resourceClaimTemplateName: kyoo-transcoder-gpu
+              - op: add
+                path: /spec/template/spec/containers/0/resources
+                value:
+                  claims:
+                    - name: gpu
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: kyoo-transcoder

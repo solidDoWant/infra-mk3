@@ -1,0 +1,66 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kyoo-frontend
+  labels: &labels
+    app.kubernetes.io/name: kyoo
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/instance: kyoo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+# This runs as a job that is fairly quick to complete. Don't let it be evicted.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kyoo-backend-migrations
+  labels: &labels
+    app.kubernetes.io/name: kyoo
+    app.kubernetes.io/component: backend-migrations
+    app.kubernetes.io/instance: kyoo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kyoo-backend
+  labels: &labels
+    app.kubernetes.io/name: kyoo
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: kyoo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kyoo-scanner
+  labels: &labels
+    app.kubernetes.io/name: kyoo
+    app.kubernetes.io/component: scanner
+    app.kubernetes.io/instance: kyoo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kyoo-matcher
+  labels: &labels
+    app.kubernetes.io/name: kyoo
+    app.kubernetes.io/component: matcher
+    app.kubernetes.io/instance: kyoo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

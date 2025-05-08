@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-kyoo-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Unfortunately this must be a secret (rather than secretGenerator) or Flux will not substitute
+  # values within it
+  authentik-kyoo-application-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=../../../../../schemas/configs/blueprint.authentik_v1.json
+    version: 1
+    metadata:
+      name: Kyoo application
+      labels:
+        blueprints.goauthentik.io/description: Resources for Kyoo SSO
+    entries:
+      # Dependencies
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Implicit provider authentication
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Password authentication flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Invalidation flow
+          required: true
+      # Application
+      - model: authentik_providers_oauth2.oauth2provider
+        id: kyoo-provider
+        identifiers:
+          name: Kyoo
+        attrs:
+          name: Kyoo
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+          client_type: confidential
+          client_id: "${SECRET_KYOO_AUTHENTIK_OIDC_CLIENT_ID}"
+          client_secret: "${SECRET_KYOO_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          redirect_uris: |-
+            https://kyoo.${SECRET_PUBLIC_DOMAIN_NAME}/api/auth/logged/authentik
+          signing_key:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          access_code_validity: minutes=1
+          access_token_validity: minutes=5
+          refresh_token_validity: days=30
+          property_mappings:
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'email'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+              ]
+          sub_mode: hashed_user_id
+          include_claims_in_id_token: true
+          issuer_mode: per_provider
+      - model: authentik_core.application
+        id: kyoo-application
+        identifiers:
+          slug: kyoo
+        attrs:
+          name: Kyoo
+          slug: kyoo
+          group: Infra access
+          provider: !KeyOf kyoo-provider
+          policy_engine_mode: any
+          meta_launch_url: https://kyoo.${SECRET_PUBLIC_DOMAIN_NAME}
+          # icon: # TODO
+      # Groups
+      - model: authentik_core.group
+        id: kyoo-group
+        identifiers:
+          name: Kyoo access
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_MEDIA_PLAYBACK_ADMINS_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf kyoo-group
+          target: !KeyOf kyoo-application
