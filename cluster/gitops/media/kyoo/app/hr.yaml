@@ -23,7 +23,7 @@ spec:
           frontend:
             image:
               repository: ghcr.io/soliddowant/kyoo_front
-              tag: &tag 4.8.0-dev.62
+              tag: &tag 4.8.0-dev.66
             env:
               KYOO_URL: http://kyoo-backend.media.svc.cluster.local/api
             ports:
@@ -157,6 +157,9 @@ spec:
               OIDC_AUTHENTIK_PROFILE: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/userinfo/
               OIDC_AUTHENTIK_SCOPE: email openid profile
               OIDC_AUTHENTIK_AUTHMETHOD: ClientSecretBasic
+              # Authentication config
+              AUTHENTICATION_DISABLE_PASSWORD_LOGIN: "true"
+              AUTHENTICATION_DISABLE_USER_REGISTRATION: "true"
             envFrom:
               - secretRef:
                   name: kyoo-backend-bucket
