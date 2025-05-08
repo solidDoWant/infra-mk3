@@ -156,7 +156,7 @@ spec:
               OIDC_AUTHENTIK_TOKEN: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/token/
               OIDC_AUTHENTIK_PROFILE: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}//application/o/userinfo/
               OIDC_AUTHENTIK_SCOPE: email openid profile
-              OIDC_AUTHENTIK_AUTHMETHOD: ClientSecretPost
+              OIDC_AUTHENTIK_AUTHMETHOD: ClientSecretBasic
             envFrom:
               - secretRef:
                   name: kyoo-backend-bucket
