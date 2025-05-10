@@ -258,6 +258,7 @@ spec:
                 auth=external"
               # Kyoo config
               SCANNER_LIBRARY_ROOT: /mnt/media/
+              LIBRARY_IGNORE_PATTERN: (?i).*\.(jpg|jpe|nfo|png|srt|svg)$
               KYOO_APIKEYS:
                 valueFrom:
                   secretKeyRef:
