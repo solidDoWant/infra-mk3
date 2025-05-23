@@ -60,7 +60,7 @@ spec:
       - ReadWriteOnce
     resources:
       requests:
-        storage: 10Gi # TODO I have no idea how big this should be
+        storage: 30Gi # TODO I have no idea how big this should be
     # TODO this needs tuning and benchmarking.
     storageClassName: victoria-logs
     volumeMode: Filesystem
