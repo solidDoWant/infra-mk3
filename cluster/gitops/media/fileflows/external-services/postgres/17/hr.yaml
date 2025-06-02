@@ -1,0 +1,47 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fileflows-postgres-17
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  dependsOn:
+    - name: fileflows-postgres-auth
+  values:
+    clusterName: fileflows
+    certificates:
+      serving:
+        issuerRef:
+          name: media-intermediary-ca
+        subject:
+          countries:
+            - US
+          provinces:
+            - ${SECRET_STATE}
+          organizations:
+            - infra-mk3
+        # This is needed for anything that C# services talk to because
+        # .net core does not support Ed25519, despite there being multiple
+        # decade-old requests for it.
+        privateKey:
+          algorithm: ECDSA
+          size: 384
+          encoding: PKCS8
+          rotationPolicy: Always
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: fileflows
+              app.kubernetes.io/component: server
+              app.kubernetes.io/instance: fileflows

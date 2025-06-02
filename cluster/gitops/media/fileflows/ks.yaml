@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/media/fileflows/app
+  path: /cluster/gitops/media/fileflows/proxy
   prune: true
   sourceRef:
     kind: GitRepository
@@ -19,3 +19,27 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name fileflows-backend
+spec:
+  targetNamespace: media
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/media/fileflows/backend
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: prometheus-crds
+    - name: cluster-issuers
+    - name: media-namespace-issuer
+    - name: cloudnative-pg
