@@ -2,7 +2,7 @@
 creation_rules:
   - &local_apply_files_config
     path_regex: ^ansible/.*/group_vars/[^/]*\.sops\.[^/]*$
-    key_groups:
+    key_groups: &personal_only_key_groups
       - age:
           - &personal_key age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
   - <<: *local_apply_files_config
@@ -19,7 +19,9 @@ creation_rules:
     path_regex: ^cluster/bootstrap/.*\.sops\.ya?ml$
   - <<: *flux_apply_files_config
     path_regex: ^cluster/gitops/.*\.sops\.ya?ml$
-
+  - path_regex: ".*\\.sops\\.md$"
+    encrypted_regex: .*
+    key_groups: *personal_only_key_groups
 stores:
   yaml:
     indent: 2
