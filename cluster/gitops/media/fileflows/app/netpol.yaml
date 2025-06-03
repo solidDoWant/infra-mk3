@@ -46,14 +46,16 @@ specs:
               - port: "80"
                 protocol: TCP
       # Download plugins, resources, etc.
-      - toFQDNs:
+      - &external_https_access
+        toFQDNs:
           - matchName: raw.githubusercontent.com
           - matchPattern: "*"
         toPorts:
           - ports:
               - port: "443"
                 protocol: TCP
-      - toFQDNs:
+      - &external_http_access
+        toFQDNs:
           - matchName: crt.sectigo.com
           - matchName: crl.usertrust.com
           - matchPattern: "*"
@@ -85,6 +87,8 @@ specs:
     egress:
       - *dns_resolution
       - *proxy_access
+      - *external_https_access
+      - *external_http_access
       # Connection to server
       - toEndpoints:
           - *server_matcher
