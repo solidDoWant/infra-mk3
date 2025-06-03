@@ -38,9 +38,9 @@ specs:
           - host
         toPorts:
           - ports:
-              - port: http
+              - port: "80"
                 protocol: TCP
-              - port: metrics
+              - port: "9113"
                 protocol: TCP
       # Requests from fileflows
       - fromEndpoints:
@@ -48,7 +48,7 @@ specs:
               app.kubernetes.io/instance: fileflows # TODO fileflows server and workers
         toPorts:
           - ports:
-              - port: http
+              - port: "80"
                 protocol: TCP
       # Metrics
       - fromEndpoints:
@@ -56,5 +56,5 @@ specs:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: metrics
+              - port: "9113"
                 protocol: TCP
