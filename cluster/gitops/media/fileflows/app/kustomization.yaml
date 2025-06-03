@@ -14,4 +14,5 @@ configMapGenerator:
     options:
       disableNameSuffixHash: true
       labels:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
         kyverno.home.arpa/reload: "true"
