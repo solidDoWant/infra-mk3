@@ -150,7 +150,7 @@ spec:
       media:
         type: nfs
         server: ${NFS_ADDRESS}
-        path: ${NFS_MEDIA_PATH}/library
+        path: ${NFS_MEDIA_PATH}
         advancedMounts:
           server:
             app: &media_mount_paths
