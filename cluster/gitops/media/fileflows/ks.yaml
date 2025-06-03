@@ -19,27 +19,52 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
+# ---
+# # This isn't working due to numerous fileflow application bugs
+# # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   namespace: flux-system
+#   name: &app_name fileflows-backend
+# spec:
+#   targetNamespace: media
+#   commonMetadata:
+#     labels:
+#       app.kubernetes.io/name: *app_name
+#   interval: 5m
+#   path: /cluster/gitops/media/fileflows/backend
+#   prune: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: infra-mk3
+#   wait: true
+#   dependsOn:
+#     - name: prometheus-crds
+#     - name: cluster-issuers
+#     - name: media-namespace-issuer
+#     - name: cloudnative-pg
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name fileflows-backend
+  name: &app_name fileflows
 spec:
   targetNamespace: media
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/media/fileflows/backend
+  path: /cluster/gitops/media/fileflows/app
   prune: true
   sourceRef:
     kind: GitRepository
     name: infra-mk3
   wait: true
   dependsOn:
-    - name: prometheus-crds
-    - name: cluster-issuers
-    - name: media-namespace-issuer
-    - name: cloudnative-pg
+    - name: gateway-crds
+    - name: intel-resource-drivers-gpu
+    # - name: fileflows-backend
+    - name: fileflows-proxy
