@@ -1,0 +1,187 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fileflows
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 3.7.3
+  values:
+    controllers:
+      server:
+        containers:
+          app:
+            image: &image
+              repository: revenz/fileflows
+              # This tag is ultra fat but it avoids the need to download and install most things
+              # after startup.
+              tag: 25.05-modded@sha256:c6264e0bc9d071b4f28c8564f839eda02a6eb8511f96242a54e20c3c6d48b466
+            env: &server_env
+              DOCKER_HOST: &docker_host tcp://127.0.0.1:2375
+              # Required until https://github.com/kata-containers/kata-containers/issues/11349 is fixed
+              TZ: ${SECRET_TIMEZONE}
+              # Causes config files at `/Data/Data/Config/<num>/config.json` to not be encrypted.
+              # Without this, the config file is encrypted using the contents of /etc/machine-id as the
+              # password. This is flawed because the key _is baked into the image_. Just disable
+              # encryption - it adds zero benefit here, and makes it so that I cannot easily load these
+              # config files on startup.
+              FF_NO_ENCRYPT: "1"
+              # Forward fileflows.com requests to the proxy.
+              FFURL: http://fileflows-proxy.media.svc
+            ports:
+              - name: http
+                containerPort: 5000
+            probes:
+              startup: &probe
+                enabled: true
+                path: /health
+                port: http
+              readiness: *probe
+              liveness: *probe
+            # This image does some excessively dumb things like downloading
+            # and installing software at runtime, and even cloning git repos
+            # and compiling software at runtime. Some of these things require
+            # privileged, root access to the VM.
+            securityContext: &container_security_context
+              privileged: true
+              allowPrivilegeEscalation: true
+        initContainers:
+          # For some dumb reason the application tries to open and save this file even if there are no changes.
+          # This requires that the file is writable by the application.
+          preload:
+            image:
+              repository: public.ecr.aws/docker/library/alpine
+              tag: 3.22.0
+            command:
+              - /preload/scripts/preload.sh
+        pod: &pod
+          # These containers download and install stuff at runtime without pinning
+          # anything. This is a pretty nasty security risk. Run this in a VM to
+          # help isolate the application, reducing the impact if/when it is
+          # compromised.
+          # TODO setup a pull-through proxy that allows only specific versions of
+          # assets to be downloaded.
+          # Asset manifest: https://raw.githubusercontent.com/revenz/FileFlowsRepository/master/repo.json
+          runtimeClassName: kata
+          annotations:
+            # Required until https://github.com/kata-containers/kata-containers/issues/11349 is fixed
+            k8tz.io/inject: "false"
+      worker:
+        replicas: 2
+        type: statefulset
+        containers:
+          app:
+            image: *image
+            env:
+              <<: *server_env
+              FFNODE: "1" # This is a worker node, not a server.
+              ServerUrl: http://fileflows.media.svc
+            securityContext: *container_security_context
+        initContainers:
+          dind-sidecar:
+            image:
+              repository: docker
+              tag: 28.2.2-dind
+            env:
+              DOCKER_HOST: *docker_host
+            args:
+              - dockerd
+              - --host=$(DOCKER_HOST)
+            securityContext: *container_security_context
+            restartPolicy: Always
+        pod: *pod
+        statefulset:
+          volumeClaimTemplates:
+            - enabled: true
+              name: fileflows-worker-data
+              size: 1Gi
+              accessMode: ReadWriteOnce
+              storageClass: ssd-replicated-3x
+              advancedMounts:
+                app:
+                  - path: /app/Data
+    persistence:
+      server-configs:
+        type: secret
+        name: fileflows-server-config
+        defaultMode: 0o666
+        advancedMounts:
+          server:
+            preload:
+              - path: /preload/data
+      preload-scripts:
+        type: configMap
+        name: fileflows-preload-scripts
+        defaultMode: 0o755
+        advancedMounts:
+          server:
+            preload:
+              - path: /preload/scripts
+      server-data:
+        type: persistentVolumeClaim
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        storageClass: ssd-replicated-3x
+        advancedMounts:
+          server:
+            app:
+              - path: /app/Data
+            preload:
+              - path: /app/Data
+      # Share /temp between the worker and dind sidecar so that containers started by the sidecar
+      # can mount files via the same path as the worker.
+      worker-dind-shared:
+        type: emptyDir
+        sizeLimit: 50Gi # This may contain large video files. It may need to be increased.
+        advancedMounts:
+          worker:
+            app:
+              - path: /temp
+            dind-sidecar:
+              - path: /temp
+    service:
+      server:
+        controller: server
+        ports:
+          http:
+            port: 80
+            targetPort: http
+    route:
+      server:
+        hostnames:
+          - fileflows.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - name: fileflows
+                port: 80
+  postRenderers:
+    # This is not currently supported by the app-template chart (TODO).
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/resourceClaims
+                value:
+                  - name: gpu
+                    resourceClaimTemplateName: fileflows-gpu
+              - op: add
+                path: /spec/template/spec/containers/0/resources
+                value:
+                  claims:
+                    - name: gpu
+            target:
+              group: apps
+              version: v1
+              kind: StatefulSet
+              name: fileflows-worker

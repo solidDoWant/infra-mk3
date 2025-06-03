@@ -1,0 +1,91 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: fileflows
+specs:
+  - description: server
+    endpointSelector: &server_matcher
+      matchLabels: &server_labels
+        app.kubernetes.io/name: fileflows
+        app.kubernetes.io/component: server
+        app.kubernetes.io/instance: fileflows
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # # Backend database access
+      # - toEndpoints:
+      #     - matchLabels:
+      #         cnpg.io/cluster: fileflows-postgres-17
+      #   toPorts:
+      #     - ports:
+      #         - port: "5432"
+      #           protocol: TCP
+      # FileFlows.com access via proxy
+      - &proxy_access
+        toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: fileflows-proxy
+              app.kubernetes.io/name: fileflows-proxy
+        toPorts: &http_ports
+          - ports:
+              - port: "80"
+                protocol: TCP
+      # Download plugins, resources, etc.
+      - toFQDNs:
+          - matchName: raw.githubusercontent.com
+          - matchPattern: "*"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      - toFQDNs:
+          - matchName: crt.sectigo.com
+          - matchName: crl.usertrust.com
+          - matchPattern: "*"
+        toPorts: *http_ports
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &server_ports
+          - ports:
+              - port: "5000"
+                protocol: TCP
+      # Connections from worker pods
+      - fromEndpoints:
+          - &worker_matcher
+            matchLabels:
+              <<: *server_labels
+              app.kubernetes.io/component: worker
+        toPorts: *server_ports
+      # Gateway to webservice
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *server_ports
+  - description: worker
+    endpointSelector: *worker_matcher
+    egress:
+      - *dns_resolution
+      - *proxy_access
+      # Connection to server
+      - toEndpoints:
+          - *server_matcher
+        toPorts: *server_ports

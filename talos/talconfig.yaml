@@ -247,7 +247,7 @@ patches:
           serializeImagePulls: false
         extraArgs:
           # Feature enablement
-          feature-gates: DynamicResourceAllocation=true,UserNamespacesSupport=true,UserNamespacesPodSecurityStandards=true
+          feature-gates: DynamicResourceAllocation=true,DRAAdminAccess=true,DRAResourceClaimDeviceStatus=true,UserNamespacesSupport=true,UserNamespacesPodSecurityStandards=true
         nodeIP:
           validSubnets:
             - 10.3.1.0/16
@@ -302,7 +302,7 @@ patches:
         extraArgs:
           bind-address: 0.0.0.0
           # Feature enablement
-          feature-gates: kube:DynamicResourceAllocation=true
+          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAResourceClaimDeviceStatus=true
   # Configure the scheduler
   - |-
     cluster:
@@ -350,7 +350,7 @@ patches:
           # Talos etcd-backed "Cluster Discovery" support, which is required for kubeprism.
           # Disabling this flag allows kubeprism to continue to work.
           # See https://github.com/siderolabs/talos/issues/9980
-          feature-gates: kube:DynamicResourceAllocation=true,kube:AuthorizeNodeWithSelectors=false
+          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAResourceClaimDeviceStatus=true,kube:AuthorizeNodeWithSelectors=false
           # Resource enablement
           # Enable everything but alpha and legacy features
           runtime-config: "api/all=true,api/legacy=false"
@@ -372,7 +372,7 @@ patches:
                     defaultingType: List
         extraArgs:
           # Feature enablement
-          feature-gates: DynamicResourceAllocation=true
+          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAResourceClaimDeviceStatus=true
   # Ship logs to each node's agent
   - |-
     machine:

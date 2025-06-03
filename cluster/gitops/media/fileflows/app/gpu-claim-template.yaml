@@ -1,0 +1,18 @@
+---
+# This relies on the beta resource claim API + the Intel GPU resource driver.
+apiVersion: resource.k8s.io/v1beta1
+kind: ResourceClaimTemplate
+metadata:
+  name: fileflows-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          deviceClassName: gpu.intel.com
+          # This is a hack to get make the claim not count against the node's total GPU count (1).
+          # FileFlows won't frequently use the resource, so this should be low impact.
+          # It'd be really nice if the new DRA framework supported requests based on timeslicing,
+          # which the resourceslice supports.
+          adminAccess: true
+          allocationMode: All

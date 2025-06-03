@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./gpu-claim-template.yaml
+  - ./hr.yaml
+  - ./netpol.yaml
+  - ./server-config.sops.yaml
+  - ./worker-pdb.yaml
+configMapGenerator:
+  - name: fileflows-preload-scripts
+    files:
+      - ./preload.sh
+    options:
+      disableNameSuffixHash: true
+      labels:
+        kyverno.home.arpa/reload: "true"
