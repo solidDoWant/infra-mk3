@@ -144,9 +144,9 @@ spec:
         advancedMounts:
           worker:
             app:
-              - path: /temp
+              - path: /shared
             dind-sidecar:
-              - path: /temp
+              - path: /shared
     service:
       server:
         controller: server
