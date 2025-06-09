@@ -46,13 +46,12 @@ spec:
                 port: http
               readiness: *probe
               liveness: *probe
-            # This image does some excessively dumb things like downloading
-            # and installing software at runtime, and even cloning git repos
-            # and compiling software at runtime. Some of these things require
-            # privileged, root access to the VM.
-            securityContext: &container_security_context
-              privileged: true
-              allowPrivilegeEscalation: true
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
         initContainers:
           # For some dumb reason the application tries to open and save this file even if there are no changes.
           # This requires that the file is writable by the application.
@@ -62,18 +61,6 @@ spec:
               tag: 3.22.0
             command:
               - /preload/scripts/preload.sh
-        pod: &pod
-          # These containers download and install stuff at runtime without pinning
-          # anything. This is a pretty nasty security risk. Run this in a VM to
-          # help isolate the application, reducing the impact if/when it is
-          # compromised.
-          # TODO setup a pull-through proxy that allows only specific versions of
-          # assets to be downloaded.
-          # Asset manifest: https://raw.githubusercontent.com/revenz/FileFlowsRepository/master/repo.json
-          runtimeClassName: kata
-          annotations:
-            # Required until https://github.com/kata-containers/kata-containers/issues/11349 is fixed
-            k8tz.io/inject: "false"
       worker:
         replicas: 2
         type: statefulset
@@ -84,7 +71,12 @@ spec:
               <<: *server_env
               FFNODE: "1" # This is a worker node, not a server.
               ServerUrl: http://fileflows.media.svc
-            securityContext: *container_security_context
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              # readOnlyRootFilesystem: true  # TODO, requires /temp to be writable.
         initContainers:
           dind-sidecar:
             image:
@@ -95,9 +87,11 @@ spec:
             args:
               - dockerd
               - --host=$(DOCKER_HOST)
-            securityContext: *container_security_context
+            # TODO
+            securityContext:
+              privileged: true
+              allowPrivilegeEscalation: true
             restartPolicy: Always
-        pod: *pod
         statefulset:
           volumeClaimTemplates:
             - enabled: true
@@ -108,6 +102,9 @@ spec:
               advancedMounts:
                 app:
                   - path: /app/Data
+    defaultPodOptions:
+      # This allows fileflow containers to run as UID 0 without actually being root.
+      hostUsers: false
     persistence:
       server-configs:
         type: secret
@@ -136,17 +133,26 @@ spec:
               - path: /app/Data
             preload:
               - path: /app/Data
+      logs:
+        type: persistentVolumeClaim
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        storageClass: ssd-replicated-3x
+        advancedMounts:
+          server:
+            app:
+              - path: /app/Logs
       # Share /temp between the worker and dind sidecar so that containers started by the sidecar
       # can mount files via the same path as the worker.
       worker-dind-shared:
         type: emptyDir
-        sizeLimit: 50Gi # This may contain large video files. It may need to be increased.
+        sizeLimit: 100Gi # This may contain large video files. It may need to be increased.
         advancedMounts:
           worker:
             app:
-              - path: /shared
+              - path: /temp
             dind-sidecar:
-              - path: /shared
+              - path: /temp
       media:
         type: nfs
         server: ${NFS_ADDRESS}
