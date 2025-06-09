@@ -51,7 +51,6 @@ spec:
               capabilities:
                 drop:
                   - ALL
-              readOnlyRootFilesystem: true
         initContainers:
           # For some dumb reason the application tries to open and save this file even if there are no changes.
           # This requires that the file is writable by the application.
