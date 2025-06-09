@@ -350,7 +350,7 @@ patches:
           # Talos etcd-backed "Cluster Discovery" support, which is required for kubeprism.
           # Disabling this flag allows kubeprism to continue to work.
           # See https://github.com/siderolabs/talos/issues/9980
-          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAResourceClaimDeviceStatus=true,kube:AuthorizeNodeWithSelectors=false
+          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAResourceClaimDeviceStatus=true,kube:AuthorizeNodeWithSelectors=false,kube:UserNamespacesSupport=true,kube:UserNamespacesPodSecurityStandards=true
           # Resource enablement
           # Enable everything but alpha and legacy features
           runtime-config: "api/all=true,api/legacy=false"
