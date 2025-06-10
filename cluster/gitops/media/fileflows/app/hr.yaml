@@ -20,14 +20,15 @@ spec:
         containers:
           app:
             image: &image
-              repository: revenz/fileflows
-              # This tag is ultra fat but it avoids the need to download and install most things
+              repository: ghcr.io/soliddowant/fileflows
+              # This tag is ultra fat (>5GB) but it avoids the need to download and install most things
               # after startup.
-              tag: 25.05-modded@sha256:c6264e0bc9d071b4f28c8564f839eda02a6eb8511f96242a54e20c3c6d48b466
+              tag: 25.05-modded@sha256:aabb159732b114a76a91d9b1498c79539450b700d5ce01755333f84e7b65ebc3
+            args:
+              - FileFlows.Server.dll
+              - --urls=http://*:5000
+              - --docker=true
             env: &server_env
-              DOCKER_HOST: &docker_host tcp://127.0.0.1:2375
-              # Required until https://github.com/kata-containers/kata-containers/issues/11349 is fixed
-              TZ: ${SECRET_TIMEZONE}
               # Causes config files at `/Data/Data/Config/<num>/config.json` to not be encrypted.
               # Without this, the config file is encrypted using the contents of /etc/machine-id as the
               # password. This is flawed because the key _is baked into the image_. Just disable
@@ -66,6 +67,9 @@ spec:
         containers:
           app:
             image: *image
+            args:
+              - FileFlows.Node.dll
+              - --docker=true
             env:
               <<: *server_env
               FFNODE: "1" # This is a worker node, not a server.
