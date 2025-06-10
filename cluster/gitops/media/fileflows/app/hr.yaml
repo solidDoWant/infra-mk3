@@ -23,7 +23,7 @@ spec:
               repository: ghcr.io/soliddowant/fileflows
               # This tag is ultra fat (>5GB) but it avoids the need to download and install most things
               # after startup.
-              tag: 25.05-modded@sha256:944a29268b263a7f29ab31f34a3dd352540a2475020819bc3e38a072eb274e32
+              tag: 25.05-modded@sha256:8ee1f989839e702d4f10e865fb49a33644f284ae90f6476f157a78a1e0c2c78a
             args:
               - FileFlows.Server.dll
               - --urls=http://*:5000
@@ -49,7 +49,8 @@ spec:
               liveness: *probe
             securityContext: &fileflows_security_context
               allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
+              # Cannot be enabled until https://fileflows.com/ticket?id=2271 is fixed
+              # readOnlyRootFilesystem: true
               capabilities:
                 drop:
                   - ALL
