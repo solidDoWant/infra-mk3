@@ -146,6 +146,15 @@ spec:
             app:
               - path: /mnt/media
           worker: *media_mounts
+      # Small temp space that needs to be writable.
+      scratch:
+        type: emptyDir
+        sizeLimit: 1Gi
+        advancedMounts:
+          worker:
+            app:
+              - path: /app/Logs
+                subPath: logs
     service:
       server:
         controller: server
