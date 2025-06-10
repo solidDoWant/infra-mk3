@@ -179,11 +179,6 @@ spec:
                 value:
                   claims:
                     - name: gpu
-              - op: add
-                path: /spec/template/spec/initContainers/0/resources
-                value:
-                  claims:
-                    - name: gpu
             target:
               group: apps
               version: v1
