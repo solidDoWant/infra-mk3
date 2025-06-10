@@ -27,7 +27,7 @@ spec:
             args:
               - FileFlows.Server.dll
               - --urls=http://*:5000
-              - --docker=true
+              - --docker
             env: &server_env
               # Causes config files at `/Data/Data/Config/<num>/config.json` to not be encrypted.
               # Without this, the config file is encrypted using the contents of /etc/machine-id as the
@@ -76,7 +76,7 @@ spec:
             image: *image
             args:
               - FileFlows.Node.dll
-              - --docker=true
+              - --docker
             env:
               <<: *server_env
               FFNODE: "1" # This is a worker node, not a server.
