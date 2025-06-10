@@ -47,8 +47,9 @@ spec:
                 port: http
               readiness: *probe
               liveness: *probe
-            securityContext:
+            securityContext: &fileflows_security_context
               allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
               capabilities:
                 drop:
                   - ALL
@@ -61,6 +62,12 @@ spec:
               tag: 3.22.0
             command:
               - /preload/scripts/preload.sh
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
       worker:
         replicas: 2
         type: statefulset
@@ -74,27 +81,7 @@ spec:
               <<: *server_env
               FFNODE: "1" # This is a worker node, not a server.
               ServerUrl: http://fileflows.media.svc
-            securityContext:
-              allowPrivilegeEscalation: false
-              capabilities:
-                drop:
-                  - ALL
-              # readOnlyRootFilesystem: true  # TODO, requires /temp to be writable.
-        initContainers:
-          dind-sidecar:
-            image:
-              repository: docker
-              tag: 28.2.2-dind
-            env:
-              DOCKER_HOST: *docker_host
-            args:
-              - dockerd
-              - --host=$(DOCKER_HOST)
-            # TODO
-            securityContext:
-              privileged: true
-              allowPrivilegeEscalation: true
-            restartPolicy: Always
+            securityContext: *fileflows_security_context
         statefulset:
           volumeClaimTemplates:
             - enabled: true
@@ -105,9 +92,6 @@ spec:
               advancedMounts:
                 app:
                   - path: /app/Data
-    defaultPodOptions:
-      # This allows fileflow containers to run as UID 0 without actually being root.
-      hostUsers: false
     persistence:
       server-configs:
         type: secret
@@ -145,28 +129,23 @@ spec:
           server:
             app:
               - path: /app/Logs
-      # Share /temp between the worker and dind sidecar so that containers started by the sidecar
-      # can mount files via the same path as the worker.
-      worker-dind-shared:
+      # Make the working directory writable
+      temp:
         type: emptyDir
         sizeLimit: 100Gi # This may contain large video files. It may need to be increased.
         advancedMounts:
           worker:
             app:
               - path: /temp
-            dind-sidecar:
-              - path: /temp
       media:
         type: nfs
         server: ${NFS_ADDRESS}
         path: ${NFS_MEDIA_PATH}
         advancedMounts:
-          server:
-            app: &media_mount_paths
+          server: &media_mounts
+            app:
               - path: /mnt/media
-          worker:
-            app: *media_mount_paths
-            dind-sidecar: *media_mount_paths
+          worker: *media_mounts
     service:
       server:
         controller: server
