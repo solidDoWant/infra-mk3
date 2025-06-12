@@ -16,6 +16,10 @@ spec:
       version: 0.7.0
   values:
     namespaceOverride: "" # Why in the world would this be set by default in the first place?
+    # TODO revert this when/if https://github.com/intel/intel-resource-drivers-for-kubernetes/pull/38 is merged
+    image:
+      repository: ghcr.io/soliddowant
+      tag: v0.7.0-pr.38
     kubeletPlugin:
       nodeSelector:
         intel.feature.node.kubernetes.io/gpu: "true"
