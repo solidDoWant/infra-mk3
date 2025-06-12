@@ -16,3 +16,6 @@ spec:
           # which the resourceslice supports.
           adminAccess: true
           allocationMode: All
+          selectors:
+            - cel:
+                expression: device.attributes["gpu.intel.com"].family == 'Arc Pro'
