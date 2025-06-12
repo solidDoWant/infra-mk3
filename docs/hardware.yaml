@@ -457,6 +457,43 @@ Compute:
                 Physical location:
                   - Motherboard: 1
                   - Motherboard: 2
+      GPU:
+        - Manufacturer: Intel
+          Model: Arc Pro A40
+          Count: 1
+          Clock frequency max: 1.55 # GHz
+          VRAM:
+            Size: 6 # GB
+            Type: GDDR6
+            Memory bus width: 96 # Bits
+            Bandwidth: 192 # GB/s
+          Transcoding support:
+            H.264:
+              Decode: true
+              Encode: true
+            H.265:
+              Decode: true
+              Encode: true
+            AV1:
+              Decode: true
+              Encode: true
+            VP9:
+              Decode: true
+              Encode: true
+          Display outputs:
+            - Type: Mini DisplayPort
+              Count: 4
+          PCIe:
+            Slot:
+              Generation: 4.0
+              Lanes: 8
+            Device:
+              Generation: 4.0
+              Lanes: 16
+            Height: Half-height
+          Physical location:
+            - PCIe slot: 1
+          TBP: 50 # Watts
       Power:
         Power supplies:
           - Manufacturer: Minisforum

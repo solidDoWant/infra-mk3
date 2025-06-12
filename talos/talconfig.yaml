@@ -26,16 +26,16 @@ nodes:
       - 10.3.0.254
     networkInterfaces:
       - &1g_1
-        interface: enp87s0
+        interface: enp91s0
         dummy: true
       - &1g_2
-        interface: enp89s0
+        interface: enp94s0
         dummy: true
       - &10g_1
-        interface: &10g_1_name enp2s0f0np0
+        interface: &10g_1_name enp6s0f0np0
         mtu: &jumbo_mtu 9000
       - &10g_2
-        interface: &10g_2_name enp2s0f1np1
+        interface: &10g_2_name enp6s0f1np1
         mtu: *jumbo_mtu
       - &bond_0
         interface: bond0
