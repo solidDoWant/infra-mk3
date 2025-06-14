@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/system-controllers/xpumanager/gpu
+  path: /cluster/gitops/system-controllers/xpumanager/gapppu
   postBuild:
     substitute:
       NAMESPACE: *namespace
