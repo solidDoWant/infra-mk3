@@ -1,0 +1,12 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: xpumanager
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  # TODO this dashboard kinda sucks. Write a better one.
+  url: https://raw.githubusercontent.com/intel/xpumanager/refs/tags/V1.2.41/rest/grafana-dashboard.json

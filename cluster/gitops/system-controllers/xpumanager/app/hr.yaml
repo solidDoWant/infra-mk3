@@ -1,0 +1,135 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: xpumanager
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 3.7.3
+  values:
+    controllers:
+      xpumanager:
+        type: daemonset
+        containers:
+          app:
+            image: &image
+              repository: ghcr.io/soliddowant/xpumanager
+              tag: 1.2.41@sha256:bad90ec611466b31c25cefa7f268ea14dff14c69dbd6e43e3ed941697481e3e1
+            args:
+              - --socket_folder
+              - /run/xpumanager
+              - --dump_folder
+              - /run/xpumanager/dump
+            resources:
+              claims:
+                - name: gpu
+            securityContext: &container_security_context
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              # This will flood the logs until https://github.com/intel/xpumanager/issues/101 is fixed
+              capabilities:
+                drop:
+                  - ALL
+          metrics:
+            image: *image
+            env:
+              XPUM_SOCKET_FILE: /run/xpumanager/xpum_p.sock
+              XPUM_EXPORTER_NO_AUTH: "1"
+              XPUM_EXPORTER_ONLY: "1"
+              NODE_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+            workingDir: /usr/lib/xpum/rest
+            command:
+              - gunicorn
+            args:
+              - --bind
+              - 0.0.0.0:29999
+              - --worker-connections
+              - "64"
+              - --worker-class
+              - gthread
+              - --workers
+              - "1"
+              - --threads
+              - "4"
+              - xpum_rest_main:main(dump_folder="/run/xpumanager/dump")
+            ports:
+              - containerPort: 29999
+                name: metrics
+            probes:
+              liveness: &probe
+                enabled: true
+                port: metrics
+                type: HTTP
+                path: /metrics
+              readiness: *probe
+            securityContext: *container_security_context
+        pod:
+          securityContext:
+            fsGroup: 1000
+    service:
+      app:
+        controller: xpumanager
+        ports:
+          metrics:
+            port: 29999
+            protocol: HTTP
+    serviceMonitor:
+      xpumanager:
+        enabled: true
+        serviceName: xpumanager
+        endpoints:
+          - port: metrics
+            interval: 10s
+            relabelings:
+              - action: labeldrop
+                regex: (service|endpoint|pod|container)
+              - action: replace
+                sourceLabels:
+                  - __meta_kubernetes_pod_node_name
+                targetLabel: instance
+    persistence:
+      shared:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 8Mi
+        globalMounts:
+          - path: /run/xpumanager
+        # Make /tmp RW for HTTP webserver (gunicorn) heartbeat file
+      gunicorn-heartbeat:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 1Ki
+        advancedMounts:
+          xpumanager:
+            metrics:
+              - path: /tmp
+                subPath: gunicorn-heartbeat
+  postRenderers:
+    # This is not currently supported by the app-template chart (TODO).
+    - kustomize:
+        patches:
+          - patch: |
+              - op: add
+                path: /spec/template/spec/resourceClaims
+                value:
+                  - name: gpu
+                    resourceClaimTemplateName: xpumanager-gpu
+            target:
+              group: apps
+              version: v1
+              kind: DaemonSet
+              name: xpumanager
