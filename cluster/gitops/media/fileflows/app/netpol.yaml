@@ -93,3 +93,12 @@ specs:
       - toEndpoints:
           - *server_matcher
         toPorts: *server_ports
+      # Register and unregister jobs
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: fileflows-job-tracker
+              app.kubernetes.io/name: fileflows-job-tracker
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
