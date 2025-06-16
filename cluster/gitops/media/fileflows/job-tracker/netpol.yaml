@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: fileflows-job-tracker
+specs:
+  - description: fileflows-job-tracker
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: fileflows-job-tracker
+        app.kubernetes.io/name: fileflows-job-tracker
+    egress:
+      # Access to the k8s API for pod label management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
+              - port: "9113"
+                protocol: TCP
+      # Requests from fileflows workers
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/instance: fileflows
+              app.kubernetes.io/nam: fileflows
+              app.kubernetes.io/component: worker
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP

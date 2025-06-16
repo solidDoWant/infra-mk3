@@ -1,0 +1,83 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fileflows-job-tracker
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 3.7.3
+  values:
+    controllers:
+      fileflows-job-tracker:
+        replicas: 2
+        containers:
+          app:
+            image:
+              repository: ghcr.io/soliddowant/pod-webhook-tracker
+              tag: 0.0.2
+            env:
+              NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            args:
+              - serve
+              - --namespace=$(NAMESPACE)
+              - --label-selector=app.kubernetes.io/instance=fileflows,app.kubernetes.io/name=fileflows,app.kubernetes.io/component=worker
+            resources:
+              requests:
+                memory: 128Mi
+                cpu: 10m
+              limits:
+                memory: 128Mi
+                cpu: 100m
+            ports:
+              - containerPort: 8080
+                name: http
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              runAsNonRoot: true
+              capabilities:
+                drop:
+                  - ALL
+    serviceAccount:
+      create: true
+    rbac:
+      roles:
+        fileflows-job-tracker:
+          type: Role
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+              verbs:
+                - list
+                - update
+      bindings:
+        fileflows-job-tracker:
+          type: RoleBinding
+          roleRef:
+            identifier: fileflows-job-tracker
+          subjects:
+            - identifier: default
+    service:
+      app:
+        controller: fileflows-job-tracker
+        ports:
+          http:
+            port: 80
+            targetPort: http
+            protocol: HTTP

@@ -1,0 +1,16 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fileflows-active-job-workers
+  labels: &labels
+    app.kubernetes.io/name: fileflows
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: fileflows
+spec:
+  minAvailable: 9999
+  selector:
+    matchLabels: *labels
+    matchExpressions:
+      - key: active-jobs
+        operator: Exists
