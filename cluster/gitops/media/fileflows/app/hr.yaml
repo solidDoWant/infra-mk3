@@ -82,6 +82,10 @@ spec:
               <<: *server_env
               FFNODE: "1" # This is a worker node, not a server.
               ServerUrl: http://fileflows.media.svc
+              POD_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
             securityContext: *fileflows_security_context
         statefulset:
           volumeClaimTemplates:
