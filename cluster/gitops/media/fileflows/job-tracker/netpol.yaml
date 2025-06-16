@@ -24,7 +24,7 @@ specs:
           - host
         toPorts:
           - ports:
-              - port: "80"
+              - port: "8080"
                 protocol: TCP
               - port: "9113"
                 protocol: TCP
@@ -32,7 +32,7 @@ specs:
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/instance: fileflows
-              app.kubernetes.io/nam: fileflows
+              app.kubernetes.io/name: fileflows
               app.kubernetes.io/component: worker
         toPorts:
           - ports:
