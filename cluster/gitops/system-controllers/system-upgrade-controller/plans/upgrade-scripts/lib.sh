@@ -88,6 +88,28 @@ check_if_healthy() {
     fi
 }
 
+check_if_active_job_pods() {
+    echo 'Checking if node contains pods with active-jobs label...'
+
+    ACTIVE_JOB_PODS="$(kubectl get pods -A -l "active-jobs" --field-selector spec.nodeName="${NODE_NAME}" --no-headers)"
+    if [ -n "${ACTIVE_JOB_PODS}" ]; then
+        >&2 echo "Node contains pods with active jobs, failing"
+        exit 1
+    fi
+
+    echo 'Checking if node active pods owned by a job...'
+
+    ACTIVE_NODE_PODS="$(kubectl get pods -A --field-selector "spec.nodeName=${NODE_NAME},status.phase!=Failed,status.phase!=Succeeded" -o json)"
+    ACTIVE_NODE_JOB_PODS="$(echo "${ACTIVE_NODE_PODS}" | jq -r '.items[] | select(.metadata.ownerReferences[]?.kind == "Job") | .metadata.namespace + "/" + .metadata.name')"
+
+    if [ -n "${ACTIVE_NODE_JOB_PODS}" ]; then
+        >&2 echo "Node contains active pods owned by jobs, failing"
+        exit 1
+    fi
+
+    echo 'No active job pods found'
+}
+
 plan() {
     echo "Performing pre-upgrade checks..."
 
@@ -95,6 +117,7 @@ plan() {
     install_deps
     check_if_healthy
     extra_plan_checks
+    check_if_active_job_pods
 
     echo "All checks passed"
 }
