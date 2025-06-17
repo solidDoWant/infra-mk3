@@ -33,7 +33,7 @@ spec:
             args:
               - serve
               - --namespace=$(NAMESPACE)
-              - --label-selector=app.kubernetes.io/instance=fileflows,app.kubernetes.io/name=fileflows,app.kubernetes.io/component=worker
+              - --label-selector=app.kubernetes.io/instance=fileflows,app.kubernetes.io/name=fileflows
             resources:
               requests:
                 memory: 128Mi
