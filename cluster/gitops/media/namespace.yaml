@@ -3,6 +3,3 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: media
-  labels:
-    # Needed for fileflows which uses privileged containers via kata-containers runtime.
-    pod-security.kubernetes.io/enforce: privileged
