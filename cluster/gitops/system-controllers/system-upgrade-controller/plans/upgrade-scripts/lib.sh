@@ -99,8 +99,20 @@ check_if_active_job_pods() {
 
     echo 'Checking if node active pods owned by a job...'
 
-    ACTIVE_NODE_PODS="$(kubectl get pods -A --field-selector "spec.nodeName=${NODE_NAME},status.phase!=Failed,status.phase!=Succeeded" -o json)"
-    ACTIVE_NODE_JOB_PODS="$(echo "${ACTIVE_NODE_PODS}" | jq -r '.items[] | select(.metadata.ownerReferences[]?.kind == "Job") | .metadata.namespace + "/" + .metadata.name')"
+    ACTIVE_NODE_PODS="$(\
+        kubectl get pods -A \
+            --field-selector "spec.nodeName=${NODE_NAME},status.phase!=Failed,status.phase!=Succeeded" \
+            -o json \
+    )"
+    ACTIVE_NODE_JOB_PODS="$(\
+        echo "${ACTIVE_NODE_PODS}" | \
+        jq -r --arg SELF_NAME "$(hostname)" '
+            .items[] | 
+            select(.metadata.ownerReferences[]?.kind == "Job") | 
+            select(.metadata.namespace != "system-controllers" or .metadata.name != $SELF_NAME) | 
+            .metadata.namespace + "/" + .metadata.name
+        ' \
+    )"
 
     if [ -n "${ACTIVE_NODE_JOB_PODS}" ]; then
         >&2 echo "Node contains active pods owned by jobs, failing"
