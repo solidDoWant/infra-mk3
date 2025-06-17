@@ -87,6 +87,12 @@ spec:
                   fieldRef:
                     fieldPath: metadata.name
             securityContext: *fileflows_security_context
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
         statefulset:
           volumeClaimTemplates:
             - enabled: true
