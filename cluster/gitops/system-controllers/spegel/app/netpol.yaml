@@ -38,6 +38,7 @@ specs:
       # Image pull requests from the container runtime
       - fromEntities:
           - host
+          - remote-node
         toPorts:
           - ports:
               - port: registry
