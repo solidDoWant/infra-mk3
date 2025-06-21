@@ -34,7 +34,7 @@ specs:
           - ports:
               # Use bash substitution for "replace prefix", matching the first entry (empty string),
               # and prepend it with a YAML resolved tag that indicates that the type is a string, not a number.
-              - port: ${SECRET_VPN_FORWARDED_PORT_1/#""/testprefix}
+              - port: ${TEST_VALUE/#12345/!<tag:yaml.org,2002:str> }
                 protocol: TCP
     #   - toEndpoints:
     #       - matchExpressions: *any_namespace
