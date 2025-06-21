@@ -33,7 +33,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_1}"
+                  ${SECRET_VPN_FORWARDED_PORT_1}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -43,7 +43,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_1}"
+                  ${SECRET_VPN_FORWARDED_PORT_1}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -53,7 +53,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_2}"
+                  ${SECRET_VPN_FORWARDED_PORT_2}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -63,7 +63,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_2}"
+                  ${SECRET_VPN_FORWARDED_PORT_2}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -73,7 +73,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_3}"
+                  ${SECRET_VPN_FORWARDED_PORT_3}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -83,7 +83,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_3}"
+                  ${SECRET_VPN_FORWARDED_PORT_3}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -93,7 +93,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_4}"
+                  ${SECRET_VPN_FORWARDED_PORT_4}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -103,7 +103,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_4}"
+                  ${SECRET_VPN_FORWARDED_PORT_4}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -113,7 +113,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_5}"
+                  ${SECRET_VPN_FORWARDED_PORT_5}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -123,7 +123,7 @@ specs:
         toPorts:
           - ports:
               - port: |
-                  "${SECRET_VPN_FORWARDED_PORT_5}"
+                  ${SECRET_VPN_FORWARDED_PORT_5}
                 protocol: UDP
     ingress:
       # Kubelet for healthcheck
