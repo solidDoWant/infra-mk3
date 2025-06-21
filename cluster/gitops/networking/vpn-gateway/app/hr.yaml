@@ -46,6 +46,7 @@ spec:
                 ${SECRET_VPN_FORWARDED_PORT_3}
                 ${SECRET_VPN_FORWARDED_PORT_4}
                 ${SECRET_VPN_FORWARDED_PORT_5}
+              # This needs to be a load balancer so that multiple services an use the same IP, but different ports/protocol combinations.
               PORT_FORWARD_DESTINATION_IP: "${VPN_PORT_FORWARD_DESTINATION_LOAD_BALANCER_IP}"
               PROTOCOLS: "tcp udp" # Protocols to apply the rules to
             command:
@@ -169,7 +170,7 @@ spec:
         controller: vpn-gateway
         type: LoadBalancer
         annotations:
-          lbipam.cilium.io/ips: 10.34.0.6
+          lbipam.cilium.io/ips: 10.34.0.5
         ports:
           http-proxy:
             port: 8888

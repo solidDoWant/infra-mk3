@@ -508,8 +508,18 @@ ip-space:
       10.34.0.0/16:
         description: External/load balanced IPs
         vlan: 300
-        10.34.0.1/16:
-          description: Cilium ingress controller load balancer
+        10.34.0.1/32:
+          description: Istio internal gateway
+        10.34.0.2/32:
+          description: Istio external gateway
+        10.34.0.3/32:
+          description: Teleport
+        10.34.0.4/32:
+          description: Unifi controller
+        10.34.0.5/32:
+          description: VPN gateway
+        10.34.0.6/32:
+          description: VPN port forward destination
       10.35.0.0/16:
         description: kube-vip IPs
         vlan: 300
