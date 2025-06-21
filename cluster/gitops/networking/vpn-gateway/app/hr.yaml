@@ -144,53 +144,10 @@ spec:
             options:
               - name: ndots
                 value: "1"
-    configMaps:
-      scripts:
-        data:
-          setup-nat.sh: |
-            #!/bin/sh
-            set -eux
-
-            # Rewrite packets that are port-forwarded by the VPN to the destination IP:Port combo
-            for PORT in ${PORT_FORWARDING_PORTS}; do
-              for PROTOCOL in ${PROTOCOLS}; do
-                iptables -t nat -A PREROUTING -i "${VPN_INTERFACE}" -p "${PROTOCOL}" --match addrtype ! --dst-type LOCAL --dport "${PORT}" -j DNAT --to-destination "${PORT_FORWARD_DESTINATION_IP}":"${PORT}"
-              done
-            done
-
-            # Rewrite the source IP of outgoing packets to the local interface's IP
-            for PORT in ${PORT_FORWARDING_PORTS}; do
-              for PROTOCOL in ${PROTOCOLS}; do
-                iptables -t nat -A POSTROUTING -o "${LOCAL_INTERFACE}"  -p "${PROTOCOL}" --dst "${PORT_FORWARD_DESTINATION_IP}" --dport "${PORT}" -j MASQUERADE
-              done
-            done
-
-            # Rewrite packets that come in the local interface to the VPN interface with the VPN interface source address, but only if they are not destined for the local machine
-            # TODO this is not needed as Cilium does not support routing to service addresses. When/if https://github.com/cilium/cilium/issues/40146 is implemented,
-            # this can be enabled, and applications pods can route traffic via the VPN gateway by running `ip route add <VPN_SERVICE_IP> dev eth0 scope link && ip route add default via <VPN_SERVICE_IP> dev eth0`
-            # iptables -t nat -A POSTROUTING -o "${VPN_INTERFACE}" --match addrtype ! --dst-type LOCAL,BROADCAST,ANYCAST,MULTICAST -j MASQUERADE
-          startup.sh: |
-            #!/bin/sh
-
-            set -eu
-
-            # Set vars based on the pod index. This is used to ensure that each pod connects to a different VPN endpoint.
-            # If they connected to the same endpoint then the endpoint would (statelessly) send packets to each of the pods randomly.
-
-            echo "Setting pod-specific variables for ${POD_NAME}:"
-            for POD_SPECIFIC_VAR in ${POD_SPECIFIC_VARS}; do
-              # Example: WIREGUARD_ADDRESSES="${WIREGUARD_ADDRESSES_0}"
-              eval "export \"${POD_SPECIFIC_VAR}=\$${POD_SPECIFIC_VAR}_${POD_NAME##*-}\""
-              echo "${POD_SPECIFIC_VAR}=$(eval echo "\$${POD_SPECIFIC_VAR}")"
-            done
-
-            echo
-            echo "Starting gluetun..."
-            exec /gluetun-entrypoint "$@"
     persistence:
       setup-nat-scripts: &scripts
         type: configMap
-        identifier: scripts
+        name: vpn-gateway-scripts
         defaultMode: 0755
         advancedMounts:
           vpn-gateway:
