@@ -32,8 +32,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-1-tcp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_1}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_1}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -42,8 +41,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-1-udp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_1}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_1}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -52,8 +50,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-2-tcp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_2}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_2}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -62,8 +59,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-2-udp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_2}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_2}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -72,8 +68,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-3-tcp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_3}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_3}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -82,8 +77,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-3-udp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_3}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_3}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -92,8 +86,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-4-tcp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_4}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_4}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -102,8 +95,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-4-udp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_4}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_4}
                 protocol: UDP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -112,8 +104,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-5-tcp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_5}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_5}
                 protocol: TCP
       - toEndpoints:
           - matchExpressions: *any_namespace
@@ -122,8 +113,7 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-5-udp: "true"
         toPorts:
           - ports:
-              - port: >
-                  ${SECRET_VPN_FORWARDED_PORT_5}
+              - port: !<tag:yaml.org,2002:str> ${SECRET_VPN_FORWARDED_PORT_5}
                 protocol: UDP
     ingress:
       # Kubelet for healthcheck
