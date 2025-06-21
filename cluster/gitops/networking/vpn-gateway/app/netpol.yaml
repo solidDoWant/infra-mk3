@@ -32,6 +32,9 @@ specs:
               endpoints.netpols.home.arpa/vpn-port-1-tcp: "true"
         toPorts:
           - ports:
+              # The value of these secrets are numbers. The field requires a string. By making this a multiline string,
+              # _specifically with a new line char at the end_, the value will be interpreted as a string. Cilium trims
+              # this whitespace automatically, so the final value is just the number, in string form.
               - port: |
                   ${SECRET_VPN_FORWARDED_PORT_1}
                 protocol: TCP
