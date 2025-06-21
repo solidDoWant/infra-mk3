@@ -48,9 +48,6 @@ spec:
                 ${SECRET_VPN_FORWARDED_PORT_5}
               PORT_FORWARD_DESTINATION_IP: "${VPN_PORT_FORWARD_DESTINATION_LOAD_BALANCER_IP}"
               PROTOCOLS: "tcp udp" # Protocols to apply the rules to
-            envFrom:
-              - secretRef:
-                  name: vpn-gateway-credentials
             command:
               - /usr/local/bin/setup-nat.sh
             securityContext:
@@ -95,6 +92,9 @@ spec:
                 valueFrom:
                   fieldRef:
                     fieldPath: metadata.name
+            envFrom:
+              - secretRef:
+                  name: vpn-gateway-credentials
             command:
               - /usr/local/bin/startup.sh
             lifecycle:
