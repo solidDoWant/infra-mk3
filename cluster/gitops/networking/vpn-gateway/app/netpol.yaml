@@ -34,111 +34,111 @@ specs:
           - ports:
               # Use bash substitution for "replace prefix", matching the first entry (empty string),
               # and prepend it with a YAML resolved tag that indicates that the type is a string, not a number.
-              - port: ${SECRET_VPN_FORWARDED_PORT_1/#/!<tag:yaml.org,2002:str> }
+              - port: ${SECRET_VPN_FORWARDED_PORT_1/#/testprefix}
                 protocol: TCP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-1-udp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_1/#/!<tag:yaml.org,2002:str> }
-                protocol: UDP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-2-tcp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_2/#/!<tag:yaml.org,2002:str> }
-                protocol: TCP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-2-udp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_2/#/!<tag:yaml.org,2002:str> }
-                protocol: UDP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-3-tcp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_3/#/!<tag:yaml.org,2002:str> }
-                protocol: TCP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-3-udp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_3/#/!<tag:yaml.org,2002:str> }
-                protocol: UDP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-4-tcp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_4/#/!<tag:yaml.org,2002:str> }
-                protocol: TCP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-4-udp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_4/#/!<tag:yaml.org,2002:str> }
-                protocol: UDP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-5-tcp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_5/#/!<tag:yaml.org,2002:str> }
-                protocol: TCP
-      - toEndpoints:
-          - matchExpressions: *any_namespace
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-listener: "true"
-              endpoints.netpols.home.arpa/vpn-port-5-udp: "true"
-        toPorts:
-          - ports:
-              - port: ${SECRET_VPN_FORWARDED_PORT_5/#/!<tag:yaml.org,2002:str> }
-                protocol: UDP
-    ingress:
-      # Kubelet for healthcheck
-      - fromEntities:
-          - host
-        toPorts:
-          - ports:
-              - port: "9999"
-                protocol: TCP
-      # Proxy ports
-      - fromEndpoints:
-          - matchExpressions:
-              - key: io.kubernetes.pod.namespace
-                operator: Exists
-            matchLabels:
-              endpoints.netpols.home.arpa/vpn-client: "true"
-        toPorts:
-          - ports:
-              # HTTP proxy
-              - port: "8888"
-                protocol: TCP
-              # Shadowsocks proxy
-              - port: "8388"
-                protocol: TCP
-              - port: "8388"
-                protocol: UDP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-1-udp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_1/#/!<tag:yaml.org,2002:str> }
+    #             protocol: UDP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-2-tcp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_2/#/!<tag:yaml.org,2002:str> }
+    #             protocol: TCP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-2-udp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_2/#/!<tag:yaml.org,2002:str> }
+    #             protocol: UDP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-3-tcp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_3/#/!<tag:yaml.org,2002:str> }
+    #             protocol: TCP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-3-udp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_3/#/!<tag:yaml.org,2002:str> }
+    #             protocol: UDP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-4-tcp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_4/#/!<tag:yaml.org,2002:str> }
+    #             protocol: TCP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-4-udp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_4/#/!<tag:yaml.org,2002:str> }
+    #             protocol: UDP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-5-tcp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_5/#/!<tag:yaml.org,2002:str> }
+    #             protocol: TCP
+    #   - toEndpoints:
+    #       - matchExpressions: *any_namespace
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-listener: "true"
+    #           endpoints.netpols.home.arpa/vpn-port-5-udp: "true"
+    #     toPorts:
+    #       - ports:
+    #           - port: ${SECRET_VPN_FORWARDED_PORT_5/#/!<tag:yaml.org,2002:str> }
+    #             protocol: UDP
+    # ingress:
+    #   # Kubelet for healthcheck
+    #   - fromEntities:
+    #       - host
+    #     toPorts:
+    #       - ports:
+    #           - port: "9999"
+    #             protocol: TCP
+    #   # Proxy ports
+    #   - fromEndpoints:
+    #       - matchExpressions:
+    #           - key: io.kubernetes.pod.namespace
+    #             operator: Exists
+    #         matchLabels:
+    #           endpoints.netpols.home.arpa/vpn-client: "true"
+    #     toPorts:
+    #       - ports:
+    #           # HTTP proxy
+    #           - port: "8888"
+    #             protocol: TCP
+    #           # Shadowsocks proxy
+    #           - port: "8388"
+    #             protocol: TCP
+    #           - port: "8388"
+    #             protocol: UDP
