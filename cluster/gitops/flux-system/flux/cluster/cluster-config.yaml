@@ -10,3 +10,6 @@ data:
   NFS_ADDRESS: 10.2.3.1
   NFS_MEDIA_PATH: /mnt/bulk-pool-01/media
   VPN_PORT_FORWARD_DESTINATION_LOAD_BALANCER_IP: 10.34.0.6
+  # Needed until https://github.com/fluxcd/flux2/discussions/1795#discussioncomment-13535401
+  # is resolved.
+  Q: '"'
