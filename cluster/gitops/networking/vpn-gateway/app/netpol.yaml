@@ -130,7 +130,7 @@ specs:
                 operator: Exists
             matchLabels:
               endpoints.netpols.home.arpa/vpn-client: "true"
-        toPorts:
+        toPorts: &proxy_ports
           - ports:
               # HTTP proxy
               - port: "8888"
@@ -140,3 +140,7 @@ specs:
                 protocol: TCP
               - port: "8388"
                 protocol: UDP
+      # Allow intranet traffic to proxy via the VPN gateway
+      - fromCIDRSet:
+          - cidrGroupRef: intranet
+        toPorts: *proxy_ports
