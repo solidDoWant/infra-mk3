@@ -1,0 +1,15 @@
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: minecraft-router
+spec:
+  parentRefs:
+    - name: internal-gateway
+      namespace: networking
+    - name: external-gateway
+      namespace: networking
+  rules:
+    - backendRefs:
+        - name: game-server
+          port: 25565

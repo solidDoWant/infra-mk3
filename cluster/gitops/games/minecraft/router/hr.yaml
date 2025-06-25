@@ -1,0 +1,106 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: minecraft-router
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 3.7.3
+  values:
+    controllers:
+      minecraft-router:
+        replicas: 2
+        strategy: RollingUpdate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/itzg/mc-router
+              tag: 1.32.0
+            env:
+              API_BINDING: 0.0.0.0:80
+              CONNECTION_RATE_LIMIT: "10"
+              IN_KUBE_CLUSTER: "true"
+              METRICS_BACKEND: prometheus
+              RECORD_LOGINS: "true"
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              capabilities:
+                drop:
+                  - ALL
+            ports:
+              - name: web
+                containerPort: 80
+              - name: game-server
+                containerPort: 25565
+            probes:
+              startup:
+                enabled: true
+              readiness:
+                enabled: true
+              liveness:
+                enabled: true
+        pod:
+          labels:
+            endpoints.netpols.home.arpa/minecraft-router: "true"
+          securityContext:
+            fsGroup: 1000
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    serviceAccount:
+      create: true
+    rbac:
+      roles:
+        minecraft-router:
+          type: ClusterRole
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - services
+              verbs:
+                - list
+                - watch
+      bindings:
+        minecraft-router:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: minecraft-router
+          subjects:
+            - identifier: default
+    service:
+      minecraft-router:
+        controller: minecraft-router
+        ports:
+          web:
+            port: 80
+            primary: true
+          game-server:
+            port: 25565
+    # TODO
+    # serviceMonitor:
+    route:
+      minecraft-router:
+        hostnames:
+          - minecraft-router.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - name: minecraft-router
+                port: 80
