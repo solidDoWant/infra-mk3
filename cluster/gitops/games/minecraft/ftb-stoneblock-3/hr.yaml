@@ -47,9 +47,16 @@ spec:
       endpoints.netpols.home.arpa/minecraft-server: "true"
     serviceAnnotations:
       mc-router.itzg.me/externalServerName: ftb-stoneblock-3.minecraft.${SECRET_PUBLIC_DOMAIN_NAME}
-    # TODO
-    # mcbackup:
-    #   enabled: true
+    mcbackup:
+      enabled: true
+      # TODO send this somewhere; probably should add support to backup-tool
+      pauseIfNoPlayers: "true"
+      compressMethod: zstd
+      persistence:
+        backupDir:
+          enabled: true
+          size: 20Gi
+          storageClass: zfs-generic-nfs
     dnsConfig:
       options:
         - name: ndots
