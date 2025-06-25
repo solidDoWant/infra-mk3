@@ -31,8 +31,6 @@ spec:
       motd: "FTB Stoneblock 3"
       pvp: true
       memory: 8192M
-      serviceAnnotations:
-        mc-router.itzg.me/externalServerName: ftb-stoneblock-3.minecraft.${SECRET_PUBLIC_DOMAIN_NAME}
       autoCurseForge:
         apiKey:
           existingSecret: minecraft-curseforge-credentials
@@ -47,6 +45,8 @@ spec:
         Size: 20Gi
     podLabels:
       endpoints.netpols.home.arpa/minecraft-server: "true"
+    serviceAnnotations:
+      mc-router.itzg.me/externalServerName: ftb-stoneblock-3.minecraft.${SECRET_PUBLIC_DOMAIN_NAME}
     # TODO
     # mcbackup:
     #   enabled: true
