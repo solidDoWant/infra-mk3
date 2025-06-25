@@ -82,6 +82,8 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+              - port: "25565"
+                protocol: TCP
       # Metrics
       - &metrics
         fromEndpoints:
@@ -119,6 +121,8 @@ specs:
               - port: "443"
                 protocol: TCP
               - port: "80"
+                protocol: TCP
+              - port: "25565"
                 protocol: TCP
       - fromEntities:
           - cluster
