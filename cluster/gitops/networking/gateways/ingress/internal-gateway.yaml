@@ -54,6 +54,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: minecraft
+      protocol: TCP
+      port: 25565
+      allowedRoutes:
+        namespaces:
+          from: All
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: games
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
