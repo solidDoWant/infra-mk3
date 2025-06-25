@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
   name: &app_name minecraft-shared-credentials
 spec:
-  targetNamespace: media
+  targetNamespace: games
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
@@ -25,7 +25,7 @@ metadata:
   namespace: flux-system
   name: &app_name minecraft-router
 spec:
-  targetNamespace: media
+  targetNamespace: games
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
@@ -47,7 +47,7 @@ metadata:
   namespace: flux-system
   name: &app_name minecraft-ftb-bedrock-3
 spec:
-  targetNamespace: media
+  targetNamespace: games
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
