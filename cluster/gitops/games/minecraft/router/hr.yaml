@@ -55,6 +55,7 @@ spec:
         pod:
           labels:
             endpoints.netpols.home.arpa/minecraft-router: "true"
+            endpoints.netpols.home.arpa/external-ingress-enabled: "true"
           securityContext:
             fsGroup: 1000
           dnsConfig:
