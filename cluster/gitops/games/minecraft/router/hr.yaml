@@ -92,8 +92,16 @@ spec:
             primary: true
           game-server:
             port: 25565
-    # TODO
-    # serviceMonitor:
+    serviceMonitor:
+      minecraft-router:
+        enabled: true
+        serviceName: "{{ .Release.Name }}"
+        endpoints:
+          - port: metrics
+            scheme: http
+            path: /metrics
+            interval: 1m
+            scrapeTimeout: 10s
     route:
       minecraft-router:
         hostnames:
