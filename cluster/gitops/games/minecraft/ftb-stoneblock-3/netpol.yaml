@@ -3,13 +3,13 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: minecraft-ftb-bedrock-3
+  name: minecraft-ftb-stoneblock-3
 specs:
-  - description: minecraft-ftb-bedrock-3
+  - description: minecraft-ftb-stoneblock-3
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: minecraft
-        app.kubernetes.io/instance: minecraft-ftb-bedrock-3
+        app.kubernetes.io/instance: minecraft-ftb-stoneblock-3
     egress:
       # DNS resolution
       - toEndpoints:
