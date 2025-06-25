@@ -7,8 +7,12 @@ spec:
   parentRefs:
     - name: internal-gateway
       namespace: networking
+      sectionName: minecraft
+      port: 25565
     - name: external-gateway
       namespace: networking
+      sectionName: minecraft
+      port: 25565
   rules:
     - backendRefs:
         - name: minecraft-router
