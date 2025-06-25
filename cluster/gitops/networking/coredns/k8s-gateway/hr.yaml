@@ -18,11 +18,8 @@ spec:
   # These values are added now that the cluster has been bootstrapped
   values:
     image:
-      # Needed until https://github.com/k8s-gateway/k8s_gateway/pull/67 is merged and released
-      # repository: ghcr.io/k8s-gateway/k8s_gateway
-      # tag: 1.1.1
-      repository: ghcr.io/soliddowant/k8s_gateway
-      tag: next@sha256:554ae3a2c62e23deb741629ce49582035ba77c2a6e0a7c4353f920624603e647
+      repository: ghcr.io/k8s-gateway/k8s_gateway
+      tag: 1.3.0
     replicaCount: 2
     serviceType: LoadBalancer
     prometheus:
@@ -73,7 +70,7 @@ spec:
             configBlock: |-
               apex coredns-k8s-gateway.networking
               ttl 300
-              resources Ingress Service HTTPRoute TLSRoute
+              resources Ingress Service HTTPRoute TLSRoute DNSEndpoint
               gatewayClasses internal-gateways
           # Resolve PTR records for load-balanced services
           # The currently-used image does not have k8s_external, so forward requests instead.
