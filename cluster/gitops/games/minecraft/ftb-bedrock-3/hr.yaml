@@ -1,0 +1,56 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: minecraft-ftb-bedrock-3
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: minecraft
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: minecraft-server-charts
+      version: 4.26.3
+  values:
+    resources:
+      requests: &requests
+        memory: 8Gi
+        cpu: 4
+      limits: *requests
+    # Ensure that the old pod is completely terminated before the new one is started
+    workloadAsStatefulSet: true
+    strategyType: OnDelete
+    minecraftServer:
+      eula: "TRUE"
+      type: AUTO_CURSEFORGE
+      difficulty: normal
+      ops: solidDoWant
+      motd: "FTB Stoneblock 3"
+      pvp: true
+      memory: 8192M
+      serviceAnnotations:
+        mc-router.itzg.me/externalServerName: ftb-stoneblock-3.minecraft.${SECRET_PUBLIC_DOMAIN_NAME}
+      autoCurseForge:
+        apiKey:
+          existingSecret: minecraft-curseforge-credentials
+        slug: ftb-stoneblock-3
+      rcon:
+        enabled: true
+        existingSecret: minecraft-rcon-credentials
+    persistence:
+      storageClass: ssd-replicated-3x
+      dataDir:
+        enabled: true
+        Size: 20Gi
+    podLabels:
+      endpoints.netpols.home.arpa/minecraft-server: "true"
+    # TODO
+    # mcbackup:
+    #   enabled: true
+    dnsConfig:
+      options:
+        - name: ndots
+          value: "1"

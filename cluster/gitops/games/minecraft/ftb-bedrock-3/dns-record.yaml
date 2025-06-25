@@ -1,0 +1,17 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: minecraft-ftb-bedrock-3
+  labels:
+    external-dns.home.arpa/publish: "true"
+spec:
+  endpoints:
+    - dnsName: ftb-bedrock-3.minecraft.${SECRET_PUBLIC_DOMAIN_NAME}
+      recordTTL: 180
+      recordType: CNAME
+      targets:
+        - public-wan.${SECRET_PUBLIC_DOMAIN_NAME}
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "false"
