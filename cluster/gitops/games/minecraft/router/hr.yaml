@@ -26,7 +26,7 @@ spec:
               repository: ghcr.io/itzg/mc-router
               tag: 1.32.0
             env:
-              API_BINDING: 0.0.0.0:80
+              API_BINDING: 0.0.0.0:8080
               CONNECTION_RATE_LIMIT: "10"
               IN_KUBE_CLUSTER: "true"
               METRICS_BACKEND: prometheus
@@ -43,7 +43,7 @@ spec:
                   - ALL
             ports:
               - name: web
-                containerPort: 80
+                containerPort: 8080
               - name: game-server
                 containerPort: 25565
             probes: &probes
@@ -111,6 +111,7 @@ spec:
         ports:
           web:
             port: 80
+            targetPort: 8080
             primary: true
           game-server:
             port: 25565

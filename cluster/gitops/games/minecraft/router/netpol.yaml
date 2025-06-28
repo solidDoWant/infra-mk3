@@ -26,6 +26,7 @@ specs:
             rules:
               dns:
                 - matchPattern: "*.games.svc.cluster.local"
+                - matchName: discord.com
       # Access to the k8s API to look for endpoints
       - toEntities:
           - kube-apiserver
@@ -41,6 +42,13 @@ specs:
           - ports:
               - port: "25565"
                 protocol: TCP
+      # Call Discord webhook
+      - toFQDNs:
+          - matchName: discord.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -48,6 +56,8 @@ specs:
         toPorts: &webservice_ports
           - ports:
               - port: "80"
+                protocol: TCP
+              - port: "8080"
                 protocol: TCP
       # Gateway to webservice
       - fromEndpoints:
