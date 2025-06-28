@@ -31,7 +31,8 @@ spec:
               IN_KUBE_CLUSTER: "true"
               METRICS_BACKEND: prometheus
               RECORD_LOGINS: "true"
-            securityContext:
+              WEBHOOK_URL: http://localhost/webhook
+            securityContext: &security_context
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
               runAsNonRoot: true
@@ -45,13 +46,27 @@ spec:
                 containerPort: 80
               - name: game-server
                 containerPort: 25565
-            probes:
+            probes: &probes
               startup:
                 enabled: true
               readiness:
                 enabled: true
               liveness:
                 enabled: true
+          discord-notifier:
+            image:
+              repository: python
+              tag: 3.13.5-slim
+            envFrom:
+              - secretRef:
+                  name: minecraft-router-discord-notifier-webhook
+            command:
+              - /scripts/webhook.py
+            securityContext: *security_context
+            ports:
+              - name: web
+                containerPort: 80
+            probes: *probes
         pod:
           labels:
             endpoints.netpols.home.arpa/minecraft-router: "true"
@@ -83,6 +98,13 @@ spec:
             identifier: minecraft-router
           subjects:
             - identifier: default
+    persistence:
+      scripts:
+        type: configMap
+        name: minecraft-router-scripts
+        defaultMode: 0755
+        globalMounts:
+          - path: /scripts
     service:
       minecraft-router:
         controller: minecraft-router

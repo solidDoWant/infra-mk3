@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minecraft-router-discord-notifier-webhook
+type: Opaque
+stringData:
+  DISCORD_WEBHOOK_URL: ENC[AES256_GCM,data:Xx95lFcePVboU+Ccnfm8aDY5TKvnawosCMiHVI4p8B9+WwreB02mWA1gVvno12/fpwVe5tibH3HgvUrR8J8rODDx8ViaBoQ/J+EoXlQXn9UOlSB3R410XNxUc/5J3b+XIC5+LED0ZVZtLyAfmWbNHVHLqtJWf0F2JA==,iv:R95iTRSn0CTcsRLCb1fr0EVdoxo0QJxzgfka4gfE8To=,tag:7m5rA3SKo2MW165u8c/1Fw==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBKOW5MVVRhb1Z1UkNXRHhK
+        N3VLYy9wZFRINUg5dUMrK0dwZUVWVWJsNnk4CkNYVjZCcmZSb0dFcktkc2Zwak1L
+        REk3K3IrZ2hoQkFYMkd6aFJ3blhxNlUKLS0tIFByMU1YWVJ2WFNxSkc4SDRkZ0NF
+        VjU4bDdkZm1pNno0TDVMV2FVYjl4TUEKf50mz/YPmqv/4XgbHPtrzAk9DUjdNRpf
+        KWh0VV/TofEpIXi0J117XDJIF1wjr0m4eSTffnEkUu8X2y9HKgMDAA==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBGcW1HTjE3aDY2bWFQc2Fz
+        allzMW9EWlBRL09TZVVKYjI2eHVlb3RCTms4ClpSQWdteVo0WWhGL013d1RnU1BS
+        VmZ0T2ZzRXd5RWhzQWpPNHhXb2NxOVUKLS0tIFVXNkZDRTNnRmprdHBNYmtyTWVj
+        cGZ6eFdVaURyU1l1cE9CdGg1L1pSZ1EKHGj20D9kDyGyc9ueg/twuvsIfh0ZiM2F
+        LLseJ2YxahAHmOjG9RCgDKi+10Us241Ickkt4T+SGho24oJL1twj3A==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2025-06-28T20:33:24Z"
+  mac: ENC[AES256_GCM,data:ZsRqQYevuAFOG/25++6038SarZOi4WYe/V0ETm8lMtLPY3ZyH4/qHfMFrDjyOmMU8XpYfWoCGx1E7fuNC1jHP5WhpEFRxPEwmXsi46EI3CTixnWMIWDnHdOQSdpu6mA3ex6hlUW5CZzEU2/ldCwbOrDuy++STzebpBXfEAnNWo4=,iv:rGeP6ZG7lCFiwDtgcxxHOGZg6D4vBRIKZ2eZcas5Nw8=,tag:qzWN/HFansfyuL67YlArXg==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0
