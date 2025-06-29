@@ -23,8 +23,9 @@ spec:
         containers:
           app:
             image:
-              repository: ghcr.io/itzg/mc-router
-              tag: 1.32.0
+              # Needed until https://github.com/itzg/mc-router/pull/422, https://github.com/itzg/mc-router/pull/421 merges and are released
+              repository: ghcr.io/soliddowant/mc-router
+              tag: 1.32.0-next
             env:
               API_BINDING: 0.0.0.0:8080
               CONNECTION_RATE_LIMIT: "10"
@@ -32,6 +33,7 @@ spec:
               METRICS_BACKEND: prometheus
               RECORD_LOGINS: "true"
               WEBHOOK_URL: http://localhost/webhook
+              WEBHOOK_REQUIRE_USER: "true"
             securityContext: &security_context
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
