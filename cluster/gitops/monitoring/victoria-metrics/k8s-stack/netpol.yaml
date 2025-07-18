@@ -146,7 +146,7 @@ specs:
               app.kubernetes.io/name: vmalertmanager
         toPorts:
           - ports:
-              - port: web
+              - port: "9093"
                 protocol: TCP
     ingress:
       # Webservice
@@ -221,7 +221,7 @@ specs:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: web
+              - port: "9093"
                 protocol: TCP
       # Gossip protocol between peers
       - fromEndpoints:
