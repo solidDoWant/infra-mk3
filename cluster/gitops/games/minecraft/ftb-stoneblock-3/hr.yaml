@@ -17,7 +17,7 @@ spec:
   values:
     resources:
       requests: &requests
-        memory: 8Gi
+        memory: 12Gi
         cpu: 4
       limits: *requests
     # Ensure that the old pod is completely terminated before the new one is started
