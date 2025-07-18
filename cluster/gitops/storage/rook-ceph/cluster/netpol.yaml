@@ -182,6 +182,9 @@ specs:
           - &rook_ceph_tools_selector
             matchLabels:
               app: rook-ceph-tools
+          - &rook_ceph_crashcollector_selector
+            matchLabels:
+              app: rook-ceph-crashcollector
         toPorts:
           - ports:
               - port: "6800"
@@ -223,9 +226,7 @@ specs:
           - *csi_cephfsplugin_provisioner_selector
           - *rook_ceph_exporter_selector
           - *rook_ceph_tools_selector
-          - &rook_ceph_crashcollector_selector
-            matchLabels:
-              app: rook-ceph-crashcollector
+          - *rook_ceph_crashcollector_selector
         toPorts:
           - ports:
               - port: "3300"
@@ -253,6 +254,7 @@ specs:
           - *csi_cephfsplugin_provisioner_selector
           - *csi_rbdplugin_provisioner_selector
           - *operator_selector
+          - *rook_ceph_tools_selector
   - description: rook-ceph-rgw
     endpointSelector: *rgw_selector
     egress:
@@ -294,3 +296,4 @@ specs:
     egress:
       - *to_monitors
       - *to_managers
+      - *to_osds
