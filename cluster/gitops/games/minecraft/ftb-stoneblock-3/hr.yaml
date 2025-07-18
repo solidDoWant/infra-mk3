@@ -22,7 +22,7 @@ spec:
       limits:
         memory: *memory
     readinessProbe: &probe
-      initialDelaySeconds: 150
+      initialDelaySeconds: 120
     livenessProbe: *probe
     # Ensure that the old pod is completely terminated before the new one is started
     workloadAsStatefulSet: true
@@ -35,8 +35,7 @@ spec:
       motd: "FTB Stoneblock 3"
       pvp: true
       # Heap size settings
-      memory: ""
-      jvmXXOpts: -XX:MaxRAMPercentage=75
+      memory: 6G
       autoCurseForge:
         apiKey:
           existingSecret: minecraft-curseforge-credentials
@@ -58,6 +57,7 @@ spec:
       # TODO send this somewhere; probably should add support to backup-tool
       pauseIfNoPlayers: "true"
       compressMethod: zstd
+      initialDelay: 5m
       persistence:
         backupDir:
           enabled: true
