@@ -13,8 +13,6 @@ spec:
     keyRef:
       key: licenseKey
       name: victoria-metrics-license-key
-  image:
-    tag: v1.110.5-enterprise # Using enterprise requires setting the tag explicitly
   podDisruptionBudget:
     minAvailable: 1
   priorityClassName: system-cluster-critical
