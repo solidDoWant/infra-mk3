@@ -59,10 +59,10 @@ spec:
       compressMethod: zstd
       initialDelay: 5m
       persistence:
+        storageClass: zfs-generic-nfs
         backupDir:
           enabled: true
-          size: 20Gi
-          storageClass: zfs-generic-nfs
+          Size: 20Gi
     dnsConfig:
       options:
         - name: ndots
