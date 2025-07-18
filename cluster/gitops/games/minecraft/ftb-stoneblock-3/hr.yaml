@@ -16,10 +16,11 @@ spec:
       version: 4.26.3
   values:
     resources:
-      requests: &requests
-        memory: 8Gi
+      requests:
+        memory: &memory 8Gi
         cpu: 4
-      limits: *requests
+      limits:
+        memory: *memory
     readinessProbe: &probe
       initialDelaySeconds: 150
     livenessProbe: *probe
