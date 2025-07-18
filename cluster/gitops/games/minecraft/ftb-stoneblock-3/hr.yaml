@@ -30,7 +30,7 @@ spec:
       ops: solidDoWant
       motd: "FTB Stoneblock 3"
       pvp: true
-      memory: 8192M
+      memory: 12000M # This is 288 MB short of the requests/limits above to allow for health checks and other processes
       autoCurseForge:
         apiKey:
           existingSecret: minecraft-curseforge-credentials
