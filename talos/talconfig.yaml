@@ -27,10 +27,10 @@ nodes:
     networkInterfaces:
       - &1g_1
         interface: enp91s0
-        dummy: true
+        ignore: true
       - &1g_2
         interface: enp94s0
-        dummy: true
+        ignore: true
       - &10g_1
         interface: &10g_1_name enp6s0f0np0
         mtu: &jumbo_mtu 9000
