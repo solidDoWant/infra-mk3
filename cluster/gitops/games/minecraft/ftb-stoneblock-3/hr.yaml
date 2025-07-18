@@ -21,7 +21,7 @@ spec:
         cpu: 4
       limits: *requests
     readinessProbe: &probe
-      initialDelaySeconds: 90
+      initialDelaySeconds: 150
     livenessProbe: *probe
     # Ensure that the old pod is completely terminated before the new one is started
     workloadAsStatefulSet: true
@@ -33,7 +33,7 @@ spec:
       ops: solidDoWant
       motd: "FTB Stoneblock 3"
       pvp: true
-      memory: 8000M # This is 192 MB short of the requests/limits above to allow for health checks and other processes
+      memory: 7500M # This is 692 MB short of the requests/limits above to allow for health checks and other processes
       autoCurseForge:
         apiKey:
           existingSecret: minecraft-curseforge-credentials
