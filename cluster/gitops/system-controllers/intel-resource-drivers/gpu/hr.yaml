@@ -7,19 +7,74 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: intel-gpu-resource-driver-chart
+      chart: intel-gpu-resource-driver
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
         namespace: flux-system
         name: intel-resource-drivers-charts
-      version: 0.8.0
+      version: 0.7.0
   values:
-    cdi:
-      staticPath: /var/cdi/static
-      dynamicPath: /var/cdi/dynamic
+    namespaceOverride: "" # Why in the world would this be set by default in the first place?
+    # TODO revert this when/if https://github.com/intel/intel-resource-drivers-for-kubernetes/pull/38 is merged
+    image:
+      repository: ghcr.io/soliddowant
+      tag: v0.7.0-pr.38
     kubeletPlugin:
       nodeSelector:
         intel.feature.node.kubernetes.io/gpu: "true"
-    nodeFeatureRules:
-      enabled: true
+    # See https://github.com/intel/intel-resource-drivers-for-kubernetes/issues/32
+    # nfd:
+    #   enabled: true
+  postRenderers:
+    # Fix https://github.com/intel/intel-resource-drivers-for-kubernetes/issues/34
+    - kustomize:
+        patches:
+          - patch: &patch |
+              - op: replace
+                path: /metadata/labels/app.kubernetes.io~1version
+                value: v0.7.0
+            target:
+              group: apps
+              version: v1
+              kind: DaemonSet
+          - patch: *patch
+            target:
+              kind: ServiceAccount
+    - kustomize:
+        patches:
+          - patch: |
+              # Set the CDI directory to the correct path
+              # This is not released yet
+              # - op: add
+              #   path: /spec/template/spec/containers/0/args
+              #   value:
+              #     - --cdi-root
+              #     - /var/run/cdi
+              # Remove the /etc/cdi mount (otherwise the container cannot start on Talos)
+              # See https://www.talos.dev/v1.9/talos-guides/configuration/containerd/#set-cdi-plugin-spec-dirs-to-writable-directories
+              - op: remove
+                path: /spec/template/spec/volumes/2
+              - op: remove
+                path: /spec/template/spec/containers/0/volumeMounts/2
+              # Mount the /var/run/cdi directory to /etc/cdi
+              - op: replace
+                path: /spec/template/spec/containers/0/volumeMounts/2/mountPath
+                value: /etc/cdi
+            target:
+              group: apps
+              version: v1
+              kind: DaemonSet
+    # Delete the namespace
+    # Honestly who TF thought that adding a namespace, that cannot be configured or disabled, was a good idea?
+    - kustomize:
+        patches:
+          - patch: |
+              $patch: delete
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: intel-gpu-resource-driver
+            target:
+              kind: Namespace
+              name: intel-gpu-resource-driver
