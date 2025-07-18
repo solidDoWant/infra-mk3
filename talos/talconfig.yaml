@@ -272,7 +272,7 @@ patches:
               # Enable the Container Device Interface
               [plugins."io.containerd.grpc.v1.cri"]
                 enable_cdi = true
-                cdi_spec_dirs = ["/var/run/cdi"]
+                cdi_spec_dirs = ["/var/cdi/static", "/var/cdi/dynamic"]
   # Configure containerd metrics
   # Disabled for now, this destroyed my cluster somehow last time it was enabled
   # - |-
