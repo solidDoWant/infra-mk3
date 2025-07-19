@@ -122,7 +122,7 @@ spec:
         enabled: true
         serviceName: "{{ .Release.Name }}"
         endpoints:
-          - port: metrics
+          - port: web
             scheme: http
             path: /metrics
             interval: 1m
