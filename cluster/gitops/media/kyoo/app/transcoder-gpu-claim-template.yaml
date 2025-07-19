@@ -1,6 +1,6 @@
 ---
 # This relies on the beta resource claim API + the Intel GPU resource driver.
-apiVersion: resource.k8s.io/v1beta1
+apiVersion: resource.k8s.io/v1beta2
 kind: ResourceClaimTemplate
 metadata:
   name: kyoo-transcoder-gpu
@@ -9,4 +9,8 @@ spec:
     devices:
       requests:
         - name: gpu
-          deviceClassName: gpu.intel.com
+          exactly:
+            deviceClassName: gpu.intel.com
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro'
