@@ -12,19 +12,11 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: fluent-charts
-      version: 3.3.0
+      version: 3.4.0
   values:
     containerRuntime: containerd
     Kubernetes: false # Don't deploy the built-in k8s pipeline
     operator:
-      container:
-        # The chart values in the Helm chart git repo does not match the
-        # chart values in the upstream fluent-operator repo (WTF?)
-        # The tag points to "latest", and the registry/repo points to
-        # someplace completely different
-        repository: ghcr.io/fluent/fluent-operator/fluent-operator
-        # Needed until https://github.com/fluent/helm-charts/issues/596 is fixed
-        tag: v3.3.0
       extraArgs:
         - --leader-elect=true
     fluentbit:
@@ -103,21 +95,6 @@ spec:
                   httpGet:
                     path: /healthz
                     port: 8081
-            target: *patch_deployment_target
-    # Add TSCs
-    - kustomize:
-        patches:
-          - patch: |
-              - op: add
-                path: /spec/template/spec/topologySpreadConstraints
-                value:
-                  - maxSkew: 1 # Skew of 1 allows for rolling updates
-                    topologyKey: kubernetes.io/hostname
-                    labelSelector:
-                      matchLabels:
-                        app.kubernetes.io/name: fluent-operator
-                        app.kubernetes.io/component: operator
-                    whenUnsatisfiable: DoNotSchedule
             target: *patch_deployment_target
     # Deploy a replica
     - kustomize:
