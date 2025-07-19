@@ -75,3 +75,12 @@ specs:
           - ports:
               - port: "25565"
                 protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
