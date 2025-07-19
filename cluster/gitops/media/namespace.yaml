@@ -7,4 +7,4 @@ metadata:
     # Needed as of k8s 1.33 so that pods can share a GPU.
     # TODO try the new partitioning feature. The docs only mention using multiple physical devices, but it might
     # be possible to partition a single physical device into multiple logical devices.
-    kubernetes.io/dra-admin-access: "true"
+    resource.k8s.io/admin-access: "true"
