@@ -270,7 +270,9 @@ patches:
               [plugins.'io.containerd.cri.v1.images']
                 discard_unpacked_layers = false
               # Enable the Container Device Interface
-              [plugins."io.containerd.grpc.v1.cri"]
+              # Important: this matches https://www.talos.dev/v1.10/talos-guides/configuration/containerd/#set-cdi-plugin-spec-dirs-to-writable-directories,
+              # which differs https://github.com/cncf-tags/container-device-interface/blob/fc17f514320237420424663de905720e11b1668b/README.md#containerd-configuration
+              [plugins."io.containerd.cri.v1.runtime"]
                 enable_cdi = true
                 cdi_spec_dirs = ["/var/cdi/static", "/var/cdi/dynamic"]
   # Configure containerd metrics
