@@ -16,7 +16,7 @@ RUN mkdir -pv /tmp/debs && \
     # SOPS
     curl -fsSL -o /tmp/debs/sops.deb "https://github.com/getsops/sops/releases/download/v3.9.0/sops_3.9.0_${PRETTY_ARCH}.deb" && \
     # Teleport
-    curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_17.0.3_${PRETTY_ARCH}.deb" && \
+    curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_18.1.4_${PRETTY_ARCH}.deb" && \
     # jsonnet
     curl -fsSL -o /tmp/debs/jsonnet.deb "https://github.com/google/go-jsonnet/releases/download/v0.20.0/jsonnet-go_0.20.0_${KERNEL}_${PRETTY_ARCH}.deb" && \
     dpkg -i /tmp/debs/*.deb && \
