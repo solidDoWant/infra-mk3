@@ -25,16 +25,16 @@ common:
 devices:
   proxmox-vm-host-01:
     physical:
-      enp137s0:
+      nic4:
         mtu: *jumbo_mtu
         description: "LAN interface, 56G QSFP+ #1"
-      eno1:
+      nic2:
         mtu: *standard_mtu
         description: XGS-PON WAN
     bonds:
       bond0:
         slaves:
-          - enp137s0
+          - nic4
         mtu: *jumbo_mtu
         description: LAN interface bond to switch-01
     _default_vlan_config: &proxmox_vlan_defaults
@@ -54,7 +54,7 @@ devices:
       "600": *proxmox_vlan_defaults
     bridges:
       vmbrWAN:
-        raw-device: eno1
+        raw-device: nic2
         description: WAN to XGS-PON bridge
         mtu: *standard_mtu
         local-interface:

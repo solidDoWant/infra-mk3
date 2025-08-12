@@ -9,7 +9,9 @@
 
 - name: Add the tzpfms repository
   ansible.builtin.apt_repository:
-    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }} {{ ansible_distribution_release }} main
+    # This needs to be `sid` until tzpfms adds a `trixie` dist
+    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }} sid main
+    # repo: deb [signed-by={{ key_path }}] https://{{ domain_name }} {{ ansible_distribution_release }} main
     state: present
     filename: tzpfms
     update_cache: true
