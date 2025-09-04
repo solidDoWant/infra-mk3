@@ -19,6 +19,8 @@ spec:
     controllers:
       whereabouts:
         type: daemonset
+        serviceAccount:
+          identifier: whereabouts-cni
         pod:
           hostNetwork: true
           priorityClassName: system-node-critical
