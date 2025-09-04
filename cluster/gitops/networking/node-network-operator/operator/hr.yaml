@@ -13,13 +13,14 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: soliddowant-charts
-      version: 0.0.2
+      version: 0.0.3
   values:
     config:
       crds:
         # These are installed via a separate Kustomization
         enabled: false
       webhook:
+        enableTLS: true
         issuerRef:
           kind: Issuer
           name: networking-intermediary-ca
