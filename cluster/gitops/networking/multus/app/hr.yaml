@@ -1,0 +1,206 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: multus
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      multus:
+        type: daemonset
+        pod:
+          hostNetwork: true
+          # This is required per https://github.com/k8snetworkplumbingwg/multus-cni/commit/fb31217e2cf376f9e7f00857b443c7f8cc473775
+          hostPID: true
+          priorityClassName: system-node-critical
+          tolerations:
+            - operator: Exists
+          nodeSelector:
+            kubernetes.io/os: linux
+          securityContext:
+            # Required to manage netlink devices
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+            seccompProfile:
+              type: RuntimeDefault
+        defaultContainerOptions:
+          image:
+            repository: ghcr.io/k8snetworkplumbingwg/multus-cni
+            tag: v4.2.2-thick
+          resources:
+            requests:
+              cpu: 10m
+              memory: &memory 64Mi
+            limits:
+              memory: *memory
+        initContainers:
+          install-multus-binary:
+            command:
+              - sh
+              - -c
+              - >
+                cp /usr/src/multus-cni/bin/multus-shim /host/opt/cni/bin/multus-shim && 
+                cp /usr/src/multus-cni/bin/passthru /host/opt/cni/bin/passthru
+            terminationMessagePolicy: FallbackToLogsOnError
+            securityContext:
+              readOnlyRootFilesystem: true
+        containers:
+          multus:
+            env:
+              MULTUS_NODE_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+            securityContext:
+              readOnlyRootFilesystem: true
+            terminationMessagePolicy: FallbackToLogsOnError
+    persistence:
+      host-cni-bin:
+        type: hostPath
+        hostPath: /opt/cni/bin
+        advancedMounts:
+          multus:
+            install-multus-binary:
+              - path: /host/opt/cni/bin
+                mountPropagation: Bidirectional
+            multus:
+              - path: /opt/cni/bin
+      host-cni-netd:
+        type: hostPath
+        hostPath: /etc/cni/net.d
+        advancedMounts:
+          multus:
+            multus:
+              - path: /host/etc/cni/net.d
+      host-root:
+        type: hostPath
+        hostPath: /
+        advancedMounts:
+          multus:
+            multus:
+              - path: /hostroot
+                mountPropagation: HostToContainer
+      host-run:
+        type: hostPath
+        hostPath: /run
+        advancedMounts:
+          multus:
+            multus:
+              - path: /host/run
+      host-var-lib-cni-multus:
+        type: hostPath
+        hostPath: /var/lib/cni/multus
+        advancedMounts:
+          multus:
+            multus:
+              - path: /var/lib/cni/multus
+      host-var-lib-kubelet:
+        type: hostPath
+        hostPath: /var/lib/kubelet
+        advancedMounts:
+          multus:
+            multus:
+              - path: /var/lib/kubelet
+                mountPropagation: HostToContainer
+      host-run-k8s-cni-cncf-io:
+        type: hostPath
+        hostPath: /run/k8s.cni.cncf.io
+        advancedMounts:
+          multus:
+            multus:
+              - path: /run/k8s.cni.cncf.io
+      host-run-netns:
+        type: hostPath
+        hostPath: /run/netns
+        advancedMounts:
+          multus:
+            multus:
+              - path: /run/netns
+                mountPropagation: HostToContainer
+      host-multus-conf-dir:
+        type: hostPath
+        hostPath: /etc/cni/multus/net.d
+        advancedMounts:
+          multus:
+            multus:
+              - path: /etc/cni/multus/net.d
+      daemon-config:
+        type: configMap
+        identifier: daemon-config
+        items:
+          - key: daemon-config.json
+            path: daemon-config.json
+        advancedMounts:
+          multus:
+            multus:
+              - path: /etc/cni/net.d/multus.d
+                readOnly: true
+    configMaps:
+      daemon-config:
+        data:
+          # TODO
+          daemon-config.json: |
+            {
+                "cniVersion": "0.3.1",
+                "chrootDir": "/hostroot",
+                "logLevel": "verbose",
+                "logToStderr": true,
+                "cniConfigDir": "/host/etc/cni/net.d",
+                "multusAutoconfigDir": "/host/etc/cni/net.d",
+                "multusConfigFile": "auto",
+                "socketDir": "/host/run/multus/",
+                "namespaceIsolation": true,
+                "globalNamespaces": "networking"
+            }
+    serviceAccount:
+      multus: {}
+    rbac:
+      roles:
+        multus:
+          type: ClusterRole
+          rules:
+            - apiGroups:
+                - k8s.cni.cncf.io
+              resources:
+                - "*"
+              verbs:
+                - "*"
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+                - pods/status
+              verbs:
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - events.k8s.io
+              resources:
+                - events
+              verbs:
+                - create
+                - patch
+                - update
+      bindings:
+        multus:
+          type: ClusterRoleBinding
+          roleRef:
+            kind: ClusterRole
+            identifier: multus
+          subjects:
+            - kind: ServiceAccount
+              identifier: multus
