@@ -44,16 +44,15 @@ spec:
               memory: &memory 64Mi
             limits:
               memory: *memory
-          env:
-            WHEREABOUTS_NAMESPACE:
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
         initContainers:
           installer-token-watcher:
             restartPolicy: Always
             env:
               SLEEP: "false"
+              WHEREABOUTS_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
             command:
               - sh
               - -c
@@ -65,6 +64,10 @@ spec:
         containers:
           ip-controller:
             env:
+              WHEREABOUTS_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
               NODENAME:
                 valueFrom:
                   fieldRef:
