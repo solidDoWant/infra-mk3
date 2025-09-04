@@ -1,0 +1,171 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: whereabouts
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      whereabouts:
+        type: daemonset
+        pod:
+          hostNetwork: true
+          priorityClassName: system-node-critical
+          tolerations:
+            - operator: Exists
+          nodeSelector:
+            kubernetes.io/os: linux
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+        defaultContainerOptions:
+          image:
+            repository: ghcr.io/k8snetworkplumbingwg/whereabouts
+            tag: v0.9.2
+          resources:
+            requests:
+              cpu: 10m
+              memory: &memory 64Mi
+            limits:
+              memory: *memory
+          env:
+            WHEREABOUTS_NAMESPACE:
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+        initContainers:
+          installer-token-watcher:
+            restartPolicy: Always
+            env:
+              SLEEP: "false"
+            command:
+              - sh
+              - -c
+              - |
+                source /install-cni.sh
+                /token-watcher.sh
+            securityContext:
+              readOnlyRootFilesystem: true
+        containers:
+          ip-controller:
+            env:
+              NODENAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+            command:
+              - /ip-control-loop
+            securityContext:
+              readOnlyRootFilesystem: true
+    persistence:
+      host-cni-bin:
+        type: hostPath
+        hostPath: /opt/cni/bin
+        advancedMounts:
+          whereabouts:
+            installer-token-watcher:
+              - path: /host/opt/cni/bin
+      host-cni-netd:
+        type: hostPath
+        hostPath: /etc/cni/net.d
+        globalMounts:
+          - path: /host/etc/cni/net.d
+      cni-config:
+        type: configMap
+        identifier: cni-config
+        items:
+          - key: cron-expression
+            path: config
+        advancedMounts:
+          whereabouts:
+            ip-controller:
+              - path: /cron-schedule
+    configMaps:
+      cni-config:
+        data:
+          cron-expression: 30 * * * *
+    serviceAccount:
+      whereabouts-cni: {}
+    rbac:
+      roles:
+        whereabouts-cni:
+          type: ClusterRole
+          rules:
+            - apiGroups:
+                - whereabouts.cni.cncf.io
+              resources:
+                - ippools
+                - overlappingrangeipreservations
+                - nodeslicepools
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+                - update
+                - patch
+                - delete
+            - apiGroups:
+                - coordination.k8s.io
+              resources:
+                - leases
+              verbs:
+                - "*"
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+              verbs:
+                - list
+                - watch
+                - get
+            - apiGroups:
+                - ""
+              resources:
+                - nodes
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - k8s.cni.cncf.io
+              resources:
+                - network-attachment-definitions
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - events.k8s.io
+              resources:
+                - events
+              verbs:
+                - create
+                - patch
+                - update
+                - get
+      bindings:
+        whereabouts-cni:
+          type: ClusterRoleBinding
+          roleRef:
+            kind: ClusterRole
+            identifier: whereabouts-cni
+          subjects:
+            - kind: ServiceAccount
+              identifier: whereabouts-cni
