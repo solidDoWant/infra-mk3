@@ -29,11 +29,9 @@ spec:
           nodeSelector:
             kubernetes.io/os: linux
           securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            runAsNonRoot: true
-            fsGroup: 1000
-            fsGroupChangePolicy: OnRootMismatch
+            # Needed to write to host filesystem
+            runAsUser: 0
+            runAsGroup: 0
             seccompProfile:
               type: RuntimeDefault
         defaultContainerOptions:
