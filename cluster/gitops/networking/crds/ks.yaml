@@ -28,7 +28,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/networking/crds/net-attachment-definition
+  path: /cluster/gitops/networking/crds/network-attachment-definition
   prune: false # Don't ever drop the CRDs
   sourceRef:
     kind: GitRepository
