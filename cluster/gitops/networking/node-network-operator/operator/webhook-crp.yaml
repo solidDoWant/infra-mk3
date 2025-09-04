@@ -1,0 +1,43 @@
+---
+# Approve the the node-network-operator-operator-webhook certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  # This must be abbreviated to 63 characters or less.
+  name: networking-intermediary-ca-node-network-operator-webhook
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: networking-intermediary-ca
+    namespace:
+      matchNames:
+        - data
+  allowed:
+    commonName:
+      required: true
+      value: Node Network Operator
+    dnsNames:
+      required: true
+      values:
+        - node-network-operator
+        - node-network-operator.networking.svc
+        - node-network-operator.networking.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 4h
