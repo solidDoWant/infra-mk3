@@ -55,6 +55,7 @@ spec:
                 cp /usr/src/multus-cni/bin/passthru /host/opt/cni/bin/passthru
             terminationMessagePolicy: FallbackToLogsOnError
             securityContext:
+              privileged: true
               readOnlyRootFilesystem: true
         containers:
           multus:
@@ -64,6 +65,7 @@ spec:
                   fieldRef:
                     fieldPath: spec.nodeName
             securityContext:
+              privileged: true
               readOnlyRootFilesystem: true
             terminationMessagePolicy: FallbackToLogsOnError
     persistence:
