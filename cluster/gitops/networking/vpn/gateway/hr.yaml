@@ -55,11 +55,14 @@ spec:
               PROTOCOLS: "tcp udp" # Protocols to apply the rules to
               # These variable values are different for each pod. See the startup script below,
               # the statefulset note above, and the vpn-credentials secret.
-              POD_SPECIFIC_VARS: "WIREGUARD_ADDRESSES SERVER_COUNTRIES"
+              POD_SPECIFIC_VARS: WIREGUARD_ADDRESSES
               POD_NAME:
                 valueFrom:
                   fieldRef:
                     fieldPath: metadata.name
+            envFrom:
+              - secretRef:
+                  name: vpn-gateway-credentials
             command:
               - /usr/local/bin/setup-nat.sh
             securityContext:
