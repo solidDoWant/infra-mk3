@@ -1,3 +1,4 @@
+# These links are for the VPN gateway network.
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
 # This is the link that pods will join to via the bridge CNI plugin. The bridge VNI plugins will add one end of a veth pair to this bridge, and
@@ -45,4 +46,41 @@ spec:
     master:
       name: vpn-gateway-bridge
     # This is 50 less than the MTU of the underlying link (bond0) to account for VXLAN overhead.
+    mtu: 8950
+...
+# These links are for the router pod network (conntrackd + keepalived syncing).
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
+kind: Link
+metadata:
+  name: vpn-router-bridge
+spec:
+  interfaceName: vpn-r-bridge0
+  bridge: {}
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
+kind: Link
+metadata:
+  name: vpn-router-vxlan-dev
+spec:
+  interfaceName: bond0
+  unmanaged: {}
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
+kind: Link
+metadata:
+  name: vpn-router-vxlan
+spec:
+  interfaceName: vpn-r-vxlan0
+  vxlan:
+    vnid: 2000
+    # Multiple VXLANs can use the same multicast address, but they must have different VNIDs.
+    remoteIPAddress: 224.0.0.88
+    device:
+      name: vpn-router-vxlan-dev
+    master:
+      name: vpn-router-bridge
     mtu: 8950

@@ -1,3 +1,4 @@
+# These NADs are for the VPN gateway network.
 ---
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
@@ -66,6 +67,28 @@ spec:
           {"dst": "128.0.0.0/1"}
         ],
         "gateway": "192.168.50.240"
+      },
+      "mtu": 1450
+    }
+...
+# These NADs are for the router pod network.
+# TODO all pods in all namespaces can reference this NAD with how I have multus configured.
+# Need to restrict this one to just the router pods.
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: vpn-router-network-router-pods
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "vpn-router-network-router-pods",
+      "type": "bridge",
+      "bridge": "vpn-r-bridge0",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "192.168.51.0/24",
       },
       "mtu": 1450
     }
