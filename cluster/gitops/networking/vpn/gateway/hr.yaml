@@ -24,10 +24,6 @@ spec:
         # If this was implemented via two different deployments, then upgrades would terminate both pods at the same time,
         # which would cause a short downtime. With a statefulset, the pods are terminated one by one, so there is no downtime.
         type: statefulset
-        annotations:
-          # Attach the pod to the VPN gateway network using the gateway-network-vpn-gateway-pods network attachment definition.
-          # The interface name within the pod will be vpn-gw-veth0.
-          k8s.v1.cni.cncf.io/networks: gateway-network-vpn-gateway-pods@vpn-gw-veth0
         initContainers:
           # Configures iptables rules to forward traffic from the VPN exit node to the destination IP.
           # The destination IP address is a load balancer service. Applications that want to receive
@@ -322,6 +318,10 @@ spec:
         pod:
           labels:
             endpoints.netpols.home.arpa/vpn-gateway: "true"
+          annotations:
+            # Attach the pod to the VPN gateway network using the gateway-network-vpn-gateway-pods network attachment definition.
+            # The interface name within the pod will be vpn-gw-veth0.
+            k8s.v1.cni.cncf.io/networks: gateway-network-vpn-gateway-pods@vpn-gw-veth0
           dnsConfig:
             options:
               - name: ndots
