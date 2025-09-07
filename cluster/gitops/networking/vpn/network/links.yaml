@@ -34,11 +34,14 @@ metadata:
 spec:
   interfaceName: vpn-gw-vxlan0
   vxlan:
+    # This is an arbitrary value but it needs to be unique across all VXLANs in the cluster.
     vnid: 1000
     # This address is subnet-local, and will not be propagated to other subnets by routers.
     remoteIPAddress: 224.0.0.88
+    # This is the device that will carry the VXLAN traffic.
     device:
       name: vpn-gateway-vxlan-dev
+    # Tie the interface to the bridge so that pods veth interfaces can send traffic over the VXLAN.
     master:
       name: vpn-gateway-bridge
     # This is 50 less than the MTU of the underlying link (bond0) to account for VXLAN overhead.
