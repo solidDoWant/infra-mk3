@@ -36,7 +36,7 @@ spec:
   vxlan:
     vnid: 1000
     # This address is subnet-local, and will not be propagated to other subnets by routers.
-    remoteIPAddress: 244.0.0.88
+    remoteIPAddress: 224.0.0.88
     device:
       name: vpn-gateway-vxlan-dev
     master:
