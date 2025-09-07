@@ -4,6 +4,7 @@ kind: Kustomization
 configMapGenerator:
   - name: vpn-gateway-scripts
     files:
+      - ./set-env-vars.sh
       - ./setup-nat.sh
       - ./startup.sh
     options:
