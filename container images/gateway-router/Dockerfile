@@ -12,7 +12,7 @@ cat << EOF_SCRIPT > /usr/bin/ping-via-gateway
 #!/bin/bash
 set -euo pipefail
 
-GATEWAY_ADDRESS="\$(nmap -sn "\${1}" | grep 'MAC Address' | cut -d' ' -f3)"
+GATEWAY_ADDRESS="\$(nmap -sn -n "\${1}" | grep 'MAC Address' | cut -d' ' -f3)"
 if [ -z "\${GATEWAY_ADDRESS}" ]; then
     >&2 echo "Could not determine gateway address"
     exit 1
