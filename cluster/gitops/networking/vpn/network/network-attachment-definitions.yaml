@@ -78,12 +78,12 @@ spec:
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
 metadata:
-  name: vpn-router-network-router-pods
+  name: gateway-router-network
 spec:
   config: |
     {
       "cniVersion": "0.3.0",
-      "name": "vpn-router-network-router-pods",
+      "name": "gateway-router-network",
       "type": "bridge",
       "bridge": "vpn-r-bridge0",
       "ipam": {
