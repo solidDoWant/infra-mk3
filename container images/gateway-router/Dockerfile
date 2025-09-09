@@ -7,22 +7,7 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Add a basic health check script.
-RUN <<EOF
-cat << EOF_SCRIPT > /usr/bin/ping-via-gateway
-#!/bin/bash
-set -euo pipefail
-
-GATEWAY_ADDRESS="\$(nmap -sn -n "\${1}" | grep 'MAC Address' | cut -d' ' -f3)"
-if [ -z "\${GATEWAY_ADDRESS}" ]; then
-    >&2 echo "Could not determine gateway address"
-    exit 1
-fi
-
-exec nping --icmp --count 1 --dest-mac "\${GATEWAY_ADDRESS}" "\${2}"
-EOF_SCRIPT
-
-chmod +x /usr/bin/ping-via-gateway
-EOF
+COPY ping-via-gateway.sh /usr/bin/ping-via-gateway
 
 # Most of the operations will require root specifically.
 USER 0:0
