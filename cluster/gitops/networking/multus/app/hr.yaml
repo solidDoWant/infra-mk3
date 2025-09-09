@@ -42,7 +42,7 @@ spec:
           resources:
             requests:
               cpu: 10m
-              memory: &memory 64Mi
+              memory: &memory 256Mi
             limits:
               memory: *memory
         initContainers:
@@ -175,7 +175,7 @@ spec:
             - apiGroups:
                 - k8s.cni.cncf.io
               resources:
-                - "*"
+                - network-attachment-definitions
               verbs:
                 - "*"
             - apiGroups:
