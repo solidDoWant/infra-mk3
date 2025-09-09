@@ -1,7 +1,7 @@
 BASE_IMAGE = ubuntu:25.04
 IMAGE_TAG = latest
 
-NEW_IMAGE = ghcr.io/soliddowant/vpn-router
+NEW_IMAGE = ghcr.io/soliddowant/gateway-router
 NEW_IMAGE_FULL = $(NEW_IMAGE):$(IMAGE_TAG)
 
 .PHONY: all
