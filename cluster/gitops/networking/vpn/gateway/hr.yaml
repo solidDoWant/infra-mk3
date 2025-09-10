@@ -80,6 +80,9 @@ spec:
               PGID: "1000"
               VERSION_INFORMATION: "off"
               HEALTH_VPN_DURATION_INITIAL: 10s
+              # Listen on all interfaces
+              # TODO iptables rule to block traffic from tun0
+              HEALTH_SERVER_ADDRESS: ":9999"
               # Handled via netpols
               FIREWALL_ENABLED_DISABLING_IT_SHOOTS_YOU_IN_YOUR_FOOT: "off"
               # Allow all non-reserved ranges.

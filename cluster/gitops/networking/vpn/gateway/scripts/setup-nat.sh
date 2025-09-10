@@ -25,3 +25,5 @@ done
 # Rewrite packets that come in the local interface to the VPN interface with the VPN interface source address, but only if they are not destined for the local machine
 # Sending packets for with a source IP within the VPN gateway subnet would result in the destination not knowing how to route the reply packets back
 iptables -t nat -A POSTROUTING -o "${VPN_INTERFACE}" --match addrtype ! --dst-type LOCAL,BROADCAST,ANYCAST,MULTICAST -j MASQUERADE
+
+# TODO iptables rule to block traffic from tun0
