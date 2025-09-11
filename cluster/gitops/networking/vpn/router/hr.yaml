@@ -83,6 +83,31 @@ spec:
               - name: net.ipv4.conf.all.send_redirects
                 value: "0"
 
+              # Ignore ARP requests on all interfaces except the one that owns the IP address. This is important to ensure that only the master responds to ARP
+              # requests for the VIP. If the backup were to respond, learning switches could end up thinking that the MAC is accessible on the wrong port.
+              # TODO not 100% sure that this is needed in a network that is exclusively bridges tied together with a VXLAN
+              - name: net.ipv4.conf.all.arp_ignore
+                value: "1"
+
+              # Ensure that ARP requests only include the source IP tied to the actual interface. This helps to avoid confusing switches/bridges with learning enabled.
+              # TODO not 100% sure that this is needed in a network that is exclusively bridges tied together with a VXLAN
+              - name: net.ipv4.conf.all.arp_announce
+                value: "2"
+
+              # These cover the other interface on the gateway network
+              - name: net.ipv4.conf.vpn-gw-veth0.arp_ignore
+                value: "1"
+
+              - name: net.ipv4.conf.vpn-gw-veth0.arp_announce
+                value: "2"
+
+              # These cover the MACVLAN interface that will be created/removed by keepalived
+              - name: net.ipv4.conf.default.arp_ignore
+                value: "1"
+
+              - name: net.ipv4.conf.default.arp_announce
+                value: "2"
+
               # It is important to set this to a static value for all pods, otherwise they will all generate a different random seed at startup
               # and packets could be forwarded to different gateways when router pods fail over. This can be any positive, non-zero integer.
               # This is a per-netns variable - see https://lists.openwall.net/netdev/2024/06/03/48
@@ -127,15 +152,15 @@ spec:
             readOnly: true
     configMaps:
       keepalived:
-        # keepalived will reload its configuration when the file changes, so there is no need to restart the pod.
-        includeInChecksum: false
         data:
           keepalived.conf: |
             global_defs {
-                # Log VRRP advertisements for virtual router IDs not configured
+                # Log VRRP advertisements for virtual router IDs not configured.
                 log_unknown_vrids
-                # Try to validate the configuration before reloading it
-                reload_check_config
+
+                # This is needed to allow keepalived to run the VRRP notify scripts.
+                enable_script_security
+                script_user root root
             }
 
             vrrp_instance router {
@@ -149,9 +174,25 @@ spec:
 
                 virtual_ipaddress {
                     # This is the router virtual IP address, and the link to attach it to
-                    # TODO investigate enabling macvlan here to avoid possible switch MAC learning issues
-                    192.168.50.240/24 dev vpn-gw-veth0
+                    # MACVLAN is used to avoid issues with arising from stale ARP entries in clients and
+                    # switches/bridges with learning enabled.
+                    # noprefixroute is needed to prevent the kernel from adding the link-scoped route automatically.
+                    # Without this, the route will get appended instead of prepended, and will never be matched.
+                    # See below for the workaround.
+                    192.168.50.240/24 dev vpn-gw-veth0 use_vmac noprefixroute
                 }
+
+                # Add/del a route to the local subnet with the VIP as the source. This will cause packets to use the VIP
+                # as the source address when routing to the local subnet. This is needed to make sure that ICMP messages
+                # (e.g. "fragmentation needed" or "time exceeded") are sent from the VIP address.
+
+                # For some weird reason keepalived tries to process virtual_routes prior to brining the MACVLAN interface up,
+                # which causes the route entries to fail. This causes keepalived to move to "FAULT" state.
+                # To work around this, add the routes manually using the notify scripts.
+                notify_master "/sbin/ip route prepend 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
+                notify_backup "/sbin/ip route del 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
+                notify_fault "/sbin/ip route del 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
+                notify_stop "/sbin/ip route del 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
             }
     service:
       metrics:

@@ -247,12 +247,9 @@ patches:
           serializeImagePulls: false
           allowedUnsafeSysctls:
             # These are needed for the VPN router pods
-            # This is more rigid than I'd like but it's needed until
+            # This is scoped wider than I'd like but it's needed until
             # https://github.com/kubernetes/kubernetes/issues/134003 is addressed
-            - net.ipv4.conf.vpn-gw-veth0.send_redirects
-            - net.ipv4.conf.all.send_redirects
-            # TODO replace the above once the issue is fixed
-            # - net.ipv4.conf.*.send_redirects
+            - net.ipv4.conf.*
             - net.ipv4.fib_multipath_hash_seed
             - net.ipv4.fib_multipath_hash_policy
             # I'm not using these yet, but they might be useful in future
