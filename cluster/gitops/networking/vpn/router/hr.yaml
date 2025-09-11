@@ -1,0 +1,169 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vpn-router
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      vpn-router:
+        replicas: 2
+        strategy: RollingUpdate
+        defaultContainerOptions:
+          image:
+            # This image includes both keepalived and the gateway route manager itself
+            repository: ghcr.io/soliddowant/gateway-route-manager
+            tag: 0.0.5-extended
+          # Needed for netlink access
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+        containers:
+          # This container advertises the router virtual IP address using Virtual Router Redundancy Protocol (VRRP),
+          # a first hop redundancy protocol (FHRP).
+          keepalived:
+            command:
+              - keepalived
+            args:
+              - --dont-fork
+              - --log-console
+              - --log-detail
+              - --no-syslog
+              - --dump-conf
+          # This container monitors the VPN gateway endpoints and updates routes in the namespace's routing table
+          # to ensure that traffic is load balanced across all available VPN gateways.
+          gateway-route-manager:
+            command:
+              - gateway-route-manager
+            args:
+              - --check-period=1s
+              - --timeout=750ms
+              - --port=9999
+              - --start-ip=192.168.50.248
+              - --end-ip=192.168.50.254
+              # Enable this for some additional logging. This will generate several lines per second, and can make it harder to see other log messages.
+              # - --log-level=debug
+            ports:
+              - name: metrics
+                containerPort: 9090
+        pod:
+          annotations:
+            # Attach the pod to the VPN gateway network using the gateway-network-vpn-gateway-pods network attachment definition.
+            # Format is <network-attachment-definition>@<interface-name>.
+            k8s.v1.cni.cncf.io/networks: >
+              gateway-network-router-pods@vpn-gw-veth0,
+              gateway-router-network@vpn-r-veth0
+          securityContext:
+            # *************************************************** IMPORTANT ***************************************************
+            # * The kubelet on each node that the pods run on must allow these to be set.                                     *
+            # * For details, see https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#enabling-unsafe-sysctls. *
+            # *****************************************************************************************************************
+
+            # Read these carefully before changing any of them.
+            sysctls:
+              # Disable sending ICMP redirects. Client pods should always go through a router pod, because the router pods
+              # have up to date routes to all available VPN gateways.
+              # This is a per-device (and therefore also namespace scoped) variable - see https://docs.kernel.org/networking/net_cachelines/netns_ipv4_sysctl.html
+              - name: net.ipv4.conf.vpn-gw-veth0.send_redirects
+                value: "0"
+
+              # This value is ORed with the per-device send_redirects value. Setting this to 0 ensures that redirects are disabled on the vpn-gw-veth0 interface.
+              - name: net.ipv4.conf.all.send_redirects
+                value: "0"
+
+              # It is important to set this to a static value for all pods, otherwise they will all generate a different random seed at startup
+              # and packets could be forwarded to different gateways when router pods fail over. This can be any positive, non-zero integer.
+              # This is a per-netns variable - see https://lists.openwall.net/netdev/2024/06/03/48
+              - name: net.ipv4.fib_multipath_hash_seed
+                value: "0xDEADBEEF"
+
+              # Configure ECMP hashing. This determines how packets are distributed across multiple equal-cost paths. The default
+              # is layer 3 only, which means that all packets between two endpoints will always take the same path.
+              # This is a per-netns variable - see https://docs.kernel.org/networking/net_cachelines/netns_ipv4_sysctl.html
+              - name: net.ipv4.fib_multipath_hash_policy
+                # Use layer 3 + 4 (source + destination IP address, protocol, source + destination port) for ECMP hashing.
+                value: "1"
+                # Enable this to use the fib_multipath_hash_fields sysctl below
+                # value: "3"
+
+              # Optional sysctls
+
+              # This will allow for multiple connections to the same host:port to take the same path. This can be important for
+              # clients that can use multiple connections to the same endpoint, such as web browsers in some cases.
+              # This isn't usually needed, but might helpful for some use cases.
+              # This is a bitfield. See https://docs.kernel.org/networking/ip-sysctl.html for a list of flags.
+              # This is a per-netns variable - see https://docs.kernel.org/networking/net_cachelines/netns_ipv4_sysctl.html
+              # - name: net.ipv4.fib_multipath_hash_fields
+              #   This value is:
+              #   * Source IP address
+              #   * Destination IP address
+              #   * IP protocol (TCP, UDP, etc)
+              #   * Destination port
+              #   value: "0x27"
+
+              # # Enable IP forwarding so that the pod can route traffic between interfaces.
+              # # This is already enabled on all pods so it doesn't need to be explicitly set
+              # - name: net.ipv4.ip_forward
+              #   value: "1"
+    persistence:
+      keepalived-config:
+        type: configMap
+        identifier: keepalived
+        globalMounts:
+          - path: /etc/keepalived/keepalived.conf
+            subPath: keepalived.conf
+            readOnly: true
+    configMaps:
+      keepalived:
+        # keepalived will reload its configuration when the file changes, so there is no need to restart the pod.
+        includeInChecksum: false
+        data:
+          keepalived.conf: |
+            global_defs {
+                # Log VRRP advertisements for virtual router IDs not configured
+                log_unknown_vrids
+                # Try to validate the configuration before reloading it
+                reload_check_config
+            }
+
+            vrrp_instance router {
+                # Start all instance in BACKUP mode. They'll elect a master among themselves.
+                state BACKUP
+                # Use this interface for VRRP advertisements. If a pod is compromised, they won't be able to
+                # affect the VRRP state of the routers, because the routers communicate over their own network.
+                interface vpn-r-veth0
+                # This value is arbitrary, but must be the same for all pods.
+                virtual_router_id 51
+
+                virtual_ipaddress {
+                    # This is the router virtual IP address, and the link to attach it to
+                    # TODO investigate enabling macvlan here to avoid possible switch MAC learning issues
+                    192.168.50.240/24 dev vpn-gw-veth0
+                }
+            }
+    service:
+      metrics:
+        controller: vpn-router
+        suffix: metrics
+        ports:
+          rm-metrics:
+            port: 9090
+            targetPort: 9090
+    serviceMonitor:
+      gateway-route-manager:
+        service:
+          identifier: metrics
+        endpoints:
+          - port: rm-metrics
