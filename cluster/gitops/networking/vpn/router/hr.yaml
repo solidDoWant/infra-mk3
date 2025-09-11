@@ -75,8 +75,7 @@ spec:
             sysctls:
               # Disable sending ICMP redirects. Client pods should always go through a router pod, because the router pods
               # have up to date routes to all available VPN gateways.
-              # This is a per-device (and therefore also namespace scoped) variable - see https://docs.kernel.org/networking/net_cachelines/netns_ipv4_sysctl.html
-              - name: net.ipv4.conf.vpn-gw-veth0.send_redirects
+              - name: net.ipv4.conf.default.send_redirects
                 value: "0"
 
               # This value is ORed with the per-device send_redirects value. Setting this to 0 ensures that redirects are disabled on the vpn-gw-veth0 interface.
@@ -110,13 +109,11 @@ spec:
 
               # It is important to set this to a static value for all pods, otherwise they will all generate a different random seed at startup
               # and packets could be forwarded to different gateways when router pods fail over. This can be any positive, non-zero integer.
-              # This is a per-netns variable - see https://lists.openwall.net/netdev/2024/06/03/48
               - name: net.ipv4.fib_multipath_hash_seed
                 value: "0xDEADBEEF"
 
               # Configure ECMP hashing. This determines how packets are distributed across multiple equal-cost paths. The default
               # is layer 3 only, which means that all packets between two endpoints will always take the same path.
-              # This is a per-netns variable - see https://docs.kernel.org/networking/net_cachelines/netns_ipv4_sysctl.html
               - name: net.ipv4.fib_multipath_hash_policy
                 # Use layer 3 + 4 (source + destination IP address, protocol, source + destination port) for ECMP hashing.
                 value: "1"
@@ -129,7 +126,6 @@ spec:
               # clients that can use multiple connections to the same endpoint, such as web browsers in some cases.
               # This isn't usually needed, but might helpful for some use cases.
               # This is a bitfield. See https://docs.kernel.org/networking/ip-sysctl.html for a list of flags.
-              # This is a per-netns variable - see https://docs.kernel.org/networking/net_cachelines/netns_ipv4_sysctl.html
               # - name: net.ipv4.fib_multipath_hash_fields
               #   This value is:
               #   * Source IP address
