@@ -11,7 +11,9 @@ metadata:
 spec:
   # This must be 15 characters or less.
   interfaceName: vpn-gw-bridge0
-  bridge: {}
+  bridge:
+    # This matches the wireguard MTU, which is the limiting factor for the VPN gateway network.
+    mtu: 1420
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
 # This is the link that the VXLAN should use for transceiving packets. This is a virtual device (a bond), but it
@@ -45,8 +47,9 @@ spec:
     # Tie the interface to the bridge so that pods veth interfaces can send traffic over the VXLAN.
     master:
       name: vpn-gateway-bridge
-    # This is 50 less than the MTU of the underlying link (bond0) to account for VXLAN overhead.
-    mtu: 8950
+    # This matches the wireguard MTU, which is the limiting factor for the VPN gateway network.
+    # It is also more than 50 bytes smaller than the underlying bond0 MTU of 9000.
+    mtu: 1420
 ...
 # These links are for the router pod network (conntrackd + keepalived syncing).
 ---

@@ -17,7 +17,7 @@ spec:
         "range_start": "192.168.50.248",
         "range_end": "192.168.50.254"
       },
-      "mtu": 1450
+      "mtu": 1420
     }
 ---
 apiVersion: k8s.cni.cncf.io/v1
@@ -37,7 +37,7 @@ spec:
         "range_start": "192.168.50.241",
         "range_end": "192.168.50.247"
       },
-      "mtu": 1450
+      "mtu": 1420
     }
 ---
 apiVersion: k8s.cni.cncf.io/v1
@@ -68,7 +68,7 @@ spec:
         ],
         "gateway": "192.168.50.240"
       },
-      "mtu": 1450
+      "mtu": 1420
     }
 ...
 # These NADs are for the router pod network.
@@ -90,5 +90,5 @@ spec:
         "type": "whereabouts",
         "range": "192.168.51.0/24"
       },
-      "mtu": 1450
+      "mtu": 8950
     }

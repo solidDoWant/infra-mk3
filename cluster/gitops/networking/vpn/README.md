@@ -64,7 +64,7 @@ loss. Here are some notes on picking the right MTU for different parts of the ne
 * The VXLAN interfaces need to have an MTU that is no more than 50 less than the underlying device's MTU. This is to account for the VXLAN header overhead. If the underlying device
   has an MTU of 1500, then the VXLAN interfaces' MTU should be no more than 1450. For an underlying interface MTU of 9000, the VXLAN MTU can be as large as 8950.
 * The interfaces created by the bridge CNI plugin should be no more than the VPN gateway's wireguard interface MTU. This will likely be the limiting factor for the VPN gateway
-  network.
+  network. This can range from 1300 to 1500. The Linux kernel default MTU is 1420 (standard MTU is 1500, and wireguard has an 80 byte overhead).
 
 ### Subnet addresses
 
