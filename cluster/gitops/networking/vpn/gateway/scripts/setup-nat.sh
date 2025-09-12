@@ -13,22 +13,11 @@ PROTOCOLS=${PROTOCOLS:-"tcp udp"}
 # Rewrite packets that are port-forwarded by the VPN to the destination IP:Port combo
 LAST_OCTET=1
 for PORT in ${PORT_FORWARDING_PORTS}; do
-    DESTINATION_IP="${PORT_FORWARD_DESTINATION_IP_PREFIX}.${LAST_OCTET}"
+    PORT_FORWARD_DESTINATION_IP="${PORT_FORWARD_DESTINATION_IP_PREFIX}.${LAST_OCTET}"
+    PORT_FORWARD_DESTINATION="${PORT_FORWARD_DESTINATION_IP}:${PORT}"
 
     for PROTOCOL in ${PROTOCOLS}; do
-        iptables -t nat -A PREROUTING -i "${VPN_INTERFACE}" -p "${PROTOCOL}" --dst "${WIREGUARD_ADDRESSES}" --dport "${PORT}" -j DNAT --to-destination "${DESTINATION_IP}":"${PORT}"
-    done
-    
-    LAST_OCTET=$((LAST_OCTET + 1))
-done
-
-# Rewrite the source IP of outgoing packets to the local interface's IP
-LAST_OCTET=1
-for PORT in ${PORT_FORWARDING_PORTS}; do
-    DESTINATION_IP="${PORT_FORWARD_DESTINATION_IP_PREFIX}.${LAST_OCTET}"
-
-    for PROTOCOL in ${PROTOCOLS}; do
-        iptables -t nat -A POSTROUTING -o "${GATEWAY_NETWORK_INTERFACE}"  -p "${PROTOCOL}" --dst "${DESTINATION_IP}" --dport "${PORT}" -j MASQUERADE
+        iptables -t nat -A PREROUTING -i "${VPN_INTERFACE}" -p "${PROTOCOL}" --dst "${WIREGUARD_ADDRESSES}" --dport "${PORT}" -j DNAT --to-destination "${PORT_FORWARD_DESTINATION}"
     done
 
     LAST_OCTET=$((LAST_OCTET + 1))
