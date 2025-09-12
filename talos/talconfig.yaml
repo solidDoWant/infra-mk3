@@ -76,6 +76,7 @@ nodes:
       # that the value itself is unique
       topology.rook.io/chassis: chassis-{{ .MachineConfig.MachineNetwork.NetworkHostname }}
       zfs.home.arpa/node.local-storage-enabled: "true"
+      cni-plugins.home.arpa/node.general-purpose-plugins-enabled: "true"
     nodeAnnotations:
       zfs.home.arpa/node.pool-drive-matcher: "/dev/disk/by-id/nvme-KINGSTON_SKC3000D2048G_*"
       talos.home.arpa/installer-image: >-

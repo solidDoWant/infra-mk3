@@ -1,0 +1,118 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: general-purpose-cni-plugin-installer
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      installer:
+        type: daemonset
+        # 1. Install the plugins
+        initContainers:
+          installer:
+            image:
+              repository: ghcr.io/home-operations/cni-plugins
+              tag: &plugin_version 1.8.0
+            command:
+              - rsync
+              - -av
+              - --exclude=LICENSE
+              - --exclude=README.md
+              - /plugins/
+              - /host/opt/cni/bin/
+            securityContext:
+              readOnlyRootFilesystem: true
+              seLinuxOptions:
+                role: object_r
+                type: cni_plugin_t
+                user: system_u
+        # 2. Label the node to stop the pod from installing this version again
+        containers:
+          labeler:
+            image:
+              repository: registry.k8s.io/kubectl
+              tag: v1.33.2
+            args:
+              - label
+              - --overwrite
+              - node
+              - "$(NODE_NAME)"
+              - cni-plugins.home.arpa/node.general-purpose-plugins-version=$(VERSION)
+            env:
+              NODE_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+              VERSION: *plugin_version
+            securityContext: &security_context_unprivileged
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+          # 3. Sleep forever and wait for the daemonset controller to terminate the pod
+          pause:
+            image:
+              repository: registry.k8s.io/pause
+              tag: 3.9
+            securityContext: *security_context_unprivileged
+        pod:
+          annotations:
+            k8tz.io/inject: "false"
+          nodeSelector:
+            cni-plugins.home.arpa/node.general-purpose-plugins-enabled: "true"
+          # After the pod succeeds once for a given version, it will no longer match this selector.
+          # As a result, the pod will exit and not run again until the version is updated.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: cni-plugins.home.arpa/node.general-purpose-plugins-version
+                        operator: NotIn
+                        values:
+                          - *plugin_version
+        serviceAccount:
+          identifier: labeler
+    # Allow the labeler to label nodes
+    serviceAccount:
+      labeler: {}
+    rbac:
+      roles:
+        labeler:
+          type: ClusterRole
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - nodes
+              verbs:
+                - get
+                - patch
+      bindings:
+        labeler:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: labeler
+          subjects:
+            - identifier: labeler
+    persistence:
+      host-cni-bin:
+        type: hostPath
+        hostPath: /opt/cni/bin
+        advancedMounts:
+          installer:
+            installer:
+              - path: /host/opt/cni/bin
