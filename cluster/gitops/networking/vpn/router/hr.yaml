@@ -66,10 +66,11 @@ spec:
               gateway-network-router-pods@vpn-gw-veth0,
               gateway-router-network@vpn-r-veth0
           securityContext:
-            # *************************************************** IMPORTANT ***************************************************
-            # * The kubelet on each node that the pods run on must allow these to be set.                                     *
-            # * For details, see https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#enabling-unsafe-sysctls. *
-            # *****************************************************************************************************************
+            # ******************************************************* IMPORTANT *******************************************************
+            # * The kubelet on each node that the pods run on must allow these to be set.                                             *
+            # * Alternatively, these could all be set using the [tuning CNI plugin](https://www.cni.dev/plugins/current/meta/tuning/) *
+            # * For details, see https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#enabling-unsafe-sysctls.         *
+            # *************************************************************************************************************************
 
             # Read these carefully before changing any of them.
             sysctls:
