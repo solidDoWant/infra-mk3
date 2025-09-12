@@ -71,6 +71,191 @@ spec:
       "mtu": 1420
     }
 ...
+# Client pod NADs for pods that can receive VPN ingress traffic.
+# As an alternative to these, pods could set the following annotation:
+#
+# ```yaml
+# k8s.v1.cni.cncf.io/networks: >
+#   [
+#     {
+#       "name": "gateway-network-client-pods",
+#       "interface": "vpn-gw-veth0",
+#       "ips": [
+#         "192.168.50.<PORT NUMBER>/24"
+#       ]
+#     }
+#   ]
+# ```
+#
+# Personally I find this a little harder to read and understand than several dedicated NADs
+# with clear names. The tradeoff is that the below is pretty verbose, but at least it is
+# all in one place.
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-network-client-pods-forwarded-port-1
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-network-client-pods-forwarded-port-1",
+      "type": "bridge",
+      "bridge": "vpn-gw-bridge0",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "192.168.50.1/24",
+          }
+        ],
+        "routes": [
+          {"dst": "0.0.0.0/5"},
+          {"dst": "8.0.0.0/7"},
+          {"dst": "11.0.0.0/8"},
+          {"dst": "12.0.0.0/6"},
+          {"dst": "16.0.0.0/4"},
+          {"dst": "32.0.0.0/3"},
+          {"dst": "64.0.0.0/2"},
+          {"dst": "128.0.0.0/1"}
+        ],
+        "gateway": "192.168.50.240"
+      },
+      "mtu": 1420
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-network-client-pods-forwarded-port-2
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-network-client-pods-forwarded-port-2",
+      "type": "bridge",
+      "bridge": "vpn-gw-bridge0",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "192.168.50.2/24",
+          }
+        ],
+        "routes": [
+          {"dst": "0.0.0.0/5"},
+          {"dst": "8.0.0.0/7"},
+          {"dst": "11.0.0.0/8"},
+          {"dst": "12.0.0.0/6"},
+          {"dst": "16.0.0.0/4"},
+          {"dst": "32.0.0.0/3"},
+          {"dst": "64.0.0.0/2"},
+          {"dst": "128.0.0.0/1"}
+        ],
+        "gateway": "192.168.50.240"
+      },
+      "mtu": 1420
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-network-client-pods-forwarded-port-3
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-network-client-pods-forwarded-port-3",
+      "type": "bridge",
+      "bridge": "vpn-gw-bridge0",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "192.168.50.3/24",
+          }
+        ],
+        "routes": [
+          {"dst": "0.0.0.0/5"},
+          {"dst": "8.0.0.0/7"},
+          {"dst": "11.0.0.0/8"},
+          {"dst": "12.0.0.0/6"},
+          {"dst": "16.0.0.0/4"},
+          {"dst": "32.0.0.0/3"},
+          {"dst": "64.0.0.0/2"},
+          {"dst": "128.0.0.0/1"}
+        ],
+        "gateway": "192.168.50.240"
+      },
+      "mtu": 1420
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-network-client-pods-forwarded-port-4
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-network-client-pods-forwarded-port-4",
+      "type": "bridge",
+      "bridge": "vpn-gw-bridge0",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "192.168.50.4/24",
+          }
+        ],
+        "routes": [
+          {"dst": "0.0.0.0/5"},
+          {"dst": "8.0.0.0/7"},
+          {"dst": "11.0.0.0/8"},
+          {"dst": "12.0.0.0/6"},
+          {"dst": "16.0.0.0/4"},
+          {"dst": "32.0.0.0/3"},
+          {"dst": "64.0.0.0/2"},
+          {"dst": "128.0.0.0/1"}
+        ],
+        "gateway": "192.168.50.240"
+      },
+      "mtu": 1420
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-network-client-pods-forwarded-port-5
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-network-client-pods-forwarded-port-5",
+      "type": "bridge",
+      "bridge": "vpn-gw-bridge0",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "192.168.50.5/24",
+          }
+        ],
+        "routes": [
+          {"dst": "0.0.0.0/5"},
+          {"dst": "8.0.0.0/7"},
+          {"dst": "11.0.0.0/8"},
+          {"dst": "12.0.0.0/6"},
+          {"dst": "16.0.0.0/4"},
+          {"dst": "32.0.0.0/3"},
+          {"dst": "64.0.0.0/2"},
+          {"dst": "128.0.0.0/1"}
+        ],
+        "gateway": "192.168.50.240"
+      },
+      "mtu": 1420
+    }
+...
 # These NADs are for the router pod network.
 # TODO all pods in all namespaces can reference this NAD with how I have multus configured.
 # Need to restrict this one to just the router pods.
