@@ -36,7 +36,7 @@ spec:
               tag: v3.40.0
             env:
               VPN_INTERFACE: tun0 # Interface for VPN traffic
-              LOCAL_INTERFACE: eth0 # Interface for local traffic
+              GATEWAY_NETWORK_INTERFACE: vpn-gw-veth0 # Interface for the VPN subnet
               # All traffic for the ports that are forwarded by the VPN exit node will be forwarded again to this address.
               # Traffic will be masqueraded to this address so return traffic can be routed back to the VPN exit node.
               # It is important to use masquerading here instead of SNAT because the pod IP can change under certain conditions.
@@ -46,9 +46,8 @@ spec:
                 ${SECRET_VPN_FORWARDED_PORT_3}
                 ${SECRET_VPN_FORWARDED_PORT_4}
                 ${SECRET_VPN_FORWARDED_PORT_5}
-              # This needs to be a load balancer so that multiple services an use the same IP, but different ports/protocol combinations.
-              PORT_FORWARD_DESTINATION_IP: "${VPN_PORT_FORWARD_DESTINATION_LOAD_BALANCER_IP}"
-              PROTOCOLS: "tcp udp" # Protocols to apply the rules to
+              # The five ports will each be forwarded to 192.168.50.1, 192.168.50.2, etc.
+              PORT_FORWARD_DESTINATION_IP_PREFIX: 192.168.50
               # These variable values are different for each pod. See the startup script below,
               # the statefulset note above, and the vpn-credentials secret.
               POD_SPECIFIC_VARS: WIREGUARD_ADDRESSES
