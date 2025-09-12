@@ -4,19 +4,40 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name whereabouts-crds
+  name: &app_name cni-plugins-crds
 spec:
   targetNamespace: networking
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/networking/whereabouts/crds
+  path: /cluster/gitops/networking/cni-plugins/crds
+  prune: false # Don't ever drop the CRDs
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name multus
+spec:
+  targetNamespace: networking
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/networking/cni-plugins/multus
   prune: true
   sourceRef:
     kind: GitRepository
     name: infra-mk3
   wait: true
+  dependsOn:
+    - name: network-attachment-definition-crds
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -30,11 +51,11 @@ spec:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/networking/whereabouts/app
+  path: /cluster/gitops/networking/cni-plugins/whereabouts
   prune: true
   sourceRef:
     kind: GitRepository
     name: infra-mk3
   wait: true
   dependsOn:
-    - name: whereabouts-crds
+    - name: cni-plugins-crds
