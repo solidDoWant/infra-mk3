@@ -30,6 +30,10 @@ spec:
             capabilities:
               add:
                 - NET_ADMIN
+        initContainers:
+          ingress-routing-setup:
+            command:
+              - /usr/local/bin/fwmark-setup.sh
         containers:
           # This container advertises the router virtual IP address using Virtual Router Redundancy Protocol (VRRP),
           # a first hop redundancy protocol (FHRP).
@@ -51,13 +55,14 @@ spec:
               - --check-period=1s
               - --timeout=750ms
               - --port=9999
-              - --start-ip=192.168.50.248
-              - --end-ip=192.168.50.254
+              - --start-ip=192.168.25.0
+              - --end-ip=192.168.25.7
               # Enable this for some additional logging. This will generate several lines per second, and can make it harder to see other log messages.
               # - --log-level=debug
             ports:
               - name: metrics
                 containerPort: 9090
+          # TODO conntrackd
         pod:
           annotations:
             # Attach the pod to the VPN gateway network using the gateway-network-vpn-gateway-pods network attachment definition.
@@ -142,55 +147,72 @@ spec:
     persistence:
       keepalived-config:
         type: configMap
-        identifier: keepalived
-        globalMounts:
-          - path: /etc/keepalived/keepalived.conf
-            subPath: keepalived.conf
-            readOnly: true
+        name: vpn-router-keepalived-config
+        advancedMounts:
+          vpn-router:
+            keepalived:
+              - path: /etc/keepalived/keepalived.conf
+                subPath: keepalived.conf
+                # readOnly: true  # TODO
+      keepalived-flux-vars-config:
+        type: configMap
+        name: keepalived-flux-vars-config
+        advancedMounts:
+          vpn-router:
+            keepalived:
+              - path: /etc/keepalived/keepalived-flux-vars.conf
+                subPath: keepalived-flux-vars.conf
+                # readOnly: true  # TODO
+      ingress-routing-setup-scripts:
+        type: configMap
+        name: vpn-router-scripts
+        defaultMode: 0755
+        advancedMounts:
+          vpn-router:
+            ingress-routing-setup:
+              - path: /usr/local/bin/fwmark-setup.sh
+                subPath: fwmark-setup.sh
     configMaps:
-      keepalived:
+      keepalived-flux-vars-config:
         data:
-          keepalived.conf: |
-            global_defs {
-                # Log VRRP advertisements for virtual router IDs not configured.
-                log_unknown_vrids
+          # This allows for configuring all of the more important values via a single file (the HelmRelease values).
+          # All of the actual logic is handled in the main keepalived.conf file, but this should extract all of the
+          # otherwise "magic values" out of that file.
+          #
+          # It also allows for Flux variable substitution to be used without escaping every `$` character in the main
+          # keepalived.conf file. This ends up looking like:
+          # $INGRESS_PORT_1=1234 # 1234 is from a secret Flux var
+          keepalived-flux-vars.conf: |
+            $$INGRESS_PORT_1=${SECRET_VPN_FORWARDED_PORT_1}
+            $$INGRESS_PORT_2=${SECRET_VPN_FORWARDED_PORT_1}
+            $$INGRESS_PORT_3=${SECRET_VPN_FORWARDED_PORT_1}
+            $$INGRESS_PORT_4=${SECRET_VPN_FORWARDED_PORT_1}
+            $$INGRESS_PORT_5=${SECRET_VPN_FORWARDED_PORT_1}
 
-                # This is needed to allow keepalived to run the VRRP notify scripts.
-                enable_script_security
-                script_user root root
-            }
+            # This is just here so that the VIP address range is defined in one place.
+            $$INGRESS_VIP_PREFIX=192.168.26
+            $$INGRESS_VIP_OCTET_START=128
+            $$INGRESS_VIP_OCTET_END=135
 
-            vrrp_instance router {
-                # Start all instance in BACKUP mode. They'll elect a master among themselves.
-                state BACKUP
-                # Use this interface for VRRP advertisements. If a pod is compromised, they won't be able to
-                # affect the VRRP state of the routers, because the routers communicate over their own network.
-                interface vpn-r-veth0
-                # This value is arbitrary, but must be the same for all pods.
-                virtual_router_id 51
+            # VRRP advertisements and IPVS connection state syncing will use this interface.
+            $$ROUTER_NETWORK_INTERFACE=vpn-r-veth0
 
-                virtual_ipaddress {
-                    # This is the router virtual IP address, and the link to attach it to
-                    # MACVLAN is used to avoid issues with arising from stale ARP entries in clients and
-                    # switches/bridges with learning enabled.
-                    # noprefixroute is needed to prevent the kernel from adding the link-scoped route automatically.
-                    # Without this, the route will get appended instead of prepended, and will never be matched.
-                    # See below for the workaround.
-                    192.168.50.240/24 dev vpn-gw-veth0 use_vmac noprefixroute
-                }
+            # VIP MACVLAN interfaces will use this as the underlying interface
+            $$VIP_UNDERLYING_INTERFACE=vpn-gw-veth0
 
-                # Add/del a route to the local subnet with the VIP as the source. This will cause packets to use the VIP
-                # as the source address when routing to the local subnet. This is needed to make sure that ICMP messages
-                # (e.g. "fragmentation needed" or "time exceeded") are sent from the VIP address.
+            # Egress traffic (traffic originating from the cluster to the internet via the VPN gateways)
+            # will use this as the nexthop address.
+            $$EGRESS_VIP_ADDRESS=192.168.26.254
 
-                # For some weird reason keepalived tries to process virtual_routes prior to brining the MACVLAN interface up,
-                # which causes the route entries to fail. This causes keepalived to move to "FAULT" state.
-                # To work around this, add the routes manually using the notify scripts.
-                notify_master "/sbin/ip route prepend 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
-                notify_backup "/sbin/ip route del 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
-                notify_fault "/sbin/ip route del 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
-                notify_stop "/sbin/ip route del 192.168.50.0/24 dev vrrp.51 scope link src 192.168.50.240"
-            }
+            # This is the IP address range that the VPN gateways will be assigned from.
+            # This is the limiting factor for deploying more gateways. If I ever deploy more than 8 then
+            # this will need to be increased
+            $$GATEWAY_IP_PREFIX=192.168.25
+            $$GATEWAY_IP_OCTET_START=1
+            $$GATEWAY_IP_OCTET_END=8
+
+            # This is the subnet mask for the gateway network.
+            $$SUBNET_CIDR_BITS=22
     service:
       metrics:
         controller: vpn-router
