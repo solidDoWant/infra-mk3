@@ -5,6 +5,8 @@ configMapGenerator:
   - name: vpn-router-scripts
     files:
       - ./fwmark-setup.sh
+      - ./keepalived-conf-gen.sh
+      - ./lib.sh
     options:
       disableNameSuffixHash: true
       labels:

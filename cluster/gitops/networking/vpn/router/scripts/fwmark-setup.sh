@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+# shellcheck source=lib.sh
+. "$(dirname "${0}")/lib.sh"
 
 # Log unset input vars
-: "${INGRESS_VIP_PREFIX:?}"
-: "${INGRESS_VIP_OCTET_START:?}"
-: "${INGRESS_VIP_OCTET_END:?}"
-
-: "${GATEWAY_IP_PREFIX:?}"
-: "${GATEWAY_IP_OCTET_START:?}"
-: "${GATEWAY_IP_OCTET_END:?}"
+: "${GATEWAY_COUNT:?}"
+: "${GATEWAY_IP_START:?}"
+: "${INGRESS_VIP_START:?}"
 
 mark_for_gateway_number() {
     GATEWAY_NUM="${1}"
     # 0x1900 = 6400 in base 10. Because the two least significant digits are zero in both bases, this makes it easier to visually match the values between `ip rule` and `iptables-save`.
-    echo $((0x1900 + GATEWAY_NUM))
+    echo "$((0x1900 + GATEWAY_NUM))"
 }
 
 log_command() {
@@ -22,19 +19,10 @@ log_command() {
     "$@"
 }
 
-# Input validation
-GATEWAY_IP_COUNT=$((GATEWAY_IP_OCTET_END - GATEWAY_IP_OCTET_START + 1))
-INGRESS_VIP_COUNT=$((INGRESS_VIP_OCTET_END - INGRESS_VIP_OCTET_START + 1))
-if [ "${GATEWAY_IP_COUNT}" -ne "${INGRESS_VIP_COUNT}" ]; then
-    >&2 echo "Error: The number of gateway IPs (${GATEWAY_IP_COUNT}) must match the number of ingress VIPs (${INGRESS_VIP_COUNT})."
-    exit 1
-fi
-GATEWAY_COUNT="${GATEWAY_IP_COUNT}"
-
 # 1. Mark connections originating from each gateway (as determined via the gateway-specific destination addresses) with a gateway-specific fwmark.
-for GATEWAY_NUM in $(seq 0 "$((GATEWAY_COUNT - 1))"); do
-    INGRESS_VIP_OCTET=$((INGRESS_VIP_OCTET_START + GATEWAY_NUM))
-    INGRESS_VIP_ADDRESS="${INGRESS_VIP_PREFIX}.${INGRESS_VIP_OCTET}"
+read -ra INGRESS_VIP_ADDRESSES <<< "$(generate_addresses "${INGRESS_VIP_START}" "${GATEWAY_COUNT}")"
+for GATEWAY_NUM in "${!INGRESS_VIP_ADDRESSES[@]}"; do
+    INGRESS_VIP_ADDRESS="${INGRESS_VIP_ADDRESSES["${GATEWAY_NUM}"]}"
     GATEWAY_FWMARK="$(mark_for_gateway_number "${GATEWAY_NUM}")"
 
     # This mark is saved to the entire connection, not just the specific packet. It can later be restored to outbound packets that are part of the same connection.
@@ -45,9 +33,9 @@ done
 log_command iptables -t mangle -A PREROUTING -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark
 
 # 3. Route outbound packets for connections originating from the gateway back to the same gateway.
-for GATEWAY_NUM in $(seq 0 "$((GATEWAY_COUNT - 1))"); do
-    GATEWAY_IP_OCTET=$((GATEWAY_IP_OCTET_START + GATEWAY_NUM))
-    GATEWAY_ADDRESS="${GATEWAY_IP_PREFIX}.${GATEWAY_IP_OCTET}"
+read -ra GATEWAY_ADDRESSES <<< "$(generate_addresses "${GATEWAY_IP_START}" "${GATEWAY_COUNT}")"
+for GATEWAY_NUM in "${!GATEWAY_ADDRESSES[@]}"; do
+    GATEWAY_ADDRESS="${GATEWAY_ADDRESSES["${GATEWAY_NUM}"]}"
     GATEWAY_TABLE="$((50 + GATEWAY_NUM))"
     GATEWAY_RULE_PRIORITY="$((1000 + GATEWAY_NUM))"
     GATEWAY_FWMARK="$(mark_for_gateway_number "${GATEWAY_NUM}")"

@@ -35,12 +35,46 @@ spec:
             command:
               - /usr/local/bin/fwmark-setup.sh
             env:
-              INGRESS_VIP_PREFIX: 192.168.26
-              INGRESS_VIP_OCTET_START: 128
-              INGRESS_VIP_OCTET_END: 135
-              GATEWAY_IP_PREFIX: 192.168.25
-              GATEWAY_IP_OCTET_START: 1
-              GATEWAY_IP_OCTET_END: 8
+              # This is the maximum number of VPN gateways that will be deployed.
+              GATEWAY_COUNT: &gateway_count 8
+              # Start of the IP range that the VPN gateways will use to accept ingress traffic.
+              GATEWAY_IP_START: 192.168.25.1
+              # This is the start of the IP range that will accept ingress traffic from gateways. One IP
+              # is used per gateway.
+              INGRESS_VIP_START: &ingress_vip_start 192.168.26.128
+          keepalived-config-gen:
+            # The keepalived configuration is about a 2000 lines long with 95% of it being repetitive.
+            # To make it easier to manage, it is generated from simple shell script.
+            # Keepalived supports some templating, but it is incredibly rigid, and extremely opaque when
+            # something doesn't work.
+            command:
+              - /usr/local/bin/keepalived-conf-gen.sh
+            env:
+              # The VPN tunnels will listen to and forward traffic destined for these ports
+              INGRESS_PORTS: >
+                ${SECRET_VPN_FORWARDED_PORT_1}
+                ${SECRET_VPN_FORWARDED_PORT_2}
+                ${SECRET_VPN_FORWARDED_PORT_3}
+                ${SECRET_VPN_FORWARDED_PORT_4}
+                ${SECRET_VPN_FORWARDED_PORT_5}
+              # VRRP advertisements and IPVS connection state syncing will use this interface.
+              ROUTER_NETWORK_INTERFACE: vpn-r-veth0
+              # Egress traffic (traffic originating from the cluster to the internet via the VPN gateways)
+              # will use this as the nexthop address.
+              EGRESS_VIP_ADDRESS: 192.168.26.254
+              # This is the subnet mask for the gateway network.
+              SUBNET_CIDR_BITS: 22
+              # VIP MACVLAN interfaces will use this as the underlying interface
+              VIP_UNDERLYING_INTERFACE: vpn-gw-veth0
+              # This is the maximum number of VPN gateways that will be deployed.
+              GATEWAY_COUNT: *gateway_count
+              # This is the start of the IP range that will accept ingress traffic from gateways. One IP
+              # is used per gateway.
+              INGRESS_VIP_START: *ingress_vip_start
+              # This is the start of the IP range that will be assigned to clients that accept ingress traffic.
+              CLIENT_INGRESS_IP_START: 192.168.27.0
+              # This is the most number of clients that will accept traffic from each port.
+              CLIENT_INGRESS_COUNT_PER_PORT: 16
         containers:
           # This container advertises the router virtual IP address using Virtual Router Redundancy Protocol (VRRP),
           # a first hop redundancy protocol (FHRP).
@@ -153,22 +187,15 @@ spec:
               #   value: "1"
     persistence:
       keepalived-config:
-        type: configMap
-        name: vpn-router-keepalived-config
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 1Mi
         advancedMounts:
           vpn-router:
+            keepalived-config-gen:
+              - path: /etc/keepalived/
             keepalived:
-              - path: /etc/keepalived/keepalived.conf
-                subPath: keepalived.conf
-                # readOnly: true  # TODO
-      keepalived-flux-vars-config:
-        type: configMap
-        identifier: keepalived-flux-vars-config
-        advancedMounts:
-          vpn-router:
-            keepalived:
-              - path: /etc/keepalived/keepalived-vars.conf
-                subPath: keepalived-vars.conf
+              - path: /etc/keepalived/
                 # readOnly: true  # TODO
       ingress-routing-setup-scripts:
         type: configMap
@@ -177,49 +204,18 @@ spec:
         advancedMounts:
           vpn-router:
             ingress-routing-setup:
+              - &lib_mount
+                path: /usr/local/bin/lib.sh
+                subPath: lib.sh
+                readOnly: true
               - path: /usr/local/bin/fwmark-setup.sh
                 subPath: fwmark-setup.sh
-    configMaps:
-      keepalived-flux-vars-config:
-        data:
-          # This allows for configuring all of the more important values via a single file (the HelmRelease values).
-          # All of the actual logic is handled in the main keepalived.conf file, but this should extract all of the
-          # otherwise "magic values" out of that file.
-          #
-          # It also allows for Flux variable substitution to be used without escaping every `$` character in the main
-          # keepalived.conf file. This ends up looking like:
-          # $INGRESS_PORT_1=1234 # 1234 is from a secret Flux var
-          keepalived-vars.conf: |
-            $$INGRESS_PORT_1=${SECRET_VPN_FORWARDED_PORT_1}
-            $$INGRESS_PORT_2=${SECRET_VPN_FORWARDED_PORT_1}
-            $$INGRESS_PORT_3=${SECRET_VPN_FORWARDED_PORT_1}
-            $$INGRESS_PORT_4=${SECRET_VPN_FORWARDED_PORT_1}
-            $$INGRESS_PORT_5=${SECRET_VPN_FORWARDED_PORT_1}
-
-            # This is just here so that the VIP address range is defined in one place.
-            $$INGRESS_VIP_PREFIX=192.168.26
-            $$INGRESS_VIP_OCTET_START=128
-            $$INGRESS_VIP_OCTET_END=135
-
-            # VRRP advertisements and IPVS connection state syncing will use this interface.
-            $$ROUTER_NETWORK_INTERFACE=vpn-r-veth0
-
-            # VIP MACVLAN interfaces will use this as the underlying interface
-            $$VIP_UNDERLYING_INTERFACE=vpn-gw-veth0
-
-            # Egress traffic (traffic originating from the cluster to the internet via the VPN gateways)
-            # will use this as the nexthop address.
-            $$EGRESS_VIP_ADDRESS=192.168.26.254
-
-            # This is the IP address range that the VPN gateways will be assigned from.
-            # This is the limiting factor for deploying more gateways. If I ever deploy more than 8 then
-            # this will need to be increased
-            $$GATEWAY_IP_PREFIX=192.168.25
-            $$GATEWAY_IP_OCTET_START=1
-            $$GATEWAY_IP_OCTET_END=8
-
-            # This is the subnet mask for the gateway network.
-            $$SUBNET_CIDR_BITS=22
+                readOnly: true
+            keepalived-config-gen:
+              - *lib_mount
+              - path: /usr/local/bin/keepalived-conf-gen.sh
+                subPath: keepalived-conf-gen.sh
+                readOnly: true
     service:
       metrics:
         controller: vpn-router
