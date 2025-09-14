@@ -156,7 +156,7 @@ spec:
                 # readOnly: true  # TODO
       keepalived-flux-vars-config:
         type: configMap
-        name: keepalived-flux-vars-config
+        identifier: keepalived-flux-vars-config
         advancedMounts:
           vpn-router:
             keepalived:
