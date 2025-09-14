@@ -2,13 +2,14 @@
 
 set -euo pipefail
 
-INGRESS_VIP_PREFIX="${1}"
-INGRESS_VIP_OCTET_START="${2}"
-INGRESS_VIP_OCTET_END="${3}"
+# Log unset input vars
+: "${INGRESS_VIP_PREFIX:?}"
+: "${INGRESS_VIP_OCTET_START:?}"
+: "${INGRESS_VIP_OCTET_END:?}"
 
-GATEWAY_IP_PREFIX="${4}"
-GATEWAY_IP_OCTET_START="${5}"
-GATEWAY_IP_OCTET_END="${6}"
+: "${GATEWAY_IP_PREFIX:?}"
+: "${GATEWAY_IP_OCTET_START:?}"
+: "${GATEWAY_IP_OCTET_END:?}"
 
 mark_for_gateway_number() {
     GATEWAY_NUM="${1}"
