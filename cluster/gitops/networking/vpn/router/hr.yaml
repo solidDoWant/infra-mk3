@@ -167,8 +167,8 @@ spec:
         advancedMounts:
           vpn-router:
             keepalived:
-              - path: /etc/keepalived/keepalived-flux-vars.conf
-                subPath: keepalived-flux-vars.conf
+              - path: /etc/keepalived/keepalived-vars.conf
+                subPath: keepalived-vars.conf
                 # readOnly: true  # TODO
       ingress-routing-setup-scripts:
         type: configMap
@@ -189,7 +189,7 @@ spec:
           # It also allows for Flux variable substitution to be used without escaping every `$` character in the main
           # keepalived.conf file. This ends up looking like:
           # $INGRESS_PORT_1=1234 # 1234 is from a secret Flux var
-          keepalived-flux-vars.conf: |
+          keepalived-vars.conf: |
             $$INGRESS_PORT_1=${SECRET_VPN_FORWARDED_PORT_1}
             $$INGRESS_PORT_2=${SECRET_VPN_FORWARDED_PORT_1}
             $$INGRESS_PORT_3=${SECRET_VPN_FORWARDED_PORT_1}
