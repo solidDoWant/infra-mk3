@@ -49,6 +49,8 @@ spec:
               # Ingress traffic will be forwarded to this IP + the pod index (0, 1, ...).
               # This is needed for connection tracking to ensure that return traffic goes back to the correct pod.
               PORT_FORWARD_DESTINATION_BASE_IP: 192.168.26.128
+              LOCAL_GATEWAY_NETWORK_IP_PREFIX: 192.168.25
+              LOCAL_GATEWAY_NETWORK_SUBNET_BITS: 22
               # These variable values are different for each pod. See the startup script below,
               # the statefulset note above, and the vpn-credentials secret.
               POD_SPECIFIC_VARS: WIREGUARD_ADDRESSES
