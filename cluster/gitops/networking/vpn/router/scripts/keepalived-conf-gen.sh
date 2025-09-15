@@ -81,7 +81,6 @@ $(
     # For some weird reason keepalived tries to process virtual_routes prior to brining the MACVLAN interface up,
     # which causes the route entries to fail. This causes keepalived to move to "FAULT" state.
     # To work around this, add the routes manually using the notify scripts.
-    # TODO this current config will probably produce a separate MACVLAN interface for each VIP address - fix this if it does
 $(
     for EVENT in master backup fault stop; do
         indent 1 notify_${EVENT} "\"/sbin/ip route ${EVENT} ${EGRESS_VIP_ADDRESS}/${SUBNET_CIDR_BITS} dev vrrp.51 scope link src ${EGRESS_VIP_ADDRESS}\""
