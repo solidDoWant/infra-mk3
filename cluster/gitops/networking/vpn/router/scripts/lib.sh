@@ -12,7 +12,11 @@ generate_addresses() {
     BASE_ADDRESS="${FIRST_ADDRESS%.*}"
     START_OCTET="$((${FIRST_ADDRESS##*.} + OFFSET))"
     END_OCTET="$((START_OCTET + COUNT - 1 + OFFSET))"
+
+    ADDRESSES=()
     for OCTET in $(seq "${START_OCTET}" "${END_OCTET}"); do
-        echo "${BASE_ADDRESS}.${OCTET}"
+        ADDRESSES+=("${BASE_ADDRESS}.${OCTET}")
     done
+
+    echo "${ADDRESSES[*]}"
 }

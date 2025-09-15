@@ -30,7 +30,8 @@ read -ra INGRESS_PORTS <<< "${INGRESS_PORTS}"
 # tools, but it's just too rigid and difficult to debug. If nothing else, when
 # this approach is misconfigured, it will be dumped to stdout for debugging.
 
-cat << EOF | tee -a "${OUTPUT_PATH}"
+echo "Generating keepalived configuration in ${OUTPUT_PATH}"
+cat << EOF > "${OUTPUT_PATH}"
 global_defs {
     # Log VRRP advertisements for virtual router IDs not configured.
     log_unknown_vrids
@@ -105,7 +106,7 @@ $(
 
         # Define a pair of TCP and UDP virtual servers per port.
         for PROTOCOL in TCP UDP; do
-            indent 0 "virtual_server ${VS_GROUP_NAME} {"
+            indent 0 "virtual_server group ${VS_GROUP_NAME} {"
             indent 1 lb_algo lc
             indent 1 lb_kind NAT
             indent 1 "protocol ${PROTOCOL}"
@@ -127,9 +128,12 @@ $(
 )
 EOF
 
+echo "Generated keepalived configuration:"
+cat "${OUTPUT_PATH}"
+
 echo
 echo "Checking keepalived configuration in ${OUTPUT_PATH}"
-if ! keepalived --config-test="${OUTPUT_PATH}"; then
+if ! keepalived "--use-file=${OUTPUT_PATH}" --config-test; then
     2>&1 echo "Error: keepalived configuration test failed"
     exit 1
 fi
