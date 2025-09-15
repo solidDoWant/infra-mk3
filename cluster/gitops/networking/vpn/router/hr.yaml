@@ -85,8 +85,8 @@ spec:
               - --check-period=1s
               - --timeout=750ms
               - --port=9999
-              - --start-ip=192.168.25.0
-              - --end-ip=192.168.25.7
+              - --start-ip=192.168.25.128
+              - --end-ip=192.168.25.135
               # Enable this for some additional logging. This will generate several lines per second, and can make it harder to see other log messages.
               # - --log-level=debug
             ports:
