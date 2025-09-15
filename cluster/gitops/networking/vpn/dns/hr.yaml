@@ -82,6 +82,10 @@ spec:
           # Forward everything else to public servers, which are only reachable via the VPN gateway
           - name: forward
             parameters: . ${SECRET_DNS_FORWARDERS}
+            configBlock: |-
+              policy random
+              health_check
+              failfast_all_unhealthy_upstreams
     podAnnotations:
       k8s.v1.cni.cncf.io/networks: gateway-network-dns-pods@vpn-gw-veth0
     livenessProbe:
