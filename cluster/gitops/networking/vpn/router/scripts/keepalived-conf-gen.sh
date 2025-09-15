@@ -195,7 +195,7 @@ $(
                 indent 1 "real_server ${CLIENT_INGRESS_IP} ${INGRESS_PORT} {"
                 case "${PROTOCOL}" in
                     TCP) CHECK_TYPE="TCP" ;;
-                    UDP) CHECK_TYPE="ICMP" ;;
+                    UDP) CHECK_TYPE="PING" ;;
                     *) 2>&1 echo "Error: Unknown protocol '${PROTOCOL}'" && exit 1 ;;
                 esac
                 indent 2 "${CHECK_TYPE}_CHECK {}"
