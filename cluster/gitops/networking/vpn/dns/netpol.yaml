@@ -23,6 +23,16 @@ specs:
                 protocol: UDP
               - port: "53"
                 protocol: TCP
+            rules:
+              dns:
+                # Service record lookups
+                - matchPattern: "*.svc.cluster.local"
+                # Pod CIDR PTR records
+                - matchPattern: "*.32.10.in-addr.arpa"
+                # Service CIDR PTR records
+                - matchPattern: "*.33.10.in-addr.arpa"
+                # LoadBalancer CIDR PTR records
+                - matchPattern: "*.34.10.in-addr.arpa"
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
