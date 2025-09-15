@@ -39,9 +39,11 @@ spec:
     priorityClassName: system-cluster-critical
     # Containerd 2.0 enables binding to port numbers <= 1024 by default, so the
     # NET_BIND_SERVICE capability is not needed
-    securityContext:
-      capabilities:
-        add: []
+    # For some weird reason as of 1.12.3 this is needed or the entrypoint fails
+    # with "permission denied" upon `exec`.
+    # securityContext:
+    #   capabilities:
+    #     add: []
     servers:
       - zones:
           - zone: .
