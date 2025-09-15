@@ -176,13 +176,13 @@ $(
             indent 1 "# This does not consider the source port number, so multiple connections from a single host will go to"
             indent 1 "# the backend. This is an application-dependent tradeoff between connection stickiness and throughput."
             indent 1 "# To include the source port in the hash, enable \`mh-port\` option."
-            indent 1 "# lb_algo mh"
+            indent 1 "# lvs_sched mh"
             indent 1 "# If the desired backend is unavailable, try to fall back to another."
             indent 1 "# Another benefit is that if a backend wants to gracefully stop, it can just stop accepting new"
             indent 1 "# connections, while finishing existing ones, without a disruption."
             indent 1 "# mh-fallback"
             indent 1 "# Use source hashing until maglev hashing is available (see above)."
-            indent 1 lb_algo sh
+            indent 1 lvs_sched sh
             indent 1 sh-fallback
             indent 1 lb_kind NAT
             indent 1 "protocol ${PROTOCOL}"
