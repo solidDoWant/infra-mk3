@@ -5,6 +5,11 @@
 
 OUTPUT_PATH=${1:-/etc/keepalived/keepalived.conf}
 
+if [ -f "${OUTPUT_PATH}" ]; then
+    echo Configuration file at "${OUTPUT_PATH}" already exists, skipping generation.
+    exit 0
+fi
+
 # Log unset input vars
 : "${INGRESS_PORTS:?}"
 : "${ROUTER_NETWORK_INTERFACE:?}"
@@ -66,6 +71,17 @@ global_defs {
 
     # Error if the include file is missing or cannot be read.
     include_check
+
+    # Sync the IPVS state between all router pods.
+    # Note that to prevent thrashing, client connections will need to send a couple of packets
+    # back and forth before the daemon will sync the state with backup routers. This can be
+    # tuned via \`sysctl net.ipv4.vs.sync_threshold=<desired min packet count>\`.
+    lvs_sync_daemon ${ROUTER_NETWORK_INTERFACE}
+
+    # Drop any existing tracked connections on startup. This is needed in case the container
+    # is restarted, so that stale entries are purged. They will be synced back from the master
+    # router.
+    lvs_flush
 }
 
 vrrp_instance router {
@@ -132,7 +148,21 @@ $(
         # Define a pair of TCP and UDP virtual servers per port.
         for PROTOCOL in TCP UDP; do
             indent 0 "virtual_server group ${VS_GROUP_NAME} {"
-            indent 1 lb_algo lc
+            indent 1 "# Talos 1.11 does not currently have the config flag for maglev hashing enabled. See"
+            indent 1 "# https://github.com/siderolabs/pkgs/issues/1326 for details. Disable this until it is fixed."
+            indent 1 "# Use maglev hashing to ensure that connections from the same client IP get routed to the same backend."
+            indent 1 "# This should provide consistent hashing with minimal disruption when backends are added/removed."
+            indent 1 "# This does not consider the source port number, so multiple connections from a single host will go to"
+            indent 1 "# the backend. This is an application-dependent tradeoff between connection stickiness and throughput."
+            indent 1 "# To include the source port in the hash, enable \`mh-port\` option."
+            indent 1 "# lb_algo mh"
+            indent 1 "# If the desired backend is unavailable, try to fall back to another."
+            indent 1 "# Another benefit is that if a backend wants to gracefully stop, it can just stop accepting new"
+            indent 1 "# connections, while finishing existing ones, without a disruption."
+            indent 1 "# mh-fallback"
+            indent 1 "# Use source hashing until maglev hashing is available (see above)."
+            indent 1 lb_algo sh
+            indent 1 sh-fallback
             indent 1 lb_kind NAT
             indent 1 "protocol ${PROTOCOL}"
             indent 0
@@ -142,7 +172,12 @@ $(
             RS_OCTET_START=$((INGRESS_PORT_IDX * CLIENT_INGRESS_COUNT_PER_PORT))
             for CLIENT_INGRESS_IP in $(generate_addresses "${CLIENT_INGRESS_IP_START}" "${CLIENT_INGRESS_COUNT_PER_PORT}" "${RS_OCTET_START}"); do
                 indent 1 "real_server ${CLIENT_INGRESS_IP} ${INGRESS_PORT} {"
-                indent 2 "PING_CHECK {}"
+                case "${PROTOCOL}" in
+                    TCP) CHECK_TYPE="TCP" ;;
+                    UDP) CHECK_TYPE="ICMP" ;;
+                    *) 2>&1 echo "Error: Unknown protocol '${PROTOCOL}'" && exit 1 ;;
+                esac
+                indent 2 "${CHECK_TYPE}_CHECK {}"
                 indent 1 "}"
             done
 

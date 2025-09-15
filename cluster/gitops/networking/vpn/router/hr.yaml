@@ -31,17 +31,17 @@ spec:
               add:
                 - NET_ADMIN
         initContainers:
-          ingress-routing-setup:
-            command:
-              - /usr/local/bin/fwmark-setup.sh
-            env:
-              # This is the maximum number of VPN gateways that will be deployed.
-              GATEWAY_COUNT: &gateway_count 8
-              # Start of the IP range that the VPN gateways will use to accept ingress traffic.
-              GATEWAY_IP_START: 192.168.25.1
-              # This is the start of the IP range that will accept ingress traffic from gateways. One IP
-              # is used per gateway.
-              INGRESS_VIP_START: &ingress_vip_start 192.168.26.128
+          # ingress-routing-setup:
+          #   command:
+          #     - /usr/local/bin/fwmark-setup.sh
+          #   env:
+          #     # This is the maximum number of VPN gateways that will be deployed.
+          #     GATEWAY_COUNT: &gateway_count 8
+          #     # Start of the IP range that the VPN gateways will use to accept ingress traffic.
+          #     GATEWAY_IP_START: 192.168.25.1
+          #     # This is the start of the IP range that will accept ingress traffic from gateways. One IP
+          #     # is used per gateway.
+          #     INGRESS_VIP_START: &ingress_vip_start 192.168.26.128
           keepalived-config-gen:
             # The keepalived configuration is about a 2000 lines long with 95% of it being repetitive.
             # To make it easier to manage, it is generated from simple shell script.
@@ -103,7 +103,6 @@ spec:
             ports:
               - name: metrics
                 containerPort: 9090
-          # TODO conntrackd
         pod:
           annotations:
             # Attach the pod to the VPN gateway network using the gateway-network-vpn-gateway-pods network attachment definition.
@@ -167,7 +166,33 @@ spec:
                 # Enable this to use the fib_multipath_hash_fields sysctl below
                 # value: "3"
 
+              # This is critically important for failover and without it ingress routing will not work properly, if at all.
+              # This configures IPVS to track connections (it does not do this by default). By tracking connections, return traffic (e.g. TCP SYN-ACKs) will take
+              # the same path as the originating traffic (e.g. TCP SYNs) every time. Without it traffic can (and will) go out a random gateway based on the ECMP
+              # hash, which will break connections.
+              # In addition, this state is synced between the master and backup routers, so that if the master fails, the backup can take over without dropping existing
+              # connections.
+              - name: net.ipv4.vs.conntrack
+                value: "1"
+
               # Optional sysctls
+
+              # This setting is a tradeoff between availability and security. It allows non-SYN packets to establish new connections even if no SYN packet was seen.
+              # This can be useful for failover scenarios where either a connection was partially established between the master and a client (e.g. SYN was sent, but
+              # SYN-ACK) was not received before the master failed, or if not enough packets were sent for the connection state to sync (see the sync_threshold setting
+              # below).
+              # The risk is that a malicious client can non-SYN packets to establish a connection without a handshake, causing a denial of service by exhausting connection
+              # tracking resources. If this becomes a problem then I'll turn this off.
+              - name: net.ipv4.vs.sloppy_tcp
+                value: "1"
+
+              # This is the minimum number of packets that must be seen on a connection before the connection state is synced to backup routers. The default is 3.
+              # Lowering this value can help to reduce the number of dropped connections during failover, especially for short-lived connections, but increases the amount
+              # of data that must be synced.
+              # Setting it to 1 means that connections will be synced as soon as they are established, which is ideal for failover, but pretty chatty and wasteful most of
+              # the time.
+              # - name: net.ipv4.vs.sync_threshold
+              #   value: "1"
 
               # This will allow for multiple connections to the same host:port to take the same path. This can be important for
               # clients that can use multiple connections to the same endpoint, such as web browsers in some cases.
