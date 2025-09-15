@@ -67,10 +67,10 @@ spec:
               # VIP MACVLAN interfaces will use this as the underlying interface
               VIP_UNDERLYING_INTERFACE: vpn-gw-veth0
               # This is the maximum number of VPN gateways that will be deployed.
-              GATEWAY_COUNT: *gateway_count
+              GATEWAY_COUNT: 8
               # This is the start of the IP range that will accept ingress traffic from gateways. One IP
               # is used per gateway.
-              INGRESS_VIP_START: *ingress_vip_start
+              INGRESS_VIP_START: 192.168.26.128
               # This is the start of the IP range that will be assigned to clients that accept ingress traffic.
               CLIENT_INGRESS_IP_START: 192.168.27.0
               # This is the most number of clients that will accept traffic from each port.
