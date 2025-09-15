@@ -46,11 +46,9 @@ spec:
                 ${SECRET_VPN_FORWARDED_PORT_3}
                 ${SECRET_VPN_FORWARDED_PORT_4}
                 ${SECRET_VPN_FORWARDED_PORT_5}
-              # Ingress traffic will be forwarded to this IP + the pod index (0, 1, ...).
+              # Ingress traffic will be forwarded to this IP + the last octet of the local address.
               # This is needed for connection tracking to ensure that return traffic goes back to the correct pod.
-              PORT_FORWARD_DESTINATION_BASE_IP: 192.168.26.128
-              LOCAL_GATEWAY_NETWORK_IP_PREFIX: 192.168.25
-              LOCAL_GATEWAY_NETWORK_SUBNET_BITS: 22
+              PORT_FORWARD_DESTINATION_BASE_IP: 192.168.26.0
               # These variable values are different for each pod. See the startup script below,
               # the statefulset note above, and the vpn-credentials secret.
               POD_SPECIFIC_VARS: WIREGUARD_ADDRESSES
