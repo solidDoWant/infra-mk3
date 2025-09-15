@@ -251,6 +251,39 @@ spec:
       "mtu": 1420
     }
 ...
+# NADs for specific services so that they have a consistent set of addresses
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-network-dns-pods
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-network-dns-pods",
+      "type": "bridge",
+      "bridge": "vpn-gw-bridge0",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "192.168.24.0/22",
+        "range_start": "192.168.27.128",
+        "range_end": "192.168.27.143",
+        "routes": [
+          {"dst": "0.0.0.0/5"},
+          {"dst": "8.0.0.0/7"},
+          {"dst": "11.0.0.0/8"},
+          {"dst": "12.0.0.0/6"},
+          {"dst": "16.0.0.0/4"},
+          {"dst": "32.0.0.0/3"},
+          {"dst": "64.0.0.0/2"},
+          {"dst": "128.0.0.0/1"}
+        ],
+        "gateway": "192.168.26.254"
+      },
+      "mtu": 1420
+    }
+...
 # These NADs are for the router pod network.
 # TODO all pods in all namespaces can reference this NAD with how I have multus configured.
 # Need to restrict this one to just the router pods.

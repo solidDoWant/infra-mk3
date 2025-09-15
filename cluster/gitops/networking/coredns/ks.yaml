@@ -61,3 +61,6 @@ spec:
   wait: true
   dependsOn:
     - name: grafana-crds
+---
+# The vpn-dns symlink is just here to make it a little easier to track coredns installs. It isn't actually deployed twice by flux.
+# See ../vpn/ks.yaml for the actual vpn-dns deployment.
