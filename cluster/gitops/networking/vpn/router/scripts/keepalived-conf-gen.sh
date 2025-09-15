@@ -24,6 +24,30 @@ indent() {
     printf "%$(( 4 * TABS ))s%s\n" "" "${TEXT}"
 }
 
+# Given an IP address within a subnet, return the network address of that subnet.
+get_network_address() {
+    IP_ADDRESS="${1}"
+    CIDR_BITS="${2}"
+
+    IFS=. read -ra octets <<< "${IP_ADDRESS}"
+    NETWORK_ADDRESS_OCTETS=()
+    REMAINING_BITS="${CIDR_BITS}"
+    
+    for i in {0..3}; do
+        if [ "${REMAINING_BITS}" -le 0 ]; then
+            NETWORK_ADDRESS_OCTETS+=("0")
+            continue
+        fi
+
+        BITS_IN_OCTET=$(( REMAINING_BITS < 8 ? REMAINING_BITS : 8 ))
+        MASK=$(( 256 - 2**(8 - BITS_IN_OCTET) ))
+        NETWORK_ADDRESS_OCTETS+=("$(( octets[i] & MASK ))")
+        REMAINING_BITS=$(( REMAINING_BITS - 8 ))
+    done
+
+    (IFS=.; printf "%s" "${NETWORK_ADDRESS_OCTETS[*]}")
+}
+
 read -ra INGRESS_PORTS <<< "${INGRESS_PORTS}"
 
 # I really tried to just generate this via the built-in keepalived templating
@@ -82,8 +106,10 @@ $(
     # which causes the route entries to fail. This causes keepalived to move to "FAULT" state.
     # To work around this, add the routes manually using the notify scripts.
 $(
+    NETWORK_ADDRESS="$(get_network_address "${EGRESS_VIP_ADDRESS}" "${SUBNET_CIDR_BITS}")"  # netlink won't accept a non-network address here
     for EVENT in master backup fault stop; do
-        indent 1 notify_${EVENT} "\"/sbin/ip route ${EVENT} ${EGRESS_VIP_ADDRESS}/${SUBNET_CIDR_BITS} dev vrrp.51 scope link src ${EGRESS_VIP_ADDRESS}\""
+        test "${EVENT}" == "master" && ACTION="prepend" || ACTION="del"
+        indent 1 notify_${EVENT} "\"/sbin/ip route ${ACTION} ${NETWORK_ADDRESS}/${SUBNET_CIDR_BITS} dev vrrp.51 scope link src ${EGRESS_VIP_ADDRESS}\""
     done
 )
 }
