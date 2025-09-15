@@ -31,17 +31,6 @@ spec:
               add:
                 - NET_ADMIN
         initContainers:
-          # ingress-routing-setup:
-          #   command:
-          #     - /usr/local/bin/fwmark-setup.sh
-          #   env:
-          #     # This is the maximum number of VPN gateways that will be deployed.
-          #     GATEWAY_COUNT: &gateway_count 8
-          #     # Start of the IP range that the VPN gateways will use to accept ingress traffic.
-          #     GATEWAY_IP_START: 192.168.25.1
-          #     # This is the start of the IP range that will accept ingress traffic from gateways. One IP
-          #     # is used per gateway.
-          #     INGRESS_VIP_START: &ingress_vip_start 192.168.26.128
           keepalived-config-gen:
             # The keepalived configuration is about a 2000 lines long with 95% of it being repetitive.
             # To make it easier to manage, it is generated from simple shell script.
