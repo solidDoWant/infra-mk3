@@ -10,9 +10,13 @@ set -x
 
 PROTOCOLS=${PROTOCOLS:-"tcp udp"}
 
-# The destination IP is set the base IP + the last octet of the local address
-LAST_OCTET="$(ip -br addr show dev "${GATEWAY_NETWORK_INTERFACE}" | sed 's/^.*\.\([0-9]\{1,3\}\)\/.*$/\1/')"
-PORT_FORWARD_DESTINATION_IP="${PORT_FORWARD_DESTINATION_BASE_IP%.*}.$((${PORT_FORWARD_DESTINATION_BASE_IP##*.} + LAST_OCTET))"
+# The destination IP address is the base IP + the pod index
+PORT_FORWARD_DESTINATION_IP="${PORT_FORWARD_DESTINATION_BASE_IP%.*}.$((${PORT_FORWARD_DESTINATION_BASE_IP##*.} + ${POD_INDEX}))"
+
+# Assign an IP address to the gateway network interface based on the pod index
+# TODO remove this after some testing and move it back into the NAD
+LOCAL_GATEWAY_NETWORK_IP="${LOCAL_GATEWAY_NETWORK_IP_PREFIX}.${POD_INDEX}"
+ip addr add "${LOCAL_GATEWAY_NETWORK_IP}/${LOCAL_GATEWAY_NETWORK_SUBNET_BITS}" dev "${GATEWAY_NETWORK_INTERFACE}"
 
 # Rewrite packets that are port-forwarded by the VPN to the destination IP:Port combo
 for PORT in ${PORT_FORWARDING_PORTS}; do

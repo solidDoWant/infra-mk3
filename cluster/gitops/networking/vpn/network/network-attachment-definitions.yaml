@@ -15,12 +15,7 @@ spec:
       "name": "gateway-network-vpn-gateway-pods",
       "type": "bridge",
       "bridge": "vpn-gw-bridge0",
-      "ipam": {
-        "type": "whereabouts",
-        "range": "192.168.24.0/22",
-        "range_start": "192.168.25.128",
-        "range_end": "192.168.25.135"
-      },
+      "ipam": {},
       "mtu": 1420
     }
 ---
@@ -58,9 +53,9 @@ spec:
       "bridge": "vpn-gw-bridge0",
       "ipam": {
         "type": "whereabouts",
-        "range": "192.168.24.0/22",
+        "range": "192.168.24.0/24",
         "range_start": "192.168.24.1",
-        "range_end": "192.168.24.255",
+        "range_end": "192.168.24.254",
         "routes": [
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
