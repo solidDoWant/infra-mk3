@@ -26,7 +26,7 @@ RUN \
     apt update && \
     apt install -y --no-install-recommends jq && \
     curl -fsSL "https://api.github.com/repos/intel/xpumanager/releases/tags/${XPUMANAGER_VERSION}" | \
-        jq -r '.assets[] | select(.name | test("xpumanager.*\\.u24\\.04_amd64\\.deb$")) | .browser_download_url' | \
+        jq -r '.assets[] | select(.name | test("xpumanager.*[\\._]u24\\.04_amd64\\.deb$")) | .browser_download_url' | \
         xargs -I {} curl -fsSL -o /tmp/xpumanager.deb {} \
         && \
     # Install the package
