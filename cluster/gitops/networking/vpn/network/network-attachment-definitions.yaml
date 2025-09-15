@@ -253,6 +253,10 @@ spec:
 ...
 # NADs for specific services so that they have a consistent set of addresses
 ---
+# The first route overrides the link-scoped prefix route that is automatically added
+# by the kernel when the veth interface is created. This ensures that all traffic is
+# routed instead of switched, which is important to ensure that clients receive the
+# DNS responses with the correct source IP address.
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
 metadata:
@@ -270,6 +274,7 @@ spec:
         "range_start": "192.168.27.128",
         "range_end": "192.168.27.143",
         "routes": [
+          {"dst": "192.168.24.0/22"},
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
           {"dst": "11.0.0.0/8"},
