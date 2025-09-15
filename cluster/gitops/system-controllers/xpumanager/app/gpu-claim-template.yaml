@@ -8,8 +8,8 @@ spec:
   spec:
     devices:
       requests:
-        exactly:
-          - name: gpu
+        - name: gpu
+          exactly:
             deviceClassName: gpu.intel.com
             adminAccess: true
             allocationMode: All
