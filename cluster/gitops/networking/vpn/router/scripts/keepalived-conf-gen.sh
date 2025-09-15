@@ -184,7 +184,7 @@ $(
             indent 1 "# Use source hashing until maglev hashing is available (see above)."
             indent 1 lvs_sched sh
             indent 1 sh-fallback
-            indent 1 lb_kind NAT
+            indent 1 lvs_method NAT
             indent 1 "protocol ${PROTOCOL}"
             indent 0
 
