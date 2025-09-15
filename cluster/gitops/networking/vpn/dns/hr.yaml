@@ -60,7 +60,7 @@ spec:
           # This shouldn't happen - this config is just a precaution
           - name: acl
             configBlock: |-
-              allow net 10.0.0.0/8
+              allow net 192.168.24.0/22
               drop
           # Resolve cluster addresses via kube-dns
           - name: forward
