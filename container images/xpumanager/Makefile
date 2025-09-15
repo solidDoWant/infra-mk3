@@ -2,7 +2,7 @@ BASE_IMAGE = ubuntu:24.04
 XPUMANAGER_VERSION = v1.3.2
 
 NEW_IMAGE = ghcr.io/soliddowant/xpumanager
-NEW_IMAGE_FULL = $(NEW_IMAGE):$(XPUMANAGER_VERSION:V%=%)
+NEW_IMAGE_FULL = $(NEW_IMAGE):$(XPUMANAGER_VERSION:v%=%)
 
 .PHONY: all
 all: image
