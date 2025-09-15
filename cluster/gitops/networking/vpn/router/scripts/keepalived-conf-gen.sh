@@ -122,6 +122,8 @@ vrrp_instance router {
         # noprefixroute is needed to prevent the kernel from adding the link-scoped route automatically.
         # Without this, the route will get appended instead of prepended, and will never be matched.
         # See below for the workaround.
+        #
+        # This is also used for the DNS virtual service.
         ${EGRESS_VIP_ADDRESS}/${SUBNET_CIDR_BITS} dev ${VIP_UNDERLYING_INTERFACE} use_vmac noprefixroute
 
         # These are additional addresses, one for each gateway, that gateways should send ingress traffic to.
@@ -205,6 +207,32 @@ $(
             indent 0 "}"
             indent 0
         done
+    done
+)
+
+# Define a virtual service for DNS resolution. An iptables rule will DNAT DNS requests to the cluster DNS service to this VIP.
+# This allows for silently resolving client pod DNS queries via a VPN tunnel without any special configuration in the client pods.
+$(
+    for PROTOCOL in TCP UDP; do
+        indent 0 "virtual_server ${EGRESS_VIP_ADDRESS} 53 {"
+        indent 1 "# See note above about maglev hashing."
+        indent 1 lvs_sched sh
+        indent 1 sh-fallback
+        indent 1 sh-port
+        indent 1 lvs_method NAT
+        indent 1 "protocol ${PROTOCOL}"
+        indent 0
+        for DNS_SERVER_IP in $(generate_addresses "${DNS_SERVER_START_IP}" "${DNS_SERVER_COUNT}"); do
+            indent 1 "real_server ${DNS_SERVER_IP} 53 {"
+            case "${PROTOCOL}" in
+                TCP) CHECK_TYPE="TCP" ;;
+                UDP) CHECK_TYPE="DNS" ;;
+                *) 2>&1 echo "Error: Unknown protocol '${PROTOCOL}'" && exit 1 ;;
+            esac
+            indent 2 "${CHECK_TYPE}_CHECK {}"
+            indent 1 "}"
+        done
+        indent 0 "}"
     done
 )
 EOF
