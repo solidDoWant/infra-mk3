@@ -73,14 +73,5 @@ affinity:
         - matchExpressions:
             - key: node-role.kubernetes.io/control-plane
               operator: Exists
-# Spread the pods out to mitigate the impact of a host failure
-topologySpreadConstraints:
-  - labelSelector:
-      matchLabels:
-        app.kubernetes.io/name: '{{ template "coredns.name" . }}'
-        app.kubernetes.io/instance: "{{ .Release.Name }}"
-    topologyKey: kubernetes.io/hostname
-    maxSkew: 1
-    whenUnsatisfiable: ScheduleAnyway
 # Set so that Cilium Hubble correctly identifies this as a cluster DNS pod
 k8sAppLabelOverride: "kube-dns"

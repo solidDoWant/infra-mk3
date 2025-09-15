@@ -90,15 +90,6 @@ spec:
       initialDelaySeconds: 5
     readinessProbe:
       initialDelaySeconds: 5
-    # Spread the pods out to mitigate the impact of a host failure
-    topologySpreadConstraints:
-      - labelSelector:
-          matchLabels:
-            app.kubernetes.io/name: '{{ template "coredns.name" . }}'
-            app.kubernetes.io/instance: "{{ .Release.Name }}"
-        topologyKey: kubernetes.io/hostname
-        maxSkew: 1
-        whenUnsatisfiable: ScheduleAnyway
     podDisruptionBudget:
       minAvailable: 1
     k8sAppLabelOverride: k8s-gateway
