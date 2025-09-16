@@ -18,7 +18,7 @@ spec:
   values:
     controllers:
       vpn-gateway:
-        replicas: 2
+        replicas: 5
         # This is just a statefulset so that pods are assigned a known index. This allows for a very slightly different
         # configuration for each pod, which is needed to ensure that each pod connects to a different VPN endpoint.
         # If this was implemented via two different deployments, then upgrades would terminate both pods at the same time,
@@ -266,7 +266,12 @@ spec:
                 208.0.0.0/4\
                 "
               WIREGUARD_MTU: "1420"
-              POD_SPECIFIC_VARS: "WIREGUARD_ADDRESSES SERVER_COUNTRIES"
+              POD_SPECIFIC_VARS: >-
+                WIREGUARD_ADDRESSES
+                SERVER_COUNTRIES
+                WIREGUARD_PUBLIC_KEY
+                WIREGUARD_PRIVATE_KEY
+                WIREGUARD_PRESHARED_KEY
               POD_NAME:
                 valueFrom:
                   fieldRef:
