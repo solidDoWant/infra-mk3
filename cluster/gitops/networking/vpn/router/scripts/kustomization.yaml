@@ -5,6 +5,7 @@ configMapGenerator:
   - name: vpn-router-scripts
     files:
       - ./keepalived-conf-gen.sh
+      - ./setup-dns-nat.sh
     options:
       disableNameSuffixHash: true
       labels:

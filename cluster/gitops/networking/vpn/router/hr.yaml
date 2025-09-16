@@ -50,7 +50,7 @@ spec:
               ROUTER_NETWORK_INTERFACE: vpn-r-veth0
               # Egress traffic (traffic originating from the cluster to the internet via the VPN gateways)
               # will use this as the nexthop address.
-              EGRESS_VIP_ADDRESS: 192.168.26.254
+              EGRESS_VIP_ADDRESS: &router_primary_vip 192.168.26.254
               # This is the subnet mask for the gateway network.
               SUBNET_CIDR_BITS: 22
               # VIP MACVLAN interfaces will use this as the underlying interface
@@ -68,6 +68,14 @@ spec:
               DNS_SERVER_START_IP: 192.168.27.128
               # This is the maximum number of DNS servers that will be deployed.
               DNS_SERVER_COUNT: 16
+          # DNAT DNS requests destined for the kube-dns service to the VPN DNS servers. This prevents
+          # DNS requests from leaking, while not requiring any configuration changes to client pods.
+          setup-dns-nat:
+            command:
+              - /usr/local/bin/setup-dns-nat.sh
+            env:
+              KUBE_DNS_SERVICE_IP_ADDRESS: 10.33.0.10
+              ROUTER_VIP_ADDRESS: *router_primary_vip
         containers:
           # This container advertises the router virtual IP address using Virtual Router Redundancy Protocol (VRRP),
           # a first hop redundancy protocol (FHRP).
@@ -215,24 +223,19 @@ spec:
             keepalived:
               - path: /etc/keepalived/
                 # readOnly: true  # TODO
-      ingress-routing-setup-scripts:
+      vpn-router-scripts:
         type: configMap
         name: vpn-router-scripts
         defaultMode: 0755
         advancedMounts:
           vpn-router:
-            ingress-routing-setup:
-              - &lib_mount
-                path: /usr/local/bin/lib.sh
-                subPath: lib.sh
-                readOnly: true
-              - path: /usr/local/bin/fwmark-setup.sh
-                subPath: fwmark-setup.sh
-                readOnly: true
             keepalived-config-gen:
-              - *lib_mount
               - path: /usr/local/bin/keepalived-conf-gen.sh
                 subPath: keepalived-conf-gen.sh
+                readOnly: true
+            setup-dns-nat:
+              - path: /usr/local/bin/setup-dns-nat.sh
+                subPath: setup-dns-nat.sh
                 readOnly: true
     service:
       metrics:
