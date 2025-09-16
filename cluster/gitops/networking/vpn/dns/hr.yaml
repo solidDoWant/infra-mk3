@@ -18,7 +18,6 @@ spec:
   # These values are added now that the cluster has been bootstrapped
   values:
     replicaCount: 2
-    serviceType: LoadBalancer
     prometheus:
       service:
         enabled: true
@@ -28,8 +27,6 @@ spec:
       name: vpn-dns
     serviceAccount:
       create: true
-    rbac:
-      create: false
     isClusterService: false
     priorityClassName: system-cluster-critical
     # Containerd 2.0 enables binding to port numbers <= 1024 by default, so the
@@ -62,25 +59,26 @@ spec:
             configBlock: |-
               allow net 192.168.24.0/22
               drop
-          # Resolve cluster addresses via kube-dns
-          - name: forward
-            parameters: cluster.local /etc/resolv.conf
-          # Resolve PTR records for load-balanced services via kube-dns
-          - name: forward
-            parameters: 34.10.in-addr.arpa /etc/resolv.conf
-          # Resolve PTR records for cluster services via kube-dns
-          - name: forward
-            parameters: 33.10.in-addr.arpa /etc/resolv.conf
-          # Resolve PTR records for pod addresses via kube-dns
-          - name: forward
-            parameters: 32.10.in-addr.arpa /etc/resolv.conf
+          - name: whoami
+          - name: kubernetes
+            parameters: cluster.local in-addr.arpa
+            configBlock: |-
+              pods verified
+              fallthrough in-addr.arpa
+          # Resolve PTR records for services
+          - name: k8s_external
+            parameters: in-addr.arpa
+            configBlock: |-
+              fallthrough in-addr.arpa
           # Fix PTR record lookups
           - name: rewrite
             parameters: stop
             configBlock: |-
               name suffix .in-addr.arpa. .in-addr.arpa.
               answer name auto
-              answer value (.*)\.cluster\.local\. {1}.${SECRET_PUBLIC_DOMAIN_NAME}
+              answer value (.*)\.cluster\.local\. {1}.cluster.local
+          - name: cache
+            parameters: 30
           # Forward everything else to public servers, which are only reachable via the VPN gateway
           - name: forward
             parameters: . ${SECRET_DNS_FORWARDERS}

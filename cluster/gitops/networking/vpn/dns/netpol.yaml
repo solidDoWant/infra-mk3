@@ -12,27 +12,13 @@ specs:
         app.kubernetes.io/instance: coredns-vpn-dns
         app.kubernetes.io/name: coredns
     egress:
-      # DNS resolution for in-cluster resources (e.g. service names) via kube-dns
-      - toEndpoints:
-          - matchLabels:
-              io.kubernetes.pod.namespace: networking
-              endpoints.netpols.home.arpa/cluster-dns: "true"
+      # Watch k8s resources
+      - toEntities:
+          - kube-apiserver
         toPorts:
           - ports:
-              - port: "53"
-                protocol: UDP
-              - port: "53"
+              - port: "6443"
                 protocol: TCP
-            rules:
-              dns:
-                # Service record lookups
-                - matchPattern: "*.*.svc.cluster.local"
-                # Pod CIDR PTR records
-                - matchPattern: "*.*.32.10.in-addr.arpa"
-                # Service CIDR PTR records
-                - matchPattern: "*.*.33.10.in-addr.arpa"
-                # LoadBalancer CIDR PTR records
-                - matchPattern: "*.*.34.10.in-addr.arpa"
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
