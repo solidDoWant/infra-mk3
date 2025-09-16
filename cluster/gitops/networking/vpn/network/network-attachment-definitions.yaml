@@ -1,4 +1,8 @@
 # These NADs are for the VPN gateway network.
+# Any routes for 10.33.0.10/32 are to ensure that DNS requests go to the VPN DNS pods
+# rather than the cluster DNS service. By using this route and DNATing the requests
+# on the router, the client pods don't need to have any special configuration to use
+# the VPN DNS servers.
 ---
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
@@ -21,6 +25,9 @@ spec:
         "range_start": "192.168.25.128",
         "range_end": "192.168.25.135"
       },
+      "routes": [
+        {"dst": "10.33.0.10/32", "gw": "192.168.26.254"}
+      ],
       "mtu": 1420
     }
 ---
@@ -41,6 +48,9 @@ spec:
         "range_start": "192.168.26.0",
         "range_end": "192.168.26.127"
       },
+      "routes": [
+        {"dst": "10.33.0.10/32", "gw": "192.168.26.254"}
+      ],
       "mtu": 1420
     }
 ---
@@ -62,6 +72,7 @@ spec:
         "range_start": "192.168.24.1",
         "range_end": "192.168.24.255",
         "routes": [
+          {"dst": "10.33.0.10/32"},
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
           {"dst": "11.0.0.0/8"},
@@ -113,6 +124,7 @@ spec:
         "range_start": "192.168.27.1",
         "range_end": "192.168.27.15",
         "routes": [
+          {"dst": "10.33.0.10/32"},
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
           {"dst": "11.0.0.0/8"},
@@ -144,6 +156,7 @@ spec:
         "range_start": "192.168.27.16",
         "range_end": "192.168.27.31",
         "routes": [
+          {"dst": "10.33.0.10/32"},
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
           {"dst": "11.0.0.0/8"},
@@ -175,6 +188,7 @@ spec:
         "range_start": "192.168.27.32",
         "range_end": "192.168.27.47",
         "routes": [
+          {"dst": "10.33.0.10/32"},
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
           {"dst": "11.0.0.0/8"},
@@ -206,6 +220,7 @@ spec:
         "range_start": "192.168.27.48",
         "range_end": "192.168.27.63",
         "routes": [
+          {"dst": "10.33.0.10/32"},
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
           {"dst": "11.0.0.0/8"},
@@ -237,6 +252,7 @@ spec:
         "range_start": "192.168.27.64",
         "range_end": "192.168.27.79",
         "routes": [
+          {"dst": "10.33.0.10/32"},
           {"dst": "0.0.0.0/5"},
           {"dst": "8.0.0.0/7"},
           {"dst": "11.0.0.0/8"},
