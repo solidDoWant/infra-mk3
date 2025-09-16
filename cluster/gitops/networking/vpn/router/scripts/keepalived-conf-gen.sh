@@ -198,6 +198,8 @@ $(
             indent 1 sh-fallback
             indent 1 lvs_method NAT
             indent 1 "protocol ${PROTOCOL}"
+            indent 1 "# Use a short delay loop to detect backend failures quickly."
+            indent 1 delay_loop 3
             indent 0
 
             # A set of IP addresses is allocated for client pods that accept traffic from a specific port.
