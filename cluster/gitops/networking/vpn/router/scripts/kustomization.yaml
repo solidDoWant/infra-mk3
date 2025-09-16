@@ -7,7 +7,9 @@ configMapGenerator:
       - ./keepalived-conf-gen.sh
       - ./keepalived-liveness-probe.sh
       - ./keepalived-startup-probe.sh
+      - ./lib.sh
       - ./setup-dns-nat.sh
+      - ./setup-return-routing.sh
     options:
       disableNameSuffixHash: true
       labels:

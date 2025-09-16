@@ -56,10 +56,10 @@ spec:
               # VIP MACVLAN interfaces will use this as the underlying interface
               VIP_UNDERLYING_INTERFACE: vpn-gw-veth0
               # This is the maximum number of VPN gateways that will be deployed.
-              GATEWAY_COUNT: 8
+              GATEWAY_COUNT: &gateway_count 8
               # This is the start of the IP range that will accept ingress traffic from gateways. One IP
               # is used per gateway.
-              INGRESS_VIP_START: 192.168.26.128
+              INGRESS_VIP_START: &ingress_vip_start 192.168.26.128
               # This is the start of the IP range that will be assigned to clients that accept ingress traffic.
               CLIENT_INGRESS_IP_START: 192.168.27.0
               # This is the most number of clients that will accept traffic from each port.
@@ -76,6 +76,15 @@ spec:
             env:
               KUBE_DNS_SERVICE_IP_ADDRESS: 10.33.0.10
               ROUTER_VIP_ADDRESS: *router_primary_vip
+          setup-return-routing:
+            command:
+              - /usr/local/bin/setup-return-routing.sh
+            env:
+              GATEWAY_COUNT: *gateway_count
+              INGRESS_VIP_START: *ingress_vip_start
+              # Start of the IP range that will be assigned to VPN gateways. These are the nexthop addresses
+              # for ingress return traffic.
+              GATEWAY_IP_START: 192.168.25.128
         containers:
           # This container advertises the router virtual IP address using Virtual Router Redundancy Protocol (VRRP),
           # a first hop redundancy protocol (FHRP).
@@ -250,12 +259,21 @@ spec:
         advancedMounts:
           vpn-router:
             keepalived-config-gen:
+              - &lib
+                path: /usr/local/bin/lib.sh
+                subPath: lib.sh
+                readOnly: true
               - path: /usr/local/bin/keepalived-conf-gen.sh
                 subPath: keepalived-conf-gen.sh
                 readOnly: true
             setup-dns-nat:
               - path: /usr/local/bin/setup-dns-nat.sh
                 subPath: setup-dns-nat.sh
+                readOnly: true
+            setup-return-routing:
+              - *lib
+              - path: /usr/local/bin/setup-return-routing.sh
+                subPath: setup-return-routing.sh
                 readOnly: true
             keepalived:
               - path: /usr/local/bin/keepalived-startup-probe.sh

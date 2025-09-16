@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+# shellcheck source=lib.sh
+. "$(dirname "${0}")/lib.sh"
 
 # Read in and convert env vars as needed
 OUTPUT_PATH=${1:-/etc/keepalived/keepalived.conf}
