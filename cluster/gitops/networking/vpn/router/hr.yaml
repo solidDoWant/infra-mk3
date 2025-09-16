@@ -88,6 +88,26 @@ spec:
               - --log-detail
               - --no-syslog
               - --dump-conf
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec: &probe_config
+                  exec:
+                    command:
+                      - /usr/local/bin/keepalived-startup-probe.sh
+                  initialDelaySeconds: 15
+                  periodSeconds: 5
+                  failureThreshold: 12 # Allow up to 1 minute for startup
+                  timeoutSeconds: 3
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  <<: *probe_config
+                  exec:
+                    command:
+                      - /usr/local/bin/keepalived-liveness-probe.sh
           # This container monitors the VPN gateway endpoints and updates routes in the namespace's routing table
           # to ensure that traffic is load balanced across all available VPN gateways.
           gateway-route-manager:
@@ -222,7 +242,7 @@ spec:
               - path: /etc/keepalived/
             keepalived:
               - path: /etc/keepalived/
-                # readOnly: true  # TODO
+                readOnly: true
       vpn-router-scripts:
         type: configMap
         name: vpn-router-scripts
@@ -236,6 +256,13 @@ spec:
             setup-dns-nat:
               - path: /usr/local/bin/setup-dns-nat.sh
                 subPath: setup-dns-nat.sh
+                readOnly: true
+            keepalived:
+              - path: /usr/local/bin/keepalived-startup-probe.sh
+                subPath: keepalived-startup-probe.sh
+                readOnly: true
+              - path: /usr/local/bin/keepalived-liveness-probe.sh
+                subPath: keepalived-liveness-probe.sh
                 readOnly: true
     service:
       metrics:
