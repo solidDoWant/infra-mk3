@@ -76,6 +76,14 @@ spec:
             env:
               KUBE_DNS_SERVICE_IP_ADDRESS: 10.33.0.10
               ROUTER_VIP_ADDRESS: *router_primary_vip
+          # This uses connection tracking to ensure that return traffic for incoming connections
+          # goes back out the same gateway that the incoming traffic arrived on. This is critically
+          # important for all return traffic, because without this, return traffic will be SNATed
+          # via a random gateway (and IP address), which will break connections.
+          #
+          # This does not need to be synced between router pods because connections are marked when
+          # considered "new", and kernel connection tracking will treat the first packet in a stream
+          # as "new", even if it is not the actual first packet (e.g. TCP SYN).
           setup-return-routing:
             command:
               - /usr/local/bin/setup-return-routing.sh
