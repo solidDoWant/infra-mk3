@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: control-server-config
+type: Opaque
+stringData:
+  PASSWORD: ENC[AES256_GCM,data:x0wndNAJ+QxgY5HC+xfUZTUEav9xqqeVDUWhusQPv7BTjtZGdB673+rjXxY3qpA6vEeDXwNXzZF/oeGon05U7g==,iv:MKdyWMOt+/4luNWBut6IlpAR5I/hbm4ib9a31uTda/E=,tag:D91+DE9z2FgdRL66YoIkhw==,type:str]
+  config.toml: ENC[AES256_GCM,data:EQjikiN5n7pYPsZVhXqctYlIqs4Royexp3aoU0n11VYpwOwyZEswRocj+4xPPojVr48LB9WXr8R9LlnNiiyyyDIa9g7qmdfwUrsa2Savbs75zlHN/HuvXDeYHUbx7AasgmG4yoZ6GKV1iAyZB6QhpydFQbwaUAudKGvGE31FjhXWB3oZtECpUos+OzGLjKDaaCrCZmJvmUIZYW6swdFx26O7VPDxuB2an7DxZI+BB+limUngwMtTHBTrqnUsZ7oKUZjWJ8Lg591M0yUVauHXsQrohEol2ifkoqzz8c9kI3QpReVmlZhOq7n0femxUS1F6PXXOC9f8RrKt4Ln7bas45pKOWREBk2ydJxVLd/spQRq6w6h3yAZI0aZ4cxHnRh6Oas1xGrLTdZAWV+mS4dCfGyK0d4jmDbbb5/z5Edy,iv:dQ1ikKTYFXatGUq/nZ3qI3hOiOhzM2/UJ8/joALDIK0=,tag:3nhFO9ySz7dLKZjaGSAzTw==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsZUE5K2RYeEFkOXpJMzNS
+        WmpNL2syNWR4Y0tiSXRXbDBIdnYzMkJER0RNCk4yY1VkZjlrOWt3M3ZkQm04YlBI
+        YlZHbHBNSmt3VGQ1S2JsR1JFVjRiVGcKLS0tIFRpVWVjYWVPVFRXb2swRGZ1bnhB
+        MzlEVXZRTDY1ci9LNVlQREV1V2pxTzgKTYTVsJivHLreNXEAJdAVKJrYkY3K4Gxr
+        2mxyhTcdUJNJDS13Olll6iRVTrzCticZcZ8X6IkDP7H1RvH9miuwgQ==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBmS0EvNStqMDBZejA5Rm91
+        Ny8wN25ud0xDVFBvR0I3NEVrdnVDRE9zS21vCjZWN3JmVDhjQ1N2OHdPUUVUYm1N
+        a2lGQk5UdjBxM2xNK1VnTHE0K0xJNDAKLS0tIEV0TXAxYnBzTEtqb3J4Ni9ublQx
+        VVUrdHhiM0ZhaklmYzYvcmM1Zk5pN1EKMYFYswhq/GCQuX6umQNhPdzLXQCUE1Qy
+        rwsVI3yNTaaXeBLb4X48KRO/l605pojaeTXapeq1ciEwMPa3tLS9Qw==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2025-09-17T22:13:18Z"
+  mac: ENC[AES256_GCM,data:Xa4LJmDxNwlZtSpEPmaZ9yUG9UdbXiASlRVBh+qSHLdz1ub5lal1Fg+FXIp1iM8tOrLVJHW9e/Ryg7Or2t3UhQ3XCM9hisX55psNwD6uC4PdXV26Oyt6XgEH3/Sf1SLXi7ZauglFB37JXP5aOEnwJTKUkTsTdxnl45mGjAGvTAs=,iv:0Rkvzbe6e8nDsMHM3/y/GyUH+qdMciUCGJ7lwz3DBpM=,tag:tvwuFSyfNYXyDoBqeFzbmQ==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0

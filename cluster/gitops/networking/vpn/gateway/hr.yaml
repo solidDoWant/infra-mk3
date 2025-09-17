@@ -353,6 +353,15 @@ spec:
                 subPath: startup.sh
               - path: /usr/local/bin/set-env-vars.sh
                 subPath: set-env-vars.sh
+      control-server-config:
+        type: secret
+        name: control-server-config
+        defaultMode: 0640
+        advancedMounts:
+          vpn-gateway:
+            gluetun:
+              - path: /gluetun/auth/config.toml
+                subPath: config.toml
     service:
       proxy:
         controller: vpn-gateway
