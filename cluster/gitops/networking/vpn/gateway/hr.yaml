@@ -305,9 +305,6 @@ spec:
                 containerPort: 8888
               - name: shadowsocks-tcp
                 containerPort: 8388
-              - name: shadowsocks-udp
-                containerPort: 8388
-                protocol: UDP
             probes:
               # From https://github.com/qdm12/gluetun-wiki/blob/main/faq/healthcheck.md#docker-healthcheck
               readiness: &gluetun_probe
@@ -367,6 +364,3 @@ spec:
             port: 8888
           shadowsocks-tcp:
             port: 8388
-          shadowsocks-udp:
-            port: 8388
-            protocol: UDP
