@@ -368,6 +368,8 @@ spec:
         type: LoadBalancer
         annotations:
           lbipam.cilium.io/ips: 10.34.0.5
+        allocateLoadBalancerNodePorts: false
+        sessionAffinity: ClientIP
         ports:
           http-proxy:
             port: 8888
