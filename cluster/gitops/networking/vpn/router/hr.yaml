@@ -136,8 +136,25 @@ spec:
               - --port=9999
               - --start-ip=192.168.25.128
               - --end-ip=192.168.25.135
+              # Enable DNS record updates when the set of active gateways' public IP addresses changes.
+              - --ddns-provider=changeip
+              - --ddns-username=$(DDNS_USERNAME)
+              - --ddns-hostname=${SECRET_CHANGEIP_HOSTNAME}
+              # Connect to each gateway's gluetun control server to query its public IP address.
+              - --public-ip-service-scheme=http
+              - --public-ip-service-port=8000
+              - --public-ip-service-path=/v1/publicip/ip
+              - --public-ip-service-username=gateway-route-manager
               # Enable this for some additional logging. This will generate several lines per second, and can make it harder to see other log messages.
               # - --log-level=debug
+            env:
+              PUBLIC_IP_SERVICE_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: control-server-config
+                    key: PASSWORD
+            envFrom:
+              - secret: ddns-credentials
             ports:
               - name: metrics
                 containerPort: 9090
