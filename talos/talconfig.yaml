@@ -259,7 +259,7 @@ patches:
             # - net.ipv4.ip_forward
         extraArgs:
           # Feature enablement
-          feature-gates: DynamicResourceAllocation=true,DRAAdminAccess=true,UserNamespacesPodSecurityStandards=true
+          feature-gates: DynamicResourceAllocation=true,DRAAdminAccess=true,UserNamespacesPodSecurityStandards=true,ImageVolume=true
         nodeIP:
           validSubnets:
             - 10.3.1.0/16
@@ -364,7 +364,7 @@ patches:
           # Talos etcd-backed "Cluster Discovery" support, which is required for kubeprism.
           # Disabling this flag allows kubeprism to continue to work.
           # See https://github.com/siderolabs/talos/issues/9980
-          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:AuthorizeNodeWithSelectors=false,kube:UserNamespacesPodSecurityStandards=true
+          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:AuthorizeNodeWithSelectors=false,kube:UserNamespacesPodSecurityStandards=true,kube:ImageVolume=true
           # Resource enablement
           # Enable everything but alpha and legacy features
           runtime-config: "api/all=true,api/legacy=false"
