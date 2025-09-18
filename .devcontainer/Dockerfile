@@ -55,7 +55,7 @@ COPY --from=ghcr.io/helmfile/helmfile:v1.0.0-rc.7 /usr/local/bin/helmfile /usr/l
 COPY --from=registry.k8s.io/kubectl:v1.32.3 /bin/kubectl /usr/local/bin/kubectl
 
 # flux
-COPY --from=ghcr.io/fluxcd/flux-cli:v2.5.1 /usr/local/bin/flux /usr/local/bin/flux
+COPY --from=ghcr.io/fluxcd/flux-cli:v2.6.4 /usr/local/bin/flux /usr/local/bin/flux
 
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
