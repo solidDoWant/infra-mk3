@@ -1,0 +1,199 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: qbittorrent
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      qbittorrent:
+        containers:
+          app:
+            image:
+              repository: ghcr.io/home-operations/qbittorrent
+              tag: 5.1.2
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            ports:
+              - name: web
+                containerPort: 8080
+            probes:
+              readiness:
+                enabled: true
+              liveness:
+                enabled: true
+        pod:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    configMaps:
+      qbittorrent:
+        data:
+          qbittorrent.conf: |
+            [Application]
+            FileLogger\Age=1
+            FileLogger\AgeType=0
+            FileLogger\Backup=false ; Don't backup logs
+            FileLogger\DeleteOld=true
+            FileLogger\Enabled=true ; Enable logging (needed by the container for stdout)
+            FileLogger\MaxSizeBytes=66560
+            FileLogger\Path=/config/qBittorrent/logs
+            MemoryWorkingSetLimit=1024  ; TODO - this is the cache size in MiB, should be tuned based on available memory
+
+            [AutoRun]
+            enabled=false
+            program=
+
+            [BitTorrent]
+            MergeTrackersEnabled=true ; Multiple downloads for the same file will just merge trackers
+            Session\AddExtensionToIncompleteFiles=true ; Add .!qB extension to incomplete files
+            Session\AddTorrentStopped=false ; Start downloads automatically
+            Session\AnnounceIP=${SECRET_VPN_DDNS_HOSTNAME} ; Announce this hostname to trackers. This will resolve to several different IP addresses, load balancing incoming connections
+            Session\AnnouncePort=${SECRET_VPN_FORWARDED_PORT_1} ; Listening port for BitTorrent traffic, which will come in from all the VPN gateways
+            Session\AnonymousModeEnabled=true ; Randomize connection ID, use generic user agent, etc.
+            Session\AsyncIOThreadsCount=10
+            ; Always follow the same logic for moving completed downloads upon completion
+            Session\DisableAutoTMMByDefault=false
+            Session\DisableAutoTMMTriggers\CategorySavePathChanged=false
+            Session\DisableAutoTMMTriggers\DefaultSavePathChanged=false
+            Session\DiskCacheSize=-1
+            Session\DiskIOReadMode=EnableOSCache
+            Session\DiskIOType=SimplePreadPwrite ; This will `mmap` when possible with a fallback to `pread`/`pwrite`
+            Session\DiskIOWriteMode=EnableOSCache
+            Session\DiskQueueSize=4194304 ; 4 MiB disk queue size
+            Session\ExcludedFileNames=
+            Session\FilePoolSize=40 ; 40 file descriptors for file I/O
+            Session\HashingThreadsCount=2 ; TODO this should probably be higher
+            Session\IgnoreSlowTorrentsForQueueing=true
+            Session\Interface=vpn-gw-veth0 ; Only handle bittorrent traffic over the VPN interface
+            Session\MultiConnectionsPerIp=true  ; Needed because the advertised "IP" maps to multiple IP addresses, making clients think that they are connecting to different peers
+            Session\MaxActiveDownloads=300
+            Session\MaxActiveTorrents=500
+            Session\MaxActiveUploads=300
+            ; Disable connection limits
+            Session\MaxConnections=-1
+            Session\MaxConnectionsPerTorrent=-1
+            Session\MaxUploads=-1
+            Session\MaxUploadsPerTorrent=-1
+            ; My download speed is fast enough that QBT is reporting this as a bottleneck
+            Session\RequestQueueSize=1000
+            ; Log poor performance to the log file (stdout)
+            Session\PerformanceWarning=true
+            Session\Port=${SECRET_VPN_FORWARDED_PORT_1} ; Listening port for BitTorrent traffic, forwarded by the VPN gateways
+            Session\Preallocation=true ; Preallocate the download space for new downloads
+            Session\ProxyPeerConnections=true ; Send peer connections through the proxy
+            Session\QueueingSystemEnabled=false ; If a torrent is registered, just start it
+            Session\ResumeDataStorageType=SQLite ; This is the new storage backend for download progress
+            ; Session\SSL\Port=26617  ; Does nothing currently
+            Session\ShareLimitAction=Stop
+            Session\SubcategoriesEnabled=true
+            Session\UseOSCache=true
+            Session\UseRandomPort=false ; Don't listen on a random port
+
+            [Core]
+            AutoDeleteAddedTorrentFile=IfAdded
+
+            [LegalNotice]
+            Accepted=true
+
+            [Meta]
+            MigrationVersion=8
+
+            [Network]
+            PortForwardingEnabled=false  ; Don't use UPnP to request port forwarding
+
+            [Preferences]
+            Connection\PortRangeMin=6881
+            Connection\UPnP=false ; Don't use UPnP to request port forwarding
+            General\Locale=en
+            General\StatusbarExternalIPDisplayed=true ; Show detected external IP in the status bar
+            General\UseRandomPort=false ; Don't listen on a random port
+            MailNotification\req_auth=true
+            WebUI\Address=* ; Listen on all addresses. Ideally this would be just the pod eth0 interfaces, but QBT doesn't currently support specifying the interface itself here
+            WebUI\AuthSubnetWhitelist=@Invalid()
+            WebUI\CSRFProtection=false
+            WebUI\HostHeaderValidation=false
+            WebUI\LocalHostAuth=false
+            WebUI\Port=8080
+            WebUI\ServerDomains=*
+            WebUI\UseUPnP=false ; Don't use UPnP to request port forwarding
+            ; See https://gist.github.com/hastinbe/8b8d247f17481cfc262a98d661bc0fd5 for a generator
+            ; Eventually I will replace this with oauth login via proxy middleware
+            WebUI\Password_PBKDF2=@ByteArray(/nYaZGw3sUGQFmlqf0urdg==:lgbQB2Lcm+BtAqIWkvAlZ4v9cd3WgfpS19rbjUJwGqHruaADxGkmSjzzNNBWvHxomVmu0yv5T3m2GwLVLH+W2w==)
+            ; Use the vuetorrent web UI
+            WebUI\AlternativeUIEnabled=true
+            WebUI\RootFolder=/webui/vuetorrent
+
+            [RSS]
+            AutoDownloader\DownloadRepacks=true
+            AutoDownloader\SmartEpisodeFilter=s(\\d+)e(\\d+), (\\d+)x(\\d+), "(\\d{4}[.\\-]\\d{1,2}[.\\-]\\d{1,2})", "(\\d{1,2}[.\\-]\\d{1,2}[.\\-]\\d{4})"
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        storageClass: ssd-replicated-3x
+        size: 100Mi
+        globalMounts:
+          - path: /config/qBittorrent
+          - path: /config/qBittorrent/logs
+          - path: /config/.cache/qBittorrent
+      media-downloads:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        globalMounts:
+          - path: /config/Downloads
+            subPath: downloads/torrents
+      config-file:
+        type: configMap
+        identifier: qbittorrent
+        globalMounts:
+          - path: /config/qBittorrent/qBittorrent.conf
+            subPath: qbittorrent.conf
+      vuetorrent:
+        type: image
+        image: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.29.0
+        globalMounts:
+          - path: /webui
+    service:
+      qbittorrent:
+        controller: qbittorrent
+        ports:
+          web:
+            port: 8080
+            primary: true
+    route:
+      qbittorrent:
+        hostnames:
+          - qbittorrent.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: qbittorrent
+                port: 8080

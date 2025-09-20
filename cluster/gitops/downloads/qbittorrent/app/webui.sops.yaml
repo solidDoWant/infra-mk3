@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: qbittorrent-webui
+type: Opaque
+stringData:
+  #ENC[AES256_GCM,data:eFJGRVolLfog5TgxgdQOskR/BfKqk/Q6x1B1f9YuHLWakpoN9JEsNdFEY0U18B8W0HmtqHsbtmyNws6psPwAvVmteQVMJ/s2Mr19eXZZpN4/KspyAddCJob6,iv:l9qXzv9UidZCKzNK5ZA/oZCPMiU3nV9YfYc0o2Ek52Y=,tag:Qx4JDK42WOrkAudaYb0DzQ==,type:comment]
+  PASSWORD: ENC[AES256_GCM,data:gOyPSzcnehaFjmq3Xcw2I3wYWZKvGsoOFC2SV6WaqFc=,iv:vDXaqJQPmBEFzLKii7euCEq1Ae3d6fTsf3yQxdo3kks=,tag:c4cUfYnwKyWIFQwBnCBfKA==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBzRlhXNjZncGJ6UjZFaFN0
+        b3NIcUc1aDVxZGoza3ZHZEhtZ1Nvb3h5MGl3CkJ2Y2ROM2xGRU9qR05jWEI3WFpS
+        YVhEdlY2aGl2eWNmR2lucjl4bHowUWsKLS0tIEEyZnNybStLbkpta1c0ZEdVUmlG
+        NzBEL3lzWTBxUUdzdzFWMzArRzZzbm8KxgqQ1p9U8UK49Eqhs0EnzA1Hduw8L8dA
+        G1acVycmUMI/z7uiDDV/tXQ/Q4IkEaej520eP8qD6w8lkNda9skd2Q==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBWNDJRVUhFVVMvOVhjQkVP
+        Wk9HM0phSTI1QWI1UnJIUXoyc1lKazRGNkU0CkU0aGtGZGZuL2ZmVzV1d3dYZ01B
+        VWN1WFQrZmh4ZndLWkZVYndtZHpqNGsKLS0tIGswQVUxeU42R1dnUWJnSDFoeW1S
+        Rk84V282TmVJb2RNVkl6RFV3V1k5aU0KG4t08jJ8egT0q+wFU+J5v5IO6s4C9m0f
+        GsrnubwtSReIP0pVdgM20Uu2LKMtDqQGons4f7Ibh5QChKoolkckVw==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2025-09-20T19:43:02Z"
+  mac: ENC[AES256_GCM,data:gZ9gh5BtEI0JbtWsZ0kd6PEpWApi2+nvDO+ZHUsn8gML34oqMWb0TUYntQTQHNj0qyjxFbOp5PmTjeOJ6SRmaabmZhOlDtwn/9YWtsS3B2zQlpsNYduIvM5eONfu7d6VX0leBQRyWOcToTvJN8Ks9d8kAKAgwzvMcVwUxI8mQ+o=,iv:a9cfRYAxupWE0aGERqUg+npThRJQSvt70XtxWdPyeNo=,tag:+EH7qA9KPYJyH/KDaKhsQQ==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0
