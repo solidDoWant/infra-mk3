@@ -81,7 +81,7 @@ spec:
             parameters: 30
           # Forward everything else to public servers, which are only reachable via the VPN gateway
           - name: forward
-            parameters: . ${SECRET_DNS_FORWARDERS}
+            parameters: . ${SECRET_VPN_DNS_FORWARDERS}
             configBlock: |-
               policy random
               health_check 1s
