@@ -24,7 +24,7 @@ spec:
           image:
             # This image includes both keepalived and the gateway route manager itself
             repository: ghcr.io/soliddowant/gateway-route-manager
-            tag: 0.0.10-extended
+            tag: 0.0.11-extended
           # Needed for netlink access
           securityContext:
             capabilities:
@@ -67,7 +67,7 @@ spec:
               # This is the start of the IP range that will be assigned to DNS servers.
               DNS_SERVER_START_IP: 192.168.27.128
               # This is the maximum number of DNS servers that will be deployed.
-              DNS_SERVER_COUNT: 16
+              DNS_SERVER_COUNT: 3
           # DNAT DNS requests destined for the kube-dns service to the VPN DNS servers. This prevents
           # DNS requests from leaking, while not requiring any configuration changes to client pods.
           setup-dns-nat:
@@ -162,6 +162,20 @@ spec:
               - name: metrics
                 containerPort: 9090
         pod:
+          dnsPolicy: None
+          dnsConfig:
+            # Specify these explicitly because the VRRP master cannot route DNS queries to it's own VRRP VIP address. IPVS does not tie into the networking
+            # stack in the same places that userspace applications do, and it's causing local connections to VIP addresses assigned to virtual servers to
+            # just disappear.
+            nameservers:
+              - 192.168.27.128
+              - 192.168.27.129
+              - 192.168.27.130
+            options:
+              - name: ndots
+                value: "1"
+              - name: timeout
+                value: "1"
           annotations:
             # Attach the pod to the VPN gateway network using the gateway-network-vpn-gateway-pods network attachment definition.
             # Format is <network-attachment-definition>@<interface-name>.

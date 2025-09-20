@@ -18,7 +18,7 @@ spec:
   values:
     controllers:
       vpn-gateway:
-        replicas: 5
+        replicas: 4
         # This is just a statefulset so that pods are assigned a known index. This allows for a very slightly different
         # configuration for each pod, which is needed to ensure that each pod connects to a different VPN endpoint.
         # If this was implemented via two different deployments, then upgrades would terminate both pods at the same time,
