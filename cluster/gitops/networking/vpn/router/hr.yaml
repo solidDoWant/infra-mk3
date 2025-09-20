@@ -24,7 +24,7 @@ spec:
           image:
             # This image includes both keepalived and the gateway route manager itself
             repository: ghcr.io/soliddowant/gateway-route-manager
-            tag: 0.0.8-extended
+            tag: 0.0.9-extended
           # Needed for netlink access
           securityContext:
             capabilities:
@@ -137,9 +137,11 @@ spec:
               - --start-ip=192.168.25.128
               - --end-ip=192.168.25.135
               # Enable DNS record updates when the set of active gateways' public IP addresses changes.
-              - --ddns-provider=changeip
+              - --ddns-provider=dynudns
               - --ddns-username=$(DDNS_USERNAME)
-              - --ddns-hostname=${SECRET_CHANGEIP_HOSTNAME}
+              - --ddns-hostname=${SECRET_VPN_DDNS_HOSTNAME}
+              - -ddns-record-ttl=30s
+              - -ddns-require-ip-address=$(EGRESS_VIP_ADDRESS) # Only do updates when the pod is the VRRP master
               # Connect to each gateway's gluetun control server to query its public IP address.
               - --public-ip-service-scheme=http
               - --public-ip-service-port=8000
@@ -153,6 +155,7 @@ spec:
                   secretKeyRef:
                     name: control-server-config
                     key: PASSWORD
+              EGRESS_VIP_ADDRESS: *router_primary_vip
             envFrom:
               - secret: ddns-credentials
             ports:
