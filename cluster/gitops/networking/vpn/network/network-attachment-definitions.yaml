@@ -9,10 +9,6 @@ kind: NetworkAttachmentDefinition
 metadata:
   name: gateway-network-vpn-gateway-pods
 spec:
-  # Gateway pods should assign their own IP addresses from the 192.168.25.0/24 range.
-  # This is purely to make debugging a little easier, as it keeps "gateway pod 0" tied
-  # to IP "192.168.25.0" a DNAT destination of "192.168.26.128" + 0. Alternatively the
-  # startup script could check the IP address and derive the DNAT destination.
   config: |
     {
       "cniVersion": "0.3.0",
