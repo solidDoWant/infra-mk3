@@ -64,3 +64,19 @@ spec:
       priorityClassName: system-cluster-critical
     meshConfig:
       trustDomain: istio.cluster.local
+      extensionProviders:
+        - name: authentik
+          envoyExtAuthzHttp:
+            service: ak-outpost-authentik-embedded-outpost.security.svc.cluster.local
+            port: 9000
+            pathPrefix: /outpost.goauthentik.io/auth/envoy
+            headersToDownstreamOnAllow:
+              # Pretty sure that the authentik docs have this backwards
+              - set-cookie
+            headersToUpstreamOnAllow:
+              - x-authentik-*
+              # Not currently used but will be useful once QBT supports basic auth
+              # https://github.com/qbittorrent/qBittorrent/issues/15007set
+              - authorization
+            includeRequestHeadersInCheck:
+              - cookie
