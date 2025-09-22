@@ -50,7 +50,6 @@ spec:
       "mtu": 1420
     }
 ---
-# TODO see if client pods set subnet can be reduced to /32 despite gateway not being in that subnet (on link route)
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
 metadata:
