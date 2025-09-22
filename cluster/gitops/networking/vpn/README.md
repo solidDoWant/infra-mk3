@@ -1,4 +1,4 @@
-# vpn-gateway
+# VPN gateway network
 
 ## Overview
 
@@ -15,7 +15,7 @@ This is a massively over-engineered way of routing traffic for specific k8s pods
 The first two benefits are pretty easy to do without significant over-complication/over-engineering, but the rest are more difficult to solve.
 
 ## Table of contents
-* [vpn-gateway](#vpn-gateway)
+* [VPN gateway network](#vpn-gateway-network)
   * [Overview](#overview)
   * [Table of contents](#table-of-contents)
   * [Definitions](#definitions)
