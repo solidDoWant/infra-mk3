@@ -5,7 +5,7 @@
 > [!TIP]
 > Click [here](#simple-alternative) if you don't care about the details and just want something simple that works.
 
-This is a massively over-engineered way of routing traffic for specific k8s pods ti and from the internet via VPN tunnels. Here's what this does that similar setups don't:
+This is a massively over-engineered way of routing traffic for specific k8s pods to and from the internet via VPN tunnels. Here's what this does that similar setups don't:
 * Client pods (pods that should send/receive internet traffic via a VPN provider) do not need any sidecars
 * Client pods do not need `CAP_NET_ADMIN` or similar capabilities
 * Client pods can be configured to accept VPN ingress traffic via a single annotation
@@ -153,9 +153,9 @@ kernel does support this out of the box, so I had to build something somewhat ha
 
 *Backup router, health checks, VRRP advertisements, and client load balancing not shown*
 
-In addition to the "general" next hop address at 192.168.26.254 that is used by client pods, an VIP address is added for each gateway. The diagram only shows two gateways, but I'm running
+In addition to the "general" next hop address at 192.168.26.254 that is used by client pods, a VIP address is added for each gateway. The diagram only shows two gateways, but I'm running
 several additional gateways which require additional VIPs. Each gateway is configured to DNAT ingress traffic to the gateway-specific VIP on the router. This allows netfilter/iptables rules,
-which operator on L3, to tie the packet back to a specific L2 source. For each gateway, the router has an iptables rule that adds a gateway-specific "firewall mark" to the connection. When
+which operates on L3, to tie the packet back to a specific L2 source. For each gateway, the router has an iptables rule that adds a gateway-specific "firewall mark" to the connection. When
 the client pod sends outbound (return) traffic, the firewall mark is restored. **This allows outbound traffic to be tied back to the gateway that received the originating traffic**. With the
 firewall mark added, mark-specific routing policy rules (i.e. `ip rule`s) rules are used to forward the traffic back to the originating gateway. For the specific commands to set this up, see
 [the return routing setup script](./router/scripts/setup-return-routing.sh).
@@ -268,9 +268,9 @@ ensuring that client pod connection tracking for DNS requests works properly.
 
 ### Ingress/remote client IP address resolution/DDNS
 
-Every time a gluetun container within the VPN gateway pods is restarted (or the pod is restarted, or rescheduled), it will likely change IP address. To allow remote clients to "discover"
-VPN IP addresses to connect to for ingress traffic, they are provided with a domain name to connect to rather than an IP address. The mechanism for informing remote clients of this
-address is handled either at the application layer (e.g. bittorrent announcements) or out of band entirely.
+Every time a gluetun container within a VPN gateway pod is restarted (or the pod is restarted, or rescheduled), it may connect to a different VPN exit node, and therefore assigned a
+different public IP address. To allow remote clients to "discover" VPN IP addresses to connect to for ingress traffic, they are provided with a domain name to connect to rather than an IP
+address. The mechanism for informing remote clients of this address is handled either at the application layer (e.g. bittorrent announcements) or out of band entirely.
 
 DDNS is usually pretty easy, but having multiple VPN ingress gateways (with separate public IP addresses) makes this more complicated (again). Most existing DDNS tooling, if not all, only
 supports querying for a single public address, and nearly all DDNS providers only support updating a record with a single address.
