@@ -6,6 +6,8 @@ metadata:
 spec:
   hostNetwork: true
   hostPID: true
+  nodeSelector:
+    kubernetes.io/hostname: talos-k8s-mixed-01
   containers:
     - name: admin
       image: ubuntu:22.04
@@ -18,21 +20,50 @@ spec:
           add:
             - SYS_ADMIN
         privileged: true
-      volumeMounts:
-        - name: sys
-          mountPath: /sys
-        - name: dev
-          mountPath: /dev
-        - name: root
-          mountPath: /root
-  volumes:
-    - name: sys
-      hostPath:
-        path: /sys
-    - name: dev
-      hostPath:
-        path: /dev
-    - name: root
-      hostPath:
-        path: /
+  restartPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: admin2
+spec:
+  hostNetwork: true
+  hostPID: true
+  nodeSelector:
+    kubernetes.io/hostname: talos-k8s-mixed-02
+  containers:
+    - name: admin
+      image: ubuntu:22.04
+      command:
+        - sleep
+        - "999999999999"
+      securityContext:
+        allowPrivilegeEscalation: true
+        capabilities:
+          add:
+            - SYS_ADMIN
+        privileged: true
+  restartPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: admin3
+spec:
+  hostNetwork: true
+  hostPID: true
+  nodeSelector:
+    kubernetes.io/hostname: talos-k8s-mixed-03
+  containers:
+    - name: admin
+      image: ubuntu:22.04
+      command:
+        - sleep
+        - "999999999999"
+      securityContext:
+        allowPrivilegeEscalation: true
+        capabilities:
+          add:
+            - SYS_ADMIN
+        privileged: true
   restartPolicy: Always
