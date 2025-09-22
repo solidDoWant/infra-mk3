@@ -46,7 +46,7 @@ stringData:
           client_type: confidential
           client_id: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_SECRET}"
-          redirect_uris: |-
+          redirect_uris:
             - url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/v1/webapi/oidc/callback
               matching_mode: strict
             - url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443/v1/webapi/oidc/callback
