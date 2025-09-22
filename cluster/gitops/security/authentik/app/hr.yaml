@@ -13,7 +13,8 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: goauthentik-charts
-      version: 2025.2.4
+      version: 2025.4.1
+      # version: 2025.8.3
   values:
     global:
       podLabels:
@@ -72,7 +73,7 @@ spec:
         # Workaround to provide client auth certs, see https://github.com/goauthentik/authentik/issues/12041
         - name: AUTHENTIK_REDIS__TLS_CA_CERT
           value: /etc/authentik/secrets/root-ca-cert/ca.crt
-        - name: AUTHENTIK_RESULT_BACKEND__URL
+        - name: AUTHENTIK_CACHE__URL
           value: &redis_connection_url "\
             rediss://\
             $(AUTHENTIK_REDIS__HOST):$(AUTHENTIK_REDIS__PORT)/$(AUTHENTIK_REDIS__DB)?\
@@ -81,11 +82,7 @@ spec:
             ssl_cert_reqs=$(AUTHENTIK_REDIS__TLS_REQS)&\
             ssl_ca_certs=$(AUTHENTIK_REDIS__TLS_CA_CERT)\
             "
-        - name: AUTHENTIK_CACHE__URL
-          value: *redis_connection_url
         - name: AUTHENTIK_CHANNEL__URL
-          value: *redis_connection_url
-        - name: AUTHENTIK_BROKER__URL
           value: *redis_connection_url
         # Use the right source IP
         # TODO netpol to limit traffic to gateway pods
@@ -195,7 +192,7 @@ spec:
               app.kubernetes.io/instance: *app_name
               app.kubernetes.io/component: server
           whenUnsatisfiable: DoNotSchedule
-      metrics:
+      metrics: &metrics
         enabled: true
         serviceMonitor:
           enabled: true
@@ -249,6 +246,7 @@ spec:
               value: "660" # Write permissions are required so that the files can be updated
           volumeMounts:
             - *blueprints_mount
+      metrics: *metrics
     geoip:
       enabled: false
       existingSecret:
