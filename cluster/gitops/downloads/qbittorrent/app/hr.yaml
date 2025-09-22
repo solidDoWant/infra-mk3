@@ -100,7 +100,7 @@ spec:
             Session\MaxUploads=-1
             Session\MaxUploadsPerTorrent=-1
             ; My download speed is fast enough that QBT is reporting these are a bottleneck
-            Session\RequestQueueSize=1000
+            Session\RequestQueueSize=10000
             Session\ConnectionSpeed=1000
             ; Log poor performance to the log file (stdout)
             Session\PerformanceWarning=true
