@@ -47,8 +47,10 @@ stringData:
           client_id: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_TELEPORT_AUTHENTIK_OIDC_CLIENT_SECRET}"
           redirect_uris: |-
-            https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/v1/webapi/oidc/callback
-            https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443/v1/webapi/oidc/callback
+            - url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/v1/webapi/oidc/callback
+              matching_mode: strict
+            - url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443/v1/webapi/oidc/callback
+              matching_mode: strict
           signing_key:
             !Find [
               authentik_crypto.certificatekeypair,

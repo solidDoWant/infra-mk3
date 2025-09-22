@@ -51,8 +51,9 @@ stringData:
           client_type: confidential
           client_id: "${SECRET_PROXMOX_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_PROXMOX_AUTHENTIK_OIDC_CLIENT_SECRET}"
-          redirect_uris: |-
-            https://10.2.2.1:8006.*
+          redirect_uris:
+            - url: https://10.2.2.1:8006.*
+              matching_mode: regex
           signing_key:
             !Find [
               authentik_crypto.certificatekeypair,

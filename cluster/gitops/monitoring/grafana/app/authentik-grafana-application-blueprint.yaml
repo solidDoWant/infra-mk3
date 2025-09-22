@@ -46,8 +46,9 @@ stringData:
           client_type: confidential
           client_id: "${SECRET_GRAFANA_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_GRAFANA_AUTHENTIK_OIDC_CLIENT_SECRET}"
-          redirect_uris: |-
-            https://grafana.${SECRET_PUBLIC_DOMAIN_NAME}/login/generic_oauth
+          redirect_uris:
+            - url: https://grafana.${SECRET_PUBLIC_DOMAIN_NAME}/login/generic_oauth
+              matching_mode: strict
           signing_key:
             !Find [
               authentik_crypto.certificatekeypair,
