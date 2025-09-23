@@ -31,11 +31,6 @@ spec:
               app.kubernetes.io/instance: *app_name
           whenUnsatisfiable: DoNotSchedule
     serviceMonitor:
-      # This is broken upstream but maintainers are not reviewing fix PRs. See
-      # * https://github.com/dragonflydb/dragonfly-operator/pull/305
-      # * https://github.com/dragonflydb/dragonfly-operator/pull/281
-      # * https://github.com/dragonflydb/dragonfly-operator/issues/258
-      # * https://github.com/dragonflydb/dragonfly-operator/issues/301
-      # enabled: true
+      enabled: true
     grafanaDashboard:
       enabled: true
