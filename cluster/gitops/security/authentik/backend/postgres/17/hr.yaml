@@ -36,3 +36,8 @@ spec:
           matchLabels:
             app.kubernetes.io/instance: authentik
             app.kubernetes.io/name: authentik
+      outpostAccess:
+        selector:
+          matchLabels:
+            app.kubernetes.io/instance: authentik-outpost
+            app.kubernetes.io/name: authentik-outpost
