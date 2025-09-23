@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# This is needed until https://github.com/goauthentik/authentik/issues/16940 is fixed
+# This is deployed manually until https://github.com/goauthentik/authentik/pull/16942 is merged and released
+version: 1
+metadata:
+  name: Proxy outpost
+  labels:
+    blueprints.goauthentik.io/description: Handle proxy outpost setup
+entries:
+  - model: authentik_outposts.outpost
+    identifiers:
+      name: authentik Proxy Outpost
+    attrs:
+      name: authentik Proxy Outpost
+      type: proxy
+      config:
+        authentik_host: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+        authentik_host_browser: ""
+        authentik_host_insecure: false
+        container_image: null
+        docker_labels: null
+        docker_map_ports: true
+        docker_network: null
+        kubernetes_disabled_components: []
+        kubernetes_image_pull_secrets: []
+        kubernetes_ingress_annotations: {}
+        kubernetes_ingress_class_name: null
+        kubernetes_ingress_secret_name: authentik-outpost-tls
+        kubernetes_json_patches: null
+        kubernetes_namespace: security
+        kubernetes_replicas: 2
+        kubernetes_service_type: ClusterIP
+        log_level: trace
+        object_naming_template: ak-outpost-%(name)s
+        refresh_interval: minutes=5
+      providers: !FindMany [authentik_providers_proxy.proxyprovider]
+      service_connection:
+        !Find [
+          authentik_outposts.kubernetesserviceconnection,
+          [name, Local Kubernetes Cluster],
+        ]
