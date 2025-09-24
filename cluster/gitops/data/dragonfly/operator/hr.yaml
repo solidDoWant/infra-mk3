@@ -16,13 +16,10 @@ spec:
   values:
     replicaCount: 2
     rbacProxy:
-      resources:
-        limits:
-          cpu: ~
-          memory: 96Mi
-        requests:
-          memory: 96Mi
+      enabled: false
     manager:
+      extraArgs:
+        - --metrics-bind-address=0.0.0.0:8080
       topologySpreadConstraints:
         - maxSkew: 1 # Skew of 1 allows for rolling updates
           topologyKey: kubernetes.io/hostname
