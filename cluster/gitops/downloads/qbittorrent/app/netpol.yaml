@@ -26,3 +26,12 @@ specs:
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
         toPorts: *webservice_ports
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8090"
+                protocol: TCP
