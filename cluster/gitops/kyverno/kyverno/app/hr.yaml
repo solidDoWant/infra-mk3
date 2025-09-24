@@ -53,6 +53,11 @@ spec:
               resources:
                 - certificates
               verbs: *all_common_verbs
+            - apiGroups:
+                - gateway.networking.k8s.io
+              resources:
+                - referencegrants
+              verbs: *all_common_verbs
       priorityClassName: system-cluster-critical
       topologySpreadConstraints:
         - maxSkew: 1
