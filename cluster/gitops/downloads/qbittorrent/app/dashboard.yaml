@@ -1,0 +1,11 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: qbittorrent
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/martabal/qbittorrent-exporter/refs/tags/v1.12.0/grafana/dashboard_high_cardinality.json
