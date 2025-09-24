@@ -50,7 +50,7 @@ spec:
               - -c
               - |
                 set -eux
-                psql -t -A -c "SELECT key FROM authentik_core_token WHERE description LIKE '%${OUTPOST_NAME}%' LIMIT 1" > "${OUTPUT_PATH}"
+                psql -t -A -c "SELECT key FROM authentik_core_token WHERE description LIKE '%$${OUTPOST_NAME}%' LIMIT 1" > "$${OUTPUT_PATH}"
         containers:
           proxy:
             image:
@@ -60,13 +60,13 @@ spec:
               AUTHENTIK_HOST: http://authentik-server.security.svc.cluster.local
               AUTHENTIK_INSECURE: true
               OUTPUT_PATH: *token_path
-              AUTHENTIK_HOST_BROWSER: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME} # ************
+              AUTHENTIK_HOST_BROWSER: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}
             command:
               - /bin/sh
               - -c
               - |
                 set -eu
-                export AUTHENTIK_TOKEN="$(cat "${OUTPUT_PATH}")"
+                export AUTHENTIK_TOKEN="$(cat "$${OUTPUT_PATH}")"
                 exec /proxy
             ports:
               - containerPort: 9000
