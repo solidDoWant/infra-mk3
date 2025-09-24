@@ -143,8 +143,10 @@ spec:
             WebUI\ServerDomains=*
             WebUI\UseUPnP=false ; Don't use UPnP to request port forwarding
             ; See https://gist.github.com/hastinbe/8b8d247f17481cfc262a98d661bc0fd5 for a generator
-            ; Eventually I will replace this with oauth login via proxy middleware
             WebUI\Password_PBKDF2=@ByteArray(/nYaZGw3sUGQFmlqf0urdg==:lgbQB2Lcm+BtAqIWkvAlZ4v9cd3WgfpS19rbjUJwGqHruaADxGkmSjzzNNBWvHxomVmu0yv5T3m2GwLVLH+W2w==)
+            ; User auth is handled via authentik
+            WebUI\AuthSubnetWhitelistEnabled=true
+            WebUI\AuthSubnetWhitelist=10.32.0.0/16
             ; Use the vuetorrent web UI
             WebUI\AlternativeUIEnabled=true
             WebUI\RootFolder=/webui/vuetorrent
