@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: &app_name authentik-outpost
+  labels: &labels
+    app.kubernetes.io/instance: *app_name
+    app.kubernetes.io/controller: proxy
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
