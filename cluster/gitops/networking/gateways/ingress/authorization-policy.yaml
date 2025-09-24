@@ -1,0 +1,20 @@
+---
+# This needs to be in the networking namespace until https://github.com/istio/api/issues/3569 is fixed.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: internal-gateway-authentik-auth
+spec:
+  targetRef:
+    kind: Gateway
+    group: gateway.networking.k8s.io
+    name: internal-gateway
+  action: CUSTOM
+  provider:
+    name: authentik
+  rules:
+    - to:
+        - operation:
+            hosts:
+              # TODO add additional domains here as they are migrated to authentik auth
+              - qbittorrent.${SECRET_PUBLIC_DOMAIN_NAME}
