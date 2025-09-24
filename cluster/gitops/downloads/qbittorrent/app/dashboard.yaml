@@ -9,3 +9,6 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   url: https://raw.githubusercontent.com/martabal/qbittorrent-exporter/refs/tags/v1.12.0/grafana/dashboard_high_cardinality.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
