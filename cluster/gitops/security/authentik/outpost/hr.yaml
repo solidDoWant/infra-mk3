@@ -109,6 +109,8 @@ spec:
           http:
             port: 80
             targetPort: 9000
+          metrics:
+            port: 9300
     serviceMonitor:
       proxy:
         endpoints:
