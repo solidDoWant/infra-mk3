@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: share-authentik-outpost-service
+spec:
+  rules:
+    - name: share-authentik-outpost-service
+      # Trigger on new and existing namespaces
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      skipBackgroundRequests: true
+      # Create a new reference grant that allows access to the outpost from any namespace
+      # This is needed for middleware auth via authentik to work with HTTPRoutes in other namespaces
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: gateway.networking.k8s.io/v1beta1
+        kind: ReferenceGrant
+        name: authentik-outpost-{{ request.object.metadata.name }}
+        namespace: security
+        data:
+          spec:
+            from:
+              - group: gateway.networking.k8s.io
+                kind: HTTPRoute
+                namespace: >-
+                  {{ request.object.metadata.name }}
+            to:
+              - group: ""
+                kind: Service
+                name: authentik-outpost-proxy

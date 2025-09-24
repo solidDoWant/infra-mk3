@@ -1,0 +1,115 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authentik-outpost
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    global:
+      alwaysAppendIdentifierToResourceName: true
+    controllers:
+      proxy:
+        replicas: 2
+        strategy: RollingUpdate
+        pod:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+        initContainers:
+          # Retrieve the token from the authentik postgres DB
+          # TODO switch this to the new 1.34 k8s feature that allows referencing env vars from files once I migrate
+          get-token:
+            image:
+              repository: alpine/psql
+              tag: 17.6
+            env:
+              PGHOST: authentik-postgres-17-rw.security.svc.cluster.local
+              PGPORT: 5432
+              PGDATABASE: authentik
+              PGUSER: authentik
+              PGSSLMODE: verify-full
+              PGSSLROOTCERT: /certs/root-ca/ca.crt
+              PGSSLCERT: /etc/authentik/secrets/postgres-authentik-user/tls.crt
+              PGSSLKEY: /etc/authentik/secrets/postgres-authentik-user/tls.key
+              OUTPOST_NAME: authentik Proxy Outpost
+              OUTPUT_PATH: &token_path /etc/authentik/outpost/token
+            command:
+              - /bin/sh
+              - -c
+              - |
+                set -eux
+                psql -t -A -c "SELECT key FROM authentik_core_token WHERE description LIKE '%${OUTPOST_NAME}%' LIMIT 1" > "${OUTPUT_PATH}"
+        containers:
+          proxy:
+            image:
+              repository: ghcr.io/goauthentik/proxy
+              tag: 2025.8.3
+            env:
+              AUTHENTIK_HOST: http://authentik-server.security.svc.cluster.local
+              AUTHENTIK_INSECURE: true
+              OUTPUT_PATH: *token_path
+              AUTHENTIK_HOST_BROWSER: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME} # ************
+            command:
+              - /bin/sh
+              - -c
+              - |
+                set -eu
+                export AUTHENTIK_TOKEN="$(cat "${OUTPUT_PATH}")"
+                exec /proxy
+            ports:
+              - containerPort: 9000
+                name: http
+              - containerPort: 9300
+                name: metrics
+    persistence:
+      token-directory:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 1Mi
+        globalMounts:
+          - path: /etc/authentik/outpost
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        globalMounts:
+          - path: /certs/root-ca
+      postgres-user-cert:
+        type: secret
+        name: authentik-postgres-authentik-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          proxy:
+            get-token:
+              - path: /etc/authentik/secrets/postgres-authentik-user
+    service:
+      proxy:
+        controller: proxy
+        ports:
+          http:
+            port: 80
+            targetPort: 9000
+    serviceMonitor:
+      proxy:
+        endpoints:
+          - port: metrics

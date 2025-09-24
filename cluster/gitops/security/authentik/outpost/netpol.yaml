@@ -1,0 +1,72 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authentik-outpost
+specs:
+  - description: authentik-outpost
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: authentik-outpost
+        app.kubernetes.io/instance: authentik-outpost
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                # This is for request monitoring with Hubble.
+                - matchPattern: "*"
+      # Access to the backing CNPG cluster to query for the outpost token
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: authentik-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Access to the authentik server
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: authentik
+              app.kubernetes.io/instance: authentik
+              app.kubernetes.io/component: server
+        toPorts:
+          - ports:
+              - port: "9000"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      # Traffic
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+        toPorts:
+          - ports:
+              - port: "9000"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9300"
+                protocol: TCP

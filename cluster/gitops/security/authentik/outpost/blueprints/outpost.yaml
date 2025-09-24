@@ -15,9 +15,9 @@ entries:
       name: authentik Proxy Outpost
       type: proxy
       config:
-        authentik_host: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}
-        authentik_host_browser: ""
-        authentik_host_insecure: false
+        authentik_host: http://authentik-server.security.svc.cluster.local
+        authentik_host_browser: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+        authentik_host_insecure: true
         container_image: null
         docker_labels: null
         docker_map_ports: true
@@ -35,8 +35,5 @@ entries:
         object_naming_template: ak-outpost-%(name)s
         refresh_interval: minutes=5
       providers: !FindMany [authentik_providers_proxy.proxyprovider]
-      service_connection:
-        !Find [
-          authentik_outposts.kubernetesserviceconnection,
-          [name, Local Kubernetes Cluster],
-        ]
+      # This is deployed via the authentik-outpost kustomization
+      service_connection: ""
