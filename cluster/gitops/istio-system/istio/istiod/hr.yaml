@@ -67,8 +67,8 @@ spec:
       extensionProviders:
         - name: authentik
           envoyExtAuthzHttp:
-            service: ak-outpost-authentik-embedded-outpost.security.svc.cluster.local
-            port: 9000
+            service: authentik-outpost-proxy.security.svc.cluster.local
+            port: 80
             pathPrefix: /outpost.goauthentik.io/auth/envoy
             headersToDownstreamOnAllow:
               # Pretty sure that the authentik docs have this backwards
