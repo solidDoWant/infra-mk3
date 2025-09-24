@@ -198,3 +198,12 @@ spec:
           - backendRefs:
               - identifier: qbittorrent
                 port: 8080
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io
