@@ -18,25 +18,38 @@ spec:
   values:
     controllers:
       qbittorrent:
+        defaultContainerOptions:
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         containers:
           app:
             image:
               repository: ghcr.io/home-operations/qbittorrent
               tag: 5.1.2
-            securityContext:
-              readOnlyRootFilesystem: true
-              allowPrivilegeEscalation: false
-              capabilities:
-                drop:
-                  - ALL
             ports:
               - name: web
                 containerPort: 8080
-            probes:
+            probes: &probes
               readiness:
                 enabled: true
               liveness:
                 enabled: true
+          exporter:
+            image:
+              repository: ghcr.io/martabal/qbittorrent-exporter
+              tag: v1.12.0
+            env:
+              ENABLE_HIGH_CARDINALITY: true
+              ENABLE_INCREASED_CARDINALITY: true
+              ENABLE_LABEL_WITH_TAG: true
+            ports:
+              - name: metrics
+                containerPort: 8090
+            probes: *probes
         pod:
           annotations:
             k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0
@@ -189,6 +202,12 @@ spec:
           web:
             port: 8080
             primary: true
+          metrics:
+            port: 8090
+    serviceMonitor:
+      qbittorrent:
+        endpoints:
+          - port: metrics
     route:
       qbittorrent:
         hostnames:
