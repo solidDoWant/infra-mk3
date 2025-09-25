@@ -64,6 +64,8 @@ spec:
               liveness:
                 enabled: true
         pod:
+          labels:
+            endpoints.netpols.home.arpa/downloader: "true"
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000

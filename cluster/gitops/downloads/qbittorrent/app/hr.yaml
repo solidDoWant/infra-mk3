@@ -53,6 +53,8 @@ spec:
         pod:
           annotations:
             k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0
+          labels:
+            endpoints.netpols.home.arpa/downloader: "true"
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000

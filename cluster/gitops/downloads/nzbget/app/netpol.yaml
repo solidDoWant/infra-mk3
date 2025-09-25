@@ -71,3 +71,11 @@ specs:
           - ports:
               - port: "9452"
                 protocol: TCP
+      # From download requesters
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/download-requester: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+        toPorts: *webservice_ports
