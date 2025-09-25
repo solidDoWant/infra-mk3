@@ -61,17 +61,11 @@ spec:
               - name: ndots
                 value: "1"
     persistence:
-      # TODO after more testing
-      # config:
-      #   type: persistentVolumeClaim
-      #   accessMode: ReadWriteOnce
-      #   storageClass: ssd-replicated-3x
-      #   size: 100Mi
-      #   globalMounts:
-      #     - path: /config
       config:
-        type: emptyDir
-        sizeLimit: 100Mi
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        storageClass: ssd-replicated-3x
+        size: 100Mi
         globalMounts:
           - path: /config
       media-downloads:
