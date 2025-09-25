@@ -49,6 +49,20 @@ spec:
                 enabled: true
               liveness:
                 enabled: true
+          exporter:
+            image:
+              repository: frebib/nzbget-exporter
+              tag: 3.19
+            env:
+              NZBGET_HOST: http://127.0.0.1:6789
+            ports:
+              - name: metrics
+                containerPort: 9452
+            probes:
+              readiness:
+                enabled: true
+              liveness:
+                enabled: true
         pod:
           securityContext:
             runAsNonRoot: true
@@ -129,6 +143,12 @@ spec:
           web:
             port: 6789
             primary: true
+          metrics:
+            port: 9452
+    serviceMonitor:
+      nzbget:
+        endpoints:
+          - port: metrics
     route:
       nzbget:
         hostnames:
