@@ -1,0 +1,64 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: nzbget
+specs:
+  - description: nzbget
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: nzbget
+        app.kubernetes.io/controller: nzbget
+        app.kubernetes.io/instance: nzbget
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Status checking
+      - toFQDNs:
+          - matchName: ip.nzbget.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Speed testing
+      - toFQDNs:
+          - matchName: nzbget.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Usenet providers
+      - toFQDNs:
+          - matchName: "${SECRET_USENET_HOST}"
+        toPorts:
+          - ports:
+              - port: "563"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &webservice_ports
+          - ports:
+              - port: "6789"
+                protocol: TCP
+      # Gateway to webservice
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *webservice_ports

@@ -145,7 +145,7 @@ spec:
         rules:
           - backendRefs:
               - identifier: nzbget
-                port: 8080
+                port: 6789
           # Send auth requests to the authentik outpost
           - backendRefs:
               - name: authentik-outpost-proxy
