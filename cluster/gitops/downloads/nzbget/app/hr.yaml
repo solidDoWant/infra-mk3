@@ -1,0 +1,154 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nzbget
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      nzbget:
+        defaultContainerOptions:
+          image:
+            repository: ghcr.io/home-operations/nzbget
+            tag: 25.3.0
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        initContainers:
+          config:
+            env:
+              BASELINE_CONFIG_FILE_PATH: /app/nzbget.conf
+              OVERRIDE_CONFIG_FILE_PATH: /tmp/overrides.conf
+              OUTPUT_CONFIG_FILE_PATH: /config/nzbget.conf
+            command:
+              - /usr/bin/update-config.py
+        containers:
+          app:
+            ports:
+              - name: web
+                containerPort: 6789
+            probes:
+              readiness:
+                enabled: true
+              liveness:
+                enabled: true
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    persistence:
+      # TODO after more testing
+      # config:
+      #   type: persistentVolumeClaim
+      #   accessMode: ReadWriteOnce
+      #   storageClass: ssd-replicated-3x
+      #   size: 100Mi
+      #   globalMounts:
+      #     - path: /config
+      config:
+        type: emptyDir
+        sizeLimit: 100Mi
+        globalMounts:
+          - path: /config
+      media-downloads:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        advancedMounts:
+          nzbget:
+            app:
+              - path: /config/completed
+                subPath: downloads/nzbs
+      # Store this on ceph block device for now. I may eventually dump this on NFS if
+      # performance is acceptable. This will limit the max download size.
+      intermediate:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        storageClass: ssd-replicated-3x
+        size: 200Gi
+        advancedMounts:
+          nzbget:
+            app:
+              - path: /config/intermediate
+      nzbs:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        advancedMounts:
+          nzbget:
+            app:
+              - path: /config/nzb
+                subPath: nzbget/nzb
+      tmp:
+        type: emptyDir
+        sizeLimit: 128Mi
+        advancedMounts:
+          nzbget:
+            app:
+              - path: /config/tmp
+      log-file:
+        type: emptyDir
+        sizeLimit: 1Mi
+        advancedMounts:
+          nzbget:
+            app:
+              - path: /config/nzbget.log
+                subPath: nzbget.log
+      update-config:
+        type: configMap
+        name: nzbget-update-config
+        advancedMounts:
+          nzbget:
+            init:
+              - path: /usr/bin/update-config.py
+                subPath: update-config.py
+              - path: /tmp/overrides.conf
+                subPath: overrides.conf
+    service:
+      nzbget:
+        controller: nzbget
+        ports:
+          web:
+            port: 6789
+            primary: true
+    route:
+      nzbget:
+        hostnames:
+          - nzbget.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: nzbget
+                port: 8080
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io
