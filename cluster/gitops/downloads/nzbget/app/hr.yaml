@@ -34,7 +34,10 @@ spec:
               BASELINE_CONFIG_FILE_PATH: /app/nzbget.conf
               OVERRIDE_CONFIG_FILE_PATH: /tmp/overrides.conf
               OUTPUT_CONFIG_FILE_PATH: /config/nzbget.conf
+            envFrom:
+              - secret: nzbget-usenet-provider
             command:
+              - python
               - /usr/bin/update-config.py
         containers:
           app:
