@@ -104,16 +104,6 @@ global_defs {
     # is restarted, so that stale entries are purged. They will be synced back from the master
     # router.
     lvs_flush
-
-    # Enable SNMP monitoring on localhost. This is needed to health checking, and monitoring.
-    snmp_socket udp:127.0.0.1:705
-
-    # Enable all SNMP MIBs.
-    enable_snmp_vrrp
-    enable_snmp_checker
-    enable_snmp_rfc
-    enable_snmp_rfcv2
-    enable_snmp_rfcv3
 }
 
 vrrp_instance router {
