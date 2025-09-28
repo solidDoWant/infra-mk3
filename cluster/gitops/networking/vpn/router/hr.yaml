@@ -20,7 +20,7 @@ spec:
       vpn-router:
         replicas: 2
         strategy: RollingUpdate
-        defaultContainerOptions:
+        defaultContainerOptions: &default_container_options
           image:
             # This image includes both keepalived and the gateway route manager itself
             repository: ghcr.io/soliddowant/gateway-route-manager
@@ -96,7 +96,7 @@ spec:
         containers:
           # This container advertises the router virtual IP address using Virtual Router Redundancy Protocol (VRRP),
           # a first hop redundancy protocol (FHRP).
-          keepalived:
+          keepalived: &keepalived_container
             command:
               - keepalived
             args:
@@ -128,8 +128,6 @@ spec:
           # This container monitors the VPN gateway endpoints and updates routes in the namespace's routing table
           # to ensure that traffic is load balanced across all available VPN gateways.
           gateway-route-manager:
-            command:
-              - gateway-route-manager
             args:
               - --check-period=1s
               - --timeout=750ms
@@ -182,7 +180,7 @@ spec:
             k8s.v1.cni.cncf.io/networks: >
               gateway-network-router-pods@vpn-gw-veth0,
               gateway-router-network@vpn-r-veth0
-          securityContext:
+          securityContext: &router_pod_security_context
             # ******************************************************* IMPORTANT *******************************************************
             # * The kubelet on each node that the pods run on must allow these to be set.                                             *
             # * Alternatively, these could all be set using the [tuning CNI plugin](https://www.cni.dev/plugins/current/meta/tuning/) *
@@ -282,18 +280,60 @@ spec:
               # # This is already enabled on all pods so it doesn't need to be explicitly set
               # - name: net.ipv4.ip_forward
               #   value: "1"
+      # This router will always route to a single VPN gateway. This is needed for some specific applications that require a stable egress IP address,
+      # such as applications that need to bypass cloudflare captchas.
+      vpn-router-single:
+        replicas: 2
+        defaultContainerOptions: *default_container_options
+        initContainers:
+          keepalived-config-gen:
+            command:
+              - /usr/local/bin/keepalived-conf-gen-single.sh
+            env:
+              # VRRP advertisements and IPVS connection state syncing will use this interface.
+              ROUTER_NETWORK_INTERFACE: vpn-r-veth0
+              # Egress traffic (traffic originating from the cluster to the internet via the VPN gateways)
+              # will use this as the nexthop address.
+              EGRESS_VIP_ADDRESS: 192.168.26.253
+              # This is the subnet mask for the gateway network.
+              SUBNET_CIDR_BITS: 22
+              # VIP MACVLAN interfaces will use this as the underlying interface
+              VIP_UNDERLYING_INTERFACE: vpn-gw-veth0
+        containers:
+          keepalived: *keepalived_container
+          gateway-route-manager:
+            args:
+              - --check-period=1s
+              - --timeout=750ms
+              - --port=9999
+              - --start-ip=192.168.25.128
+              - --end-ip=192.168.25.135
+              # Out of all available gateways, only route to a single active one.
+              - --gateways-count=1
+              # Enable this for some additional logging. This will generate several lines per second, and can make it harder to see other log messages.
+              # - --log-level=debug
+            ports:
+              - name: metrics
+                containerPort: 9090
+        pod:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: >
+              gateway-network-router-pods@vpn-gw-veth0,
+              gateway-single-router-network@vpn-r-veth0
+          securityContext: *router_pod_security_context
     persistence:
       keepalived-config:
         type: emptyDir
         medium: Memory
         sizeLimit: 1Mi
         advancedMounts:
-          vpn-router:
+          vpn-router: &keepalived_config_mounts
             keepalived-config-gen:
               - path: /etc/keepalived/
             keepalived:
               - path: /etc/keepalived/
                 readOnly: true
+          vpn-router-single: *keepalived_config_mounts
       vpn-router-scripts:
         type: configMap
         name: vpn-router-scripts
@@ -317,24 +357,37 @@ spec:
               - path: /usr/local/bin/setup-return-routing.sh
                 subPath: setup-return-routing.sh
                 readOnly: true
-            keepalived:
+            keepalived: &keepalived_scripts
               - path: /usr/local/bin/keepalived-startup-probe.sh
                 subPath: keepalived-startup-probe.sh
                 readOnly: true
               - path: /usr/local/bin/keepalived-liveness-probe.sh
                 subPath: keepalived-liveness-probe.sh
                 readOnly: true
+          vpn-router-single:
+            keepalived-config-gen:
+              - *lib
+              - path: /usr/local/bin/keepalived-conf-gen-single.sh
+                subPath: keepalived-conf-gen-single.sh
+                readOnly: true
+            keepalived: *keepalived_scripts
     service:
-      metrics:
+      metrics: &metrics_service
         controller: vpn-router
-        suffix: metrics
         ports:
           rm-metrics:
             port: 9090
             targetPort: 9090
+      single-metrics:
+        <<: *metrics_service
+        controller: vpn-router-single
     serviceMonitor:
-      gateway-route-manager:
+      gateway-route-manager: &service_monitor
         service:
           identifier: metrics
         endpoints:
           - port: rm-metrics
+      gateway-route-manager-single:
+        <<: *service_monitor
+        service:
+          identifier: single-metrics

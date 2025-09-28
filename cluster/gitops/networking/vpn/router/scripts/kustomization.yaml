@@ -4,6 +4,7 @@ kind: Kustomization
 configMapGenerator:
   - name: vpn-router-scripts
     files:
+      - ./keepalived-conf-gen-single.sh
       - ./keepalived-conf-gen.sh
       - ./keepalived-liveness-probe.sh
       - ./keepalived-startup-probe.sh

@@ -65,7 +65,7 @@ spec:
         "type": "whereabouts",
         "range": "192.168.24.0/22",
         "range_start": "192.168.24.1",
-        "range_end": "192.168.24.255",
+        "range_end": "192.168.24.127",
         "routes": [
           {"dst": "10.33.0.10/32"},
           {"dst": "0.0.0.0/5"},
@@ -320,4 +320,58 @@ spec:
         "range": "192.168.28.0/24"
       },
       "mtu": 8950
+    }
+...
+# These NADs are for the active-passive, single gateway network.
+# This network is needed for some specific applications that require a stable egress IP address,
+# such as tools that need to bypass cloudflare captchas.
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-single-router-network
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-single-router-network",
+      "type": "bridge",
+      "bridge": "vpn-r-bridge0",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "192.168.29.0/24"
+      },
+      "mtu": 8950
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: gateway-network-single-router-client-pods
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "gateway-network-single-router-client-pods",
+      "type": "bridge",
+      "bridge": "vpn-gw-bridge0",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "192.168.24.0/22",
+        "range_start": "192.168.24.128",
+        "range_end": "192.168.24.255",
+        "routes": [
+          {"dst": "10.33.0.10/32"},
+          {"dst": "0.0.0.0/5"},
+          {"dst": "8.0.0.0/7"},
+          {"dst": "11.0.0.0/8"},
+          {"dst": "12.0.0.0/6"},
+          {"dst": "16.0.0.0/4"},
+          {"dst": "32.0.0.0/3"},
+          {"dst": "64.0.0.0/2"},
+          {"dst": "128.0.0.0/1"}
+        ],
+        "gateway": "192.168.26.253"
+      },
+      "mtu": 1420
     }
