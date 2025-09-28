@@ -284,6 +284,7 @@ spec:
       # such as applications that need to bypass cloudflare captchas.
       vpn-router-single:
         replicas: 2
+        strategy: RollingUpdate
         defaultContainerOptions: *default_container_options
         initContainers:
           keepalived-config-gen:
