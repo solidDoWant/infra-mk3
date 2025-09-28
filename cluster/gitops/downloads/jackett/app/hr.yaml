@@ -44,28 +44,28 @@ spec:
               - |
                 set -euo pipefail
 
-                TEMPLATED_OVERRIDE_CONTENTS="$( \
-                  jq -n  -f "${OVERRIDE_FILE_PATH}" \
-                  --arg JACKET_API_KEY "${JACKET_API_KEY}" \
-                  --arg OMDB_API_KEY "${OMDB_API_KEY}"  \
-                  --arg WEB_PORT "${WEB_PORT}" \
+                TEMPLATED_OVERRIDE_CONTENTS="$$( \
+                  jq -n -f "$${OVERRIDE_FILE_PATH}" \
+                  --arg JACKET_API_KEY "$${JACKET_API_KEY}" \
+                  --arg OMDB_API_KEY "$${OMDB_API_KEY}"  \
+                  --arg WEB_PORT "$${WEB_PORT}" \
                 )"
-                if ! [ -f "${CONFIG_FILE_PATH}" ]; then
+                if ! [ -f "$${CONFIG_FILE_PATH}" ]; then
                   echo "Config file does not exist, creating from overrides"
-                  mkdir -p "$(dirname "${CONFIG_FILE_PATH}")"
-                  echo "${TEMPLATED_OVERRIDE_CONTENTS}" > "${CONFIG_FILE_PATH}"
+                  mkdir -p "$$(dirname "$${CONFIG_FILE_PATH}")"
+                  echo "$${TEMPLATED_OVERRIDE_CONTENTS}" > "$${CONFIG_FILE_PATH}"
                   exit
                 fi
 
                 # Use jq to merge the existing config with the overrides
                 echo "Merging existing config with overrides"
-                MERGED_CONFIG="$(jq -s '.[0] * .[1]' \
-                  <(cat "${CONFIG_FILE_PATH}") \
-                  <(echo "${TEMPLATED_OVERRIDE_CONTENTS}") \
+                MERGED_CONFIG="$$(jq -s '.[0] * .[1]' \
+                  <(cat "$${CONFIG_FILE_PATH}") \
+                  <(echo "$${TEMPLATED_OVERRIDE_CONTENTS}") \
                 )"
 
                 # This needs to be done separately to avoid truncating the file while it's being read
-                echo "${MERGED_CONFIG}" > "${CONFIG_FILE_PATH}"
+                echo "$${MERGED_CONFIG}" > "$${CONFIG_FILE_PATH}"
         containers:
           jackett:
             ports:
