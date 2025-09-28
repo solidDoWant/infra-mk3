@@ -30,12 +30,12 @@ specs:
           - ports:
               - port: "9117"
                 protocol: TCP
-      # From jackett
+      # From nzbhydra2
       - fromEndpoints:
           - matchLabels:
-              app.kubernetes.io/name: jackett
-              app.kubernetes.io/controller: jackett
-              app.kubernetes.io/instance: jackett
+              app.kubernetes.io/name: nzbhydra2
+              app.kubernetes.io/controller: nzbhydra2
+              app.kubernetes.io/instance: nzbhydra2
         toPorts: *webservice_ports
       # Gateway to webservice
       - fromEndpoints:
