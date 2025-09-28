@@ -17,5 +17,6 @@ spec:
         - operation:
             hosts:
               # TODO add additional domains here as they are migrated to authentik auth
-              - qbittorrent.${SECRET_PUBLIC_DOMAIN_NAME}
+              - jackett.${SECRET_PUBLIC_DOMAIN_NAME}
               - nzbget.${SECRET_PUBLIC_DOMAIN_NAME}
+              - qbittorrent.${SECRET_PUBLIC_DOMAIN_NAME}
