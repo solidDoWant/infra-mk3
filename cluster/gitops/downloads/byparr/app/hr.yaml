@@ -1,0 +1,78 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: byparr
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      byparr:
+        defaultContainerOptions:
+          securityContext:
+            # This must run with a writable filesystem, see https://github.com/ThePhaseless/Byparr/issues/249
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        containers:
+          byparr:
+            image:
+              repository: ghcr.io/thephaseless/byparr
+              tag: 2.0.1
+            ports:
+              - name: web
+                containerPort: 8191
+            probes:
+              # Because of a lack of synchronization between threads, probes must be performed in series
+              # until the first one succeeds or the MaxMind database download will be corrupted.
+              # This will take forever because the image is missing some required files, and downloads them on startup.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  initialDelaySeconds: 20
+                  timeoutSeconds: 180
+                  periodSeconds: 200
+                  failureThreshold: 5
+                  httpGet:
+                    port: 8191
+                    path: /health
+              readiness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  initialDelaySeconds: 0
+                  timeoutSeconds: 15
+                  periodSeconds: 60
+                  httpGet:
+                    port: 8191
+                    path: /health
+              liveness: *probe
+        pod:
+          annotations:
+            # Egress via a single gateway so that the external IP address is consistent
+            k8s.v1.cni.cncf.io/networks: networking/gateway-network-single-router-client-pods@vpn-gw-veth0
+          # This must run as UID 0, see https://github.com/ThePhaseless/Byparr/issues/248
+          hostUsers: false
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    service:
+      byparr:
+        controller: byparr
+        ports:
+          web:
+            port: 8191
+            primary: true
