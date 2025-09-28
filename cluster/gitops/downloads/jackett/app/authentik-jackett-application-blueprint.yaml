@@ -1,0 +1,99 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-jackett-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Unfortunately this must be a secret (rather than secretGenerator) or Flux will not substitute
+  # values within it
+  authentik-jackett-application-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: Jackett application
+      labels:
+        blueprints.goauthentik.io/description: Resources for Jackett SSO
+    entries:
+      # Dependencies
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Implicit provider authentication
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Password authentication flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Invalidation flow
+          required: true
+      # Application
+      - model: authentik_providers_proxy.proxyprovider
+        id: jackett-provider
+        identifiers:
+          name: Jackett
+        attrs:
+          name: Jackett
+          mode: forward_single
+          external_host: https://jackett.${SECRET_PUBLIC_DOMAIN_NAME}
+          intercept_header_auth: true
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          access_token_validity: hours=4
+          refresh_token_validity: days=2
+          property_mappings:
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: Application Entitlements"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'email'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: Proxy outpost"],
+              ]
+      - model: authentik_core.application
+        id: jackett-application
+        identifiers:
+          slug: jackett
+        attrs:
+          name: Jackett
+          slug: jackett
+          group: Downloads access
+          provider: !KeyOf jackett-provider
+          policy_engine_mode: any
+          meta_launch_url: https://jackett.${SECRET_PUBLIC_DOMAIN_NAME}
+          # icon: # TODO
+      # Groups
+      - model: authentik_core.group
+        id: jackett-group
+        identifiers:
+          name: Jackett access
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_JACKETT_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf jackett-group
+          target: !KeyOf jackett-application

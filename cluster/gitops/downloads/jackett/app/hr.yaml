@@ -1,0 +1,166 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: jackett
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      jackett:
+        defaultContainerOptions:
+          image:
+            repository: ghcr.io/home-operations/jackett
+            tag: 0.23.71
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        initContainers:
+          # Update the server config with the options stored in this repo.
+          # This does not yet support indexers due to https://github.com/Jackett/Jackett/issues/16195
+          config:
+            env:
+              CONFIG_FILE_PATH: /config/Jackett/ServerConfig.json
+              OVERRIDE_FILE_PATH: /tmp/ServerConfig.json
+              WEB_PORT: &web_port 9117
+            envFrom:
+              - secret: jackett-api-keys
+            command:
+              - bash
+              - -c
+              - |
+                set -euo pipefail
+
+                TEMPLATED_OVERRIDE_CONTENTS="$( \
+                  jq -n  -f "${OVERRIDE_FILE_PATH}" \
+                  --arg JACKET_API_KEY "${JACKET_API_KEY}" \
+                  --arg OMDB_API_KEY "${OMDB_API_KEY}"  \
+                  --arg WEB_PORT "${WEB_PORT}" \
+                )"
+                if ! [ -f "${CONFIG_FILE_PATH}" ]; then
+                  echo "Config file does not exist, creating from overrides"
+                  mkdir -p "$(dirname "${CONFIG_FILE_PATH}")"
+                  echo "${TEMPLATED_OVERRIDE_CONTENTS}" > "${CONFIG_FILE_PATH}"
+                  exit
+                fi
+
+                # Use jq to merge the existing config with the overrides
+                echo "Merging existing config with overrides"
+                MERGED_CONFIG="$(jq -s '.[0] * .[1]' \
+                  <(cat "${CONFIG_FILE_PATH}") \
+                  <(echo "${TEMPLATED_OVERRIDE_CONTENTS}") \
+                )"
+
+                # This needs to be done separately to avoid truncating the file while it's being read
+                echo "${MERGED_CONFIG}" > "${CONFIG_FILE_PATH}"
+        containers:
+          jackett:
+            ports:
+              - name: web
+                containerPort: *web_port
+            probes:
+              readiness: &probe
+                enabled: true
+                path: /health
+              liveness: *probe
+        pod:
+          annotations:
+            # Egress via a single gateway so that the external IP address is consistent
+            # Byparr also uses this so that both apps share the same external IP, so more cloudflare captcha cookies should be valid
+            k8s.v1.cni.cncf.io/networks: networking/gateway-network-single-router-client-pods@vpn-gw-veth0
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    configMaps:
+      config-overrides:
+        data:
+          # This will be templated by jq in the init container above
+          ServerConfig.json: |
+            {
+              "Port": $$WEB_PORT,
+              "LocalBindAddress": "127.0.0.1",
+              "AllowExternal": true,
+              "AllowCORS": false,
+              "APIKey": $$JACKET_API_KEY,
+              "AdminPassword": null,
+              "UpdateDisabled": true,
+              "UpdatePrerelease": false,
+              "CacheEnabled": true,
+              "CacheTtl": 2100,
+              "CacheMaxResultsPerIndexer": 1000,
+              "FlareSolverrUrl": "http://byparr.downloads.svc.cluster.local:8191/",
+              "FlareSolverrMaxTimeout": 65000,
+              "OmdbApiKey": $$OMDB_API_KEY,
+              "ProxyType": -1
+            }
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        storageClass: ssd-replicated-3x
+        size: 100Mi
+        globalMounts:
+          - path: /config
+      config-overrides:
+        type: configMap
+        identifier: config-overrides
+        advancedMounts:
+          jackett:
+            config:
+              - path: /tmp/ServerConfig.json
+                subPath: ServerConfig.json
+      temp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 50Mi
+        advancedMounts:
+          jackett:
+            jackett:
+              - path: /tmp
+    service:
+      jackett:
+        controller: jackett
+        ports:
+          web:
+            port: *web_port
+            primary: true
+    route:
+      jackett:
+        hostnames:
+          - jackett.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: jackett
+                port: *web_port
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io

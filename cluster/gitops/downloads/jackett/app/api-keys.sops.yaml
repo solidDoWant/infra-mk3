@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jackett-api-keys
+type: Opaque
+stringData:
+  JACKET_API_KEY: ENC[AES256_GCM,data:/W5dUECF+Zg9pviCBPSTpfsw4pKoMqWgx812PDXamDI=,iv:iolqSXqCYWRu9dble4X5AScKMmJg7iCqMSOkTmYdNwA=,tag:7/G9jsJglgoS11nmZM9e1w==,type:str]
+  OMDB_API_KEY: ENC[AES256_GCM,data:KorgAHhB7Mk=,iv:0jHd45mGJ5GFUuzM5xZadIGUK56RZ4YnTi/dmlTou30=,tag:JiIrbLNyuwNXCe7YsVHVYg==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBuSFI3VVAweDNHS1l6UEhO
+        aXJqRnU1elM0aytjaDJlVG0yalJvUmlkc0FNCjV0bGxWVWpMRTNlcENYMUN6VVZa
+        VVE1NjJqUmY5ZmpVdzdodHZSMENvdmMKLS0tIHVSMGZCS2hCcnVpT2R2d2RFbXJt
+        RDBWRnRuRjF0VldKSXowV3pwT2VCT0kKLwwfyCfy5scyYtnVgLYQMNxoRgwmZNB+
+        omBkLuksxvvVX3+yADL3CCEmGRDOMitHy9VwA56HRFgm3AvXo87oSg==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBQYndLZFdIcTZyTnFaNERY
+        elZCOGpNaFFlQ0VCdHFPcks5SjlhZ29UdXhjCnBWWXlKMjdSSVpYeTlqNCtua00z
+        QkpndkJzSzVOUGRlSGU4ZEJBMG5BT1EKLS0tIDlyKzAxUW5uY1BGZFJzRUt3aUNN
+        SWJ5c0g0S3JsUnVQdFk4SGowejNhV0kKqXP/Jch1bXPOG6zf/lUwHz7nKGI9ge2R
+        FV2sA1qJNKj8uoKB2KOXBVuxZm7f158flkfKZA5LYqBiEtoyoDw4fw==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2025-09-28T21:09:46Z"
+  mac: ENC[AES256_GCM,data:6dpRdoM58NYISGZn6TPNEV+0NzpJ4jBf+/9KFClOZSmzYcULAsjHogTbI9UuArCQnhUfL2m0+F38HwOR30DMSe6ufgKRA/wfAplMzKnaxgsmUYB23WKRNj1FfnKyv/Pes1rsDnYzW449WVz55BZiM1KmQ03HiqIRJoOxywbxqGk=,iv:MSXcVjpZkI+1CgYWbH6QnCoc0Zwev5wIFEOF2vkmaC0=,tag:eT9qC30oiyXRivQ+90p06g==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0
