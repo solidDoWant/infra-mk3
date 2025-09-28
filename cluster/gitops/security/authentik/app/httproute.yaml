@@ -15,6 +15,17 @@ spec:
     - name: external-gateway
       namespace: networking
   rules:
-    - backendRefs:
+    - backendRefs: &backend_ref
         - name: authentik-server
           port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /application/o/authorize
+      backendRefs: *backend_ref
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: Access-Control-Allow-Origin
+                value: "*.${SECRET_PUBLIC_DOMAIN_NAME}"
