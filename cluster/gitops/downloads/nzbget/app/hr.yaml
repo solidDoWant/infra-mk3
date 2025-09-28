@@ -36,6 +36,7 @@ spec:
               OUTPUT_CONFIG_FILE_PATH: /config/nzbget.conf
             envFrom:
               - secret: nzbget-usenet-provider
+              - secret: nzbget-add-user-credentials
             command:
               - python
               - /usr/bin/update-config.py
