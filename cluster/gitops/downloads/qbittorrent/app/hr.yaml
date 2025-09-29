@@ -186,6 +186,12 @@ spec:
         globalMounts:
           - path: /config/Downloads
             subPath: downloads/torrents
+          - path: /config/Blackhole
+            subPath: qbittorrent/blackhole
+          - path: /config/Intermediate
+            subPath: qbittorrent/intermediate
+          - path: /config/Torrents
+            subPath: qbittorrent/torrents
       config-file:
         type: configMap
         identifier: qbittorrent
