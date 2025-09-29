@@ -175,34 +175,42 @@ spec:
         accessMode: ReadWriteOnce
         storageClass: ssd-replicated-3x
         size: 100Mi
-        globalMounts:
-          - path: /config/qBittorrent
-          - path: /config/qBittorrent/logs
-          - path: /config/.cache/qBittorrent
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /config/qBittorrent
+              - path: /config/qBittorrent/logs
+              - path: /config/.cache/qBittorrent
       media-downloads:
         type: nfs
         server: ${NFS_ADDRESS}
         path: ${NFS_MEDIA_PATH}
-        globalMounts:
-          - path: /config/Downloads
-            subPath: downloads/torrents
-          - path: /config/Blackhole
-            subPath: qbittorrent/blackhole
-          - path: /config/Intermediate
-            subPath: qbittorrent/intermediate
-          - path: /config/Torrents
-            subPath: qbittorrent/torrents
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /config/Downloads
+                subPath: downloads/torrents
+              - path: /config/Blackhole
+                subPath: qbittorrent/blackhole
+              - path: /config/Intermediate
+                subPath: qbittorrent/intermediate
+              - path: /config/Torrents
+                subPath: qbittorrent/torrents
       config-file:
         type: configMap
         identifier: qbittorrent
-        globalMounts:
-          - path: /config/qBittorrent/qBittorrent.conf
-            subPath: qbittorrent.conf
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /config/qBittorrent/qBittorrent.conf
+                subPath: qbittorrent.conf
       vuetorrent:
         type: image
         image: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.29.0
-        globalMounts:
-          - path: /webui
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /webui
     service:
       qbittorrent:
         controller: qbittorrent
