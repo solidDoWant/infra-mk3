@@ -1,0 +1,111 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nzbhydra2
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      nzbhydra2:
+        containers:
+          nzbhydra2:
+            image:
+              repository: ghcr.io/home-operations/nzbhydra2
+              tag: 7.19.1
+            env:
+              # Needed until https://github.com/home-operations/containers/pull/851 merges
+              NZBHYDRA_DISABLE_UPDATE: true
+            ports:
+              - name: web
+                containerPort: &web_port 5076
+            probes:
+              readiness:
+                enabled: true
+              liveness:
+                enabled: true
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0
+          labels:
+            endpoints.netpols.home.arpa/download-requester: "true"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        storageClass: ssd-replicated-3x
+        size: 100Mi
+        globalMounts:
+          - path: /config
+      logs:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 50Mi
+        globalMounts:
+          - path: /config/logs
+      media-downloads:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        globalMounts:
+          - path: /config/blackhole/torrents
+            subPath: qbittorrent/blackhole
+      temp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 50Mi
+        globalMounts:
+          - path: /tmp
+    service:
+      nzbhydra2:
+        controller: nzbhydra2
+        ports:
+          web:
+            port: *web_port
+            primary: true
+    route:
+      nzbhydra2:
+        hostnames:
+          - nzbhydra2.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: nzbhydra2
+                port: *web_port
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io
