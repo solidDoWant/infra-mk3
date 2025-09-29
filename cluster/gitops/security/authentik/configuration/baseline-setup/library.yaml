@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../../schemas/configs/blueprint.authentik_v1.json
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
 version: 1
 metadata:
   name: Blueprint library
@@ -27,3 +27,32 @@ entries:
       name: access-denied-stage
     attrs:
       deny_message: Access denied
+  # This is a reduced version of the default proxy outpost mapping that only includes
+  # the fields that are actually needed by most applications. This reduces the size of generated JWTs,
+  # and therefore headers to proxy upstreams, by about 18kB.
+  # Except for excluding the unnecessary keys, this is otherwise identical to the default mapping.
+  - model: authentik_providers_oauth2.scopemapping
+    id: proxy-outpost-reduced
+    identifiers:
+      name: >-
+        authentik default OAuth Mapping: Proxy outpost reduced
+    attrs:
+      expression: |
+        # This mapping is used by the authentik proxy. It passes extra user attributes,
+        # which are used for example for the HTTP-Basic Authentication mapping.
+        keys_to_exclude = [
+          "avatar",
+          "discord",
+          "discord_initial",
+          "discord_role_id"
+        ]
+        return {
+            "ak_proxy": {
+                "user_attributes": {
+                  key: value
+                  for key, value in request.user.group_attributes(request).items()
+                  if key not in keys_to_exclude
+                },
+                "is_superuser": request.user.is_superuser,
+            }
+        }
