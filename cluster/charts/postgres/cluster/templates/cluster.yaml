@@ -60,7 +60,15 @@ spec:
       labelSelector:
         matchLabels:
           cnpg.io/cluster: {{ include "cluster-resource-name" . }}
-          cnpg.io/podRole: instance
+        matchExpressions:
+        - key: cnpg.io/podRole
+          operator: In
+          # Don't schedule instances or new join jobs on the same node. Both values must
+          # be included here so that new join jobs don't end up on the same node, tying
+          # the instance's volume to that node.
+          values:
+            - instance
+            - join
       whenUnsatisfiable: DoNotSchedule
 {{- if .Values.additionalClusterConfig }}
 {{ .Values.additionalClusterConfig | toYaml | indent 2 }}
