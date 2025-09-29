@@ -66,7 +66,7 @@ spec:
       trustDomain: istio.cluster.local
       extensionProviders:
         - name: authentik
-          envoyExtAuthzHttp:
+          envoyExtAuthzHttp: &authentik_ext_auth
             service: authentik-outpost-proxy.security.svc.cluster.local
             port: 80
             pathPrefix: /outpost.goauthentik.io/auth/envoy
@@ -80,3 +80,8 @@ spec:
               - authorization
             includeRequestHeadersInCheck:
               - cookie
+        # Same as above but doesn't add the upstream headers
+        - name: authentik-no-upstream-headers
+          envoyExtAuthzHttp:
+            <<: *authentik_ext_auth
+            headersToUpstreamOnAllow: ~

@@ -19,5 +19,26 @@ spec:
               # TODO add additional domains here as they are migrated to authentik auth
               - jackett.${SECRET_PUBLIC_DOMAIN_NAME}
               - nzbget.${SECRET_PUBLIC_DOMAIN_NAME}
-              - nzbhydra2.${SECRET_PUBLIC_DOMAIN_NAME}
               - qbittorrent.${SECRET_PUBLIC_DOMAIN_NAME}
+---
+# This needs to be in the networking namespace until https://github.com/istio/api/issues/3569 is fixed.
+# Some applications don't seem to handle the extra upstream headers. This may be due to the request size,
+# or header size. This policy will use a "separate" provider that doesn't add the upstream headers.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: internal-gateway-authentik-auth-no-upstream-headers
+spec:
+  targetRef:
+    kind: Gateway
+    group: gateway.networking.k8s.io
+    name: internal-gateway
+  action: CUSTOM
+  provider:
+    name: authentik-no-upstream-headers
+  rules:
+    - to:
+        - operation:
+            hosts:
+              # TODO add additional domains here as they are migrated to authentik auth
+              - nzbhydra2.${SECRET_PUBLIC_DOMAIN_NAME}
