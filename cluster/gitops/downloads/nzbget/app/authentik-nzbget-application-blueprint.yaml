@@ -34,6 +34,11 @@ stringData:
           identifiers:
             name: Invalidation flow
           required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Blueprint library
+          required: true
       # Application
       - model: authentik_providers_proxy.proxyprovider
         id: nzbget-provider
@@ -70,7 +75,7 @@ stringData:
               ]
             - !Find [
                 authentik_providers_oauth2.scopemapping,
-                [name, "authentik default OAuth Mapping: Proxy outpost"],
+                [name, "authentik default OAuth Mapping: Proxy outpost reduced"],
               ]
       - model: authentik_core.application
         id: nzbget-application
