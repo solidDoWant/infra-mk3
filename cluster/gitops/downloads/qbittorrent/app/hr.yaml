@@ -129,6 +129,10 @@ spec:
             Session\SubcategoriesEnabled=true
             Session\UseOSCache=true
             Session\UseRandomPort=false ; Don't listen on a random port
+            ; Configure directories
+            Session\TempPathEnabled=true
+            Session\TempPath=/config/Intermediate
+            Session\TorrentExportDirectory=/config/Torrents
 
             [Core]
             AutoDeleteAddedTorrentFile=IfAdded
