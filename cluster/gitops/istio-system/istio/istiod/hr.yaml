@@ -73,15 +73,19 @@ spec:
             headersToDownstreamOnAllow:
               # Pretty sure that the authentik docs have this backwards
               - set-cookie
-            headersToUpstreamOnAllow:
-              - x-authentik-*
-              # Not currently used but will be useful once QBT supports basic auth
-              # https://github.com/qbittorrent/qBittorrent/issues/15007set
-              - authorization
+            # Disable this for now due to https://github.com/istio/api/issues/3569#issuecomment-3344686050
+            # NZBHydra2 won't work with the x-authentik-* headers being passed upstream, presumably because they
+            # are too large
+            # headersToUpstreamOnAllow:
+            #   - x-authentik-*
+            #   # Not currently used but will be useful once QBT supports basic auth
+            #   # https://github.com/qbittorrent/qBittorrent/issues/15007
+            #   - authorization
             includeRequestHeadersInCheck:
               - cookie
-        # Same as above but doesn't add the upstream headers
-        - name: authentik-no-upstream-headers
-          envoyExtAuthzHttp:
-            <<: *authentik_ext_auth
-            headersToUpstreamOnAllow: ~
+        # This approach does not work due to https://github.com/istio/api/issues/3569#issuecomment-3344686050
+        # # Same as above but doesn't add the upstream headers
+        # - name: authentik-no-upstream-headers
+        #   envoyExtAuthzHttp:
+        #     <<: *authentik_ext_auth
+        #     headersToUpstreamOnAllow: ~
