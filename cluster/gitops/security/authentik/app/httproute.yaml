@@ -27,5 +27,8 @@ spec:
         - type: ResponseHeaderModifier
           responseHeaderModifier:
             add:
+              # Authentik is bugged and does not send this header on the /application/o/authorize for proxy providers
+              # This is all or nothing, and does not support subdomain wildcards. I'd rather allow all domains than
+              # have to maintain a list of domains here.
               - name: Access-Control-Allow-Origin
-                value: "*.${SECRET_PUBLIC_DOMAIN_NAME}"
+                value: "*"
