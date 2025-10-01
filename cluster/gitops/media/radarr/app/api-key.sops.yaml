@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: radarr-api-key
+type: Opaque
+stringData:
+  API_KEY: ENC[AES256_GCM,data:tnm/W5kW6XhMkh/b2k/YGWkO9HT5FtLRZ8X5d9RROQI=,iv:7yPWHZzt1LCfQuGW5hYP1ptX4PfhFx5K7qY4j8GsCb4=,tag:0OeuAnwv4Asxzuf3F2htEA==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBjeHhXdzRIRmkwTHNGRHF6
+        bVo2VEdUNklJaDR4aUdhbVQ2OFl0dW44NUdVCjJOSkZiT05Lc1lLWEpXTndhUDZW
+        TVBoSFIyME5LWXo5TWxPaUJrWjBLVjgKLS0tIFRRdkxlbndyMU1tYWxRVlQ1cXR6
+        dE1aV3RtWVVkT2xqazF0eU9YazVTL1EKmuA2Pilag/u0yPV7J1kPF1zCTi/hbbIo
+        ND+XBSEjUAfUoMcC1X13rHF/Nwd4cdp8WyO6Fn5UDsn4ClcvCQ7gbw==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsOHdvOWJkSmI4aXZaZ25w
+        QkljWlhjbUxDMVV0ZGdpSkhsdXFNSklqUmtzClpHUDIybnk3UExLeVpBMG5RaTBk
+        QjlTRUlIUy9TUkdlWUZIT0kxVEErYncKLS0tIE5nRjNSeU81Qm1EUXRPWk15RzI4
+        SmlHU0JsWDJ0R1RPZ0RMTkVtdHJwUEUK6vGjlFSKLwv3JJ1KbJgx1LhXl817QCLf
+        tTLbckYm3aKP9Nkz26GMbGpZlgg46XVGYAmR4stx8SuH8iacqHGIiQ==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2025-10-01T07:39:22Z"
+  mac: ENC[AES256_GCM,data:f3JTjGpfrVJAhS+htyUNnONDE2Lsca8yAbVEiDbxSm9tsy9jV11HlGHS2SkZpDGYLGninTcseGlzfeT4f8sQljr3WOEvGBMGqatC3Msu3k9a4ubGKbU0AYkrbIEsrXxYDtH/cUAHQSEb4Hjrs8Chqv6d2ISQ240Wqhd69UZgab8=,iv:Bf7Lt1d8S//SPoi2nLk7MEtYBrdQ9OKNA4pAQKF6T0M=,tag:Qj3jf75KWf1KjJYBY1LCNA==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0

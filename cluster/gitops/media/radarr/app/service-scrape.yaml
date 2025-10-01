@@ -1,0 +1,21 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: radarr-metrics
+  labels:
+    app.kubernetes.io/part-of: radarr
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: radarr
+      app.kubernetes.io/service: radarr-metrics
+      app.kubernetes.io/instance: radarr
+  endpoints:
+    - port: metrics
+      interval: 1m
+  jobLabel: radarr-metrics
+  # Exports are HA, and will always contain the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service

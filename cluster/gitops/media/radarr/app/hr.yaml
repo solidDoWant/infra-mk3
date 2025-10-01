@@ -1,0 +1,192 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: radarr
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      radarr:
+        containers:
+          radarr:
+            image:
+              # Needed until https://github.com/Radarr/Radarr/pull/11255 merges and is released
+              repository: ghcr.io/soliddowant/radarr
+              tag: latest@sha256:81a88fa08e219a6fabacf7a553eb55e1f83c63f0d7f88365ebdaaa33854189cb
+            env:
+              # cspell:words APIKEY ANALYTICSENABLED CONSOLELEVEL DBENABLED FILTERSENTRYEVENTS MAINDBCONNECTIONSTRING
+              RADARR__AUTH__APIKEY:
+                secretKeyRef:
+                  name: radarr-api-key
+                  key: API_KEY
+              RADARR__AUTH__METHOD: External
+              RADARR__LOG__FILTERSENTRYEVENTS: true
+              RADARR__LOG__SQL: false
+              RADARR__LOG__CONSOLELEVEL: Info
+              RADARR__LOG__ANALYTICSENABLED: false
+              RADARR__LOG__DBENABLED: false
+              RADARR__UPDATE__MECHANISM: External
+              RADARR__UPDATE__AUTOMATICALLY: false
+              RADARR__POSTGRES__MAINDBCONNECTIONSTRING: >-
+                Server=radarr-postgres-17-rw.media.svc.cluster.local;
+                Database=radarr;
+                Username=radarr;
+                SSLMode=VerifyCA;
+                RootCertificate=/certs/root-ca/ca.crt;
+                SSLCertificate=/certs/postgres/user/tls.crt;
+                SSLKey=/certs/postgres/user/tls.key;
+                Pooling=true;
+                MinPoolSize=2;
+                Maximum Pool Size=100;
+            ports:
+              - name: web
+                containerPort: &web_port 7878
+            probes:
+              readiness: &probe
+                enabled: true
+                type: HTTP
+                path: /ping
+              liveness: *probe
+            securityContext: &container_security_context
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+      exportarr:
+        # Run this as a separate deployment so that I can try deploying multiple Radarr instances
+        # at once without screwing up the metrics
+        replicas: 2
+        strategy: RollingUpdate
+        containers:
+          exportarr:
+            image:
+              repository: ghcr.io/onedr0p/exportarr
+              tag: v2.3.0
+            args:
+              - radarr
+            env:
+              PORT: &metrics_port 80
+              URL: http://radarr.media.svc.cluster.local:7878
+              ENABLE_ADDITIONAL_METRICS: true
+              ENABLE_UNKNOWN_QUEUE_ITEMS: true
+            envFrom:
+              - secret: radarr-api-key
+            ports:
+              - name: web
+                containerPort: *metrics_port
+            probes:
+              readiness: &probe
+                enabled: true
+                type: HTTP
+              liveness: *probe
+            securityContext: *container_security_context
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # So far it doesn't look like anything under /config needs to be persistent.
+      # Leaving this as a separate volume for now in case that changes.
+      config:
+        type: emptyDir
+        sizeLimit: 100Mi
+        advancedMounts:
+          radarr:
+            radarr:
+              - path: /config
+      # I don't want these written to disk but I can't disable them entirely
+      logs:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 10Mi
+        advancedMounts:
+          radarr:
+            radarr:
+              - path: /config/logs
+                subPath: logs
+              - path: /config/Sentry
+                subPath: Sentry
+      temp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 50Mi
+        advancedMounts:
+          radarr:
+            radarr:
+              - path: /tmp
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          radarr:
+            radarr:
+              - path: /certs/root-ca
+      radarr-postgres-radarr-user-cert:
+        type: secret
+        name: radarr-postgres-radarr-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          radarr:
+            radarr:
+              - path: /certs/postgres/user
+    service:
+      radarr:
+        controller: radarr
+        ports:
+          web:
+            port: *web_port
+            primary: true
+      metrics:
+        controller: exportarr
+        ports:
+          metrics:
+            port: *metrics_port
+            primary: true
+    route:
+      radarr:
+        hostnames:
+          - radarr.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: radarr
+                port: *web_port
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io

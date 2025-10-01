@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: radarr-metrics
+  labels: &labels
+    app.kubernetes.io/name: radarr
+    app.kubernetes.io/controller: exportarr
+    app.kubernetes.io/instance: radarr
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

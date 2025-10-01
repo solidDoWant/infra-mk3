@@ -1,0 +1,89 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: radarr
+specs:
+  - description: radarr
+    endpointSelector: &radarr_selector
+      matchLabels:
+        app.kubernetes.io/name: radarr
+        app.kubernetes.io/controller: radarr
+        app.kubernetes.io/instance: radarr
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Access to the backend PostgreSQL database
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: radarr-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # To Radarr cloud API for "Discover" page
+      - toFQDNs:
+          - matchPattern: api.radarr.video
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &webservice_ports
+          - ports:
+              - port: "7878"
+                protocol: TCP
+      # Exportarr for metrics scraping
+      - fromEndpoints:
+          - &exportarr_selector
+            matchLabels:
+              app.kubernetes.io/name: radarr
+              app.kubernetes.io/controller: exportarr
+              app.kubernetes.io/instance: radarr
+      # Gateway to webservice
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *webservice_ports
+  - description: exportarr
+    endpointSelector: *exportarr_selector
+    egress:
+      # DNS resolution
+      - *dns_resolution
+      # To Radarr webservice to scrape metrics
+      - toEndpoints:
+          - <<: *radarr_selector
+        toPorts: *webservice_ports
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &metrics_ports
+          - ports:
+              - port: "80"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *metrics_ports
