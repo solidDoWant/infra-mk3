@@ -42,6 +42,16 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+      # To downloaders
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/downloader: "true"
+        toPorts:
+          - ports:
+              - port: "6789"
+                protocol: TCP
+              - port: "8080"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:

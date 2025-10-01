@@ -64,6 +64,9 @@ spec:
               capabilities:
                 drop:
                   - ALL
+        pod:
+          labels:
+            endpoints.netpols.home.arpa/download-requester: "true"
       exportarr:
         # Run this as a separate deployment so that I can try deploying multiple Radarr instances
         # at once without screwing up the metrics
