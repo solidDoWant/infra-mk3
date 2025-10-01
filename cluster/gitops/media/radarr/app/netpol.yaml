@@ -46,6 +46,7 @@ specs:
       - toEndpoints:
           - matchLabels:
               endpoints.netpols.home.arpa/downloader: "true"
+              io.kubernetes.pod.namespace: downloads
         toPorts:
           - ports:
               - port: "6789"
