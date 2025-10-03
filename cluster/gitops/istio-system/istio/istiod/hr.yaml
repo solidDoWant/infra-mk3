@@ -73,7 +73,12 @@ spec:
             headersToDownstreamOnAllow:
               # Pretty sure that the authentik docs have this backwards
               - set-cookie
+              # These don't appear to be needed but I'm leaving them here pending the outcome of https://github.com/goauthentik/authentik/pull/17233
+              # Note: Currently uncommenting these can lead to their values being duplicated responses coming from the authentik outpost
+              # - Access-Control-Allow-Origin
+              # - Access-Control-Allow-Credentials
             headersToUpstreamOnAllow:
+              # These need to be listed explicitly until https://github.com/goauthentik/authentik/issues/17074 is fixed
               - X-Authentik-Email
               - X-Authentik-Entitlements
               - X-Authentik-Groups
