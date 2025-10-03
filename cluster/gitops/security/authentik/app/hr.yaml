@@ -18,6 +18,11 @@ spec:
     global:
       podLabels:
         endpoints.netpols.home.arpa/email-sender: "true"
+      image:
+        # This is a fork build of the 2025.8.3 release that includes CORS fixes.
+        # See https://github.com/goauthentik/authentik/pull/17233
+        repository: ghcr.io/soliddowant/authentik
+        tag: 2025.8.3-cors.12
       env:
         # Postgres
         ## RW endpoint
