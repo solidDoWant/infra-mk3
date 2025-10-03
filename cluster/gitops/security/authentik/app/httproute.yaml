@@ -15,6 +15,6 @@ spec:
     - name: external-gateway
       namespace: networking
   rules:
-    - backendRefs: &backend_ref
+    - backendRefs:
         - name: authentik-server
           port: 80
