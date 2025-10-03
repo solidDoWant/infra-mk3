@@ -99,6 +99,7 @@ spec:
               - authorization
             includeRequestHeadersInCheck:
               - cookie
+              - Origin
         # This approach does not work due to https://github.com/istio/api/issues/3569#issuecomment-3344686050
         # # Same as above but doesn't add the upstream headers
         # - name: authentik-no-upstream-headers
