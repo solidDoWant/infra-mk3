@@ -22,8 +22,11 @@ spec:
           radarr:
             image:
               # Needed until https://github.com/Radarr/Radarr/pull/11255 merges and is released
+              # Needed until https://github.com/Radarr/Radarr/pull/11257 merges and is released
+              # This supports Postgres with mTLS auth, and fixes a CORS compatibility issue with the
+              # Authentik outpost
               repository: ghcr.io/soliddowant/radarr
-              tag: latest@sha256:81a88fa08e219a6fabacf7a553eb55e1f83c63f0d7f88365ebdaaa33854189cb
+              tag: latest@sha256:58924e2213b9041c9c16d17a856c1e4e74901ba56784c7db6d06fb962b7c1884
             env:
               # cspell:words APIKEY ANALYTICSENABLED CONSOLELEVEL DBENABLED FILTERSENTRYEVENTS MAINDBCONNECTIONSTRING
               RADARR__AUTH__APIKEY:
