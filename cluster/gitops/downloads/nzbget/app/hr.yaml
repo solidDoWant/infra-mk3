@@ -93,7 +93,7 @@ spec:
           nzbget:
             app:
               - path: /config/completed
-                subPath: downloads/nzbs
+                subPath: downloads/usenet
       # Store this on ceph block device for now. I may eventually dump this on NFS if
       # performance is acceptable. This will limit the max download size.
       intermediate:
