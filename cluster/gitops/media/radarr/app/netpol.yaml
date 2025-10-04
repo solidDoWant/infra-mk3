@@ -44,6 +44,16 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+      # To nzbhydra2 for searching
+      - toEndpoints:
+          - &nzbhydra2_selector
+            matchLabels:
+              app.kubernetes.io/name: nzbhydra2
+              io.kubernetes.pod.namespace: downloads
+        toPorts:
+          - ports:
+              - port: "5076"
+                protocol: TCP
       # To downloaders
       - toEndpoints:
           - matchLabels:
@@ -65,9 +75,7 @@ specs:
                 protocol: TCP
       - fromEndpoints:
           # NZBHydra2 configuration syncing
-          - matchLabels:
-              app.kubernetes.io/name: nzbhydra2
-              io.kubernetes.pod.namespace: downloads
+          - *nzbhydra2_selector
           # Exportarr for metrics scraping
           - &exportarr_selector
             matchLabels:
