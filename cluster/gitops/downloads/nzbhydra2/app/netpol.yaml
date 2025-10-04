@@ -62,6 +62,14 @@ specs:
           - ports:
               - port: "5076"
                 protocol: TCP
+      # From search requesters
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/download-search-requester: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+        toPorts: *webservice_ports
       # Gateway to webservice
       - fromEndpoints:
           - matchLabels:

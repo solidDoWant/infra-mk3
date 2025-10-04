@@ -44,6 +44,7 @@ spec:
           annotations:
             k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0
           labels:
+            endpoints.netpols.home.arpa/download-searcher: "true"
             endpoints.netpols.home.arpa/download-requester: "true"
           securityContext:
             runAsNonRoot: true

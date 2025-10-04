@@ -69,6 +69,7 @@ spec:
                   - ALL
         pod:
           labels:
+            endpoints.netpols.home.arpa/download-search-requester: "true"
             endpoints.netpols.home.arpa/download-requester: "true"
             endpoints.netpols.home.arpa/nzbhydra2-sync: "true"
       exportarr:
