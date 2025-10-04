@@ -139,6 +139,17 @@ spec:
           radarr:
             radarr:
               - path: /tmp
+      media:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        advancedMounts:
+          radarr:
+            radarr:
+              - path: /mnt/complete
+                subPath: converted/Movies
+              - path: /mnt/library
+                subPath: library
       root-ca:
         type: secret
         name: root-ca-pub-cert
