@@ -63,15 +63,18 @@ specs:
           - ports:
               - port: "7878"
                 protocol: TCP
-      # Exportarr for metrics scraping
       - fromEndpoints:
+          # NZBHydra2 configuration syncing
+          - matchLabels:
+              app.kubernetes.io/name: nzbhydra2
+              io.kubernetes.pod.namespace: downloads
+          # Exportarr for metrics scraping
           - &exportarr_selector
             matchLabels:
               app.kubernetes.io/name: radarr
               app.kubernetes.io/controller: exportarr
               app.kubernetes.io/instance: radarr
-      # Gateway to webservice
-      - fromEndpoints:
+          # Gateway to webservice
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways

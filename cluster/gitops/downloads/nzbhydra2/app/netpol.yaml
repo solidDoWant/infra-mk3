@@ -33,6 +33,27 @@ specs:
           - ports:
               - port: "9117"
                 protocol: TCP
+      # To external tools
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/nzbhydra2-sync: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+        toPorts:
+          - ports:
+              # Radarr instances port
+              - port: "7878"
+                protocol: TCP
+              # Sonarr instances port
+              - port: "8989"
+                protocol: TCP
+              # Lidarr instances port
+              - port: "8686"
+                protocol: TCP
+              # Readarr instances port
+              - port: "8787"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
