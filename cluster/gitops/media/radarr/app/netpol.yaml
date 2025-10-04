@@ -35,9 +35,11 @@ specs:
           - ports:
               - port: "5432"
                 protocol: TCP
-      # To Radarr cloud API for "Discover" page
       - toFQDNs:
+          # To Radarr cloud API for "Discover" page
           - matchPattern: api.radarr.video
+          # Show movie posters
+          - matchPattern: image.tmdb.org
         toPorts:
           - ports:
               - port: "443"
