@@ -24,7 +24,7 @@ specs:
                 protocol: TCP
             rules:
               dns:
-                - matchPattern: fileflows.com
+                - matchPattern: "*"
       # Proxy access to fileflows.com
       - toFQDNs:
           - matchName: fileflows.com
