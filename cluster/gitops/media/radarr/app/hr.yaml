@@ -130,6 +130,10 @@ spec:
         storageClass: zfs-generic-nfs
         accessMode: ReadWriteOnce
         size: 10Gi
+        advancedMounts:
+          radarr:
+            radarr:
+              - path: /config/MediaCover
       # I don't want these written to disk but I can't disable them entirely
       logs:
         type: emptyDir
