@@ -20,6 +20,7 @@ spec:
     controllers:
       fileflows-proxy:
         replicas: 2
+        strategy: RollingUpdate
         containers:
           app:
             image:
