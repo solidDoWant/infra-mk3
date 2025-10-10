@@ -7,7 +7,7 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: app-template
+      chart: harbor-deploy
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
