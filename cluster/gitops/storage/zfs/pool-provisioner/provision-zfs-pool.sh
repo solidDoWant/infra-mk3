@@ -114,8 +114,6 @@ provision_datasets() {
         "/fluent"
         "/fluent/bit"
         "/fluent/d"
-        "/harbor"
-        "/harbor/registry"
         "/postgres"
         "/rabbitmq"
         "/rabbitmq/default"
