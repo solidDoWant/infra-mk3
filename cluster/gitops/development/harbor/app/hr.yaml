@@ -1,0 +1,68 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: harbor-charts
+      version: 1.18.0
+  # This is not HA. The HA support is pretty terrible and is missing a support for a ton of basic features
+  # like mTLS DB auth and redis failover. Run with a single instance of each component until I get time to
+  # fix this mess.
+  values:
+    expose:
+      type: route
+      route:
+        hosts:
+          - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+    externalURL: https://harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+    persistence:
+      resourcePolicy: ""
+      persistentVolumeClaim:
+        registry:
+          storageClass: harbor-registry
+          size: 100Gi
+        database:
+          storageClass: ssd-replicated-3x
+          size: 3Gi
+        redis:
+          storageClass: ssd-replicated-3x
+        trivy: # No idea what this needs
+          storageClass: ssd-replicated-3x
+    existingSecretAdminPassword: harbor-admin-credentials
+    ipFamily:
+      ipv6:
+        enabled: false
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+      configureUserSettings: # TODO
+    jobservice:
+      jobLoggers:
+        - database # TODO I might be able to remove this
+        - stdout
+    registry:
+      credentials:
+        username: harbor-internal
+        password: ""
+        existingSecret: harbor-internal-registry-credentials
+        htpasswordString: $2y$10$2Fc7nxr89CpQOCCzh3dbZu7A5/6pZ.rdrpxN3t3I/fly0jOCK5YwW
+    trivy:
+      resources:
+        requests:
+          memory: 256Mi
+        limits:
+          memory: 256Mi
+      ignoreUnfixed: true
