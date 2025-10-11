@@ -1,8 +1,8 @@
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
-metadata:
-  name: repoflow-graphql-metadata-postgres-auth
+meta:
+  name: repoflow-graphql-meta-postgres-auth
 spec:
   interval: 5m
   chart:
@@ -13,7 +13,7 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-    serviceName: repoflow-graphql-metadata
+    serviceName: repoflow-graphql-meta
     certificates:
       ca:
         subject:
@@ -25,5 +25,5 @@ spec:
             - infra-mk3
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     users:
-      repoflow-graphql-metadata:
-        username: repoflow-graphql-metadata
+      repoflow-graphql-meta:
+        username: repoflow-graphql-meta
