@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/objectbucket.io/objectbucketclaim_v1alpha1.json
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: repoflow-storage
+spec:
+  generateBucketName: repoflow-storage
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    maxObjects: "10000"
+    maxSize: 100G
