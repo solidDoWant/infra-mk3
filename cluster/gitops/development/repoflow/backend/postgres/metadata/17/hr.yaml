@@ -2,7 +2,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: repoflow-graphql-meta-postgres-17
+  name: repoflow-metadata-postgres-17
 spec:
   interval: 5m
   chart:
@@ -14,9 +14,9 @@ spec:
         namespace: flux-system
         name: infra-mk3
   dependsOn:
-    - name: repoflow-graphql-meta-postgres-auth
+    - name: repoflow-metadata-postgres-auth
   values:
-    clusterName: repoflow-graphql-meta
+    clusterName: repoflow-metadata
     certificates:
       serving:
         issuerRef:
@@ -31,7 +31,7 @@ spec:
     additionalClusterConfig:
       managed:
         roles:
-          - name: repoflow-graphql-meta
+          - name: repoflow-metadata
             # Remove the app user password. TLS auth will be enforce instead.
             # This doesn't make a huge difference given that TLS auth is enforced via pg_hba
             disablePassword: true
