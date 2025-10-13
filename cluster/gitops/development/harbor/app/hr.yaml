@@ -120,9 +120,11 @@ spec:
     database:
       type: external
       external:
-        # This uses the default username and password, and no TLS. Envoy sidecars to all pods that access the DB
+        # This uses the password auth, and no TLS. Envoy sidecars on all pods that access the DB
         # will proxy the DB connections and authenticate via mTLS.
-        host: 127.0.0.1 # harbor-postgres-17-rw.development.svc.cluster.local
+        host: 127.0.0.1
+        user: harbor
+        coreDatabase: harbor
         maxOpenConns: 50
         maxIdleConns: 10
     redis:
