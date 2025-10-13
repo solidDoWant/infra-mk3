@@ -1,0 +1,295 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: harbor
+specs:
+  - description: exporter
+    endpointSelector: &exporter_matcher
+      matchLabels:
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/component: exporter
+        app.kubernetes.io/instance: harbor
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Access to the backend PostgreSQL database
+      - &to_database
+        toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: harbor-database-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8001"
+                protocol: TCP
+      # Metrics
+      - &from_metrics_scraper
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8001"
+                protocol: TCP
+      # # Ingress from internal gateway
+      # - fromEndpoints:
+      #     - &gateway_matcher
+      #       matchLabels:
+      #         io.kubernetes.pod.namespace: networking
+      #         app.kubernetes.io/name: ingress-gateways
+      #         gateway.networking.k8s.io/gateway-name: internal-gateway
+      #   toPorts:
+      #     - ports:
+      #         - port: "8901"
+      #           protocol: TCP
+  - description: jobservice
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/component: jobservice
+        app.kubernetes.io/instance: harbor
+    egress:
+      - *dns_resolution
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+      - *from_metrics_scraper
+  - description: registry
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/component: registry
+        app.kubernetes.io/instance: harbor
+    egress:
+      - *dns_resolution
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "5000"
+                protocol: TCP
+              - port: "8080"
+                protocol: TCP
+      - *from_metrics_scraper
+  - description: trivy
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/component: trivy
+        app.kubernetes.io/instance: harbor
+    egress:
+      - *dns_resolution
+      - &to_redis
+        toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: dragonfly
+              app.kubernetes.io/instance: authentik-dragonfly
+        toPorts:
+          - ports:
+              - port: "6379"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+  - description: core
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/component: core
+        app.kubernetes.io/instance: harbor
+    egress:
+      - *dns_resolution
+      # - *to_database
+      - *to_redis
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      - *from_metrics_scraper
+  # - description: backend-migrations
+  #   endpointSelector:
+  #     matchLabels:
+  #       app.kubernetes.io/name: kyoo
+  #       app.kubernetes.io/component: backend-migrations
+  #       app.kubernetes.io/instance: kyoo
+  #   egress:
+  #     - *dns_resolution
+  #     # Access to the backend PostgreSQL database
+  #     - &to_backend_postgresql
+  #       toEndpoints:
+  #         - matchLabels:
+  #             cnpg.io/cluster: kyoo-backend-postgres-17
+  #       toPorts:
+  #         - ports:
+  #             - port: "5432"
+  #               protocol: TCP
+  # - description: backend
+  #   endpointSelector: *backend_matcher
+  #   egress:
+  #     - *dns_resolution
+  #     - *to_backend_postgresql
+  #     # Access to RabbitMQ
+  #     - &to_rabbitmq
+  #       toEndpoints:
+  #         - matchLabels:
+  #             app.kubernetes.io/name: kyoo-rabbitmq
+  #             app.kubernetes.io/component: rabbitmq
+  #             app.kubernetes.io/part-of: rabbitmq
+  #       toPorts:
+  #         - ports:
+  #             - port: "5671"
+  #               protocol: TCP
+  #     # Access to Meilisearch
+  #     - toEndpoints:
+  #         - matchLabels:
+  #             app.kubernetes.io/name: kyoo-meilisearch
+  #             app.kubernetes.io/component: meilisearch
+  #             app.kubernetes.io/instance: kyoo-meilisearch
+  #       toPorts:
+  #         - ports:
+  #             - port: "7700"
+  #               protocol: TCP
+  #     # Access to s3 (thumbnail storage)
+  #     - &to_s3
+  #       toEndpoints:
+  #         - *gateway_matcher
+  #       toPorts:
+  #         - ports:
+  #             - port: "443"
+  #               protocol: TCP
+  #     # User avatars
+  #     - toFQDNs:
+  #         # Gravatar
+  #         - matchName: www.gravatar.com
+  #       toPorts:
+  #         - ports:
+  #             - port: "443"
+  #               protocol: TCP
+  #     # To media information services
+  #     - toFQDNs:
+  #         - matchName: image.tmdb.org
+  #         - matchName: artworks.thetvdb.com
+  #       toPorts:
+  #         - ports:
+  #             - port: "443"
+  #               protocol: TCP
+  #     # Access to the transcoder
+  #     - toEndpoints:
+  #         - &transcoder_matcher
+  #           matchLabels:
+  #             app.kubernetes.io/name: kyoo
+  #             app.kubernetes.io/component: transcoder
+  #             app.kubernetes.io/instance: kyoo
+  #       toPorts:
+  #         - ports:
+  #             - port: "7666"
+  #               protocol: TCP
+  #   ingress:
+  #     # Kubelet for healthcheck
+  #     - fromEntities:
+  #         - host
+  #       toPorts:
+  #         - ports:
+  #             - port: "5000"
+  #               protocol: TCP
+  #     # Ingress
+  #     - fromEndpoints:
+  #         # Internal gateway
+  #         - *gateway_matcher
+  #         - *frontend_matcher
+  #         # Scanner service
+  #         - &scanner_matcher
+  #           matchLabels:
+  #             app.kubernetes.io/name: kyoo
+  #             app.kubernetes.io/component: scanner
+  #             app.kubernetes.io/instance: kyoo
+  #         # Matcher service
+  #         - &matcher_matcher
+  #           matchLabels:
+  #             app.kubernetes.io/name: kyoo
+  #             app.kubernetes.io/component: matcher
+  #             app.kubernetes.io/instance: kyoo
+  #       toPorts:
+  #         - ports:
+  #             - port: "5000"
+  #               protocol: TCP
+  # - description: transcoder
+  #   endpointSelector: *transcoder_matcher
+  #   egress:
+  #     - *dns_resolution
+  #     - *to_s3
+  #     # Access to the transcoder PostgreSQL database
+  #     - toEndpoints:
+  #         - matchLabels:
+  #             cnpg.io/cluster: kyoo-transcoder-postgres-17
+  #       toPorts:
+  #         - ports:
+  #             - port: "5432"
+  #               protocol: TCP
+  #   ingress:
+  #     # Transcoding requests from the backend
+  #     - fromEndpoints:
+  #         - *backend_matcher
+  #       toPorts:
+  #         - ports:
+  #             - port: "7666"
+  #               protocol: TCP
+  # - description: scanner
+  #   endpointSelector: *scanner_matcher
+  #   egress:
+  #     - *dns_resolution
+  #     - *to_rabbitmq
+  #     - *to_backend
+  # - description: matcher
+  #   endpointSelector: *matcher_matcher
+  #   egress:
+  #     - *dns_resolution
+  #     - *to_rabbitmq
+  #     - *to_backend
+  #     # To media information services
+  #     - toFQDNs:
+  #         - matchName: thexem.info
+  #         - matchName: api.themoviedb.org
+  #         - matchName: api4.thetvdb.com
+  #       toPorts:
+  #         - ports:
+  #             - port: "443"
+  #               protocol: TCP

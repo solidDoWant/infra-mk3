@@ -14,6 +14,15 @@ spec:
         namespace: flux-system
         name: harbor-charts
       version: 1.18.0
+  valuesFrom:
+    - kind: Secret
+      name: harbor-registry-bucket-hr-config
+      valuesKey: regionendpoint
+      targetPath: persistence.imageChartStorage.s3.regionendpoint
+    - kind: Secret
+      name: harbor-registry-bucket-hr-config
+      valuesKey: bucket
+      targetPath: persistence.imageChartStorage.s3.bucket
   # This is not HA. The HA support is pretty terrible and is missing a support for a ton of basic features
   # like mTLS DB auth and redis failover. Run with a single instance of each component until I get time to
   # fix this mess.
@@ -32,17 +41,14 @@ spec:
     externalURL: https://harbor.${SECRET_PUBLIC_DOMAIN_NAME}
     persistence:
       resourcePolicy: ""
-      persistentVolumeClaim:
-        registry:
-          storageClass: harbor-registry
-          size: 100Gi
-        database:
-          storageClass: ssd-replicated-3x
-          size: 3Gi
-        redis:
-          storageClass: ssd-replicated-3x
-        trivy: # No idea what this needs
-          storageClass: ssd-replicated-3x
+      imageChartStorage:
+        # Disable S3 redirect for now while I sort out access requirements
+        disableredirect: true
+        type: s3
+        s3:
+          # Bucket and endpoint are set via valuesFrom above
+          existingSecret: harbor-registry-bucket-credentials
+          # forcepathstyle:
     existingSecretAdminPassword: harbor-admin-credentials
     ipFamily:
       ipv6:
@@ -51,21 +57,119 @@ spec:
       enabled: true
       serviceMonitor:
         enabled: true
+    portal:
+      replicas: 2
+    core:
+      replicas: 2
       configureUserSettings: # TODO
+      # TODO envoy sidecar for mTLS to DB
+      # TODO envoy sidecar for mTLS to Redis
+      initContainers:
+        - &envoy_sidecar
+          name: envoy
+          image: envoyproxy/envoy:distroless-v1.35.3
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+            - name: postgres-cert
+              mountPath: /etc/envoy/secrets/postgres
+            - name: root-ca
+              mountPath: /etc/envoy/secrets/root-ca
+          restartPolicy: Always
     jobservice:
+      replicas: 2
       jobLoggers:
         - database # TODO I might be able to remove this
         - stdout
+      # TODO envoy sidecar for mTLS to Redis
+      # initContainers: *envoy_sidecar
     registry:
+      replicas: 2
       credentials:
         username: harbor-internal
         password: ""
         existingSecret: harbor-internal-registry-credentials
         htpasswordString: $2y$10$2Fc7nxr89CpQOCCzh3dbZu7A5/6pZ.rdrpxN3t3I/fly0jOCK5YwW
+      # TODO envoy sidecar for mTLS to Redis
+      # initContainers: *envoy_sidecar
     trivy:
+      replicas: 2
       resources:
         requests:
           memory: 256Mi
         limits:
           memory: 256Mi
       ignoreUnfixed: true
+      # TODO envoy sidecar for mTLS to Redis
+      # initContainers: *envoy_sidecar
+    database:
+      type: external
+      external:
+        # This uses the default username and password, and no TLS. Envoy sidecars to all pods that access the DB
+        # will proxy the DB connections and authenticate via mTLS.
+        host: 127.0.0.1 # harbor-postgres-17-rw.development.svc.cluster.local
+        maxOpenConns: 50
+        maxIdleConns: 10
+    redis:
+      type: external
+      external:
+        # See above DB note about Envoy sidecar for mTLS
+        addr: 127.0.0.1:6379
+    exporter:
+      # TODO, this will require changing the ServiceMonitor to avoid metric duplication
+      # replicas: 2
+      # TODO envoy sidecar for mTLS to DB
+  postRenderers:
+    # Add the cert and envoy config volumes to envoy sidecars
+    - kustomize:
+        patches:
+          - patch: |
+              # Add the postgres user cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: postgres-cert
+                  secret:
+                    secretName: harbor-postgres-harbor-user
+                    items:
+                      - key: tls.crt
+                        path: tls.crt
+                      - key: tls.key
+                        path: tls.key
+                    defaultMode: 0440
+              # Add the root CA cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: root-ca
+                  secret:
+                    secretName: root-ca-pub-cert
+                    items:
+                      - key: ca.crt
+                        path: ca.crt
+                    defaultMode: 0444
+              # Add the envoy config volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: envoy-config
+                  configMap:
+                    name: harbor-envoy-config
+                    items:
+                      - key: pg-only.yaml
+                        value: envoy.yaml
+                    defaultMode: 0444
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: harbor-core

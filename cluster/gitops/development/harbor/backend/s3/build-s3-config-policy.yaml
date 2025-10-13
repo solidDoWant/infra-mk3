@@ -44,4 +44,3 @@ spec:
           data:
             regionendpoint: https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}
             bucket: "{{ request.object.data.BUCKET_NAME }}"
-            existingSecret: harbor-registry-bucket-credentials
