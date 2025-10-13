@@ -236,6 +236,10 @@ spec:
     - kustomize:
         patches:
           - patch: |
+              # Add an empty volume list
+              - op: add
+                path: /spec/template/spec/volumes
+                value: []
               # Add the redis user cert volume
               - op: add
                 path: /spec/template/spec/volumes/-
