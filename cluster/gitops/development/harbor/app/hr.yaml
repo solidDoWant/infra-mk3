@@ -166,7 +166,7 @@ spec:
                     name: harbor-envoy-config
                     items:
                       - key: pg-only.yaml
-                        value: envoy.yaml
+                        path: envoy.yaml
                     defaultMode: 0444
             target:
               group: apps
