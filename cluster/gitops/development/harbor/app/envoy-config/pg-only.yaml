@@ -32,6 +32,9 @@ static_resources:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.starttls.v3.UpstreamStartTlsConfig
           tls_socket_config:
             common_tls_context:
+              tls_params:
+                tls_minimum_protocol_version: TLSv1_3
+                tls_maximum_protocol_version: TLSv1_3
               tls_certificates:
                 - certificate_chain:
                     filename: /etc/envoy/secrets/postgres/tls.crt
