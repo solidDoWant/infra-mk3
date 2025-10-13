@@ -24,7 +24,20 @@ spec:
         username: harbor
     netpol:
       applicationAccess:
-        selector:
-          matchLabels:
-            app.kubernetes.io/name: harbor
-            app.kubernetes.io/instance: harbor
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: core
+              app.kubernetes.io/instance: harbor
+          - matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: jobservice
+              app.kubernetes.io/instance: harbor
+          - matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: registry
+              app.kubernetes.io/instance: harbor
+          - matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: trivy
+              app.kubernetes.io/instance: harbor
