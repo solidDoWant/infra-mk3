@@ -67,7 +67,8 @@ spec:
       initContainers:
         - &envoy_sidecar
           name: envoy
-          image: envoyproxy/envoy:distroless-v1.35.3
+          # Contrib image is required because the postgres filter extension is only in the contrib build
+          image: envoyproxy/envoy:contrib-v1.35.3
           securityContext:
             capabilities:
               drop:
