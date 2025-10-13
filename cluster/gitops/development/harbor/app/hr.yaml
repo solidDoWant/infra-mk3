@@ -15,11 +15,11 @@ spec:
         name: harbor-charts
       version: 1.18.0
   valuesFrom:
-    - kind: Secret
+    - kind: ConfigMap
       name: harbor-registry-bucket-hr-config
       valuesKey: regionendpoint
       targetPath: persistence.imageChartStorage.s3.regionendpoint
-    - kind: Secret
+    - kind: ConfigMap
       name: harbor-registry-bucket-hr-config
       valuesKey: bucket
       targetPath: persistence.imageChartStorage.s3.bucket
