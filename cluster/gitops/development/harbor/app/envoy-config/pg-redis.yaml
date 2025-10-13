@@ -118,9 +118,9 @@ static_resources:
                 settings:
                   op_timeout: 5s
                   enable_redirection: true
+                  dns_cache_config:
+                    name: default
+                    dns_lookup_family: V4_ONLY
                 prefix_routes:
                   catch_all_route:
                     cluster: redis_cluster
-                dns_cache_config:
-                  name: default
-                  dns_lookup_family: V4_ONLY
