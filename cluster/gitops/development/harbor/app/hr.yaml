@@ -94,15 +94,8 @@ spec:
       jobLoggers:
         - database # TODO I might be able to remove this
         - stdout
-      initContainers: &envoy_sidecar_redis_only
-        - <<: *envoy_sidecar
-          volumeMounts:
-            - name: envoy-config
-              mountPath: /etc/envoy
-            - name: redis-cert
-              mountPath: /etc/envoy/secrets/redis
-            - name: root-ca
-              mountPath: /etc/envoy/secrets/root-ca
+      initContainers:
+        - *envoy_sidecar
     registry:
       replicas: 2
       credentials:
@@ -118,7 +111,15 @@ spec:
         limits:
           memory: 256Mi
       ignoreUnfixed: true
-      initContainers: *envoy_sidecar_redis_only
+      initContainers:
+        - <<: *envoy_sidecar
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+            - name: redis-cert
+              mountPath: /etc/envoy/secrets/redis
+            - name: root-ca
+              mountPath: /etc/envoy/secrets/root-ca
     database:
       type: external
       external:
@@ -195,6 +196,19 @@ spec:
     - kustomize:
         patches:
           - patch: |
+              # Add the postgres user cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: postgres-cert
+                  secret:
+                    secretName: harbor-postgres-harbor-user
+                    items:
+                      - key: tls.crt
+                        path: tls.crt
+                      - key: tls.key
+                        path: tls.key
+                    defaultMode: 0440
               # Add the redis user cert volume
               - op: add
                 path: /spec/template/spec/volumes/-
@@ -225,7 +239,7 @@ spec:
                 value:
                   name: envoy-config
                   configMap:
-                    name: harbor-envoy-redis-only-config
+                    name: harbor-envoy-pg-redis-config
                     defaultMode: 0440
             target:
               group: apps

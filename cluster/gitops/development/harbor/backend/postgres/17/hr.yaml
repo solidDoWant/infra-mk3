@@ -48,5 +48,9 @@ spec:
               app.kubernetes.io/instance: harbor
           - matchLabels:
               app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: jobservice
+              app.kubernetes.io/instance: harbor
+          - matchLabels:
+              app.kubernetes.io/name: harbor
               app.kubernetes.io/component: exporter
               app.kubernetes.io/instance: harbor
