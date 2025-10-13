@@ -6,7 +6,7 @@ metadata:
   name: harbor
 specs:
   - description: core
-    endpointSelector:
+    endpointSelector: &core_selector
       matchLabels:
         app.kubernetes.io/name: harbor
         app.kubernetes.io/component: core
@@ -36,6 +36,7 @@ specs:
           - ports:
               - port: "5432"
                 protocol: TCP
+      # Access to the backend Redis/Dragonfly instance
       - &to_redis
         toEndpoints:
           - matchLabels:
@@ -44,6 +45,41 @@ specs:
         toPorts:
           - ports:
               - port: "6379"
+                protocol: TCP
+      # Access to the registry service
+      - toEndpoints:
+          - &registry_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: registry
+              app.kubernetes.io/instance: harbor
+        toPorts:
+          - ports:
+              - port: "5000"
+                protocol: TCP
+              - port: "8080"
+                protocol: TCP
+      # Access to the trivy service
+      - toEndpoints:
+          - &trivy_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: trivy
+              app.kubernetes.io/instance: harbor
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Access to the portal service
+      - toEndpoints:
+          - &portal_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: portal
+              app.kubernetes.io/instance: harbor
+        toPorts:
+          - ports:
+              - port: "8080"
                 protocol: TCP
     ingress:
       # Kubelet for healthcheck
@@ -63,13 +99,20 @@ specs:
           - ports:
               - port: "8001"
                 protocol: TCP
+      # Access from the job service
+      - fromEndpoints:
+          - &job_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: jobservice
+              app.kubernetes.io/instance: harbor
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
 
   - description: portal
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: harbor
-        app.kubernetes.io/component: portal
-        app.kubernetes.io/instance: harbor
+    endpointSelector: *portal_service_selector
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -78,26 +121,30 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
-      # Ingress from internal gateway
       - fromEndpoints:
+          # Ingress from internal gateway
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
+          - *core_selector
         toPorts:
           - ports:
               - port: "8080"
                 protocol: TCP
 
   - description: jobservice
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: harbor
-        app.kubernetes.io/component: jobservice
-        app.kubernetes.io/instance: harbor
+    endpointSelector: *job_service_selector
     egress:
       - *dns_resolution
       - *to_redis
+      # Access to the core service
+      - toEndpoints:
+          - *core_selector
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -108,11 +155,7 @@ specs:
       - *from_metrics_scraper
 
   - description: registry
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: harbor
-        app.kubernetes.io/component: registry
-        app.kubernetes.io/instance: harbor
+    endpointSelector: *registry_service_selector
     egress:
       - *dns_resolution
     ingress:
@@ -126,13 +169,17 @@ specs:
               - port: "8080"
                 protocol: TCP
       - *from_metrics_scraper
+      - fromEndpoints:
+          - *core_selector
+        toPorts:
+          - ports:
+              - port: "5000"
+                protocol: TCP
+              - port: "8080"
+                protocol: TCP
 
   - description: trivy
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: harbor
-        app.kubernetes.io/component: trivy
-        app.kubernetes.io/instance: harbor
+    endpointSelector: *trivy_service_selector
     egress:
       - *dns_resolution
       - *to_redis
@@ -140,6 +187,12 @@ specs:
       # Kubelet for healthcheck
       - fromEntities:
           - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      - fromEndpoints:
+          - *core_selector
         toPorts:
           - ports:
               - port: "8080"
