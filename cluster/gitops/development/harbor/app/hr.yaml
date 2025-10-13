@@ -95,14 +95,14 @@ spec:
         - database # TODO I might be able to remove this
         - stdout
       initContainers: &envoy_sidecar_redis_only
-        <<: *envoy_sidecar
-        volumeMounts:
-          - name: envoy-config
-            mountPath: /etc/envoy
-          - name: redis-cert
-            mountPath: /etc/envoy/secrets/redis
-          - name: root-ca
-            mountPath: /etc/envoy/secrets/root-ca
+        - <<: *envoy_sidecar
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+            - name: redis-cert
+              mountPath: /etc/envoy/secrets/redis
+            - name: root-ca
+              mountPath: /etc/envoy/secrets/root-ca
     registry:
       replicas: 2
       credentials:
