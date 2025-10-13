@@ -311,31 +311,31 @@ spec:
                     defaultMode: 0444
               # Add the envoy sidecar init container
               - op: add
-                path: /spec/template/spec/initContainers/-
+                path: /spec/template/spec/initContainers
                 value:
-                  name: envoy
-                  # Contrib image is required because the postgres filter extension is only in the contrib build
-                  image: envoyproxy/envoy:contrib-v1.35.3
-                  ports:
-                    - name: envoy-admin
-                      containerPort: 8000
-                  securityContext:
-                    capabilities:
-                      drop:
-                        - ALL
-                    privileged: false
-                    runAsNonRoot: true
-                    allowPrivilegeEscalation: false
-                    seccompProfile:
-                      type: RuntimeDefault
-                  volumeMounts:
-                    - name: envoy-config
-                      mountPath: /etc/envoy
-                    - name: postgres-cert
-                      mountPath: /etc/envoy/secrets/postgres
-                    - name: root-ca
-                      mountPath: /etc/envoy/secrets/root-ca
-                  restartPolicy: Always
+                  - name: envoy
+                    # Contrib image is required because the postgres filter extension is only in the contrib build
+                    image: envoyproxy/envoy:contrib-v1.35.3
+                    ports:
+                      - name: envoy-admin
+                        containerPort: 8000
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+                      privileged: false
+                      runAsNonRoot: true
+                      allowPrivilegeEscalation: false
+                      seccompProfile:
+                        type: RuntimeDefault
+                    volumeMounts:
+                      - name: envoy-config
+                        mountPath: /etc/envoy
+                      - name: postgres-cert
+                        mountPath: /etc/envoy/secrets/postgres
+                      - name: root-ca
+                        mountPath: /etc/envoy/secrets/root-ca
+                    restartPolicy: Always
             target:
               group: apps
               version: v1
