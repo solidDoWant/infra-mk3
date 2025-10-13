@@ -62,8 +62,6 @@ spec:
     core:
       replicas: 2
       configureUserSettings: # TODO
-      # TODO envoy sidecar for mTLS to DB
-      # TODO envoy sidecar for mTLS to Redis
       initContainers:
         - &envoy_sidecar
           name: envoy
@@ -96,8 +94,15 @@ spec:
       jobLoggers:
         - database # TODO I might be able to remove this
         - stdout
-      # TODO envoy sidecar for mTLS to Redis
-      # initContainers: *envoy_sidecar
+      initContainers: &envoy_sidecar_redis_only
+        <<: *envoy_sidecar
+        volumeMounts:
+          - name: envoy-config
+            mountPath: /etc/envoy
+          - name: redis-cert
+            mountPath: /etc/envoy/secrets/redis
+          - name: root-ca
+            mountPath: /etc/envoy/secrets/root-ca
     registry:
       replicas: 2
       credentials:
@@ -105,8 +110,7 @@ spec:
         password: ""
         existingSecret: harbor-internal-registry-credentials
         htpasswordString: $2y$10$2Fc7nxr89CpQOCCzh3dbZu7A5/6pZ.rdrpxN3t3I/fly0jOCK5YwW
-      # TODO envoy sidecar for mTLS to Redis
-      # initContainers: *envoy_sidecar
+      initContainers: *envoy_sidecar_redis_only
     trivy:
       replicas: 2
       resources:
@@ -115,8 +119,7 @@ spec:
         limits:
           memory: 256Mi
       ignoreUnfixed: true
-      # TODO envoy sidecar for mTLS to Redis
-      # initContainers: *envoy_sidecar
+      initContainers: *envoy_sidecar_redis_only
     database:
       type: external
       external:
@@ -135,7 +138,6 @@ spec:
     exporter:
       # TODO, this will require changing the ServiceMonitor to avoid metric duplication
       # replicas: 2
-      # TODO envoy sidecar for mTLS to DB
   postRenderers:
     # Add the cert and envoy config volumes to envoy sidecars
     - kustomize:
@@ -184,13 +186,158 @@ spec:
                 value:
                   name: envoy-config
                   configMap:
-                    name: harbor-envoy-config
-                    items:
-                      - key: pg-redis.yaml
-                        path: envoy.yaml
+                    name: harbor-envoy-pg-redis-config
                     defaultMode: 0444
             target:
               group: apps
               version: v1
               kind: Deployment
               name: harbor-core
+    - kustomize:
+        patches:
+          - patch: |
+              # Add the redis user cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: redis-cert
+                  secret:
+                    secretName: harbor-dragonfly-harbor-user
+                    items:
+                      - key: tls.crt
+                        path: tls.crt
+                      - key: tls.key
+                        path: tls.key
+                    defaultMode: 0440
+              # Add the root CA cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: root-ca
+                  secret:
+                    secretName: root-ca-pub-cert
+                    items:
+                      - key: ca.crt
+                        path: ca.crt
+                    defaultMode: 0444
+              # Add the envoy config volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: envoy-config
+                  configMap:
+                    name: harbor-envoy-redis-only-config
+                    defaultMode: 0444
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: harbor-jobservice
+    - kustomize:
+        patches:
+          - patch: |
+              # Add the redis user cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: redis-cert
+                  secret:
+                    secretName: harbor-dragonfly-harbor-user
+                    items:
+                      - key: tls.crt
+                        path: tls.crt
+                      - key: tls.key
+                        path: tls.key
+                    defaultMode: 0440
+              # Add the root CA cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: root-ca
+                  secret:
+                    secretName: root-ca-pub-cert
+                    items:
+                      - key: ca.crt
+                        path: ca.crt
+                    defaultMode: 0444
+              # Add the envoy config volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: envoy-config
+                  configMap:
+                    name: harbor-envoy-redis-only-config
+                    defaultMode: 0444
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: harbor-trivy
+    # This deployment does not support `initContainers`, so a patch is needed for it here as well
+    - kustomize:
+        patches:
+          - patch: |
+              # Add the postgres user cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: postgres-cert
+                  secret:
+                    secretName: harbor-postgres-harbor-user
+                    items:
+                      - key: tls.crt
+                        path: tls.crt
+                      - key: tls.key
+                        path: tls.key
+                    defaultMode: 0440
+              # Add the root CA cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: root-ca
+                  secret:
+                    secretName: root-ca-pub-cert
+                    items:
+                      - key: ca.crt
+                        path: ca.crt
+                    defaultMode: 0444
+              # Add the envoy config volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: envoy-config
+                  configMap:
+                    name: harbor-envoy-pg-only-config
+                    defaultMode: 0444
+              # Add the envoy sidecar init container
+              - op: add
+                path: /spec/template/spec/initContainers/-
+                value:
+                  name: envoy
+                  # Contrib image is required because the postgres filter extension is only in the contrib build
+                  image: envoyproxy/envoy:contrib-v1.35.3
+                  ports:
+                    - name: envoy-admin
+                      containerPort: 8000
+                  securityContext:
+                    capabilities:
+                      drop:
+                        - ALL
+                    privileged: false
+                    runAsNonRoot: true
+                    allowPrivilegeEscalation: false
+                    seccompProfile:
+                      type: RuntimeDefault
+                  volumeMounts:
+                    - name: envoy-config
+                      mountPath: /etc/envoy
+                    - name: postgres-cert
+                      mountPath: /etc/envoy/secrets/postgres
+                    - name: root-ca
+                      mountPath: /etc/envoy/secrets/root-ca
+                  restartPolicy: Always
+            target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: harbor-exporter

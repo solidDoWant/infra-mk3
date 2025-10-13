@@ -2,12 +2,25 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 configMapGenerator:
-  - name: harbor-envoy-config
+  # These are separate configmaps to minimize the number of pods restarted upon change
+  - name: harbor-envoy-pg-only-config
     files:
-      - ./pg-only.yaml
-      - ./pg-redis.yaml
-      - ./redis-only.yaml
+      - envoy.yaml=./pg-only.yaml
     options:
       labels:
-        kyverno.home.arpa/ksm-custom-resource-config: "true"
+        kyverno.home.arpa/reload: "true"
+      disableNameSuffixHash: true
+  - name: harbor-envoy-pg-redis-config
+    files:
+      - envoy.yaml=./pg-redis.yaml
+    options:
+      labels:
+        kyverno.home.arpa/reload: "true"
+      disableNameSuffixHash: true
+  - name: harbor-envoy-redis-only-config
+    files:
+      - envoy.yaml=./redis-only.yaml
+    options:
+      labels:
+        kyverno.home.arpa/reload: "true"
       disableNameSuffixHash: true

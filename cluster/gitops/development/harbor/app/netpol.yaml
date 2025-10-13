@@ -110,6 +110,17 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+        # Ingress from internal gateway
+      - fromEndpoints:
+          - &ingress_gateway_selector
+            matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
 
   - description: portal
     endpointSelector: *portal_service_selector
@@ -122,11 +133,7 @@ specs:
               - port: "8080"
                 protocol: TCP
       - fromEndpoints:
-          # Ingress from internal gateway
-          - matchLabels:
-              io.kubernetes.pod.namespace: networking
-              app.kubernetes.io/name: ingress-gateways
-              gateway.networking.k8s.io/gateway-name: internal-gateway
+          - *ingress_gateway_selector
           - *core_selector
         toPorts:
           - ports:
