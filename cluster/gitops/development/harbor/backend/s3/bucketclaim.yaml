@@ -3,9 +3,9 @@
 apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
 metadata:
-  name: harbor-registry
+  name: &name harbor-registry-bucket # This has the "-bucket" suffix to avoid collisions with secrets deployed for Harbor via the Helm chart.
 spec:
-  generateBucketName: harbor-registry
+  generateBucketName: *name
   storageClassName: ssd-replicated-object
   additionalConfig:
     maxObjects: "10000"

@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: build-harbor-registry-bucket-config
+spec:
+  rules:
+    - name: build-harbor-registry-bucket-credentials
+      match:
+        any:
+          - resources:
+              kinds:
+                - Secret
+              name: harbor-registry-bucket
+      skipBackgroundRequests: true
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: harbor-registry-bucket-credentials
+        namespace: development
+        data:
+          data:
+            REGISTRY_STORAGE_S3_ACCESSKEY: "{{ request.object.data.AWS_ACCESS_KEY_ID }}"
+            REGISTRY_STORAGE_S3_SECRETKEY: "{{ request.object.data.AWS_SECRET_ACCESS_KEY }}"
+    - name: build-harbor-registry-bucket-config
+      match:
+        any:
+          - resources:
+              kinds:
+                - ConfigMap
+              name: harbor-registry-bucket
+      skipBackgroundRequests: true
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: harbor-registry-bucket-hr-config
+        namespace: development
+        data:
+          data:
+            regionendpoint: https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}
+            bucket: "{{ request.object.data.BUCKET_NAME }}"
+            existingSecret: harbor-registry-bucket-credentials
