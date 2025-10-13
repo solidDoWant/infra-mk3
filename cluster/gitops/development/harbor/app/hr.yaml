@@ -187,7 +187,7 @@ spec:
                   name: envoy-config
                   configMap:
                     name: harbor-envoy-pg-redis-config
-                    defaultMode: 0444
+                    defaultMode: 0440
             target:
               group: apps
               version: v1
@@ -227,7 +227,7 @@ spec:
                   name: envoy-config
                   configMap:
                     name: harbor-envoy-redis-only-config
-                    defaultMode: 0444
+                    defaultMode: 0440
             target:
               group: apps
               version: v1
@@ -267,11 +267,11 @@ spec:
                   name: envoy-config
                   configMap:
                     name: harbor-envoy-redis-only-config
-                    defaultMode: 0444
+                    defaultMode: 0440
             target:
               group: apps
               version: v1
-              kind: Deployment
+              kind: StatefulSet
               name: harbor-trivy
     # This deployment does not support `initContainers`, so a patch is needed for it here as well
     - kustomize:
@@ -284,6 +284,19 @@ spec:
                   name: postgres-cert
                   secret:
                     secretName: harbor-postgres-harbor-user
+                    items:
+                      - key: tls.crt
+                        path: tls.crt
+                      - key: tls.key
+                        path: tls.key
+                    defaultMode: 0440
+              # Add the redis user cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: redis-cert
+                  secret:
+                    secretName: harbor-dragonfly-harbor-user
                     items:
                       - key: tls.crt
                         path: tls.crt
@@ -307,8 +320,8 @@ spec:
                 value:
                   name: envoy-config
                   configMap:
-                    name: harbor-envoy-pg-only-config
-                    defaultMode: 0444
+                    name: harbor-envoy-pg-redis-config
+                    defaultMode: 0440
               # Add the envoy sidecar init container
               - op: add
                 path: /spec/template/spec/initContainers
@@ -333,6 +346,8 @@ spec:
                         mountPath: /etc/envoy
                       - name: postgres-cert
                         mountPath: /etc/envoy/secrets/postgres
+                      - name: redis-cert
+                        mountPath: /etc/envoy/secrets/redis
                       - name: root-ca
                         mountPath: /etc/envoy/secrets/root-ca
                     restartPolicy: Always

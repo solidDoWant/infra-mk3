@@ -110,6 +110,17 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+      # Access from the exporter service
+      - fromEndpoints:
+          - &exporter_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: exporter
+              app.kubernetes.io/instance: harbor
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
         # Ingress from internal gateway
       - fromEndpoints:
           - &ingress_gateway_selector
@@ -206,14 +217,16 @@ specs:
                 protocol: TCP
 
   - description: exporter
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: harbor
-        app.kubernetes.io/component: exporter
-        app.kubernetes.io/instance: harbor
+    endpointSelector: *exporter_service_selector
     egress:
       - *dns_resolution
       - *to_database
+      - toEndpoints:
+          - *core_selector
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
