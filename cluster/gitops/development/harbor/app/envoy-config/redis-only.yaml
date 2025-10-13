@@ -63,9 +63,6 @@ static_resources:
                 prefix_routes:
                   catch_all_route:
                     cluster: redis_cluster
-            - name: envoy.tcp_proxy
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-                stat_prefix: tcp_redis
-                cluster: redis_cluster
-                idle_timeout: 10s
+                dns_cache_config:
+                  name: default
+                  dns_lookup_family: V4_ONLY
