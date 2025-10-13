@@ -69,6 +69,9 @@ spec:
           name: envoy
           # Contrib image is required because the postgres filter extension is only in the contrib build
           image: envoyproxy/envoy:contrib-v1.35.3
+          ports:
+            - name: envoy-admin
+              containerPort: 8000
           securityContext:
             capabilities:
               drop:
@@ -83,6 +86,8 @@ spec:
               mountPath: /etc/envoy
             - name: postgres-cert
               mountPath: /etc/envoy/secrets/postgres
+            - name: redis-cert
+              mountPath: /etc/envoy/secrets/redis
             - name: root-ca
               mountPath: /etc/envoy/secrets/root-ca
           restartPolicy: Always
@@ -147,6 +152,19 @@ spec:
                       - key: tls.key
                         path: tls.key
                     defaultMode: 0440
+              # Add the redis user cert volume
+              - op: add
+                path: /spec/template/spec/volumes/-
+                value:
+                  name: redis-cert
+                  secret:
+                    secretName: harbor-dragonfly-harbor-user
+                    items:
+                      - key: tls.crt
+                        path: tls.crt
+                      - key: tls.key
+                        path: tls.key
+                    defaultMode: 0440
               # Add the root CA cert volume
               - op: add
                 path: /spec/template/spec/volumes/-
@@ -166,7 +184,7 @@ spec:
                   configMap:
                     name: harbor-envoy-config
                     items:
-                      - key: pg-only.yaml
+                      - key: pg-redis.yaml
                         path: envoy.yaml
                     defaultMode: 0444
             target:
