@@ -59,7 +59,7 @@ static_resources:
                 stat_prefix: egress_postgres
                 enable_sql_parsing: false
                 terminate_ssl: true
-                upstream_ssl: REQUIRED
+                upstream_ssl: REQUIRE
             - name: envoy.tcp_proxy
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
