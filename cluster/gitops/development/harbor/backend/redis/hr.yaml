@@ -1,0 +1,30 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-dragonfly
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/dragonfly/cluster
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    serviceName: harbor
+    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    certificates:
+      serving:
+        issuerRef:
+          name: development-intermediary-ca
+    users:
+      harbor:
+        username: harbor
+    netpol:
+      applicationAccess:
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: harbor
+            app.kubernetes.io/instance: harbor

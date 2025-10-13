@@ -4,6 +4,31 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
+  name: &app_name harbor-backend
+spec:
+  targetNamespace: development
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/development/harbor/backend
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: cloudnative-pg
+    - name: dragonfly-operator
+    # - name: kyverno-app
+    - name: rook-ceph-cluster
+    - name: development-namespace-issuer
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
   name: &app_name harbor-app
 spec:
   targetNamespace: development
@@ -20,5 +45,4 @@ spec:
   dependsOn:
     - name: gateway-crds
     - name: prometheus-crds
-    - name: rook-ceph-cluster
-    - name: openebs
+    - name: harbor-backend
