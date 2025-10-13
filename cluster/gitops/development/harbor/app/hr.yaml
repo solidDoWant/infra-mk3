@@ -123,7 +123,7 @@ spec:
         # This uses the password auth, and no TLS. Envoy sidecars on all pods that access the DB
         # will proxy the DB connections and authenticate via mTLS.
         host: 127.0.0.1
-        user: harbor
+        username: harbor
         coreDatabase: harbor
         maxOpenConns: 50
         maxIdleConns: 10
