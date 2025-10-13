@@ -5,6 +5,8 @@ configMapGenerator:
   - name: harbor-envoy-config
     files:
       - ./pg-only.yaml
+      - ./pg-redis.yaml
+      - ./redis-only.yaml
     options:
       labels:
         kyverno.home.arpa/ksm-custom-resource-config: "true"
