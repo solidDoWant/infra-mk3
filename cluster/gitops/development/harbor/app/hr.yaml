@@ -20,6 +20,9 @@ spec:
   values:
     expose:
       type: route
+      tls:
+        # This is a bug. tls.enabled should only be true when ingress is used, not gateway API.
+        enabled: false
       route:
         hosts:
           - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
