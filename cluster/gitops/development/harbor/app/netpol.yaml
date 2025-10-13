@@ -176,6 +176,16 @@ specs:
     endpointSelector: *registry_service_selector
     egress:
       - *dns_resolution
+      # Allow access to S3
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -221,6 +231,7 @@ specs:
     egress:
       - *dns_resolution
       - *to_database
+      - *to_redis
       - toEndpoints:
           - *core_selector
         toPorts:

@@ -110,7 +110,6 @@ spec:
         password: ""
         existingSecret: harbor-internal-registry-credentials
         htpasswordString: $2y$10$2Fc7nxr89CpQOCCzh3dbZu7A5/6pZ.rdrpxN3t3I/fly0jOCK5YwW
-      initContainers: *envoy_sidecar_redis_only
     trivy:
       replicas: 2
       resources:
