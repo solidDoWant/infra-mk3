@@ -51,8 +51,9 @@ stringData:
           client_type: confidential
           client_id: "${SECRET_HARBOR_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_HARBOR_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          # Authentik docs are wrong. The redirect URI should not have trailing slash
           redirect_uris:
-            - url: https://harbor.${SECRET_PUBLIC_DOMAIN_NAME}/c/oidc/callback/
+            - url: https://harbor.${SECRET_PUBLIC_DOMAIN_NAME}/c/oidc/callback
               matching_mode: strict
           signing_key:
             !Find [
