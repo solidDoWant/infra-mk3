@@ -155,6 +155,7 @@ specs:
     endpointSelector: *job_service_selector
     egress:
       - *dns_resolution
+      - *to_database
       - *to_redis
       # Access to the core service
       - toEndpoints:
