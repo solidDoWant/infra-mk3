@@ -25,11 +25,9 @@ static_resources:
           unhealthy_threshold: 2
           healthy_threshold: 1
           custom_health_check:
+            name: envoy.health_checkers.redis
             typed_config:
-              "@type": type.googleapis.com/envoy.extensions.health_checkers.custom.v3.CustomHealthCheck
-              name: envoy.health_checkers.redis
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.health_checkers.redis.v3.RedisHealthCheck
+              "@type": type.googleapis.com/envoy.extensions.health_checkers.redis.v3.Redis
       dns_lookup_family: V4_ONLY
       transport_socket:
         name: redis_upstream_tls
