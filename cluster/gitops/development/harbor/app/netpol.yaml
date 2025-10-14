@@ -92,6 +92,18 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+      # Access to Authentik for auth
+      # This needs to be the gateway because Harbor doesn't support separate internal/external URLs
+      - &to_internal_gateway
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -192,15 +204,7 @@ specs:
     egress:
       - *dns_resolution
       # Allow access to S3
-      - toEndpoints:
-          - matchLabels:
-              io.kubernetes.pod.namespace: networking
-              app.kubernetes.io/name: ingress-gateways
-              gateway.networking.k8s.io/gateway-name: internal-gateway
-        toPorts:
-          - ports:
-              - port: "443"
-                protocol: TCP
+      - *to_internal_gateway
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
