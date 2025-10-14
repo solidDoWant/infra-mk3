@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: harbor-authentication-config
+type: Opaque
+stringData:
+  configureUserSettings: |-
+    {
+        "auth_mode": "oidc_auth",
+        "primary_auth_mode": true,
+        "project_creation_restriction": "adminonly",
+        "self_registration": false,
+        "oidc_name": "Authentik",
+        "oidc_endpoint": "https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/harbor/",
+        "oidc_client_id": "${SECRET_HARBOR_AUTHENTIK_OIDC_CLIENT_ID}",
+        "oidc_client_secret": "${SECRET_HARBOR_AUTHENTIK_OIDC_CLIENT_SECRET}",
+        "oidc_groups_claim": "groups",
+        "oidc_group_filter": "Harbor users",
+        "oidc_admin_group": "Harbor admins",
+        "oidc_scope": "openid,profile,email,offline_access",
+        "oidc_verify_cert": true,
+        "oidc_auto_onboard": true,
+        "oidc_user_claim": "preferred_username"
+    }
