@@ -23,6 +23,10 @@ spec:
       name: harbor-registry-bucket-hr-config
       valuesKey: bucket
       targetPath: persistence.imageChartStorage.s3.bucket
+    - kind: Secret
+      name: harbor-authentication-config
+      valuesKey: configureUserSettings
+      targetPath: core.configureUserSettings
   # This is not HA. The HA support is pretty terrible and is missing a support for a ton of basic features
   # like mTLS DB auth and redis failover. Run with a single instance of each component until I get time to
   # fix this mess.
@@ -61,7 +65,6 @@ spec:
       replicas: 2
     core:
       replicas: 2
-      configureUserSettings: # TODO
       initContainers:
         - &envoy_sidecar
           name: envoy
