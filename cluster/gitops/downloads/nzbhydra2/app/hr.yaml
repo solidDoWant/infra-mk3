@@ -61,7 +61,7 @@ spec:
         type: persistentVolumeClaim
         accessMode: ReadWriteOnce
         storageClass: ssd-replicated-3x
-        size: 100Mi
+        size: 10Gi
         globalMounts:
           - path: /config
       logs:
