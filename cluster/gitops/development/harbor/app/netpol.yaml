@@ -46,6 +46,17 @@ specs:
           - ports:
               - port: "6379"
                 protocol: TCP
+      # Access to the job service
+      - toEndpoints:
+          - &job_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: jobservice
+              app.kubernetes.io/instance: harbor
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
       # Access to the registry service
       - toEndpoints:
           - &registry_service_selector
@@ -101,11 +112,7 @@ specs:
                 protocol: TCP
       # Access from the job service
       - fromEndpoints:
-          - &job_service_selector
-            matchLabels:
-              app.kubernetes.io/name: harbor
-              app.kubernetes.io/component: jobservice
-              app.kubernetes.io/instance: harbor
+          - *job_service_selector
         toPorts:
           - ports:
               - port: "8080"
@@ -172,6 +179,13 @@ specs:
           - ports:
               - port: "8080"
       - *from_metrics_scraper
+      # Access from the core service
+      - fromEndpoints:
+          - *core_selector
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
 
   - description: registry
     endpointSelector: *registry_service_selector
