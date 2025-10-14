@@ -93,6 +93,9 @@ static_resources:
                 filename: /etc/envoy/secrets/root-ca/ca.crt
           auto_host_sni: true
           auto_sni_san_validation: true
+          # This is Dragonfly-specific. Dragonfly does not support session resumption, and enabling session resumption will
+          # cause resumed sessions to fail to authenticate.
+          max_session_keys: 0
       close_connections_on_host_health_failure: true
       ignore_health_on_host_removal: true
 
