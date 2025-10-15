@@ -1,0 +1,17 @@
+---
+# Install the operator via the manifest for the version's release.
+# TODO when/if kubevirt ever makes progress on the Helm chart, switch to that.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/kubevirt/kubevirt/releases/download/v1.6.2/kubevirt-operator.yaml
+patches:
+  # Why do some tools insist on trying to create their own namespaces???
+  - patch: |-
+      $patch: delete
+      apiVersion: placeholder-value-does-not-matter
+      kind: placeholder-value-does-not-matter
+      metadata:
+        name: placeholder-value-does-not-matter
+    target:
+      kind: Namespace
