@@ -67,4 +67,6 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
                 stat_prefix: tcp_postgres
                 cluster: postgres_cluster
-                idle_timeout: 10s
+                # Disable the idle timeout. This relies on the application to close idle connections. Some applications
+                # (such as Harbor) don't handle Envoy-terminated connections well.
+                idle_timeout: 0s
