@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kubevirt
+specs:
+  - description: virt-operator-strategy-dumper
+    endpointSelector:
+      matchLabels:
+        kubevirt.io: virt-operator-strategy-dumper
+    egress:
+      # To API server
+      - &to_apiserver
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+  - description: virt-api
+    endpointSelector:
+      matchLabels:
+        kubevirt.io: virt-api
+    egress:
+      - *to_apiserver
+    ingress:
+      # From API server for webhooks
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+      # Kubelet for healthcheck
+      - &from_kubelet
+        fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+  - description: virt-controller
+    endpointSelector:
+      matchLabels:
+        kubevirt.io: virt-controller
+    egress:
+      - *to_apiserver
+    ingress:
+      - *from_kubelet
+  - description: virt-handler
+    endpointSelector:
+      matchLabels:
+        kubevirt.io: virt-handler
+    egress:
+      - *to_apiserver
+    ingress:
+      - *from_kubelet

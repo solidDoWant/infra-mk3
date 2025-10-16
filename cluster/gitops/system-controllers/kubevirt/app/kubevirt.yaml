@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/CRDs-catalog/add-kubevirt-crds-1/kubevirt.io/kubevirt_v1.json
+# TODO schema
+apiVersion: kubevirt.io/v1
+kind: KubeVirt
+metadata:
+  name: kubevirt
+spec:
+  configuration:
+    evictionStrategy: LiveMigrate
+    migrations:
+      allowAutoConverge: true
+      allowWorkloadDisruption: false
+    vmStateStorageClass: ssd-replicated-3d
