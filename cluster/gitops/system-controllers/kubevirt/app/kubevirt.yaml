@@ -1,6 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/CRDs-catalog/add-kubevirt-crds-1/kubevirt.io/kubevirt_v1.json
-# TODO schema
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kubevirt.io/kubevirt_v1.json
 apiVersion: kubevirt.io/v1
 kind: KubeVirt
 metadata:
@@ -12,3 +11,6 @@ spec:
       allowAutoConverge: true
       allowWorkloadDisruption: false
     vmStateStorageClass: ssd-replicated-3d
+  monitorNamespace: monitoring
+  monitorAccount: vmagent-victoria-metrics-k8s-stack
+  serviceMonitorNamespace: system-controllers
