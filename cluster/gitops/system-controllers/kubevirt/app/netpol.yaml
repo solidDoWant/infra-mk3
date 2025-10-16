@@ -18,11 +18,20 @@ specs:
           - ports:
               - port: "6443"
   - description: virt-api
-    endpointSelector:
+    endpointSelector: &virt_api_selector
       matchLabels:
         kubevirt.io: virt-api
     egress:
       - *to_apiserver
+      # To virt-handler for console port
+      - toEndpoints:
+          - &virt_handler_selector
+            matchLabels:
+              kubevirt.io: virt-handler
+        toPorts:
+          - ports:
+              - port: "8186"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - &from_kubelet
@@ -59,11 +68,16 @@ specs:
       - *from_kubelet
       - *from_metrics_scraper
   - description: virt-handler
-    endpointSelector:
-      matchLabels:
-        kubevirt.io: virt-handler
+    endpointSelector: *virt_handler_selector
     egress:
       - *to_apiserver
     ingress:
       - *from_kubelet
       - *from_metrics_scraper
+      # From virt-api for console port
+      - fromEndpoints:
+          - *virt_api_selector
+        toPorts:
+          - ports:
+              - port: "8186"
+                protocol: TCP
