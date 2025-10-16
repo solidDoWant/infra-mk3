@@ -74,10 +74,6 @@ specs:
       # To other instances for live migration
       - toEndpoints:
           - *virt_handler_selector
-        toPorts:
-          - ports:
-              - port: "35353"
-                protocol: TCP
     ingress:
       - *from_kubelet
       - *from_metrics_scraper
@@ -91,7 +87,3 @@ specs:
       # From other instances for live migration
       - fromEndpoints:
           - *virt_handler_selector
-        toPorts:
-          - ports:
-              - port: "35353"
-                protocol: TCP
