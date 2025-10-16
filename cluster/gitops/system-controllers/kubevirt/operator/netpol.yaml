@@ -18,6 +18,13 @@ specs:
           - ports:
               - port: "6443"
     ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
       # From API server for webhooks
       - fromEntities:
           - kube-apiserver
@@ -25,9 +32,11 @@ specs:
           - ports:
               - port: "8444"
                 protocol: TCP
-      # Kubelet for healthcheck
-      - fromEntities:
-          - host
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
               - port: "8443"
