@@ -18,6 +18,13 @@ specs:
           - ports:
               - port: "6443"
     ingress:
+      # From API server for webhooks
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "8444"
+                protocol: TCP
       # Kubelet for healthcheck
       - fromEntities:
           - host
