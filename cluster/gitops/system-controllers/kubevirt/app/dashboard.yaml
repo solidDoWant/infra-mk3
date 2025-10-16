@@ -1,0 +1,11 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: kubevirt-control-plane
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/kubevirt/monitoring/refs/tags/v0.0.10/dashboards/grafana/kubevirt-control-plane.json
