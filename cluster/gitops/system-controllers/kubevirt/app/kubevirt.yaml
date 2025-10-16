@@ -10,6 +10,10 @@ spec:
     migrations:
       allowAutoConverge: true
       allowWorkloadDisruption: false
+    network:
+      # Needed for live migration to work properly
+      defaultNetworkInterface: masquerade
+      permitBridgeInterfaceOnPodNetwork: false
     vmStateStorageClass: ssd-replicated-3d
   monitorNamespace: monitoring
   monitorAccount: vmagent-victoria-metrics-k8s-stack
