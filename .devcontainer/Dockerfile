@@ -102,7 +102,7 @@ ENV PATH="${KREW_ROOT}/bin:${PATH}"
 
 ## Krew plugins
 RUN kubectl krew update && \
-    kubectl krew install kyverno cnpg sniff
+    kubectl krew install kyverno cnpg sniff virt
 
 ## Krew ownership fix
 RUN find /usr/local/krew -type d -exec chmod 777 {} \; && \
