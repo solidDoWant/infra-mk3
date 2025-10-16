@@ -14,6 +14,8 @@ spec:
       # Needed for live migration to work properly
       defaultNetworkInterface: masquerade
       permitBridgeInterfaceOnPodNetwork: false
+    # Roll out changes right away via migrations where supported
+    vmRolloutStrategy: LiveUpdate
     vmStateStorageClass: ssd-replicated-3d
   monitorNamespace: monitoring
   monitorAccount: vmagent-victoria-metrics-k8s-stack
