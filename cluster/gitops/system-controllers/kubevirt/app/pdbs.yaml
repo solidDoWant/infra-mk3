@@ -1,0 +1,33 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdi-apiserver
+  labels: &labels
+    cdi.kubevirt.io: cdi-apiserver
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdi-deployment
+  labels: &labels
+    cdi.kubevirt.io: cdi-deployment
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdi-uploadproxy
+  labels: &labels
+    cdi.kubevirt.io: cdi-uploadproxy
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

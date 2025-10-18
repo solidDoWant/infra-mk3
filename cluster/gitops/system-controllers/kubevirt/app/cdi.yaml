@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/CRDs-catalog/add-cdi-crds-1/cdi.kubevirt.io/cdi_v1beta1.json
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: CDI
+metadata:
+  name: cdi
+spec:
+  priorityClass: kubevirt-cluster-critical
+  uninstallStrategy: BlockUninstallIfWorkloadsExist
+  config:
+    scratchSpaceStorageClass: ssd-replicated-3x # This may ultimately be wasteful but I can change it later if need be
+    featureGates:
+      - HonorWaitForFirstConsumer
+      - WebhookPvcRendering
+  customizeComponents:
+    patches:
+      # Deploy multiple deployment replicas for HA
+      - &replica_patch
+        patch: |-
+          [
+            {
+              "op": "replace",
+              "path": "/spec/replicas",
+              "value": 2
+            }
+          ]
+        resourceName: cdi-deployment
+        resourceType: Deployment
+        type: json
+      - <<: *replica_patch
+        resourceName: cdi-apiserver
+      - <<: *replica_patch
+        resourceName: cdi-uploadproxy
