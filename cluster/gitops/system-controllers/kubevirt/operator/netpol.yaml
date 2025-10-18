@@ -60,3 +60,20 @@ specs:
         toPorts:
           - ports:
               - port: "6443"
+    ingress:
+      # From API server for webhooks
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "8444"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
