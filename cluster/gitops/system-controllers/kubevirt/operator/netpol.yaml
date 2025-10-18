@@ -41,3 +41,22 @@ specs:
           - ports:
               - port: "8443"
                 protocol: TCP
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cdi-operator
+specs:
+  - description: cdi-operator
+    endpointSelector:
+      matchLabels:
+        cdi.kubevirt.io: cdi-operator
+        name: cdi-operator
+    egress:
+      # To API server
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"

@@ -1,0 +1,22 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: virt-operator
+  labels: &labels
+    kubevirt.io: virt-operator
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdi-operator
+  labels: &labels
+    cdi.kubevirt.io: cdi-operator
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
