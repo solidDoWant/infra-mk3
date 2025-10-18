@@ -32,6 +32,13 @@ specs:
           - ports:
               - port: "8186"
                 protocol: TCP
+      # To virt-launcher for VMI operations, port-forwarding, etc.
+      - toEndpoints:
+          - matchLabels:
+              kubevirt.io: virt-launcher
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
     ingress:
       # Kubelet for healthcheck
       - &from_kubelet
@@ -87,6 +94,23 @@ specs:
       # From other instances for live migration
       - fromEndpoints:
           - *virt_handler_selector
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: virt-launcher
+specs:
+  - description: virt-launcher
+    endpointSelector:
+      matchLabels:
+        kubevirt.io: virt-launcher
+    ingress:
+      # From virt-api for VMI operations, port-forwarding, etc.
+      - fromEndpoints:
+          - matchLabels:
+              kubevirt.io: virt-api
+              io.kubernetes.pod.namespace: system-controllers
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
 apiVersion: cilium.io/v2
