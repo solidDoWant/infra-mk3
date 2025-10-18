@@ -18,7 +18,7 @@ patches:
         name: placeholder-value-does-not-matter
     target:
       kind: Namespace
-  # Deploy two copies of the CDI operator for redundancy.
+  # Fix missing items on the CDI operator deployment
   - patch: |-
       # Set replicas to 2
       - op: replace
@@ -29,6 +29,30 @@ patches:
         path: /spec/strategy
         value:
           type: RollingUpdate
+      # Add probes
+      - op: add
+        path: /spec/template/spec/containers/0/livenessProbe
+        value:
+          httpGet:
+            path: /metrics
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+      - op: add
+        path: /spec/template/spec/containers/0/readinessProbe
+        value:
+          httpGet:
+            path: /metrics
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+      # Add ports
+      - op: add
+        path: /spec/template/spec/containers/0/ports
+        value:
+          - name: metrics
+            containerPort: 8443
+            protocol: TCP
     target:
       group: apps
       version: v1
