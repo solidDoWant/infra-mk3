@@ -126,6 +126,11 @@ RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     curl -fsSL -o /usr/local/bin/jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.6.0/jb-${KERNEL}-${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/jb
 
+# Packer
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg > /etc/apt/keyrings/hashicorp-archive-keyring.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.asc] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list && \
+    apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y packer
 
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
