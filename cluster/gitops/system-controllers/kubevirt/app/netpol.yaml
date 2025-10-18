@@ -128,6 +128,17 @@ specs:
         cdi.kubevirt.io: cdi-deployment
     egress:
       - *to_apiserver
+      # To namespace-specific importers
+      - toEndpoints:
+          - matchLabels:
+              cdi.kubevirt.io: importer
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
     ingress:
       # Metrics
       - fromEndpoints:
