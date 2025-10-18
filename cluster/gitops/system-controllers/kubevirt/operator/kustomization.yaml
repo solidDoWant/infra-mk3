@@ -5,6 +5,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - https://github.com/kubevirt/kubevirt/releases/download/v1.6.2/kubevirt-operator.yaml
+  - https://github.com/kubevirt/containerized-data-importer/releases/download/v1.63.1/cdi-operator.yaml
   - ./netpol.yaml
 patches:
   # Why do some tools insist on trying to create their own namespaces???
@@ -16,3 +17,17 @@ patches:
         name: placeholder-value-does-not-matter
     target:
       kind: Namespace
+  # Deploy two copies of the CDI operator for redundancy.
+  - patch: |-
+      # Set replicas to 2
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      # Change strategy to RollingUpdate
+      - op: replace
+        path: /spec/strategy
+        value:
+          type: RollingUpdate
+    target:
+      kind: Deployment
+      name: cdi-operator
