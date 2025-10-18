@@ -460,6 +460,7 @@ spec:
       # or storage goes through the roof.
       metricLabelsAllowlist:
         - pods=[*]
+        - nodes=[kubevirt.io/schedulable]
       replicas: 2
       podDisruptionBudget:
         minAvailable: 1
