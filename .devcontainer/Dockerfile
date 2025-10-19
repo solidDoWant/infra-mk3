@@ -132,6 +132,12 @@ RUN curl -fsSL https://apt.releases.hashicorp.com/gpg > /etc/apt/keyrings/hashic
     apt update && \
     DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y packer
 
+# Nix
+RUN curl -fsSL https://nixos.org/releases/nix/nix-install.sh | sh -s -- --daemon && \
+    mkdir -p /etc/nix && \
+    echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf && \
+    echo "system-features = nixos-test benchmark big-parallel kvm" >> /etc/nix/nix.conf
+
 # SOPS configuration
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 
