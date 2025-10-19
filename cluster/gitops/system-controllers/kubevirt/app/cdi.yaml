@@ -31,3 +31,5 @@ spec:
         resourceName: cdi-apiserver
       - <<: *replica_patch
         resourceName: cdi-uploadproxy
+  # This should really be a per-volume config, but it needs to be enabled cluster-wide
+  imagePullPolicy: Always
