@@ -6,6 +6,10 @@ metadata:
   name: kubevirt
 spec:
   configuration:
+    developerConfiguration:
+      featureGates:
+        - EnableVirtioFsConfigVolumes
+        - EnableVirtioFsStorageVolumes
     evictionStrategy: LiveMigrate
     migrations:
       allowAutoConverge: true
