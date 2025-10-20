@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportprovisiontoken_v2.json
+# The operator only watches this namespace so the token must reside here
+apiVersion: resources.teleport.dev/v2
+kind: TeleportProvisionToken
+metadata:
+  name: insurgency-server
+spec:
+  roles:
+    - Node
+  join_method: kubernetes
+  kubernetes:
+    allow:
+      - service_account: tug2:insurgency-server
