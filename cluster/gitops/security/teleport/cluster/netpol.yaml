@@ -173,6 +173,12 @@ specs:
               app.kubernetes.io/name: teleport-resource-applier
               app.kubernetes.io/instance: teleport-resource-applier
               app.kubernetes.io/component: teleport-resource-applier
+          # VMs
+          - matchExpressions:
+              - key: vm.kubevirt.io/name
+                operator: Exists
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
         toPorts: &agent_ports
           - ports:
               - port: tls
