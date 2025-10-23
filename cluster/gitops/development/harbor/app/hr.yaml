@@ -136,12 +136,13 @@ spec:
         maxOpenConns: 50
         maxIdleConns: 10
     redis:
-      type: external
-      external:
-        # See above DB note about Envoy sidecar for mTLS
-        # This is only used by the registry service due to the envoy redis connection pooling mess
-        addr: 127.0.0.1:6379
-        harborDatabaseIndex: "6"
+      type: internal
+      # This does not currently work due to https://github.com/envoyproxy/envoy/issues/41659
+      # type: external
+      # external:
+      #   # See above DB note about Envoy sidecar for mTLS
+      #   # This is only used by the registry service due to the envoy redis connection pooling mess
+      #   addr: 127.0.0.1:6379
     exporter:
       # TODO, this will require changing the ServiceMonitor to avoid metric duplication
       # replicas: 2
@@ -380,60 +381,3 @@ spec:
               version: v1
               kind: Deployment
               name: harbor-exporter
-    # Update all references to redis connection strings to use the DB-specific envoy listeners.
-    # This is needed until https://github.com/envoyproxy/envoy/issues/41659 is resolved. See
-    # the envoy config for details.
-    #
-    # Core service mapping:
-    # * core DB 0: 6379
-    # * reg DB: 6380
-    # * harbor DB 6: 6381
-    # * cache DB 7: 6382 (not used)
-    #
-    # Job service mapping:
-    # * jobservice DB 1: 6379
-    # * core DB 0: 6380
-    # * cache DB 7: 6381 (not used)
-    #
-    # Exporter service mapping:
-    # * jobservice DB 1: 6379
-    #
-    # Trivy service mapping:
-    # * trivy DB 5: 6379
-    #
-    # Registry service mapping:
-    # * registry DB 2: 6379
-    - kustomize:
-        patches:
-          # Core service configmap
-          # Harbor does something really dumb with the job service redis config where it requests
-          # the redis service URL from the job service itself. THe job service requires that the
-          # redis URL use the redis.external.addr value above, so port 6379 must be reserved
-          # on all clients that connect to redis for the job service DB.
-          - patch: |
-              - op: replace
-                path: /data/_REDIS_URL_CORE
-                value: redis://127.0.0.1:6380/0?idle_timeout_seconds=30
-              - op: replace
-                path: /data/_REDIS_URL_REG
-                value: redis://127.0.0.1:6381/2?idle_timeout_seconds=30
-              - op: replace
-                path: /data/_REDIS_URL_HARBOR
-                value: redis://127.0.0.1:6382/6?idle_timeout_seconds=30
-            target:
-              group: ""
-              version: v1
-              kind: ConfigMap
-              name: harbor-core
-          # Job service env configmap
-          # This job service has another configmap that sets the jobservice redis
-          # URL to 127.0.0.1:6379/1
-          - patch: |
-              - op: replace
-                path: /data/_REDIS_URL_CORE
-                value: redis://127.0.0.1:6380/0?idle_timeout_seconds=30
-            target:
-              group: ""
-              version: v1
-              kind: ConfigMap
-              name: harbor-jobservice-env

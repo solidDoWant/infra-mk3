@@ -36,12 +36,25 @@ specs:
           - ports:
               - port: "5432"
                 protocol: TCP
-      # Access to the backend Redis/Dragonfly instance
+      # This does not currently work due to https://github.com/envoyproxy/envoy/issues/41659
+      # # Access to the backend Redis/Dragonfly instance
+      # - &to_redis
+      #   toEndpoints:
+      #     - matchLabels:
+      #         app.kubernetes.io/name: dragonfly
+      #         app.kubernetes.io/instance: harbor-dragonfly
+      #   toPorts:
+      #     - ports:
+      #         - port: "6379"
+      #           protocol: TCP
+      # Access to the backend Redis instance
       - &to_redis
         toEndpoints:
-          - matchLabels:
-              app.kubernetes.io/name: dragonfly
-              app.kubernetes.io/instance: harbor-dragonfly
+          - &redis_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: redis
+              app.kubernetes.io/instance: harbor
         toPorts:
           - ports:
               - port: "6379"
@@ -274,3 +287,16 @@ specs:
               - port: "8001"
                 protocol: TCP
       - *from_metrics_scraper
+
+  - description: redis
+    endpointSelector: *redis_service_selector
+    ingress:
+      - fromEndpoints:
+          - *core_selector
+          - *job_service_selector
+          - *exporter_service_selector
+          - *trivy_service_selector
+        toPorts:
+          - ports:
+              - port: "6379"
+                protocol: TCP
