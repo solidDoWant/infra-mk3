@@ -1,0 +1,37 @@
+---
+# By deploying this as a docker-compose file, I can version the config without needing to rebuild the
+# entire VM image for application changes like image updates.
+services:
+  tug2-insurgency-main:
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.1-dev
+    pull_policy: always
+    command:
+      - -strictportbind
+      - -netconport
+      - "27023"
+      - -port
+      - "27000"
+      - -nohltv
+    ports:
+      - "27023:27023" # Netcon
+      - "27000:27000" # RCON
+      - "27000:27000/udp" # Game traffic
+    deploy:
+      update_config:
+        failure_action: rollback
+      restart_policy:
+        condition: any
+        delay: 10s
+      resources:
+        limits:
+          memory: 1Gi
+          cpus: "1.0"
+        reservations:
+          memory: 1Gi
+          cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  # Additional servers should be added here
+  # The k8s service config and internet gateway's firewall will need to be updated as well

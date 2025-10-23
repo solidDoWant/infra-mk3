@@ -1,0 +1,119 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: insurgency-server
+specs:
+  - description: insurgency-server
+    endpointSelector:
+      matchLabels:
+        kubevirt.io/vm: insurgency-server
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # NTP
+      - toFQDNs:
+          - matchPattern: "*.nixos.pool.ntp.org"
+        toPorts:
+          - ports:
+              - port: "123"
+                protocol: UDP
+      # To Harbor to pull images
+      - &to_harbor
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # To Teleport for node communication
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: security
+              app.kubernetes.io/name: teleport-cluster
+              app.kubernetes.io/instance: teleport-cluster
+              app.kubernetes.io/component: proxy
+        toPorts:
+          - ports:
+              - port: "3080"
+                protocol: TCP
+      # To Steam for master server, auth ticket checks, workshop, etc.
+      - toFQDNs:
+          - matchPattern: "*.steampowered.com"
+          - matchPattern: "*.steamserver.net"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+              - port: "27018"
+                endPort: 27025
+                protocol: TCP
+    ingress:
+      # Host for bootstrapping
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "23"
+                protocol: TCP
+      # Game server traffic
+      - fromEntities:
+          - world
+        toPorts:
+          - ports:
+              - port: "27000"
+                protocol: TCP
+              - port: "27000"
+                protocol: UDP
+      # Local network for administrative access to game server
+      - fromCIDRSet:
+          - cidrGroupRef: intranet
+        toPorts:
+          - ports:
+              - port: "27023"
+                protocol: TCP
+  - description: cdi-importer
+    endpointSelector:
+      matchLabels:
+        cdi.kubevirt.io: importer
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      - *to_harbor
+    ingress:
+      - fromEndpoints:
+          - matchLabels:
+              cdi.kubevirt.io: cdi-deployment
+              io.kubernetes.pod.namespace: system-controllers
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP

@@ -1,0 +1,86 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/pool.kubevirt.io/virtualmachinepool_v1alpha1.json
+apiVersion: pool.kubevirt.io/v1alpha1
+kind: VirtualMachinePool
+metadata:
+  name: &name insurgency-server
+  labels: &labels
+    kubevirt.io/vm: *name
+spec:
+  selector:
+    matchLabels: *labels
+  virtualMachineTemplate:
+    metadata:
+      labels: *labels
+    spec:
+      runStrategy: Always
+      template:
+        metadata:
+          labels: *labels
+        spec:
+          domain:
+            cpu:
+              cores: 1
+              # Sockets can be hotplugged, cores and threads cannot
+              # Hotplugging is bugged, see https://github.com/kubevirt/kubevirt/issues/15937
+              sockets: 2
+              threads: 1
+            devices:
+              filesystems:
+                - name: docker-compose
+                  virtiofs: {}
+                - name: serviceaccount
+                  virtiofs: {}
+                - name: root-ca
+                  virtiofs: {}
+              disks:
+                - name: rootfs
+                  disk:
+                    bus: virtio
+                - name: cloudinit
+                  disk:
+                    bus: virtio
+            resources:
+              requests:
+                memory: 2Gi
+              limits:
+                memory: 2Gi
+          volumes:
+            - name: docker-compose
+              configMap:
+                name: tug2-insurgency-docker-compose
+            - name: rootfs
+              dataVolume:
+                name: insurgency-server-os
+            - name: serviceaccount
+              serviceAccount:
+                serviceAccountName: insurgency-server
+            - name: root-ca
+              secret:
+                secretName: root-ca-pub-cert
+            - name: cloudinit
+              cloudInitNoCloud:
+                userData: |
+                  #cloud-config
+                  users:
+                    - name: admin
+                      # Plain-text copy is stored in the `insurgency-server-admin-user-password` secret
+                      # To generate: `echo "new password" | mkpasswd --method=SHA-512 --rounds=500000 --stdin | sed 's/$/$$/g'`
+                      # sed command is to escape $ characters for flux variant substitution
+                      hashed_passwd: "$$6$rounds=500000$MTEB32qgsHlREII8$eo.MzO//gRor7.7E2ZVCDMDXWxrG1YXSmzhi6vNwtlTKbO7h3MKx88IlHFLQh9YyCkcEJwnHS25EIOrUK97ul/"
+                      lock_passwd: false
+      dataVolumeTemplates:
+        - metadata:
+            name: insurgency-server-os
+          spec:
+            storage:
+              accessModes:
+                # Needed for live migration
+                - ReadWriteMany
+              resources:
+                requests:
+                  storage: 30Gi
+              storageClassName: ssd-replicated-filesystem
+            source:
+              registry:
+                url: docker://harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-server-os:latest
