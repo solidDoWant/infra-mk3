@@ -24,10 +24,10 @@ services:
         delay: 10s
       resources:
         limits:
-          memory: 1Gi
+          memory: 1G
           cpus: "1.0"
         reservations:
-          memory: 1Gi
+          memory: 1G
           cpus: "1.0"
     security_opt:
       - no-new-privileges:true
