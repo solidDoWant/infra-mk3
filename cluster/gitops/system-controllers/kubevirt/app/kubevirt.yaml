@@ -24,3 +24,6 @@ spec:
   monitorNamespace: monitoring
   monitorAccount: vmagent-victoria-metrics-k8s-stack
   serviceMonitorNamespace: system-controllers
+  workloadUpdateStrategy:
+    workloadUpdateMethods:
+      - LiveMigrate
