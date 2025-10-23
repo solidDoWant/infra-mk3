@@ -216,6 +216,7 @@ specs:
       - *dns_resolution
       # Allow access to S3
       - *to_internal_gateway
+      - *to_redis
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -306,6 +307,7 @@ specs:
           - *job_service_selector
           - *exporter_service_selector
           - *trivy_service_selector
+          - *registry_service_selector
         toPorts:
           - ports:
               - port: "6379"
