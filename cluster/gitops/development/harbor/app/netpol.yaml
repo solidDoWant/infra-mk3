@@ -242,9 +242,10 @@ specs:
       - *dns_resolution
       - *to_redis
       - *to_core
-      # To GCR
+      # To GCR and GHCR for image vulnerability database updates
       - toFQDNs:
           - matchName: mirror.gcr.io
+          - matchName: ghcr.io
         toPorts:
           - ports:
               - port: "443"
