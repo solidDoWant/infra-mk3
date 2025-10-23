@@ -135,31 +135,21 @@ specs:
           - ports:
               - port: "8001"
                 protocol: TCP
-      # Access from the job service
       - fromEndpoints:
-          - *job_service_selector
-        toPorts:
-          - ports:
-              - port: "8080"
-                protocol: TCP
-      # Access from the exporter service
-      - fromEndpoints:
-          - &exporter_service_selector
-            matchLabels:
-              app.kubernetes.io/name: harbor
-              app.kubernetes.io/component: exporter
-              app.kubernetes.io/instance: harbor
-        toPorts:
-          - ports:
-              - port: "8080"
-                protocol: TCP
-        # Ingress from internal gateway
-      - fromEndpoints:
+          # Ingress from internal gateway
           - &ingress_gateway_selector
             matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Access from the exporter service
+          - &exporter_service_selector
+            matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: exporter
+              app.kubernetes.io/instance: harbor
+          - *job_service_selector
+          - *trivy_service_selector
         toPorts:
           - ports:
               - port: "8080"
@@ -190,7 +180,8 @@ specs:
       - *to_database
       - *to_redis
       # Access to the core service
-      - toEndpoints:
+      - &to_core
+        toEndpoints:
           - *core_selector
         toPorts:
           - ports:
@@ -250,6 +241,7 @@ specs:
     egress:
       - *dns_resolution
       - *to_redis
+      - *to_core
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
