@@ -242,6 +242,15 @@ specs:
       - *dns_resolution
       - *to_redis
       - *to_core
+      # To GCR
+      - toFQDNs:
+          - matchName: mirror.gcr.io
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+              - port: "80"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
