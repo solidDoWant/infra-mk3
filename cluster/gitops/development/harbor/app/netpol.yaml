@@ -242,10 +242,16 @@ specs:
       - *dns_resolution
       - *to_redis
       - *to_core
-      # To GCR and GHCR for image vulnerability database updates
+      # See https://github.com/aquasecurity/trivy/blob/e0c04168b9cce9331163336d65c02452822bc319/docs/docs/advanced/air-gap.md
       - toFQDNs:
+          # To GCR and GHCR for image vulnerability database updates
           - matchName: mirror.gcr.io
           - matchName: ghcr.io
+          # To VEX Hub for vulnerability data
+          - matchName: api.github.com
+          - matchName: codeload.github.com
+          # To Maven for package identification
+          - matchName: repo.maven.org
         toPorts:
           - ports:
               - port: "443"
