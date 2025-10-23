@@ -48,7 +48,6 @@ spec:
         s3:
           # Bucket and endpoint are set via valuesFrom above
           existingSecret: harbor-registry-bucket-credentials
-          # forcepathstyle:
     existingSecretAdminPassword: harbor-admin-credentials
     ipFamily:
       ipv6:
@@ -141,6 +140,9 @@ spec:
       external:
         # See above DB note about Envoy sidecar for mTLS
         addr: 127.0.0.1:6379
+        # Envoy has a pretty nasty bug with db 0, so use a different one
+        # See https://github.com/envoyproxy/envoy/issues/41659
+        coreDatabaseIndex: 6
     exporter:
       # TODO, this will require changing the ServiceMonitor to avoid metric duplication
       # replicas: 2

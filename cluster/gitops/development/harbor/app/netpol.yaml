@@ -183,6 +183,13 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+      # Access to trivy
+      - toEndpoints:
+          - *trivy_service_selector
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
@@ -240,6 +247,7 @@ specs:
                 protocol: TCP
       - fromEndpoints:
           - *core_selector
+          - *job_service_selector
         toPorts:
           - ports:
               - port: "8080"
