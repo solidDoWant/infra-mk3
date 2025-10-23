@@ -246,7 +246,9 @@ specs:
       - toFQDNs:
           # To GCR and GHCR for image vulnerability database updates
           - matchName: mirror.gcr.io
+          - matchName: googlecode.l.googleusercontent.com
           - matchName: ghcr.io
+          - matchName: pkg-containers.githubusercontent.com
           # To VEX Hub for vulnerability data
           - matchName: api.github.com
           - matchName: codeload.github.com
