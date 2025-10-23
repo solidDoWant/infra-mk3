@@ -406,16 +406,20 @@ spec:
     - kustomize:
         patches:
           # Core service configmap
+          # Harbor does something really dumb with the job service redis config where it requests
+          # the redis service URL from the job service itself. THe job service requires that the
+          # redis URL use the redis.external.addr value above, so port 6379 must be reserved
+          # on all clients that connect to redis for the job service DB.
           - patch: |
               - op: replace
                 path: /data/_REDIS_URL_CORE
-                value: redis://127.0.0.1:6379/0?idle_timeout_seconds=30
+                value: redis://127.0.0.1:6380/0?idle_timeout_seconds=30
               - op: replace
                 path: /data/_REDIS_URL_REG
-                value: redis://127.0.0.1:6380/2?idle_timeout_seconds=30
+                value: redis://127.0.0.1:6381/2?idle_timeout_seconds=30
               - op: replace
                 path: /data/_REDIS_URL_HARBOR
-                value: redis://127.0.0.1:6381/6?idle_timeout_seconds=30
+                value: redis://127.0.0.1:6382/6?idle_timeout_seconds=30
             target:
               group: ""
               version: v1

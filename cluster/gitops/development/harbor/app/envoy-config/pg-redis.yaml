@@ -166,3 +166,9 @@ static_resources:
           address: 127.0.0.1
           port_value: 6381
       filter_chains: *redis_filter_chains
+    - name: redis_listener_3
+      address:
+        socket_address:
+          address: 127.0.0.1
+          port_value: 6382
+      filter_chains: *redis_filter_chains
