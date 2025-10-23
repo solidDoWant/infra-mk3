@@ -143,6 +143,7 @@ spec:
         # Envoy has a pretty nasty bug with db 0, so use a different one
         # See https://github.com/envoyproxy/envoy/issues/41659
         coreDatabaseIndex: "6"
+        harborDatabaseIndex: "6"
     exporter:
       # TODO, this will require changing the ServiceMonitor to avoid metric duplication
       # replicas: 2
