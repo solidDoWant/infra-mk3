@@ -63,8 +63,11 @@ spec:
         enabled: true
     portal:
       replicas: 2
+      podLabels: &external_access_labels
+        endpoints.netpols.home.arpa/external-ingress-enabled: "true"
     core:
       replicas: 2
+      podLabels: *external_access_labels
       extraEnvVars:
         # This could alternatively be set via `configureUserSettings`, but this doesn't play nice with flux var substitution because the value is a JSON object
         - name: CONFIG_OVERWRITE_JSON
