@@ -137,11 +137,17 @@ specs:
                 protocol: TCP
       - fromEndpoints:
           # Ingress from internal gateway
-          - &ingress_gateway_selector
+          - &internal_ingress_gateway_selector
             matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Ingress from external gateway
+          - &external_ingress_gateway_selector
+            matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: external-gateway
           # Access from the exporter service
           - &exporter_service_selector
             matchLabels:
@@ -166,7 +172,8 @@ specs:
               - port: "8080"
                 protocol: TCP
       - fromEndpoints:
-          - *ingress_gateway_selector
+          - *internal_ingress_gateway_selector
+          - *external_ingress_gateway_selector
           - *core_selector
         toPorts:
           - ports:

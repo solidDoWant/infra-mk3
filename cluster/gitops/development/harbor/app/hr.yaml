@@ -33,10 +33,14 @@ spec:
         # This is a bug. tls.enabled should only be true when ingress is used, not gateway API.
         enabled: false
       route:
+        labels:
+          external-dns.home.arpa/publish: "true"
         hosts:
           - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
         parentRefs:
           - name: internal-gateway
+            namespace: networking
+          - name: external-gateway
             namespace: networking
     externalURL: https://harbor.${SECRET_PUBLIC_DOMAIN_NAME}
     persistence:
