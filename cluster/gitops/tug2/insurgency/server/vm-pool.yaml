@@ -29,6 +29,8 @@ spec:
               filesystems:
                 - name: docker-compose
                   virtiofs: {}
+                - name: docker-pull-credentials
+                  virtiofs: {}
                 - name: serviceaccount
                   virtiofs: {}
                 - name: root-ca
@@ -46,6 +48,9 @@ spec:
               limits:
                 memory: 2Gi
           volumes:
+            - name: docker-pull-credentials
+              secret:
+                secretName: tug2-pull-credentials
             - name: docker-compose
               configMap:
                 name: tug2-insurgency-docker-compose
@@ -84,3 +89,4 @@ spec:
             source:
               registry:
                 url: docker://harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-server-os:latest
+                secretRef: tug2-pull-credentials

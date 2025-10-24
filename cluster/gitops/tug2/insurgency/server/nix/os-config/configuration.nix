@@ -11,6 +11,8 @@ let
 
   # Import the compose watcher derivation
   composeWatcher = import ./modules/compose-watcher { inherit pkgs; };
+
+  dockerCredentialsDir = "/mnt/docker-pull-credentials";
 in
 {
   nixpkgs = {
@@ -48,6 +50,16 @@ in
       ];
     };
 
+    # Mount the docker pull credentials into the VM
+    "${dockerCredentialsDir}" = {
+      device = "docker-pull-credentials";
+      fsType = "virtiofs";
+      options = [
+        "ro"
+        "nofail"
+      ];
+    };
+
     # Mount the docker compose configuration into the VM
     "/mnt/docker-compose" = {
       device = "docker-compose";
@@ -68,6 +80,11 @@ in
       pkgs.docker-compose # Docker compose for container orchestration
       teleportPkgs.withBPF # Remote access
     ];
+
+    variables = {
+      # Point Docker to the pull credentials
+      DOCKER_CONFIG = dockerCredentialsDir;
+    };
 
     etc = {
       # Copy all configuration files to /etc/nixos/ in the image
@@ -208,6 +225,7 @@ in
       composeFilePath = "/mnt/docker-compose/docker-compose.yaml";
       extraServiceConfig = {
         User = "compose-watcher";
+        Environment = [ "DOCKER_CONFIG=${dockerCredentialsDir}" ];
       };
     };
   };

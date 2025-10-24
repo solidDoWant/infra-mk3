@@ -24,7 +24,7 @@ result: $(VM_IMAGE_FILES)
 	nix build ./os-config/#kubevirt-container
 
 .PHONY: vm-image
-vm-image: # update-dependencies result
+vm-image: update-dependencies result
 	[ "$(PUSH_ALL)" = "false" ] || (	\
 		$(foreach CONTAINER_FULL_TAGS,$(CONTAINER_FULL_TAGS),nix run nixpkgs#crane -- push result "$(CONTAINER_FULL_TAGS)" &&) true	\
 	)
