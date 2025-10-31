@@ -71,7 +71,8 @@ specs:
               - port: "8080"
                 protocol: TCP
       # Access to the registry service
-      - toEndpoints:
+      - &to_registry
+        toEndpoints:
           - &registry_service_selector
             matchLabels:
               app.kubernetes.io/name: harbor
@@ -186,6 +187,7 @@ specs:
       - *dns_resolution
       - *to_database
       - *to_redis
+      - *to_registry
       # Access to the core service
       - &to_core
         toEndpoints:
@@ -237,6 +239,7 @@ specs:
       - *from_metrics_scraper
       - fromEndpoints:
           - *core_selector
+          - *job_service_selector
         toPorts:
           - ports:
               - port: "5000"
