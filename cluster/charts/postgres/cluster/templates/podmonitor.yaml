@@ -1,0 +1,14 @@
+---
+# This used to be managed by CNPG via Cluster resources, but was deprecated in v1.25.4.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "cluster-resource-name" . }}
+  labels:
+    cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+spec:
+  podMetricsEndpoints:
+    - port: metrics
+  selector:
+    matchLabels:
+      cnpg.io/cluster: {{ include "cluster-resource-name" . }}
