@@ -1,0 +1,10 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: insurgency-sourcemod-default
+spec:
+  name: sourcemod-default
+  owner: insurgency
+  cluster:
+    name: insurgency-postgres-17
