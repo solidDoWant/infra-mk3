@@ -48,7 +48,8 @@ spec:
     # can't get the WAL from the primary, and for cluster cloning.
     retentionPolicy: "1d"
   monitoring:
-    enablePodMonitor: true
+    # Temp set to false prior to rolling out unmanaged PodMonitors
+    enablePodMonitor: false
   certificates:
     serverTLSSecret: {{ include "serving-cert-name" . }}
     serverCASecret: {{ include "serving-cert-name" . }}
