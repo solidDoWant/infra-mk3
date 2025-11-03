@@ -13,7 +13,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: cnpg-charts
-      version: 0.22.1
+      version: 0.23.2
   values:
     # If the operator fails, then instance failover will also fail.
     replicaCount: 2
@@ -28,6 +28,8 @@ spec:
       grafanaDashboard:
         create: true
         sidecarLabel: "" # Unset this and load via operator resource
+    updateStrategy:
+      type: RollingUpdate
   postRenderers:
     # Add topology spread constraints
     - kustomize:
