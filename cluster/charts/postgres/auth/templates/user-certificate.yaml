@@ -11,7 +11,7 @@ spec:
     - client auth
   commonName: {{ $info.username }}
   duration: 1h
-{{- if not $info.disable-reloading }}
+{{- if not $info.disableReloading }}
   secretTemplate: {{ include "cnpg-labels" $ | nindent 4 }}
 {{- end }}
   issuerRef: {{ include "ca-issuer-ref" $ | nindent 4 }}
