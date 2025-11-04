@@ -35,6 +35,8 @@ spec:
                   virtiofs: {}
                 - name: root-ca
                   virtiofs: {}
+                - name: insurgency-postgres-insurgency-user
+                  virtiofs: {}
               disks:
                 - name: rootfs
                   disk:
@@ -63,6 +65,9 @@ spec:
             - name: root-ca
               secret:
                 secretName: root-ca-pub-cert
+            - name: insurgency-postgres-insurgency-user
+              secret:
+                secretName: insurgency-postgres-insurgency-user
             - name: cloudinit
               cloudInitNoCloud:
                 userData: |
