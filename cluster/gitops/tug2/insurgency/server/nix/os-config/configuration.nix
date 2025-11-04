@@ -69,6 +69,16 @@ in
         "nofail"
       ];
     };
+
+    # Mount the Postgres TLS secrets into the VM
+    "/mnt/postgres" = {
+      device = "insurgency-postgres-insurgency-user";
+      fsType = "virtiofs";
+      options = [
+        "ro"
+        "nofail"
+      ];
+    };
   };
 
   environment = {
