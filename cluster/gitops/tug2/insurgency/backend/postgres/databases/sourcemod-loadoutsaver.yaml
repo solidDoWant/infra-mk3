@@ -1,0 +1,10 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: insurgency-sourcemod-loadoutsaver
+spec:
+  name: sourcemod-loadoutsaver
+  owner: insurgency
+  cluster:
+    name: insurgency-postgres-17
