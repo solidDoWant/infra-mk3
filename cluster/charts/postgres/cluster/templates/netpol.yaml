@@ -10,22 +10,16 @@ specs:
         cnpg.io/cluster: {{ include "cluster-resource-name" . }}
         cnpg.io/podRole: instance
     egress:
-      # Replication between primary and replicas
       - toEndpoints:
           - matchLabels:
               cnpg.io/cluster: {{ include "cluster-resource-name" . }}
               cnpg.io/podRole: instance
         toPorts:
           - ports:
+              # Replication between primary and replicas
               - port: postgresql
                 protocol: TCP
-      # Status checks between primary and replicas
-      - toEndpoints:
-          - matchLabels:
-              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
-              cnpg.io/podRole: instance
-        toPorts:
-          - ports:
+              # Status checks between primary and replicas
               - port: status
                 protocol: TCP
       # DNS resolution
@@ -99,6 +93,12 @@ specs:
           - ports:
               - port: metrics
                 protocol: TCP
+      # Status check from other instances
+      - fromEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+              cnpg.io/podRole: instance
+        toPorts: *status_ports
   - description: initdb
     endpointSelector:
       matchLabels:
