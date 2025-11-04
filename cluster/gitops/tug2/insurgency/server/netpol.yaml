@@ -71,6 +71,14 @@ specs:
               - port: "27018"
                 endPort: 27036
                 protocol: TCP
+      # Access to the backend PostgreSQL database
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: insurgency-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
     ingress:
       # Host for bootstrapping
       - fromEntities:
