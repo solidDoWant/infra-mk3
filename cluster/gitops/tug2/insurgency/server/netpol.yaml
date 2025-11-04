@@ -53,23 +53,26 @@ specs:
           - ports:
               - port: "3080"
                 protocol: TCP
+      # To Steam for master server, auth ticket checks, workshop, etc.
       - toFQDNs:
-          # To Steam for master server, auth ticket checks, workshop, etc.
           - matchPattern: "*.steampowered.com"
           - matchPattern: "*.steamserver.net"
           - matchPattern: "*.steamcontent.com"
           - matchName: fastly.cdn.steampipe.steamcontent.com
           - matchName: steampipe.akamaized.net
-          # To Let's Encrypt to get CRLs
-          - matchPattern: "*.c.lencr.org"
         toPorts:
           - ports:
-              - port: "80"
-                protocol: TCP
               - port: "443"
                 protocol: TCP
               - port: "27018"
                 endPort: 27036
+                protocol: TCP
+      # To Let's Encrypt to get CRLs
+      - toFQDNs:
+          - matchPattern: "*.c.lencr.org"
+        toPorts:
+          - ports:
+              - port: "80"
                 protocol: TCP
       # Access to the backend PostgreSQL database
       - toEndpoints:
@@ -78,6 +81,14 @@ specs:
         toPorts:
           - ports:
               - port: "5432"
+                protocol: TCP
+      # Access to dockerhub to pull Envoy image
+      - toFQDNs:
+          - matchName: registry-1.docker.io
+          - matchName: production.cloudflare.docker.com
+        toPorts:
+          - ports:
+              - port: "443"
                 protocol: TCP
     ingress:
       # Host for bootstrapping
