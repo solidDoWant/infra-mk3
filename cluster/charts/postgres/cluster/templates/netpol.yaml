@@ -19,6 +19,15 @@ specs:
           - ports:
               - port: postgresql
                 protocol: TCP
+      # Status checks between primary and replicas
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+              cnpg.io/podRole: instance
+        toPorts:
+          - ports:
+              - port: status
+                protocol: TCP
       # DNS resolution
       - toEndpoints:
           - {{ .Values.netpol.dns.selector | toYaml | nindent 12 | trim }}
