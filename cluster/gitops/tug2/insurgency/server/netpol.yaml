@@ -53,16 +53,23 @@ specs:
           - ports:
               - port: "3080"
                 protocol: TCP
-      # To Steam for master server, auth ticket checks, workshop, etc.
       - toFQDNs:
+          # To Steam for master server, auth ticket checks, workshop, etc.
           - matchPattern: "*.steampowered.com"
           - matchPattern: "*.steamserver.net"
+          - matchPattern: "*.steamcontent.com"
+          - matchName: fastly.cdn.steampipe.steamcontent.com
+          - matchName: steampipe.akamaized.net
+          # To Let's Encrypt to get CRLs
+          - matchPattern: "*.c.lencr.org"
         toPorts:
           - ports:
+              - port: "80"
+                protocol: TCP
               - port: "443"
                 protocol: TCP
               - port: "27018"
-                endPort: 27025
+                endPort: 27036
                 protocol: TCP
     ingress:
       # Host for bootstrapping
