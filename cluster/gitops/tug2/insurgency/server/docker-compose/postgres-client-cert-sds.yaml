@@ -1,0 +1,13 @@
+---
+# SDS configuration for Postgres client certificate
+# Envoy will watch /mnt/postgres for changes and automatically reload
+resources:
+  - "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: postgres_client_cert
+    tls_certificate:
+      certificate_chain:
+        filename: /mnt/postgres/tls.crt
+      private_key:
+        filename: /mnt/postgres/tls.key
+      watched_directory:
+        path: /mnt/postgres

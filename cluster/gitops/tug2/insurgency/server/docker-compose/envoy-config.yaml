@@ -1,10 +1,16 @@
 ---
 # Proxy postgres connections, changing auth to mTLS, using Envoy's Postgres proxy filter
+# Uses file-based SDS for automatic certificate reloading
 admin:
   address:
     socket_address:
       address: 0.0.0.0
       port_value: 8000
+
+node:
+  # Values are basically meaningless but must be set
+  id: envoy-insurgency-postgres-proxy
+  cluster: tug2
 
 static_resources:
   clusters:
@@ -36,14 +42,24 @@ static_resources:
               tls_params:
                 tls_minimum_protocol_version: TLSv1_3
                 tls_maximum_protocol_version: TLSv1_3
-              tls_certificates:
-                - certificate_chain:
-                    filename: /mnt/postgres/tls.crt
-                  private_key:
-                    filename: /mnt/postgres/tls.key
-              validation_context:
-                trusted_ca:
-                  filename: /mnt/root-ca/ca.crt
+              # Unfortunately this doesn't currently work due to https://github.com/envoyproxy/envoy/issues/41850.
+              # Leaving this here for when/if it is addressed.
+              tls_certificate_sds_secret_configs:
+                - name: postgres_client_cert
+                  sds_config:
+                    resource_api_version: V3
+                    path_config_source:
+                      path: /etc/envoy/postgres-client-cert-sds.yaml
+                      watched_directory:
+                        path: /mnt/postgres
+              validation_context_sds_secret_config:
+                name: postgres_serving_cert
+                sds_config:
+                  resource_api_version: V3
+                  path_config_source:
+                    path: /etc/envoy/postgres-validation-context-sds.yaml
+                    watched_directory:
+                      path: /mnt/root-ca
             auto_host_sni: true
             auto_sni_san_validation: true
       close_connections_on_host_health_failure: true

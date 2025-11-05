@@ -49,8 +49,10 @@ services:
       # Mount TLS certs for Postgres connections
       - /mnt/postgres:/mnt/postgres:ro
       - /mnt/root-ca:/mnt/root-ca:ro
-      # Mount the Envoy config file
+      # Mount the Envoy config files
       - /mnt/docker-compose/envoy-config.yaml:/etc/envoy/envoy.yaml:ro
+      - /mnt/docker-compose/postgres-client-cert-sds.yaml:/etc/envoy/postgres-client-cert-sds.yaml:ro
+      - /mnt/docker-compose/postgres-validation-context-sds.yaml:/etc/envoy/postgres-validation-context-sds.yaml:ro
     ports:
       - "8000:8000" # Admin interface
       - "5432:5432" # Postgres listener
