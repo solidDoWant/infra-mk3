@@ -32,10 +32,10 @@ services:
         delay: 10s
       resources:
         limits:
-          memory: 1G
+          memory: 4G
           cpus: "1.0"
         reservations:
-          memory: 1G
+          memory: 4G
           cpus: "1.0"
     security_opt:
       - no-new-privileges:true

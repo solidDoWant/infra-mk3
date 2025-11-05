@@ -46,9 +46,9 @@ spec:
                     bus: virtio
             resources:
               requests:
-                memory: 2Gi
+                memory: 6Gi
               limits:
-                memory: 2Gi
+                memory: 6Gi
           volumes:
             - name: docker-pull-credentials
               secret:
