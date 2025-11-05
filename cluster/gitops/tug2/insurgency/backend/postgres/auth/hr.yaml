@@ -30,3 +30,6 @@ spec:
         username: insurgency
         # Cert will be reloaded on disk automatically, so no need to restart the pod (which would restart the entire VM as well)
         disableReloading: true
+        # Set this to a long time due to https://github.com/envoyproxy/envoy/issues/41850 making envoy not auto-reload
+        duration: 8760h # 1 year
+        renewBefore: 4380h # 6 months
