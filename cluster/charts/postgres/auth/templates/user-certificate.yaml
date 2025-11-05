@@ -10,7 +10,10 @@ spec:
   usages:
     - client auth
   commonName: {{ $info.username }}
-  duration: 1h
+  duration: {{ $info.duration | default "1h" }}
+{{- if $info.renewBefore }}
+  renewBefore: {{ $info.renewBefore }}
+{{- end }}
 {{- if not $info.disableReloading }}
   secretTemplate: {{ include "cnpg-labels" $ | nindent 4 }}
 {{- end }}

@@ -13,3 +13,5 @@ users:
   # example-application:
   #   name: example-application
   #   disableReloading: true # If true, pods mounting this cert will NOT be reloaded on cert changes
+  #   duration: 8760h # 1 year # If set, override the default duration for user certificate (1h)
+  #   renewBefore: 720h # 30 days # Optionally set renewBefore for user certificate

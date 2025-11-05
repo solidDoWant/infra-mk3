@@ -17,5 +17,5 @@ spec:
     usages:
       - client auth
   constraints:
-    maxDuration: 1h
+    maxDuration: {{ $info.duration | default "1h" }}
 {{ end }}
