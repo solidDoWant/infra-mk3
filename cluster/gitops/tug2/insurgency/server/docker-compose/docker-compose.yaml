@@ -10,15 +10,11 @@ services:
   tug2-insurgency-main:
     depends_on:
       - envoy
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.48-dev
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.84-dev
     pull_policy: always
-    command:
-      - -strictportbind
-      - -netconport
-      - "27023"
-      - -port
-      - "27000"
-      - -nohltv
+    environment:
+      - PORT=27000
+      - RCON_PASSWORD=${SECRET_RCON_PASSWORD}
     ports:
       - "27000:27000" # RCON
       - "27000:27000/udp" # Game traffic
