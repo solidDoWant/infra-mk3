@@ -4,14 +4,14 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name radarr-backend
+  name: &app_name sonarr-backend
 spec:
   targetNamespace: media
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/media/radarr/backend
+  path: /cluster/gitops/media/sonarr/backend
   prune: true
   sourceRef:
     kind: GitRepository
