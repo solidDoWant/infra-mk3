@@ -1,0 +1,119 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: sonarr
+specs:
+  - description: sonarr
+    endpointSelector: &sonarr_selector
+      matchLabels:
+        app.kubernetes.io/name: sonarr
+        app.kubernetes.io/controller: sonarr
+        app.kubernetes.io/instance: sonarr
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Access to the backend PostgreSQL database
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: sonarr-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      - toFQDNs:
+          # To Skyhook for tvdb info
+          # TODO write an OSS implementation and replace this
+          - matchName: skyhook.sonarr.tv
+          # To XEM for show mapping info
+          - matchName: thexem.inf
+          # # To Radarr cloud API for "Discover" page
+          # - matchPattern: api.radarr.video
+          # Show show posters
+          - matchName: artworks.thetvdb.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # To download searchers
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/download-searcher: "true"
+              io.kubernetes.pod.namespace: downloads
+        toPorts:
+          - ports:
+              - port: "5076"
+                protocol: TCP
+      # To downloaders
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/downloader: "true"
+              io.kubernetes.pod.namespace: downloads
+        toPorts:
+          - ports:
+              - port: "6789"
+                protocol: TCP
+              - port: "8080"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &webservice_ports
+          - ports:
+              - port: "8989"
+                protocol: TCP
+      - fromEndpoints:
+          # NZBHydra2 configuration syncing
+          - matchLabels:
+              app.kubernetes.io/name: nzbhydra2
+              io.kubernetes.pod.namespace: downloads
+          # Exportarr for metrics scraping
+          - &exportarr_selector
+            matchLabels:
+              app.kubernetes.io/name: sonarr
+              app.kubernetes.io/controller: exportarr
+              app.kubernetes.io/instance: sonarr
+          # Gateway to webservice
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *webservice_ports
+  - description: exportarr
+    endpointSelector: *exportarr_selector
+    egress:
+      # DNS resolution
+      - *dns_resolution
+      # To Sonarr webservice to scrape metrics
+      - toEndpoints:
+          - <<: *sonarr_selector
+        toPorts: *webservice_ports
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &metrics_ports
+          - ports:
+              - port: "80"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *metrics_ports

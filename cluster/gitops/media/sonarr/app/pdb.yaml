@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sonarr-metrics
+  labels: &labels
+    app.kubernetes.io/name: sonarr
+    app.kubernetes.io/controller: exportarr
+    app.kubernetes.io/instance: sonarr
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

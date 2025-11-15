@@ -1,0 +1,21 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: sonarr-metrics
+  labels:
+    app.kubernetes.io/part-of: sonarr
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sonarr
+      app.kubernetes.io/service: sonarr-metrics
+      app.kubernetes.io/instance: sonarr
+  endpoints:
+    - port: metrics
+      interval: 1m
+  jobLabel: sonarr-metrics
+  # Exports are HA, and will always contain the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service

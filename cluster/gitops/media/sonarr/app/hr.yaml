@@ -1,0 +1,225 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sonarr
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.2.0
+  values:
+    controllers:
+      sonarr:
+        containers:
+          sonarr:
+            image:
+              # Needed until https://github.com/Sonarr/Sonarr/pull/8177 merges and is released
+              # Needed until https://github.com/Sonarr/Sonarr/pull/8178 merges and is released
+              # This supports Postgres with mTLS auth, and fixes a CORS compatibility issue with the
+              # Authentik outpost
+              repository: ghcr.io/soliddowant/sonarr
+              tag: v4-develop@sha256:b330e605f03aff63a20c37f50f56af60d33c3a9d414cca528188cda73487d900
+            env:
+              # cspell:words APIKEY ANALYTICSENABLED CONSOLELEVEL DBENABLED FILTERSENTRYEVENTS MAINDBCONNECTIONSTRING
+              SONARR__AUTH__APIKEY:
+                secretKeyRef:
+                  name: sonarr-api-key
+                  key: API_KEY
+              SONARR__AUTH__METHOD: External
+              SONARR__LOG__FILTERSENTRYEVENTS: true
+              SONARR__LOG__SQL: false
+              SONARR__LOG__CONSOLELEVEL: Info
+              SONARR__LOG__ANALYTICSENABLED: false
+              SONARR__LOG__DBENABLED: false
+              SONARR__UPDATE__MECHANISM: External
+              SONARR__UPDATE__AUTOMATICALLY: false
+              SONARR__POSTGRES__MAINDBCONNECTIONSTRING: >-
+                Server=sonarr-postgres-17-rw.media.svc.cluster.local;
+                Database=sonarr;
+                Username=sonarr;
+                SSLMode=VerifyCA;
+                RootCertificate=/certs/root-ca/ca.crt;
+                SSLCertificate=/certs/postgres/user/tls.crt;
+                SSLKey=/certs/postgres/user/tls.key;
+                Pooling=true;
+                MinPoolSize=2;
+                Maximum Pool Size=100;
+              SONARR__SERVER__ALLOWEDCORSORIGINS: https://sonarr.${SECRET_PUBLIC_DOMAIN_NAME}
+            ports:
+              - name: web
+                containerPort: &web_port 8989
+            probes:
+              readiness: &probe
+                enabled: true
+                type: HTTP
+                path: /ping
+              liveness: *probe
+            securityContext: &container_security_context
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          labels:
+            endpoints.netpols.home.arpa/download-search-requester: "true"
+            endpoints.netpols.home.arpa/download-requester: "true"
+            endpoints.netpols.home.arpa/nzbhydra2-sync: "true"
+      exportarr:
+        # Run this as a separate deployment so that I can try deploying multiple Radarr instances
+        # at once without screwing up the metrics
+        replicas: 2
+        strategy: RollingUpdate
+        containers:
+          exportarr:
+            image:
+              repository: ghcr.io/onedr0p/exportarr
+              tag: v2.3.0
+            args:
+              - sonarr
+            env:
+              PORT: &metrics_port 80
+              URL: http://sonarr.media.svc.cluster.local:8989
+              ENABLE_ADDITIONAL_METRICS: true
+              ENABLE_UNKNOWN_QUEUE_ITEMS: true
+            envFrom:
+              - secret: sonarr-api-key
+            ports:
+              - name: web
+                containerPort: *metrics_port
+            probes:
+              readiness: &probe
+                enabled: true
+                type: HTTP
+              liveness: *probe
+            securityContext: *container_security_context
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # So far it doesn't look like anything under /config needs to be persistent.
+      # Leaving this as a separate volume for now in case that changes.
+      config:
+        type: emptyDir
+        sizeLimit: 100Mi
+        advancedMounts:
+          sonarr:
+            sonarr:
+              - path: /config
+      # This is a QoL thing more than anything else. The application will be unavailable
+      # anyway if the NFS server is down, the volume contents will be large (in quantity
+      # at least), and increased network access time isn't an issue, so I'm storing this
+      # on a NFS-backed volume.
+      media-covers:
+        type: persistentVolumeClaim
+        storageClass: zfs-generic-nfs
+        accessMode: ReadWriteOnce
+        size: 10Gi
+        advancedMounts:
+          sonarr:
+            sonarr:
+              - path: /config/MediaCover
+      # I don't want these written to disk but I can't disable them entirely
+      logs:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 10Mi
+        advancedMounts:
+          sonarr:
+            sonarr:
+              - path: /config/logs
+                subPath: logs
+              - path: /config/Sentry
+                subPath: Sentry
+      temp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 50Mi
+        advancedMounts:
+          sonarr:
+            sonarr:
+              - path: /tmp
+      media:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        advancedMounts:
+          sonarr:
+            sonarr:
+              - path: /mnt/complete
+                subPath: converted/Shows
+              - path: /mnt/library
+                subPath: library/Shows
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          sonarr:
+            sonarr:
+              - path: /certs/root-ca
+      sonarr-postgres-sonarr-user-cert:
+        type: secret
+        name: sonarr-postgres-sonarr-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          sonarr:
+            sonarr:
+              - path: /certs/postgres/user
+    service:
+      sonarr:
+        controller: sonarr
+        ports:
+          web:
+            port: *web_port
+            primary: true
+      metrics:
+        controller: exportarr
+        ports:
+          metrics:
+            port: *metrics_port
+            primary: true
+    route:
+      sonarr:
+        hostnames:
+          - sonarr.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: sonarr
+                port: *web_port
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io

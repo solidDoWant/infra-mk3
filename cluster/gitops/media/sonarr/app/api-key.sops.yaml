@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: sonarr-api-key
+type: Opaque
+stringData:
+    API_KEY: ENC[AES256_GCM,data:EfXXwCx7MWjVRWeQR/nl0Sw6c3ci2Ta1bz379+05YeA=,iv:eIVYkxpSVgL5hXSxHYucrvH58voWXkIeKGsiuGc3auo=,tag:fiRIbKZ0gl6FbvXQwjM3Ew==,type:str]
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age:
+        - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBjeHhXdzRIRmkwTHNGRHF6
+            bVo2VEdUNklJaDR4aUdhbVQ2OFl0dW44NUdVCjJOSkZiT05Lc1lLWEpXTndhUDZW
+            TVBoSFIyME5LWXo5TWxPaUJrWjBLVjgKLS0tIFRRdkxlbndyMU1tYWxRVlQ1cXR6
+            dE1aV3RtWVVkT2xqazF0eU9YazVTL1EKmuA2Pilag/u0yPV7J1kPF1zCTi/hbbIo
+            ND+XBSEjUAfUoMcC1X13rHF/Nwd4cdp8WyO6Fn5UDsn4ClcvCQ7gbw==
+            -----END AGE ENCRYPTED FILE-----
+        - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsOHdvOWJkSmI4aXZaZ25w
+            QkljWlhjbUxDMVV0ZGdpSkhsdXFNSklqUmtzClpHUDIybnk3UExLeVpBMG5RaTBk
+            QjlTRUlIUy9TUkdlWUZIT0kxVEErYncKLS0tIE5nRjNSeU81Qm1EUXRPWk15RzI4
+            SmlHU0JsWDJ0R1RPZ0RMTkVtdHJwUEUK6vGjlFSKLwv3JJ1KbJgx1LhXl817QCLf
+            tTLbckYm3aKP9Nkz26GMbGpZlgg46XVGYAmR4stx8SuH8iacqHGIiQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2025-11-13T05:44:18Z"
+    mac: ENC[AES256_GCM,data:QkZ+loDzntsDbQ7ZeZ7nIaFof5mArk0EP3T+uFPAJlZcpUyP+cQfSdpe0ChOOKs7MxSJwByJVRQaiTJupfhZFRs0wgGex6HMGinij7X5oxrpvZKRIeZiWawTTaX88cvsumEoXVatvwVktYLG9kNT5P17QFkr0bD20OXR5DfRGSM=,iv:LVdGIULBKgcOGAz05WGziXxYDlnrxa4DGnXWvf2Di0A=,tag:Rwwy1wtStiYiVs0CBZxETA==,type:str]
+    pgp: []
+    encrypted_regex: ^(data|stringData)$
+    mac_only_encrypted: true
+    version: 3.9.0

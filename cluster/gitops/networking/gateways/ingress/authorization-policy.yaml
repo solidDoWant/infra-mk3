@@ -22,6 +22,7 @@ spec:
               - qbittorrent.${SECRET_PUBLIC_DOMAIN_NAME}
               - nzbhydra2.${SECRET_PUBLIC_DOMAIN_NAME}
               - radarr.${SECRET_PUBLIC_DOMAIN_NAME}
+              - sonarr.${SECRET_PUBLIC_DOMAIN_NAME}
 ...
 # This approach does not work due to https://github.com/istio/api/issues/3569#issuecomment-3344686050
 # # This needs to be in the networking namespace until https://github.com/istio/api/issues/3569 is fixed.
