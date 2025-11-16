@@ -39,10 +39,13 @@ specs:
           # To Skyhook for tvdb info
           # TODO write an OSS implementation and replace this
           - matchName: skyhook.sonarr.tv
+          # This does a lot of "phoning home" that really doesn't seem to be needed (like time sync).
+          # This also MITMs at least one importer (MyAnimeList), meaning that it has more than enough
+          # information to act on behalf of the user, opaquely, without much consent. There is PLENTY
+          # of information available to the service for it to uniquely identify users.
+          - matchName: services.sonarr.tv
           # To XEM for show mapping info
           - matchName: thexem.info
-          # # To Radarr cloud API for "Discover" page
-          # - matchPattern: api.radarr.video
           # Show show posters
           - matchName: artworks.thetvdb.com
         toPorts:
