@@ -11,7 +11,6 @@ spec:
   redirect_url:
     - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443/v1/webapi/oidc/callback
   acr_values: goauthentik.io/providers/oauth2/default
-  max_age: 24h
   display: Login with Authentik
   scope:
     # This provides access to the `groups` claim
