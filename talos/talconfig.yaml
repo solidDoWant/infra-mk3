@@ -244,7 +244,7 @@ patches:
           imageMaximumGCAge: 168h # One week
           imageGCHighThresholdPercent: 50
           imageGCLowThresholdPercent: 20
-          maxPods: 128  # Probably higher than will realistically be scheduled
+          maxPods: 256
           serializeImagePulls: false
           allowedUnsafeSysctls:
             # These are needed for the VPN router pods
