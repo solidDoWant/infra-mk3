@@ -53,7 +53,7 @@ stringData:
           client_secret: "${SECRET_CODER_AUTHENTIK_OIDC_CLIENT_SECRET}"
           # Authentik docs are wrong. The redirect URI should not have trailing slash
           redirect_uris:
-            - url: https://coder.${SECRET_PUBLIC_DOMAIN_NAME}/c/oidc/callback
+            - url: https://coder.${SECRET_PUBLIC_DOMAIN_NAME}/api/v2/users/oidc/callback
               matching_mode: strict
           signing_key:
             !Find [
