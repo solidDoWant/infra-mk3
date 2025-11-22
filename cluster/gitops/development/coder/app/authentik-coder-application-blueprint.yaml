@@ -111,7 +111,6 @@ stringData:
           order: 0
           group: !KeyOf coder-admins-group
           target: !KeyOf coder-application
-      # Groups
       - model: authentik_core.group
         id: coder-users-group
         identifiers:
@@ -123,4 +122,16 @@ stringData:
         identifiers:
           order: 0
           group: !KeyOf coder-users-group
+          target: !KeyOf coder-application
+      - model: authentik_core.group
+        id: coder-claude-users-group
+        identifiers:
+          name: Coder Claude users
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_CODER_USERS_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf coder-claude-users-group
           target: !KeyOf coder-application
