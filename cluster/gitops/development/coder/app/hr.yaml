@@ -92,7 +92,9 @@ spec:
         - name: temp
           mountPath: /home/coder/.cache
           subPath: cache
-      resources: {}
+      resources:
+        requests: {}
+        limits: {}
       service:
         type: ClusterIP
       command:
