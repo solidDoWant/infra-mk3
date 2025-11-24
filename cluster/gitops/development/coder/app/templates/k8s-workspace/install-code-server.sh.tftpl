@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Set env vars from Terraform template variables, and validate that they are set.
+# shellcheck disable=SC2269
+PORT="${PORT}"
+: "$${PORT:?PORT is not set}"
+# shellcheck disable=SC2269
+TRUST_WORKSPACE="${TRUST_WORKSPACE}"
+: "$${TRUST_WORKSPACE:?TRUST_WORKSPACE is not set}"
+
+# Install the latest code-server if not already installed.
+CURRENT_VERSION="$(dpkg -s code-server 2>/dev/null | awk '/^Version: / {print $2}' || echo "none")"
+LATEST_VERSION="$(curl -fsSLI -o /dev/null -w "%%{url_effective}" https://github.com/coder/code-server/releases/latest)"
+LATEST_VERSION="$${LATEST_VERSION#https://github.com/coder/code-server/releases/tag/}"
+LATEST_VERSION="$${LATEST_VERSION#v}"
+
+if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+  echo "Installing code-server version $LATEST_VERSION (current: $CURRENT_VERSION)..."
+  INSTALL_SCRIPT=$(curl -fsSL "https://raw.githubusercontent.com/cdr/code-server/v$LATEST_VERSION/install.sh")
+  # Retry the installation up to 3 times in case of error, such as dpkg lock contention.
+  for i in {1..3}; do
+    if echo "$INSTALL_SCRIPT" | sh -s -- --version "$LATEST_VERSION"; then
+      break
+    fi
+
+    echo "code-server installation attempt $i failed."
+    if [ "$i" -eq 3 ]; then
+      echo "code-server installation failed after 3 attempts. Exiting."
+      exit 1
+    fi
+
+    echo "Retrying code-server installation..."
+    sleep 2
+  done
+
+  rm -rf ~/.cache/code-server
+
+  # Symlink `code` to `code-server` for convenience (e.g. `echo "example" | code -`).
+  sudo ln -s code-server /usr/lib/code-server/lib/vscode/bin/remote-cli/code
+fi
+
+# Create default settings
+SETTINGS_DIR="$HOME/.local/share/code-server/User"
+SETTINGS_PATH="$SETTINGS_DIR/settings.json"
+
+mkdir -p "$SETTINGS_DIR"
+NEW_SETTINGS='{
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "security.workspace.trust.banner": "never",
+  "telemetry.enableTelemetry": false,
+  "telemetry.enableCrashReporter": false,
+  "window.autoDetectColorScheme": true,
+  "window.menuBarVisibility": "visible"
+}'
+
+if [ "$TRUST_WORKSPACE" = "true" ]; then
+  TRUST_SETTINGS='{
+    "security.workspace.trust.enabled": false
+  }'
+  NEW_SETTINGS="$(echo "$NEW_SETTINGS" | jq --argjson trust "$TRUST_SETTINGS" '$trust * .')"
+fi
+
+# Merge the existing settings on top of the new settings, using JSON vars
+OLD_SETTINGS="$(cat "$SETTINGS_PATH" 2>/dev/null || echo '{}')"
+jq -n --argjson old "$OLD_SETTINGS" --argjson new "$NEW_SETTINGS" '$old * $new' >  "$SETTINGS_PATH"
+
+# Start code-server in the background.
+# Setting env vars here will affect all web terminals from within the code server, but not the entire workspace.
+EDITOR="code --wait" code-server --auth none --port "$PORT" > /tmp/code-server.log 2>&1 &
+
+# Wait for code-server to start
+printf "Waiting for code-server to start..."
+until curl -fs "http://localhost:$PORT/healthz" > /dev/null; do
+  printf .
+  sleep 1
+done
+printf "\ncode-server is up and running on port %s\n" "$PORT"

@@ -57,6 +57,15 @@ COPY --from=registry.k8s.io/kubectl:v1.33.4 /bin/kubectl /usr/local/bin/kubectl
 # flux
 COPY --from=ghcr.io/fluxcd/flux-cli:v2.6.4 /usr/local/bin/flux /usr/local/bin/flux
 
+# Coder
+COPY --from=ghcr.io/coder/coder:v2.28.3 /opt/coder /usr/local/bin/coder
+
+# Terraform
+COPY --from=hashicorp/terraform:1.13 /bin/terraform /usr/local/bin/terraform
+
+# tflint
+COPY --from=ghcr.io/terraform-linters/tflint:v0.60.0 /usr/local/bin/tflint /usr/local/bin/tflint
+
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
 COPY --from=alpine/helm:3.16.2 /usr/bin/helm /usr/local/bin/helm
@@ -166,4 +175,6 @@ RUN \
     istioctl completion bash | sudo tee /etc/bash_completion.d/istioctl.bash > /dev/null && \
     diffoci completion bash | sudo tee /etc/bash_completion.d/diffoci.bash > /dev/null && \
     docker completion bash | sudo tee /etc/bash_completion.d/docker.bash > /dev/null && \
-    cmtool completion bash | sudo tee /etc/bash_completion.d/cmtool.bash > /dev/null
+    cmtool completion bash | sudo tee /etc/bash_completion.d/cmtool.bash > /dev/null && \
+    coder completion -s bash | sudo tee /etc/bash_completion.d/coder.bash > /dev/null && \
+    echo "complete -C $(which terraform) terraform" | sudo tee /etc/bash_completion.d/terraform.bash > /dev/null

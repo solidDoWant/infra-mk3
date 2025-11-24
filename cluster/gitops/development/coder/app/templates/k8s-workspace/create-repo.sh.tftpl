@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# shellcheck disable=SC2269
+REPO_NAME="${REPO_NAME}"
+: "$${REPO_NAME:?REPO_NAME is not set}"
+
+# shellcheck disable=SC2269
+CREATE_GITHUB_REPO="${CREATE_GITHUB_REPO}"
+: "$${CREATE_GITHUB_REPO:?CREATE_GITHUB_REPO is not set}"
+
+# shellcheck disable=SC2269
+GITHUB_OWNER="${GITHUB_OWNER}"
+: "$${GITHUB_OWNER?GITHUB_OWNER is not set}"
+
+# shellcheck disable=SC2269
+MAKE_GITHUB_REPO_PRIVATE="${MAKE_GITHUB_REPO_PRIVATE}"
+: "$${MAKE_GITHUB_REPO_PRIVATE:?MAKE_GITHUB_REPO_PRIVATE is not set}"
+
+# shellcheck disable=SC2269
+REPO_DIR="${REPO_DIR}"
+: "$${REPO_DIR:?REPO_DIR is not set}"
+
+github_api_request() {
+  local endpoint="$1"
+  local method="$${2:-GET}"
+  local data="$${3:-}"
+
+  # shellcheck disable=SC1083
+  curl -L -s \
+    -X "$method" \
+    -w "\n%%{http_code}" \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $GITHUB_TOKEN" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "https://api.github.com$endpoint" \
+    $${data:+-d "$data"}
+}
+
+# Create the target directory if it doesn't exist
+mkdir -p "$REPO_DIR"
+
+# Do nothing if the target directory is not empty
+if [ -n "$(ls -A "$REPO_DIR")" ]; then
+  echo "Directory '$REPO_DIR' is not empty. Skipping repository creation."
+  exit 0
+fi
+
+echo "Creating local Git repository '$REPO_NAME' in directory '$REPO_DIR'..."
+git -c advice.defaultBranchName=false -c init.defaultBranch=master init "$REPO_DIR"
+
+if [ "$CREATE_GITHUB_REPO" != "true" ]; then
+    echo "Skipping GitHub repository creation as CREATE_GITHUB_REPO is not set to 'true'."
+    exit 0
+fi
+
+# Set $GITHUB_OWNER to the actual authenticated user if not set
+REPO_OWNER="$GITHUB_OWNER"
+if [ -z "$REPO_OWNER" ]; then
+  echo "Fetching the authenticated user's name from GitHub..."
+  GITHUB_USER_RESPONSE=$(github_api_request /user)
+  GITHUB_USER_RESPONSE_STATUS=$(tail -n1 <<< "$GITHUB_USER_RESPONSE")
+  GITHUB_USER_RESPONSE_BODY=$(sed \$d <<< "$GITHUB_USER_RESPONSE")
+
+  if [ "$GITHUB_USER_RESPONSE_STATUS" -ne 200 ]; then
+      echo "Failed to fetch authenticated user from GitHub with status code $GITHUB_USER_RESPONSE_STATUS!"
+      echo "$GITHUB_USER_RESPONSE_BODY"
+      exit 1
+  fi
+
+  REPO_OWNER=$(jq -r '.login' <<< "$GITHUB_USER_RESPONSE_BODY")
+  echo "Authenticated GitHub user is '$REPO_OWNER'."
+fi
+
+# Check if the repository already exists on GitHub
+echo "Checking if GitHub repository '$REPO_OWNER/$REPO_NAME' exists..."
+GITHUB_REPO_CHECK_RESPONSE=$(github_api_request "/repos/$REPO_OWNER/$REPO_NAME")
+GITHUB_REPO_CHECK_RESPONSE_STATUS=$(tail -n1 <<< "$GITHUB_REPO_CHECK_RESPONSE")
+GITHUB_REPO_CHECK_RESPONSE_BODY=$(sed \$d <<< "$GITHUB_REPO_CHECK_RESPONSE")
+
+if [ "$GITHUB_REPO_CHECK_RESPONSE_STATUS" -ne 200 ] && [ "$GITHUB_REPO_CHECK_RESPONSE_STATUS" -ne 404 ] ; then
+  echo "Failed to fetch repositories from GitHub with status code $GITHUB_REPO_CHECK_RESPONSE_STATUS!"
+  echo "$GITHUB_REPO_CHECK_RESPONSE_BODY"
+  exit 1
+fi
+
+# Create the repo if it does not exist
+if [ "$GITHUB_REPO_CHECK_RESPONSE_STATUS" -eq 404 ]; then
+  echo "GitHub repository '$REPO_OWNER/$REPO_NAME' does not exist. Creating it now..."
+  ENDPOINT="/orgs/$GITHUB_OWNER/repos"
+  if [ -z "$GITHUB_OWNER" ]; then
+    ENDPOINT="/user/repos"
+  fi
+
+  PAYLOAD="{
+    \"name\": \"$REPO_NAME\",
+    \"private\": $MAKE_GITHUB_REPO_PRIVATE,
+    \"allow_merge_commit\": false,
+    \"allow_rebase_merge\": false,
+    \"delete_branch_on_merge\": true,
+    \"squash_merge_commit_title\": \"COMMIT_OR_PR_TITLE\",
+    \"squash_merge_commit_message\": \"COMMIT_MESSAGES\"
+  }"
+  GITHUB_REPO_CREATION_RESPONSE=$(github_api_request "$ENDPOINT" POST "$PAYLOAD")
+  GITHUB_REPO_CREATION_RESPONSE_STATUS=$(tail -n1 <<< "$GITHUB_REPO_CREATION_RESPONSE")
+  GITHUB_REPO_CREATION_RESPONSE_BODY=$(sed \$d <<< "$GITHUB_REPO_CREATION_RESPONSE")
+
+  if [ "$GITHUB_REPO_CREATION_RESPONSE_STATUS" -ne 201 ]; then
+    echo "Failed to create GitHub repository with status code $GITHUB_REPO_CREATION_RESPONSE_STATUS!"
+    echo "$GITHUB_REPO_CREATION_RESPONSE_BODY"
+    exit 1
+  fi
+
+  echo "GitHub repository '$REPO_OWNER/$REPO_NAME' created successfully."
+else
+  echo "GitHub repository '$REPO_OWNER/$REPO_NAME' already exists. Skipping creation."
+fi
+
+echo "Setting GitHub repository 'origin' remote in local repository..."
+git -C "$REPO_DIR" remote add origin "https://github.com/$REPO_OWNER/$REPO_NAME.git"
+echo "Repository setup completed successfully."

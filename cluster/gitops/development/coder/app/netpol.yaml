@@ -1,0 +1,138 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: coder
+specs:
+  - description: coder
+    endpointSelector: &coder_selector
+      matchLabels:
+        app.kubernetes.io/name: coder
+        app.kubernetes.io/part-of: coder
+        app.kubernetes.io/instance: coder
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # To ingress gateway to check access URL
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Access to the backend PostgreSQL database
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: coder-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Access replicas for health check
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: coder
+              app.kubernetes.io/instance: coder
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Send emails via SMTP relay
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: email
+              endpoints.netpols.home.arpa/email-relay: "true"
+        toPorts:
+          - ports:
+              - port: "587"
+                protocol: TCP
+      - toFQDNs:
+          # Terraform providers, modules
+          - matchName: registry.terraform.io
+          - matchName: releases.hashicorp.com
+          - matchName: github.com # coder terraform provider GH releases page
+          - matchName: release-assets.githubusercontent.com
+          - matchName: registry.coder.com
+          # GitHub external auth
+          - matchName: api.github.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # To API server for workspace pod management
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # To workspace pods
+      - toEndpoints:
+          - &coder_workspace_selector
+            matchLabels:
+              app.kubernetes.io/name: coder-workspace
+              app.kubernetes.io/part-of: coder
+    ingress:
+      - fromEndpoints:
+          # Allow traffic from ingress gateway
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Allow traffic from other coder pods (for replicas)
+          - matchLabels:
+              app.kubernetes.io/name: coder
+              app.kubernetes.io/instance: coder
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Allow traffic from coder-workspace pods
+      - fromEndpoints:
+          - *coder_workspace_selector
+  - description: coder-workspace
+    endpointSelector: *coder_workspace_selector
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # To control plane
+      - toEndpoints:
+          - *coder_selector
+      # To internet to access arbitrary resources
+      - toCIDRSet:
+          - cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+    ingress:
+      - fromEndpoints:
+          - *coder_selector

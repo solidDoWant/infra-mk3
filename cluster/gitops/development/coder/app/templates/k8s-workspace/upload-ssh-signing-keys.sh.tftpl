@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+# Based on https://github.com/coder/registry/blob/f3c24af1dbfa340470b8601fa4dd22ee230447af/registry/coder/modules/github-upload-public-key/run.sh
+# but uploads the SSH signing key instead of an SSH git key.
+set -euo pipefail
+
+# From Terraform
+# shellcheck disable=SC2269
+PUBLIC_KEY="${PUBLIC_KEY}"
+: "$${PUBLIC_KEY:?PUBLIC_KEY is not set}"
+
+# shellcheck disable=SC2269
+SIGNING_KEY_NAME="${SIGNING_KEY_NAME}"
+: "$${SIGNING_KEY_NAME:?SIGNING_KEY_NAME is not set}"
+
+unset GITHUB_TOKEN
+# shellcheck disable=SC2269
+GITHUB_TOKEN="${GITHUB_TOKEN}"
+: "$${GITHUB_TOKEN:?GITHUB_TOKEN is not set}"
+
+github_api_request() {
+  local endpoint="$1"
+  local method="$${2:-GET}"
+  local data="$${3:-}"
+
+  # shellcheck disable=SC1083
+  curl -L -s \
+    -X "$method" \
+    -w "\n%%{http_code}" \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $GITHUB_TOKEN" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "https://api.github.com$endpoint" \
+    $${data:+-d "$data"}
+}
+
+echo "Fetching public keys from GitHub..."
+GITHUB_KEYS_RESPONSE=$(github_api_request /user/ssh_signing_keys)
+GITHUB_KEYS_RESPONSE_STATUS=$(tail -n1 <<< "$GITHUB_KEYS_RESPONSE")
+GITHUB_KEYS_RESPONSE_BODY=$(sed \$d <<< "$GITHUB_KEYS_RESPONSE")
+
+if [ "$GITHUB_KEYS_RESPONSE_STATUS" -ne 200 ]; then
+  echo "Failed to fetch public SSH signing keys from GitHub with status code $GITHUB_KEYS_RESPONSE_STATUS!"
+  echo "$GITHUB_KEYS_RESPONSE_BODY"
+  exit 1
+fi
+
+GITHUB_MATCH=$(jq -r --arg PUBLIC_KEY "$PUBLIC_KEY" '.[] | select(.key == $PUBLIC_KEY) | .key' <<< "$GITHUB_KEYS_RESPONSE_BODY")
+
+if [ "$PUBLIC_KEY" = "$GITHUB_MATCH" ]; then
+  echo "Your Coder public key is already on GitHub!"
+  exit 0
+fi
+
+echo "Your Coder public key is not in GitHub. Adding it now..."
+UPLOAD_RESPONSE=$(github_api_request /user/ssh_signing_keys POST "{\"title\":\"$SIGNING_KEY_NAME\",\"key\":\"$PUBLIC_KEY\"}")
+UPLOAD_RESPONSE_STATUS=$(tail -n1 <<< "$UPLOAD_RESPONSE")
+UPLOAD_RESPONSE_BODY=$(sed \$d <<< "$UPLOAD_RESPONSE")
+
+if [ "$UPLOAD_RESPONSE_STATUS" -ne 201 ]; then
+  echo "Failed to upload Coder public SSH key with status code $UPLOAD_RESPONSE_STATUS!"
+  echo "$UPLOAD_RESPONSE_BODY"
+  exit 1
+fi
+
+echo "Your Coder public key has been added to GitHub!"
