@@ -22,7 +22,7 @@ data "coder_parameter" "enable_mcp_servers" {
 }
 
 locals {
-  enable_mcp_servers = local.enable_claude_code && length(data.coder_parameter.enable_mcp_servers) > 0 && tobool(data.coder_parameter.enable_mcp_servers[0].value)
+  enable_mcp_servers = local.enable_claude_code && tobool(data.coder_parameter.enable_mcp_servers[0].value)
 }
 
 # Individual MCP server toggles
@@ -36,7 +36,7 @@ data "coder_parameter" "enable_mcp_playwright" {
   default     = "false"
   description = "Browser automation using Playwright. Enables web scraping and testing capabilities."
   mutable     = true
-  icon        = "/icon/playwright.svg"
+  icon        = "https://github.com/microsoft/playwright.dev/raw/2185d27269f02874647094820d3d854328ffb6cf/static/img/playwright-logo.svg"
   order       = local.mcp_order_start + 1
 }
 
@@ -102,18 +102,18 @@ data "coder_parameter" "enable_mcp_context7" {
   default     = "false"
   description = "Context7 documentation lookup for libraries and frameworks."
   mutable     = true
-  icon        = "/icon/book.svg"
+  icon        = "https://github.com/upstash/context7/raw/45ed23558b098491692f8f98aa42e93c0f2a0c2f/public/context7-icon.svg"
   order       = local.mcp_order_start + 6
 }
 
 # Compute which servers are enabled
 locals {
-  mcp_playwright_enabled  = local.enable_mcp_servers && length(data.coder_parameter.enable_mcp_playwright) > 0 && tobool(data.coder_parameter.enable_mcp_playwright[0].value)
-  mcp_coder_enabled       = local.enable_mcp_servers && local.coder_login && length(data.coder_parameter.enable_mcp_coder) > 0 && tobool(data.coder_parameter.enable_mcp_coder[0].value)
-  mcp_kubernetes_enabled  = local.enable_mcp_servers && length(data.coder_parameter.enable_mcp_kubernetes) > 0 && tobool(data.coder_parameter.enable_mcp_kubernetes[0].value)
-  mcp_github_enabled      = local.enable_mcp_servers && length(data.coder_parameter.enable_mcp_github) > 0 && tobool(data.coder_parameter.enable_mcp_github[0].value)
-  mcp_memory_enabled      = local.enable_mcp_servers && length(data.coder_parameter.enable_mcp_memory) > 0 && tobool(data.coder_parameter.enable_mcp_memory[0].value)
-  mcp_context7_enabled    = local.enable_mcp_servers && length(data.coder_parameter.enable_mcp_context7) > 0 && tobool(data.coder_parameter.enable_mcp_context7[0].value)
+  mcp_playwright_enabled = local.enable_mcp_servers && tobool(data.coder_parameter.enable_mcp_playwright[0].value)
+  mcp_coder_enabled      = local.enable_mcp_servers && local.coder_login && tobool(data.coder_parameter.enable_mcp_coder[0].value)
+  mcp_kubernetes_enabled = local.enable_mcp_servers && tobool(data.coder_parameter.enable_mcp_kubernetes[0].value)
+  mcp_github_enabled     = local.enable_mcp_servers && tobool(data.coder_parameter.enable_mcp_github[0].value)
+  mcp_memory_enabled     = local.enable_mcp_servers && tobool(data.coder_parameter.enable_mcp_memory[0].value)
+  mcp_context7_enabled   = local.enable_mcp_servers && tobool(data.coder_parameter.enable_mcp_context7[0].value)
 }
 
 # Build the MCP configuration object
@@ -125,23 +125,27 @@ locals {
         args    = ["@playwright/mcp@0.0.48"]
       }
     } : {},
+
     local.mcp_coder_enabled ? {
       coder = {
         command = "coder"
         args    = ["exp", "mcp", "server"]
       }
     } : {},
+
     local.mcp_kubernetes_enabled ? {
       kubernetes = {
         command = "npx"
         args    = ["-y", "kubernetes-mcp-server@0.0.54"]
       }
     } : {},
+
     local.mcp_github_enabled ? {
       github = {
         serverUrl = "https://api.githubcopilot.com/mcp/"
       }
     } : {},
+
     local.mcp_memory_enabled ? {
       memory = {
         command = "npx"
@@ -151,6 +155,7 @@ locals {
         }
       }
     } : {},
+
     local.mcp_context7_enabled ? {
       context7 = {
         command = "npx"
@@ -166,7 +171,7 @@ locals {
 }
 
 # Kubernetes service account for MCP server
-resource "kubernetes_service_account" "mcp_k8s_viewer" {
+resource "kubernetes_service_account" "mcp_k8s" {
   count = local.mcp_kubernetes_enabled ? 1 : 0
 
   metadata {

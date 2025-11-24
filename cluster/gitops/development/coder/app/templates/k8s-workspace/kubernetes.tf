@@ -220,6 +220,8 @@ resource "kubernetes_deployment" "main" {
       }
 
       spec {
+        service_account_name = local.mcp_kubernetes_enabled ? kubernetes_service_account.mcp_k8s.metadata[0].name : null
+
         runtime_class_name = local.runtime_class
 
         security_context {
