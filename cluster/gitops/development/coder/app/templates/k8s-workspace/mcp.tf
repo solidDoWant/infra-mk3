@@ -142,7 +142,11 @@ locals {
 
     local.mcp_github_enabled ? {
       github = {
-        serverUrl = "https://api.githubcopilot.com/mcp/"
+        type = "http"
+        url  = "https://api.githubcopilot.com/mcp"
+        headers = {
+          Authorization = "Bearer ${local.github_workspace_token}"
+        }
       }
     } : {},
 
@@ -165,7 +169,7 @@ locals {
   )
 
   # Only include mcpServers wrapper if there are servers enabled
-  mcp_config = length(local.mcp_servers) > 0 ? jsonencode({
+  mcp_servers_json = length(local.mcp_servers) > 0 ? jsonencode({
     mcpServers = local.mcp_servers
   }) : null
 }

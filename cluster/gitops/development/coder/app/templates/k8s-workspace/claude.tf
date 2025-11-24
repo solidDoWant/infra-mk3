@@ -52,7 +52,31 @@ module "claude_code" {
   dangerously_skip_permissions = true
   permission_mode              = "bypassPermissions"
 
-  mcp = local.mcp_config
+  # MCP configuration is screwed up due to a dumb bug in the module. Work around this by patching the .claude.json file with jq.
+  # See https://github.com/coder/registry/issues/562
+  # mcp = local.mcp_servers_encoded
+  post_install_script = local.mcp_servers_json != null ? (
+    <<-EOT
+    #!/bin/bash
+    set -euo pipefail
+
+    CLAUDE_CONFIG_PATH="$HOME/.claude.json"
+    MCP_SERVERS="$(echo ${base64encode(local.mcp_servers_json)} | base64 --decode)"
+
+    if [ ! -f "$CLAUDE_CONFIG_PATH" ]; then
+      2>&1 echo "Claude config file not found at $CLAUDE_CONFIG_PATH"
+      exit 1
+    fi
+
+    # Use jq to patch each object under '.projects' with the MCP configuration
+    jq --argjson mcpServers "$MCP_SERVERS" '
+      .projects |= with_entries(
+        .value.mcpServers = $mcpServers.mcpServers + (.value.mcpServers // {})
+      )
+    ' "$CLAUDE_CONFIG_PATH" > "$${CLAUDE_CONFIG_PATH}.tmp"
+    mv "$${CLAUDE_CONFIG_PATH}.tmp" "$CLAUDE_CONFIG_PATH"
+  EOT
+  ) : null
 
   claude_code_oauth_token = data.kubernetes_secret.claude_oauth_token[0].data["CLAUDE_CODE_OAUTH_TOKEN"]
 }
