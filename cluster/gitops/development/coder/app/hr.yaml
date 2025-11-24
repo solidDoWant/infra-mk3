@@ -20,52 +20,6 @@ spec:
       name: coder-helm-values
   values:
     coder:
-      env:
-        - name: CODER_DISABLE_PATH_APPS
-          value: "true"
-        - name: CODER_PG_CONNECTION_URL
-          value: "\
-            postgresql://coder@coder-postgres-17-rw.development.svc:5432/coder?\
-            sslrootcert=/etc/coder/certs/postgres/serving/tls.crt&\
-            sslcert=/etc/coder/certs/postgres/user/tls.crt&\
-            sslkey=/etc/coder/certs/postgres/user/tls.key&\
-            sslmode=verify-full"
-        - name: CODER_UPDATE_CHECK
-          value: "false"
-        - name: CODER_EMAIL_FROM
-          value: no-reply-coder@${SECRET_PUBLIC_DOMAIN_NAME}
-        - name: CODER_EMAIL_SMARTHOST
-          value: docker-postfix-mail.email.svc.cluster.local:25
-        # Not currently used due to https://github.com/coder/coder/issues/20883
-        - name: CODER_PROMETHEUS_COLLECT_AGENT_STATS
-          value: "true"
-        - name: CODER_PROMETHEUS_COLLECT_DB_METRICS
-          value: "true"
-        - name: CODER_PROMETHEUS_ENABLE
-          value: "true"
-        - name: CODER_ACCESS_URL
-          value: https://coder.${SECRET_PUBLIC_DOMAIN_NAME}
-        - name: CODER_WILDCARD_ACCESS_URL
-          value: "*.coder.${SECRET_PUBLIC_DOMAIN_NAME}"
-        - name: CODER_DERP_SERVER_STUN_ADDRESSES
-          value: disable
-        # Handled by reverse proxy
-        - name: CODER_TLS_ENABLE
-          value: "false"
-        - name: CODER_OIDC_CLIENT_ID
-          value: "${SECRET_CODER_AUTHENTIK_OIDC_CLIENT_ID}"
-        - name: CODER_OIDC_CLIENT_SECRET
-          value: "${SECRET_CODER_AUTHENTIK_OIDC_CLIENT_SECRET}"
-        - name: CODER_OIDC_ISSUER_URL
-          value: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/coder/
-        - name: CODER_OIDC_SIGN_IN_TEXT
-          value: Authentik
-        - name: CODER_OIDC_ICON_URL
-          value: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/static/dist/assets/icons/icon.svg
-        - name: CODER_TELEMETRY_ENABLE
-          value: "false"
-        - name: CODER_NOTIFICATIONS_MAX_SEND_ATTEMPTS
-          value: "2"
       image:
         pullSecrets:
           - name: coder-pull-credentials
