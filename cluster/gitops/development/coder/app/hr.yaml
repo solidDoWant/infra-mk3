@@ -37,6 +37,13 @@ spec:
               - coder-claude-oauth-token
             verbs:
               - get
+          # Rule to manage CiliumNetworkPolicy objects for workspaces
+          - apiGroups:
+              - cilium.io
+            resources:
+              - ciliumnetworkpolicies
+            verbs:
+              - "*"
       podSecurityContext:
         fsGroup: 1000
       volumes:

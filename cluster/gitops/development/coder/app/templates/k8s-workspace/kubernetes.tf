@@ -51,6 +51,14 @@ locals {
   # This is just an address in the TEST-NET-3 range per RFC 5737, which should be
   # a bogon address.
   blackhole_address = "203.0.113.1"
+
+  name = "coder-workspace-${data.coder_workspace.me.id}"
+
+  coder_labels = {
+    "app.kubernetes.io/name"     = "coder"
+    "app.kubernetes.io/part-of"  = "coder"
+    "app.kubernetes.io/instance" = "coder"
+  }
 }
 
 # Parameters
@@ -137,7 +145,7 @@ resource "kubernetes_persistent_volume_claim" "pvcs" {
   for_each = local.pvcs
 
   metadata {
-    name        = "coder-${data.coder_workspace.me.id}-${each.key}"
+    name        = "${local.name}-${each.key}"
     namespace   = local.namespace
     labels      = local.labels
     annotations = local.annotations
@@ -157,10 +165,10 @@ resource "kubernetes_persistent_volume_claim" "pvcs" {
 }
 
 resource "kubernetes_deployment" "main" {
-
   wait_for_rollout = false
+
   metadata {
-    name        = "coder-${data.coder_workspace.me.id}"
+    name        = local.name
     namespace   = local.namespace
     labels      = local.labels
     annotations = local.annotations
@@ -280,5 +288,96 @@ resource "kubernetes_deployment" "main" {
         }
       }
     }
+  }
+}
+
+# CiliumNetworkPolicy for coder-workspace
+resource "kubernetes_manifest" "coder_workspace_netpol" {
+  count = data.coder_workspace.me.start_count
+
+  manifest = {
+    "apiVersion" = "cilium.io/v2"
+    "kind"       = "CiliumNetworkPolicy"
+    "metadata" = {
+      "name"      = local.name
+      "namespace" = local.namespace
+      "labels"    = local.labels
+    }
+    "specs" = [
+      {
+        "description" = "coder-workspace"
+        "endpointSelector" = {
+          "matchLabels" = local.labels
+        }
+        "egress" = [
+          # DNS resolution
+          {
+            "toEndpoints" = [
+              {
+                "matchLabels" = {
+                  "io.kubernetes.pod.namespace"             = "networking"
+                  "endpoints.netpols.home.arpa/cluster-dns" = "true"
+                }
+              }
+            ]
+            "toPorts" = [
+              {
+                "ports" = [
+                  {
+                    "port"     = "53"
+                    "protocol" = "UDP"
+                  },
+                  {
+                    "port"     = "53"
+                    "protocol" = "TCP"
+                  }
+                ]
+                "rules" = {
+                  "dns" = [
+                    {
+                      "matchPattern" = "*"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+
+          # To control plane
+          {
+            "toEndpoints" = [
+              {
+                "matchLabels" = local.coder_labels
+              }
+            ]
+          },
+
+          # To internet to access arbitrary resources
+          {
+            "toCIDRSet" = [
+              {
+                "cidr" = "0.0.0.0/0"
+                "except" = [
+                  "10.0.0.0/8",
+                  "172.16.0.0/12",
+                  "192.168.0.0/16"
+                ]
+              }
+            ]
+          }
+        ]
+
+        # From control plane
+        "ingress" = [
+          {
+            "fromEndpoints" = [
+              {
+                "matchLabels" = local.coder_labels
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

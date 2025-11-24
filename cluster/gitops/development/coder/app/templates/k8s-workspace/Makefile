@@ -22,6 +22,7 @@ validate: fmt
 .PHONY: plan
 plan: fmt validate
 	@echo "Creating Terraform plan..."
+	KUBE_CONFIG_PATH="$${HOME}/.kube/config" \
 	terraform plan
 
 .PHONY: publish
