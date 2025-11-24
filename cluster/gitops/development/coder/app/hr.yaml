@@ -75,7 +75,7 @@ spec:
             reference: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/coder/coder-startup:0.0.2
         - name: temp
           emptyDir:
-            sizeLimit: 1Gi
+            sizeLimit: 4Gi
       volumeMounts:
         - name: postgres-user-cert
           mountPath: /etc/coder/certs/postgres/user
