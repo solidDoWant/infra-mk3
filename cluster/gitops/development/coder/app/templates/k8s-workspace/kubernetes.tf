@@ -63,7 +63,7 @@ locals {
 
 # Parameters
 locals {
-  workspace_resources_order_start = local.claude_order_start + local.claude_size
+  workspace_resources_order_start = local.mcp_order_start + local.mcp_size
   workspace_resources_size        = 4
 }
 

@@ -52,7 +52,7 @@ module "claude_code" {
   dangerously_skip_permissions = true
   permission_mode              = "bypassPermissions"
 
-  # mcp = "" # TODO
+  mcp = local.mcp_config
 
   claude_code_oauth_token = data.kubernetes_secret.claude_oauth_token[0].data["CLAUDE_CODE_OAUTH_TOKEN"]
 }
