@@ -293,8 +293,6 @@ resource "kubernetes_deployment" "main" {
 
 # CiliumNetworkPolicy for coder-workspace
 resource "kubernetes_manifest" "coder_workspace_netpol" {
-  count = data.coder_workspace.me.start_count
-
   manifest = {
     "apiVersion" = "cilium.io/v2"
     "kind"       = "CiliumNetworkPolicy"
@@ -303,7 +301,7 @@ resource "kubernetes_manifest" "coder_workspace_netpol" {
       "namespace" = local.namespace
       "labels"    = local.labels
     }
-    "specs" = [
+    "specs" = data.coder_workspace.me.start_count > 0 ? [
       {
         "description" = "coder-workspace"
         "endpointSelector" = {
@@ -378,6 +376,6 @@ resource "kubernetes_manifest" "coder_workspace_netpol" {
           }
         ]
       }
-    ]
+    ] : []
   }
 }
