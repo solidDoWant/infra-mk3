@@ -1,6 +1,6 @@
 # Parameters
 locals {
-  code_server_order_start = local.coder_order_start + local.workspace_resources_size
+  code_server_order_start = local.coder_order_start + local.coder_size
   code_server_size        = 1
 }
 

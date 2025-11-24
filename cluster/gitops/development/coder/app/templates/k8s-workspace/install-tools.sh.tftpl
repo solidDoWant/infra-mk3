@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing development tools..."
+
+# Install Go
+%{ if ENABLE_GO }
+echo "Installing Go ${GO_VERSION}..."
+wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+rm /tmp/go.tar.gz
+
+# Add Go to PATH if not already present
+if ! grep -q '/usr/local/go/bin' ~/.bashrc; then
+  echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> ~/.bashrc
+fi
+export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
+
+go version
+echo "Go ${GO_VERSION} installed successfully"
+%{ endif }
+
+# Install .NET SDK
+%{ if ENABLE_DOTNET }
+echo "Installing .NET SDK ${DOTNET_VERSION}..."
+wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh
+chmod +x /tmp/dotnet-install.sh
+/tmp/dotnet-install.sh --channel ${DOTNET_VERSION} --install-dir ~/.dotnet
+rm /tmp/dotnet-install.sh
+
+# Add dotnet to PATH if not already present
+if ! grep -q '.dotnet' ~/.bashrc; then
+  echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
+  echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
+fi
+export DOTNET_ROOT=$HOME/.dotnet
+export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
+
+~/.dotnet/dotnet --version
+echo ".NET SDK ${DOTNET_VERSION} installed successfully"
+%{ endif }
+
+# Install Docker
+%{ if ENABLE_DOCKER }
+echo "Installing Docker..."
+sudo apt-get update -qq
+sudo apt-get install -y -qq ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update -qq
+sudo apt-get install -y -qq docker-ce-cli docker-buildx-plugin docker-compose-plugin
+
+docker --version
+echo "Docker installed successfully"
+%{ endif }
+
+# Install Python tools (uv and uvx)
+%{ if ENABLE_PYTHON_TOOLS }
+echo "Installing Python tools (uv and uvx)..."
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+
+# Add to PATH if not already present
+if ! grep -q '.local/bin' ~/.bashrc; then
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+fi
+
+uv --version
+echo "Python tools installed successfully"
+%{ endif }
+
+# Install Node.js tools
+%{ if ENABLE_NODE_TOOLS }
+echo "Installing Node.js tools..."
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y -qq nodejs
+
+node --version
+npm --version
+echo "Node.js tools installed successfully"
+%{ endif }
+
+# Install Kubernetes tools
+%{ if ENABLE_K8S_TOOLS }
+echo "Installing Kubernetes tools..."
+
+# Install kubectl
+echo "Installing kubectl..."
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+rm kubectl
+kubectl version --client
+
+# Install flux
+echo "Installing flux..."
+curl -s https://fluxcd.io/install.sh | sudo bash
+
+# Install helm
+echo "Installing helm..."
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Install krew
+echo "Installing krew..."
+(
+  set -x; cd "$(mktemp -d)" &&
+  OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+  KREW="krew-$${OS}_$${ARCH}" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/$${KREW}.tar.gz" &&
+  tar zxvf "$${KREW}.tar.gz" &&
+  ./"$${KREW}" install krew
+)
+# Add krew to PATH if not already present
+if ! grep -q '.krew/bin' ~/.bashrc; then
+  echo 'export PATH="$${KREW_ROOT:-$HOME/.krew}/bin:$PATH"' >> ~/.bashrc
+fi
+export PATH="$${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
+# Install talosctl
+echo "Installing talosctl..."
+curl -sL https://talos.dev/install | sh
+
+# Install talhelper
+echo "Installing talhelper..."
+curl -sL https://i.jpillora.com/budimanjojo/talhelper! | sudo bash
+
+echo "Kubernetes tools installed successfully"
+%{ endif }
+
+# Install Terraform tools
+%{ if ENABLE_TERRAFORM_TOOLS }
+echo "Installing Terraform tools..."
+
+# Install Terraform
+echo "Installing terraform..."
+sudo apt-get update -qq && sudo apt-get install -y -qq gnupg software-properties-common
+wget -O- https://apt.releases.hashicorp.com/gpg | \
+    gpg --dearmor | \
+    sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+    https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+    sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt-get update -qq && sudo apt-get install -y -qq terraform
+
+terraform version
+
+# Install tflint
+echo "Installing tflint..."
+curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+tflint --version
+
+echo "Terraform tools installed successfully"
+%{ endif }
+
+# Install PostgreSQL client
+%{ if ENABLE_PSQL }
+echo "Installing PostgreSQL client..."
+sudo apt-get update -qq
+sudo apt-get install -y -qq postgresql-client
+
+psql --version
+echo "PostgreSQL client installed successfully"
+%{ endif }
+
+# Install Teleport
+%{ if ENABLE_TELEPORT }
+echo "Installing Teleport..."
+curl -O https://cdn.teleport.dev/install-v16.4.10.sh
+sudo bash install-v16.4.10.sh
+rm install-v16.4.10.sh
+
+tsh version
+echo "Teleport installed successfully"
+%{ endif }
+
+echo "All development tools installed successfully!"

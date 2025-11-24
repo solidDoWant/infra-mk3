@@ -5,7 +5,7 @@ locals {
 
 # Parameters
 locals {
-  claude_order_start = local.repo_setup_order_start + local.repo_setup_size
+  claude_order_start = local.tools_order_start + local.tools_size
   claude_size        = 1
 }
 
