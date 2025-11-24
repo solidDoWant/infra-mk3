@@ -169,15 +169,3 @@ locals {
     mcpServers = local.mcp_servers
   }) : null
 }
-
-# Kubernetes service account for MCP server
-resource "kubernetes_service_account" "mcp_k8s" {
-  count = local.mcp_kubernetes_enabled ? 1 : 0
-
-  metadata {
-    name        = "${local.name}-mcp-k8s"
-    namespace   = local.namespace
-    labels      = local.labels
-    annotations = local.annotations
-  }
-}

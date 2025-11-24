@@ -191,6 +191,17 @@ resource "kubernetes_persistent_volume_claim" "pvcs" {
   }
 }
 
+resource "kubernetes_service_account" "workspace" {
+  count = local.mcp_kubernetes_enabled ? 1 : 0
+
+  metadata {
+    name        = local.name
+    namespace   = local.namespace
+    labels      = local.labels
+    annotations = local.annotations
+  }
+}
+
 resource "kubernetes_deployment" "main" {
   wait_for_rollout = false
 
@@ -220,7 +231,7 @@ resource "kubernetes_deployment" "main" {
       }
 
       spec {
-        service_account_name = local.mcp_kubernetes_enabled ? kubernetes_service_account.mcp_k8s[0].metadata[0].name : null
+        service_account_name = local.mcp_kubernetes_enabled ? kubernetes_service_account.workspace[0].metadata[0].name : null
 
         runtime_class_name = local.runtime_class
 
