@@ -141,6 +141,33 @@ data "coder_workspace_owner" "me" {}
 # Actual Kubernetes resources
 provider "kubernetes" {}
 
+# Use an external datasource to get a list of available environment variables
+locals {
+  environment_vars = [
+    "KUBE_POD_IP",
+    "KUBERNETES_SERVICE_HOST",
+    "KUBERNETES_SERVICE_PORT_HTTPS",
+  ]
+
+  environment_vars_escaped_json = "{ ${join(", ", [for environment_var in local.environment_vars : format("\\\"%[1]s\\\": \\\"$${%[1]s}\\\"", environment_var)])} }"
+}
+
+data "external" "env" {
+  program = ["sh", "-c", "echo \"${local.environment_vars_escaped_json}\""]
+}
+
+locals {
+  is_in_cluster = data.external.env.result["KUBE_POD_IP"] != ""
+}
+
+provider "kubectl" {
+  # If running in a pod, use the in-cluster config
+  load_config_file       = !local.is_in_cluster
+  host                   = local.is_in_cluster ? "https://${data.external.env.result["KUBERNETES_SERVICE_HOST"]}:${data.external.env.result["KUBERNETES_SERVICE_PORT_HTTPS"]}" : null
+  cluster_ca_certificate = local.is_in_cluster ? file("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt") : null
+  token                  = local.is_in_cluster ? file("/var/run/secrets/kubernetes.io/serviceaccount/token") : null
+}
+
 resource "kubernetes_persistent_volume_claim" "pvcs" {
   for_each = local.pvcs
 
@@ -292,8 +319,12 @@ resource "kubernetes_deployment" "main" {
 }
 
 # CiliumNetworkPolicy for coder-workspace
-resource "kubernetes_manifest" "coder_workspace_netpol" {
-  manifest = {
+resource "kubectl_manifest" "netpol" {
+  count             = data.coder_workspace.me.start_count
+  server_side_apply = true
+  wait              = true
+
+  yaml_body = yamlencode({
     "apiVersion" = "cilium.io/v2"
     "kind"       = "CiliumNetworkPolicy"
     "metadata" = {
@@ -301,7 +332,8 @@ resource "kubernetes_manifest" "coder_workspace_netpol" {
       "namespace" = local.namespace
       "labels"    = local.labels
     }
-    "specs" = data.coder_workspace.me.start_count > 0 ? [
+
+    "specs" = [
       {
         "description" = "coder-workspace"
         "endpointSelector" = {
@@ -376,6 +408,6 @@ resource "kubernetes_manifest" "coder_workspace_netpol" {
           }
         ]
       }
-    ] : []
-  }
+    ]
+  })
 }
