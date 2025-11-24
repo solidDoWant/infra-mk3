@@ -44,6 +44,13 @@ spec:
               - ciliumnetworkpolicies
             verbs:
               - "*"
+          # Manage service accounts for workspaces
+          - apiGroups:
+              - ""
+            resources:
+              - serviceaccounts
+            verbs:
+              - "*"
       podSecurityContext:
         fsGroup: 1000
       volumes:

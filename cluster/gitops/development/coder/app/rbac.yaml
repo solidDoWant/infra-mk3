@@ -42,7 +42,7 @@ spec:
       validate:
         failureAction: Enforce
         message: The Coder service account can only modify CiliumNetworkPolicies for Coder Workspaces.
-        deny:
+        deny: &conditions
           conditions:
             all:
               - key: >-
@@ -53,3 +53,14 @@ spec:
                   {{ request.object.metadata.labels."app.kubernetes.io/name" || "" }}
                 operator: NotEquals
                 value: coder-workspace
+    - name: deny-coder-sa-non-coder-sa-access
+      match:
+        resources:
+          kinds:
+            - ServiceAccount
+          namespaces:
+            - development
+      validate:
+        failureAction: Enforce
+        message: The Coder service account can only modify ServiceAccounts for Coder Workspaces.
+        deny: *conditions
