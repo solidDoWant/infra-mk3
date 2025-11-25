@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing Talos tools (talosctl and talhelper)..."
+
+# Install talosctl
+echo "Installing talosctl..."
+curl -sL https://talos.dev/install | sudo sh
+
+# Install talhelper
+echo "Installing talhelper..."
+curl -sL https://i.jpillora.com/talhelper | sudo bash
+
+# Verify installations
+if command -v talosctl &> /dev/null && command -v talhelper &> /dev/null; then
+  echo "Talos tools installed successfully:"
+  talosctl version --client
+  talhelper --version
+else
+  echo "ERROR: Talos tools installation failed"
+  exit 1
+fi

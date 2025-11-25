@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing PostgreSQL client..."
+
+# Update and install PostgreSQL client
+sudo apt-get update
+sudo apt-get install -y postgresql-client
+
+# Verify installation
+if command -v psql &> /dev/null; then
+  echo "PostgreSQL client installed successfully:"
+  psql --version
+else
+  echo "ERROR: PostgreSQL client installation failed"
+  exit 1
+fi

@@ -1,294 +1,583 @@
-# Parameters
+# Development Tools Installation
+# Each tool has its own parameter(s) and separate installation script for parallel execution
+
+# Parameter ordering
 locals {
   tools_order_start = local.repo_setup_order_start + local.repo_setup_size
-  tools_size        = 1 + local.go_size + local.dotnet_size + local.docker_size + local.python_tools_size + local.node_tools_size + local.k8s_tools_size + local.terraform_tools_size + local.psql_size + local.teleport_size
+  tools_size        = 17 # Total number of tool parameters
 }
 
-data "coder_parameter" "enable_tools" {
-  count = local.allow_claude_access ? 1 : 0
-
-  type         = "bool"
-  name         = "enable_tools"
-  display_name = "Enable Development Tools"
-  default      = "false"
-  description  = "Enable installation of development tools in this workspace."
-  mutable      = true
-  icon         = "/icon/wrench.svg"
-  order        = local.tools_order_start + 0
-  form_type    = "switch"
-}
-
-locals {
-  enable_tools = local.allow_claude_access && local.enable_claude_code && tobool(data.coder_parameter.enable_tools[0].value)
-}
-
-# Go parameters
-locals {
-  go_order_start = local.tools_order_start + 1
-  go_size        = 2
-}
+# ============================================================================
+# Go
+# ============================================================================
 
 data "coder_parameter" "enable_go" {
-  count = local.enable_tools ? 1 : 0
-
   type         = "bool"
   name         = "enable_go"
   display_name = "Install Go"
   default      = "false"
-  description  = "Install the Go programming language."
+  description  = "Install the Go programming language"
   mutable      = true
   icon         = "/icon/go.svg"
-  order        = local.go_order_start + 0
+  order        = local.go_enable_order
   form_type    = "checkbox"
 }
 
-data "coder_parameter" "go_version" {
-  count = local.enable_tools && tobool(data.coder_parameter.enable_go[0].value) ? 1 : 0
+locals {
+  go_enable_order  = local.tools_order_start
+  go_version_order = local.go_enable_order + 1
+}
 
+data "coder_parameter" "go_version" {
   type         = "string"
   name         = "go_version"
-  display_name = "Go version"
-  default      = "1.23.5"
-  description  = "The version of Go to install."
-  mutable      = true
+  display_name = "Go Version"
+  default      = "1.23"
+  description  = "The version of Go to install"
+  mutable      = false
   icon         = "/icon/go.svg"
-  order        = local.go_order_start + 1
+  order        = local.go_version_order
+
+  option {
+    name  = "1.21"
+    value = "1.21"
+  }
+  option {
+    name  = "1.22"
+    value = "1.22"
+  }
+  option {
+    name  = "1.23"
+    value = "1.23"
+  }
+  option {
+    name  = "Latest"
+    value = "latest"
+  }
 }
 
-locals {
-  enable_go  = local.enable_tools && tobool(data.coder_parameter.enable_go[0].value)
-  go_version = local.enable_go ? data.coder_parameter.go_version[0].value : ""
+resource "coder_script" "install_go" {
+  count              = data.coder_parameter.enable_go.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Go"
+  icon               = "/icon/go.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-go.sh.tftpl", {
+    GO_VERSION = data.coder_parameter.go_version.value
+  })
 }
 
-# .NET SDK parameters
-locals {
-  dotnet_order_start = local.go_order_start + local.go_size
-  dotnet_size        = 2
-}
+# ============================================================================
+# .NET SDK
+# ============================================================================
 
 data "coder_parameter" "enable_dotnet" {
-  count = local.enable_tools ? 1 : 0
-
   type         = "bool"
   name         = "enable_dotnet"
   display_name = "Install .NET SDK"
   default      = "false"
-  description  = "Install the .NET SDK."
+  description  = "Install the .NET SDK"
   mutable      = true
   icon         = "/icon/dotnet.svg"
-  order        = local.dotnet_order_start + 0
+  order        = local.dotnet_enable_order
   form_type    = "checkbox"
+}
+
+locals {
+  dotnet_enable_order  = local.go_version_order + 1
+  dotnet_version_order = local.dotnet_enable_order + 1
 }
 
 data "coder_parameter" "dotnet_version" {
-  count = local.enable_tools && tobool(data.coder_parameter.enable_dotnet[0].value) ? 1 : 0
-
   type         = "string"
   name         = "dotnet_version"
-  display_name = ".NET version"
-  default      = "9.0"
-  description  = "The version of .NET SDK to install."
-  mutable      = true
+  display_name = ".NET SDK Version"
+  default      = "8.0"
+  description  = "The version of .NET SDK to install"
+  mutable      = false
   icon         = "/icon/dotnet.svg"
-  order        = local.dotnet_order_start + 1
+  order        = local.dotnet_version_order
+
+  option {
+    name  = "6.0"
+    value = "6.0"
+  }
+  option {
+    name  = "7.0"
+    value = "7.0"
+  }
+  option {
+    name  = "8.0 (LTS)"
+    value = "8.0"
+  }
+  option {
+    name  = "9.0"
+    value = "9.0"
+  }
+  option {
+    name  = "10.0"
+    value = "10.0"
+  }
 }
 
-locals {
-  enable_dotnet  = local.enable_tools && tobool(data.coder_parameter.enable_dotnet[0].value)
-  dotnet_version = local.enable_dotnet ? data.coder_parameter.dotnet_version[0].value : ""
+resource "coder_script" "install_dotnet" {
+  count              = data.coder_parameter.enable_dotnet.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install .NET SDK"
+  icon               = "/icon/dotnet.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-dotnet.sh.tftpl", {
+    DOTNET_VERSION = data.coder_parameter.dotnet_version.value
+  })
 }
 
-# Docker parameters
-locals {
-  docker_order_start = local.dotnet_order_start + local.dotnet_size
-  docker_size        = 1
-}
+# ============================================================================
+# Docker CLI
+# ============================================================================
 
 data "coder_parameter" "enable_docker" {
-  count = local.enable_tools ? 1 : 0
-
   type         = "bool"
   name         = "enable_docker"
-  display_name = "Install Docker"
+  display_name = "Install Docker CLI"
   default      = "false"
-  description  = "Install Docker CLI and tools."
+  description  = "Install Docker CLI and tools (docker, buildx, compose)"
   mutable      = true
   icon         = "/icon/docker.svg"
-  order        = local.docker_order_start + 0
+  order        = local.docker_enable_order
   form_type    = "checkbox"
 }
 
 locals {
-  enable_docker = local.enable_tools && tobool(data.coder_parameter.enable_docker[0].value)
+  docker_enable_order = local.dotnet_version_order + 1
 }
 
-# Python tools parameters
-locals {
-  python_tools_order_start = local.docker_order_start + local.docker_size
-  python_tools_size        = 1
+resource "coder_script" "install_docker" {
+  count              = data.coder_parameter.enable_docker.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Docker CLI"
+  icon               = "/icon/docker.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-docker.sh.tftpl", {})
 }
+
+# ============================================================================
+# Python Tools (uv/uvx)
+# ============================================================================
 
 data "coder_parameter" "enable_python_tools" {
-  count = local.enable_tools ? 1 : 0
-
   type         = "bool"
   name         = "enable_python_tools"
-  display_name = "Install Python Tools (uv, uvx)"
+  display_name = "Install Python Tools"
   default      = "false"
-  description  = "Install uv and uvx for Python package management."
+  description  = "Install uv and uvx for Python package management"
   mutable      = true
   icon         = "/icon/python.svg"
-  order        = local.python_tools_order_start + 0
+  order        = local.python_tools_enable_order
   form_type    = "checkbox"
 }
 
 locals {
-  enable_python_tools = local.enable_tools && tobool(data.coder_parameter.enable_python_tools[0].value)
+  python_tools_enable_order = local.docker_enable_order + 1
 }
 
-# Node tools parameters
-locals {
-  node_tools_order_start = local.python_tools_order_start + local.python_tools_size
-  node_tools_size        = 1
+resource "coder_script" "install_python_tools" {
+  count              = data.coder_parameter.enable_python_tools.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Python Tools"
+  icon               = "/icon/python.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-python-tools.sh.tftpl", {})
 }
 
-data "coder_parameter" "enable_node_tools" {
-  count = local.enable_tools ? 1 : 0
+# ============================================================================
+# Node.js
+# ============================================================================
 
+data "coder_parameter" "enable_node" {
   type         = "bool"
-  name         = "enable_node_tools"
-  display_name = "Install Node Tools (node, npm, npx)"
+  name         = "enable_node"
+  display_name = "Install Node.js"
   default      = "false"
-  description  = "Install Node.js, npm, and npx."
+  description  = "Install Node.js, npm, and npx"
   mutable      = true
-  icon         = "/icon/node.svg"
-  order        = local.node_tools_order_start + 0
+  icon         = "/icon/nodejs.svg"
+  order        = local.node_enable_order
   form_type    = "checkbox"
 }
 
 locals {
-  enable_node_tools = local.enable_tools && tobool(data.coder_parameter.enable_node_tools[0].value)
+  node_enable_order  = local.python_tools_enable_order + 1
+  node_version_order = local.node_enable_order + 1
 }
 
-# Kubernetes tools parameters
-locals {
-  k8s_tools_order_start = local.node_tools_order_start + local.node_tools_size
-  k8s_tools_size        = 1
+data "coder_parameter" "node_version" {
+  type         = "string"
+  name         = "node_version"
+  display_name = "Node.js Version"
+  default      = "20"
+  description  = "The version of Node.js to install"
+  mutable      = false
+  icon         = "/icon/nodejs.svg"
+  order        = local.node_version_order
+
+  option {
+    name  = "18 LTS"
+    value = "18"
+  }
+  option {
+    name  = "20 LTS"
+    value = "20"
+  }
+  option {
+    name  = "22"
+    value = "22"
+  }
+  option {
+    name  = "Latest"
+    value = "latest"
+  }
 }
 
-data "coder_parameter" "enable_k8s_tools" {
-  count = local.enable_tools ? 1 : 0
+resource "coder_script" "install_node" {
+  count              = data.coder_parameter.enable_node.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Node.js"
+  icon               = "/icon/nodejs.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
 
+  script = templatefile("./install-node.sh.tftpl", {
+    NODE_VERSION = data.coder_parameter.node_version.value
+  })
+}
+
+# ============================================================================
+# kubectl
+# ============================================================================
+
+data "coder_parameter" "enable_kubectl" {
   type         = "bool"
-  name         = "enable_k8s_tools"
-  display_name = "Install Kubernetes Tools"
+  name         = "enable_kubectl"
+  display_name = "Install kubectl"
   default      = "false"
-  description  = "Install kubectl, flux, helm, krew, talosctl, and talhelper."
+  description  = "Install Kubernetes kubectl CLI"
   mutable      = true
-  icon         = "/icon/kubernetes.svg"
-  order        = local.k8s_tools_order_start + 0
+  icon         = "/icon/k8s.svg"
+  order        = local.kubectl_enable_order
   form_type    = "checkbox"
 }
 
 locals {
-  enable_k8s_tools = local.enable_tools && tobool(data.coder_parameter.enable_k8s_tools[0].value)
+  kubectl_enable_order  = local.node_version_order + 1
+  kubectl_version_order = local.kubectl_enable_order + 1
 }
 
-# Terraform tools parameters
-locals {
-  terraform_tools_order_start = local.k8s_tools_order_start + local.k8s_tools_size
-  terraform_tools_size        = 1
+data "coder_parameter" "kubectl_version" {
+  type         = "string"
+  name         = "kubectl_version"
+  display_name = "kubectl Version"
+  default      = "1.34"
+  description  = "The Kubernetes version for kubectl (e.g., 1.34)"
+  mutable      = false
+  icon         = "/icon/k8s.svg"
+  order        = local.kubectl_version_order
+
+  option {
+    name  = "1.31"
+    value = "1.31"
+  }
+  option {
+    name  = "1.32"
+    value = "1.32"
+  }
+  option {
+    name  = "1.33"
+    value = "1.33"
+  }
+  option {
+    name  = "1.34"
+    value = "1.34"
+  }
 }
+
+resource "coder_script" "install_kubectl" {
+  count              = data.coder_parameter.enable_kubectl.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install kubectl"
+  icon               = "/icon/k8s.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-kubectl.sh.tftpl", {
+    KUBECTL_VERSION = data.coder_parameter.kubectl_version.value
+  })
+}
+
+# ============================================================================
+# Flux
+# ============================================================================
+
+data "coder_parameter" "enable_flux" {
+  type         = "bool"
+  name         = "enable_flux"
+  display_name = "Install Flux"
+  default      = "false"
+  description  = "Install Flux CLI for GitOps"
+  mutable      = true
+  icon         = "/icon/k8s.svg"
+  order        = local.flux_enable_order
+  form_type    = "checkbox"
+}
+
+locals {
+  flux_enable_order = local.kubectl_version_order + 1
+}
+
+resource "coder_script" "install_flux" {
+  count              = data.coder_parameter.enable_flux.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Flux"
+  icon               = "/icon/k8s.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-flux.sh.tftpl", {})
+}
+
+# ============================================================================
+# Helm
+# ============================================================================
+
+data "coder_parameter" "enable_helm" {
+  type         = "bool"
+  name         = "enable_helm"
+  display_name = "Install Helm"
+  default      = "false"
+  description  = "Install Helm package manager for Kubernetes"
+  mutable      = true
+  icon         = "/icon/k8s.svg"
+  order        = local.helm_enable_order
+  form_type    = "checkbox"
+}
+
+locals {
+  helm_enable_order = local.flux_enable_order + 1
+}
+
+resource "coder_script" "install_helm" {
+  count              = data.coder_parameter.enable_helm.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Helm"
+  icon               = "/icon/k8s.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-helm.sh.tftpl", {})
+}
+
+# ============================================================================
+# Krew
+# ============================================================================
+
+data "coder_parameter" "enable_krew" {
+  type         = "bool"
+  name         = "enable_krew"
+  display_name = "Install Krew"
+  default      = "false"
+  description  = "Install Krew kubectl plugin manager"
+  mutable      = true
+  icon         = "/icon/k8s.svg"
+  order        = local.krew_enable_order
+  form_type    = "checkbox"
+}
+
+locals {
+  krew_enable_order = local.helm_enable_order + 1
+}
+
+resource "coder_script" "install_krew" {
+  count              = data.coder_parameter.enable_krew.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Krew"
+  icon               = "/icon/k8s.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-krew.sh.tftpl", {})
+}
+
+# ============================================================================
+# Talos Tools
+# ============================================================================
+
+data "coder_parameter" "enable_talos_tools" {
+  type         = "bool"
+  name         = "enable_talos_tools"
+  display_name = "Install Talos Tools"
+  default      = "false"
+  description  = "Install talosctl and talhelper for Talos Linux"
+  mutable      = true
+  icon         = "/icon/k8s.svg"
+  order        = local.talos_tools_enable_order
+  form_type    = "checkbox"
+}
+
+locals {
+  talos_tools_enable_order = local.krew_enable_order + 1
+}
+
+resource "coder_script" "install_talos_tools" {
+  count              = data.coder_parameter.enable_talos_tools.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Talos Tools"
+  icon               = "/icon/k8s.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-talos-tools.sh.tftpl", {})
+}
+
+# ============================================================================
+# Terraform Tools
+# ============================================================================
 
 data "coder_parameter" "enable_terraform_tools" {
-  count = local.enable_tools ? 1 : 0
-
   type         = "bool"
   name         = "enable_terraform_tools"
   display_name = "Install Terraform Tools"
   default      = "false"
-  description  = "Install terraform and tflint."
+  description  = "Install Terraform and tflint"
   mutable      = true
-  icon         = "/icon/terraform.svg"
-  order        = local.terraform_tools_order_start + 0
+  icon         = "/icon/gateway.svg"
+  order        = local.terraform_tools_enable_order
   form_type    = "checkbox"
 }
 
 locals {
-  enable_terraform_tools = local.enable_tools && tobool(data.coder_parameter.enable_terraform_tools[0].value)
+  terraform_tools_enable_order  = local.talos_tools_enable_order + 1
+  terraform_tools_version_order = local.terraform_tools_enable_order + 1
 }
 
-# PostgreSQL client parameters
-locals {
-  psql_order_start = local.terraform_tools_order_start + local.terraform_tools_size
-  psql_size        = 1
+data "coder_parameter" "terraform_version" {
+  type         = "string"
+  name         = "terraform_version"
+  display_name = "Terraform Version"
+  default      = "latest"
+  description  = "The version of Terraform to install"
+  mutable      = false
+  icon         = "/icon/gateway.svg"
+  order        = local.terraform_tools_version_order
+
+  option {
+    name  = "Latest"
+    value = "latest"
+  }
+  option {
+    name  = "1.9.0"
+    value = "1.9.0"
+  }
+  option {
+    name  = "1.8.0"
+    value = "1.8.0"
+  }
+  option {
+    name  = "1.7.0"
+    value = "1.7.0"
+  }
 }
 
-data "coder_parameter" "enable_psql" {
-  count = local.enable_tools ? 1 : 0
+resource "coder_script" "install_terraform_tools" {
+  count              = data.coder_parameter.enable_terraform_tools.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Terraform Tools"
+  icon               = "/icon/gateway.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
 
+  script = templatefile("./install-terraform-tools.sh.tftpl", {
+    TERRAFORM_VERSION = data.coder_parameter.terraform_version.value
+  })
+}
+
+# ============================================================================
+# PostgreSQL Client
+# ============================================================================
+
+data "coder_parameter" "enable_postgresql" {
   type         = "bool"
-  name         = "enable_psql"
-  display_name = "Install PostgreSQL Client (psql)"
+  name         = "enable_postgresql"
+  display_name = "Install PostgreSQL Client"
   default      = "false"
-  description  = "Install the PostgreSQL command-line client."
+  description  = "Install PostgreSQL command-line client (psql)"
   mutable      = true
   icon         = "/icon/postgres.svg"
-  order        = local.psql_order_start + 0
+  order        = local.postgresql_enable_order
   form_type    = "checkbox"
 }
 
 locals {
-  enable_psql = local.enable_tools && tobool(data.coder_parameter.enable_psql[0].value)
+  postgresql_enable_order = local.terraform_tools_version_order + 1
 }
 
-# Teleport parameters
-locals {
-  teleport_order_start = local.psql_order_start + local.psql_size
-  teleport_size        = 1
+resource "coder_script" "install_postgresql" {
+  count              = data.coder_parameter.enable_postgresql.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install PostgreSQL Client"
+  icon               = "/icon/postgres.svg"
+  run_on_start       = true
+  start_blocks_login = false
+  timeout            = 300
+
+  script = templatefile("./install-postgresql.sh.tftpl", {})
 }
+
+# ============================================================================
+# Teleport
+# ============================================================================
 
 data "coder_parameter" "enable_teleport" {
-  count = local.enable_tools ? 1 : 0
-
   type         = "bool"
   name         = "enable_teleport"
   display_name = "Install Teleport"
   default      = "false"
-  description  = "Install Teleport CLI (tsh)."
+  description  = "Install Teleport CLI (tsh)"
   mutable      = true
-  icon         = "/icon/teleport.svg"
-  order        = local.teleport_order_start + 0
+  icon         = "/icon/terminal.svg"
+  order        = local.teleport_enable_order
   form_type    = "checkbox"
 }
 
 locals {
-  enable_teleport = local.enable_tools && tobool(data.coder_parameter.enable_teleport[0].value)
+  teleport_enable_order = local.postgresql_enable_order + 1
 }
 
-# Installation script
-resource "coder_script" "install_tools" {
-  count = local.enable_tools ? 1 : 0
-
-  agent_id     = coder_agent.main.id
-  display_name = "Install Development Tools"
-  icon         = "/icon/wrench.svg"
-
+resource "coder_script" "install_teleport" {
+  count              = data.coder_parameter.enable_teleport.value ? 1 : 0
+  agent_id           = coder_agent.main.id
+  display_name       = "Install Teleport"
+  icon               = "/icon/terminal.svg"
   run_on_start       = true
-  start_blocks_login = true
-  timeout            = 600 # seconds (10 minutes)
+  start_blocks_login = false
+  timeout            = 300
 
-  script = templatefile("./install-tools.sh.tftpl", {
-    ENABLE_GO              = local.enable_go
-    GO_VERSION             = local.go_version
-    ENABLE_DOTNET          = local.enable_dotnet
-    DOTNET_VERSION         = local.dotnet_version
-    ENABLE_DOCKER          = local.enable_docker
-    ENABLE_PYTHON_TOOLS    = local.enable_python_tools
-    ENABLE_NODE_TOOLS      = local.enable_node_tools
-    ENABLE_K8S_TOOLS       = local.enable_k8s_tools
-    ENABLE_TERRAFORM_TOOLS = local.enable_terraform_tools
-    ENABLE_PSQL            = local.enable_psql
-    ENABLE_TELEPORT        = local.enable_teleport
-  })
+  script = templatefile("./install-teleport.sh.tftpl", {})
 }

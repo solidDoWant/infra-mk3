@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+DOTNET_VERSION="${DOTNET_VERSION}"
+: "$${DOTNET_VERSION:?DOTNET_VERSION is not set}"
+
+echo "Installing .NET SDK version $${DOTNET_VERSION}..."
+
+if [ "$${DOTNET_VERSION}" = "8.0" ]; then
+  # .NET 8.0 is available in default Ubuntu 24.04 repositories
+  sudo apt-get update
+  sudo apt-get install -y dotnet-sdk-8.0
+else
+  # For other versions, use the backports PPA
+  sudo add-apt-repository ppa:dotnet/backports -y
+  sudo apt-get update
+  sudo apt-get install -y "dotnet-sdk-$${DOTNET_VERSION}"
+fi
+
+# Verify installation
+if command -v dotnet &> /dev/null; then
+  echo ".NET SDK installed successfully:"
+  dotnet --version
+  dotnet --list-sdks
+else
+  echo "ERROR: .NET SDK installation failed"
+  exit 1
+fi

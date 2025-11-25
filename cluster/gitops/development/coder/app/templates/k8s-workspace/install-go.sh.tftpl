@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+GO_VERSION="${GO_VERSION}"
+: "$${GO_VERSION:?GO_VERSION is not set}"
+
+echo "Installing Go version $${GO_VERSION}..."
+
+if [ "$${GO_VERSION}" = "latest" ]; then
+  # Install latest version from go.dev
+  LATEST_GO=$(curl -sL 'https://go.dev/VERSION?m=text' | head -n1)
+  echo "Latest Go version: $${LATEST_GO}"
+
+  cd /tmp
+  wget -q "https://go.dev/dl/$${LATEST_GO}.linux-amd64.tar.gz"
+
+  # Remove any existing Go installation
+  sudo rm -rf /usr/local/go
+
+  # Extract to /usr/local
+  sudo tar -C /usr/local -xzf "$${LATEST_GO}.linux-amd64.tar.gz"
+  rm "$${LATEST_GO}.linux-amd64.tar.gz"
+
+  # Add to PATH via /etc/profile.d
+  echo 'export PATH=$$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh > /dev/null
+  sudo chmod +x /etc/profile.d/go.sh
+
+  # Make available immediately
+  export PATH=$$PATH:/usr/local/go/bin
+else
+  # Install specific version from apt
+  sudo apt-get update
+  sudo apt-get install -y "golang-$${GO_VERSION}"
+
+  # Create symlink to make it the default
+  sudo ln -sf "/usr/lib/go-$${GO_VERSION}/bin/go" /usr/local/bin/go
+  sudo ln -sf "/usr/lib/go-$${GO_VERSION}/bin/gofmt" /usr/local/bin/gofmt
+fi
+
+# Verify installation
+if command -v go &> /dev/null; then
+  echo "Go installed successfully:"
+  go version
+else
+  echo "ERROR: Go installation failed"
+  exit 1
+fi

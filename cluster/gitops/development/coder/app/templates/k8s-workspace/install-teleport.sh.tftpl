@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing Teleport (tsh)..."
+
+# Download and install Teleport GPG key
+sudo curl -fsSL https://deb.releases.teleport.dev/teleport-pubkey.asc \
+  -o /usr/share/keyrings/teleport-archive-keyring.asc
+
+# Add Teleport repository
+echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] https://apt.releases.teleport.dev/ubuntu noble stable" | \
+  sudo tee /etc/apt/sources.list.d/teleport.list
+
+# Update and install Teleport
+sudo apt-get update
+sudo apt-get install -y teleport
+
+# Verify installation
+if command -v tsh &> /dev/null; then
+  echo "Teleport installed successfully:"
+  tsh version
+else
+  echo "ERROR: Teleport installation failed"
+  exit 1
+fi

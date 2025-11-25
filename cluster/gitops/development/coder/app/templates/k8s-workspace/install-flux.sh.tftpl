@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing Flux CLI..."
+
+# Install using official install script
+curl -s https://fluxcd.io/install.sh | sudo bash
+
+# Verify installation
+if command -v flux &> /dev/null; then
+  echo "Flux installed successfully:"
+  flux --version
+else
+  echo "ERROR: Flux installation failed"
+  exit 1
+fi

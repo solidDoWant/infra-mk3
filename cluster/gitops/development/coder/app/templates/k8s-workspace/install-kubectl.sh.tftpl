@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+KUBECTL_VERSION="${KUBECTL_VERSION}"
+: "$${KUBECTL_VERSION:?KUBECTL_VERSION is not set}"
+
+echo "Installing kubectl version $${KUBECTL_VERSION}..."
+
+# Install prerequisites
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl
+
+# Add Kubernetes GPG key
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$${KUBECTL_VERSION}/deb/Release.key" | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# Add Kubernetes repository
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$${KUBECTL_VERSION}/deb/ /" | \
+  sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+# Update and install kubectl
+sudo apt-get update
+sudo apt-get install -y kubectl
+
+# Verify installation
+if command -v kubectl &> /dev/null; then
+  echo "kubectl installed successfully:"
+  kubectl version --client
+else
+  echo "ERROR: kubectl installation failed"
+  exit 1
+fi

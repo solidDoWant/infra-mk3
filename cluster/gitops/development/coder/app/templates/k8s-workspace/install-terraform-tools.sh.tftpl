@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+TERRAFORM_VERSION="${TERRAFORM_VERSION}"
+: "$${TERRAFORM_VERSION:?TERRAFORM_VERSION is not set}"
+
+echo "Installing Terraform tools..."
+
+# Add HashiCorp GPG key
+wget -O- https://apt.releases.hashicorp.com/gpg | \
+  sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+# Add HashiCorp repository
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $$(lsb_release -cs) main" | \
+  sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+# Update package list
+sudo apt-get update
+
+# Install Terraform
+if [ "$${TERRAFORM_VERSION}" = "latest" ]; then
+  echo "Installing latest Terraform..."
+  sudo apt-get install -y terraform
+else
+  echo "Installing Terraform version $${TERRAFORM_VERSION}..."
+  sudo apt-get install -y "terraform=$${TERRAFORM_VERSION}-*"
+fi
+
+# Install tflint
+echo "Installing tflint..."
+curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | sudo bash
+
+# Verify installations
+if command -v terraform &> /dev/null && command -v tflint &> /dev/null; then
+  echo "Terraform tools installed successfully:"
+  terraform version
+  tflint --version
+else
+  echo "ERROR: Terraform tools installation failed"
+  exit 1
+fi

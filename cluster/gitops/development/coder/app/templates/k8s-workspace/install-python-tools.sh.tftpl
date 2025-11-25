@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing Python tools (uv and uvx)..."
+
+# Download latest uv tarball
+cd /tmp
+wget -q https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz
+
+# Extract to /usr/local/bin (global installation)
+sudo tar xf uv-x86_64-unknown-linux-gnu.tar.gz --strip-components=1 -C /usr/local/bin \
+  uv-x86_64-unknown-linux-gnu/uv uv-x86_64-unknown-linux-gnu/uvx
+
+# Clean up
+rm uv-x86_64-unknown-linux-gnu.tar.gz
+
+# Verify installation
+if command -v uv &> /dev/null && command -v uvx &> /dev/null; then
+  echo "Python tools installed successfully:"
+  uv --version
+  uvx --version
+else
+  echo "ERROR: Python tools installation failed"
+  exit 1
+fi

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing Helm..."
+
+# Install prerequisites
+sudo apt-get update
+sudo apt-get install -y curl gpg apt-transport-https
+
+# Add Helm GPG key
+curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey | \
+  gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+
+# Add Helm repository
+echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main" | \
+  sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+
+# Update and install Helm
+sudo apt-get update
+sudo apt-get install -y helm
+
+# Verify installation
+if command -v helm &> /dev/null; then
+  echo "Helm installed successfully:"
+  helm version
+else
+  echo "ERROR: Helm installation failed"
+  exit 1
+fi

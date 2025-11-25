@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+NODE_VERSION="${NODE_VERSION}"
+: "$${NODE_VERSION:?NODE_VERSION is not set}"
+
+echo "Installing Node.js version $${NODE_VERSION}..."
+
+if [ "$${NODE_VERSION}" = "latest" ]; then
+  # Install latest LTS version via tarball
+  # Get the latest LTS version number
+  LATEST_NODE=$(curl -sL https://nodejs.org/dist/index.json | grep -oP '"version":"v\K[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+  echo "Latest Node.js LTS version: v$${LATEST_NODE}"
+
+  cd /tmp
+  wget -q "https://nodejs.org/dist/v$${LATEST_NODE}/node-v$${LATEST_NODE}-linux-x64.tar.xz"
+
+  # Extract to /usr/local (strip the top-level directory)
+  sudo tar --strip-components 1 -xf "node-v$${LATEST_NODE}-linux-x64.tar.xz" --directory /usr/local
+
+  # Clean up
+  rm "node-v$${LATEST_NODE}-linux-x64.tar.xz"
+else
+  # Install specific version from NodeSource PPA
+  curl -fsSL "https://deb.nodesource.com/setup_$${NODE_VERSION}.x" | sudo -E bash -
+  sudo apt-get install -y nodejs
+fi
+
+# Verify installation
+if command -v node &> /dev/null && command -v npm &> /dev/null; then
+  echo "Node.js installed successfully:"
+  node --version
+  npm --version
+  npx --version
+else
+  echo "ERROR: Node.js installation failed"
+  exit 1
+fi
