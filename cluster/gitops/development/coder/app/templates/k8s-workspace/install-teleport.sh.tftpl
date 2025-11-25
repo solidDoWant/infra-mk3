@@ -3,12 +3,13 @@ set -euo pipefail
 
 echo "Installing Teleport (tsh)..."
 
-# Download and install Teleport GPG key
-sudo curl -fsSL https://deb.releases.teleport.dev/teleport-pubkey.asc \
-  -o /usr/share/keyrings/teleport-archive-keyring.asc
+# Create keyrings directory and download GPG key
+sudo mkdir -p /etc/apt/keyrings
+sudo curl -fsSL https://apt.releases.teleport.dev/gpg \
+  -o /etc/apt/keyrings/teleport-archive-keyring.asc
 
 # Add Teleport repository
-echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] https://apt.releases.teleport.dev/ubuntu noble stable" | \
+echo "deb [signed-by=/etc/apt/keyrings/teleport-archive-keyring.asc] https://apt.releases.teleport.dev/ubuntu noble stable/v18" | \
   sudo tee /etc/apt/sources.list.d/teleport.list
 
 # Update and install Teleport
@@ -16,10 +17,10 @@ sudo apt-get update
 sudo apt-get install -y teleport
 
 # Verify installation
-if command -v tsh &> /dev/null; then
-  echo "Teleport installed successfully:"
-  tsh version
-else
+if ! command -v tsh &> /dev/null; then
   echo "ERROR: Teleport installation failed"
   exit 1
 fi
+
+echo "Teleport installed successfully:"
+tsh version

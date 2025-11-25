@@ -1,16 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Flux CLI..."
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+FLUX_VERSION="${FLUX_VERSION}"
+: "$${FLUX_VERSION:?FLUX_VERSION is not set}"
 
-# Install using official install script
-curl -s https://fluxcd.io/install.sh | sudo bash
+echo "Installing Flux CLI version $${FLUX_VERSION}..."
+
+# Download from GitHub releases
+cd /tmp
+wget -q "https://github.com/fluxcd/flux2/releases/download/v$${FLUX_VERSION}/flux_$${FLUX_VERSION}_linux_amd64.tar.gz"
+
+# Extract and install
+tar -xzf "flux_$${FLUX_VERSION}_linux_amd64.tar.gz"
+sudo mv flux /usr/local/bin/flux
+sudo chmod +x /usr/local/bin/flux
+
+# Clean up
+rm "flux_$${FLUX_VERSION}_linux_amd64.tar.gz"
 
 # Verify installation
-if command -v flux &> /dev/null; then
-  echo "Flux installed successfully:"
-  flux --version
-else
+if ! command -v flux &> /dev/null; then
   echo "ERROR: Flux installation failed"
   exit 1
 fi
+
+echo "Flux installed successfully:"
+flux --version

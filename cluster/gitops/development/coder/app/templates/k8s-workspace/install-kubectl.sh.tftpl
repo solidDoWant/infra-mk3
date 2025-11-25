@@ -8,28 +8,27 @@ KUBECTL_VERSION="${KUBECTL_VERSION}"
 
 echo "Installing kubectl version $${KUBECTL_VERSION}..."
 
-# Install prerequisites
-sudo apt-get update
-sudo apt-get install -y apt-transport-https ca-certificates curl
+# Download binary from dl.k8s.io
+cd /tmp
+wget -q "https://dl.k8s.io/release/v$${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
 
-# Add Kubernetes GPG key
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$${KUBECTL_VERSION}/deb/Release.key" | \
-  sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# Download checksum
+wget -q "https://dl.k8s.io/release/v$${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
 
-# Add Kubernetes repository
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$${KUBECTL_VERSION}/deb/ /" | \
-  sudo tee /etc/apt/sources.list.d/kubernetes.list
+# Verify checksum
+echo "$$(cat kubectl.sha256) kubectl" | sha256sum --check
 
-# Update and install kubectl
-sudo apt-get update
-sudo apt-get install -y kubectl
+# Install to /usr/local/bin
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# Clean up
+rm kubectl kubectl.sha256
 
 # Verify installation
-if command -v kubectl &> /dev/null; then
-  echo "kubectl installed successfully:"
-  kubectl version --client
-else
+if ! command -v kubectl &> /dev/null; then
   echo "ERROR: kubectl installation failed"
   exit 1
 fi
+
+echo "kubectl installed successfully:"
+kubectl version --client

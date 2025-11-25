@@ -1,29 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Helm..."
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+HELM_VERSION="${HELM_VERSION}"
+: "$${HELM_VERSION:?HELM_VERSION is not set}"
 
-# Install prerequisites
-sudo apt-get update
-sudo apt-get install -y curl gpg apt-transport-https
+echo "Installing Helm version $${HELM_VERSION}..."
 
-# Add Helm GPG key
-curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey | \
-  gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+# Download from get.helm.sh
+cd /tmp
+wget -q "https://get.helm.sh/helm-v$${HELM_VERSION}-linux-amd64.tar.gz"
 
-# Add Helm repository
-echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main" | \
-  sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+# Extract
+tar -xzf "helm-v$${HELM_VERSION}-linux-amd64.tar.gz"
 
-# Update and install Helm
-sudo apt-get update
-sudo apt-get install -y helm
+# Install to /usr/local/bin
+sudo mv linux-amd64/helm /usr/local/bin/helm
+sudo chmod +x /usr/local/bin/helm
+
+# Clean up
+rm -rf linux-amd64 "helm-v$${HELM_VERSION}-linux-amd64.tar.gz"
 
 # Verify installation
-if command -v helm &> /dev/null; then
-  echo "Helm installed successfully:"
-  helm version
-else
+if ! command -v helm &> /dev/null; then
   echo "ERROR: Helm installation failed"
   exit 1
 fi
+
+echo "Helm installed successfully:"
+helm version

@@ -9,35 +9,31 @@ GO_VERSION="${GO_VERSION}"
 echo "Installing Go version $${GO_VERSION}..."
 
 if [ "$${GO_VERSION}" = "latest" ]; then
-  # Install latest version from go.dev
-  LATEST_GO=$(curl -sL 'https://go.dev/VERSION?m=text' | head -n1)
+  # Get latest version from go.dev
+  LATEST_GO=$$(curl -sL 'https://go.dev/VERSION?m=text' | head -n1)
   echo "Latest Go version: $${LATEST_GO}"
-
-  cd /tmp
-  wget -q "https://go.dev/dl/$${LATEST_GO}.linux-amd64.tar.gz"
-
-  # Remove any existing Go installation
-  sudo rm -rf /usr/local/go
-
-  # Extract to /usr/local
-  sudo tar -C /usr/local -xzf "$${LATEST_GO}.linux-amd64.tar.gz"
-  rm "$${LATEST_GO}.linux-amd64.tar.gz"
-
-  # Add to PATH via /etc/profile.d
-  echo 'export PATH=$$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh > /dev/null
-  sudo chmod +x /etc/profile.d/go.sh
-
-  # Make available immediately
-  export PATH=$$PATH:/usr/local/go/bin
+  GO_DOWNLOAD="$${LATEST_GO}"
 else
-  # Install specific version from apt
-  sudo apt-get update
-  sudo apt-get install -y "golang-$${GO_VERSION}"
-
-  # Create symlink to make it the default
-  sudo ln -sf "/usr/lib/go-$${GO_VERSION}/bin/go" /usr/local/bin/go
-  sudo ln -sf "/usr/lib/go-$${GO_VERSION}/bin/gofmt" /usr/local/bin/gofmt
+  GO_DOWNLOAD="go$${GO_VERSION}"
 fi
+
+# Download from go.dev
+cd /tmp
+wget -q "https://go.dev/dl/$${GO_DOWNLOAD}.linux-amd64.tar.gz"
+
+# Remove any existing Go installation
+sudo rm -rf /usr/local/go
+
+# Extract to /usr/local
+sudo tar -C /usr/local -xzf "$${GO_DOWNLOAD}.linux-amd64.tar.gz"
+rm "$${GO_DOWNLOAD}.linux-amd64.tar.gz"
+
+# Add to PATH via /etc/profile.d
+echo 'export PATH=$$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh > /dev/null
+sudo chmod +x /etc/profile.d/go.sh
+
+# Make available immediately
+export PATH=$$PATH:/usr/local/go/bin
 
 # Verify installation
 if command -v go &> /dev/null; then

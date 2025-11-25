@@ -4,7 +4,7 @@
 # Parameter ordering
 locals {
   tools_order_start = local.repo_setup_order_start + local.repo_setup_size
-  tools_size        = 17 # Total number of tool parameters
+  tools_size        = 23 # Total number of tool parameters
 }
 
 # ============================================================================
@@ -344,7 +344,36 @@ data "coder_parameter" "enable_flux" {
 }
 
 locals {
-  flux_enable_order = local.kubectl_version_order + 1
+  flux_enable_order  = local.kubectl_version_order + 1
+  flux_version_order = local.flux_enable_order + 1
+}
+
+data "coder_parameter" "flux_version" {
+  type         = "string"
+  name         = "flux_version"
+  display_name = "Flux Version"
+  default      = "2.7.4"
+  description  = "The version of Flux to install"
+  mutable      = false
+  icon         = "/icon/k8s.svg"
+  order        = local.flux_version_order
+
+  option {
+    name  = "2.7.4"
+    value = "2.7.4"
+  }
+  option {
+    name  = "2.7.3"
+    value = "2.7.3"
+  }
+  option {
+    name  = "2.7.2"
+    value = "2.7.2"
+  }
+  option {
+    name  = "2.7.1"
+    value = "2.7.1"
+  }
 }
 
 resource "coder_script" "install_flux" {
@@ -356,7 +385,9 @@ resource "coder_script" "install_flux" {
   start_blocks_login = false
   timeout            = 300
 
-  script = templatefile("./install-flux.sh.tftpl", {})
+  script = templatefile("./install-flux.sh.tftpl", {
+    FLUX_VERSION = data.coder_parameter.flux_version.value
+  })
 }
 
 # ============================================================================
@@ -376,7 +407,36 @@ data "coder_parameter" "enable_helm" {
 }
 
 locals {
-  helm_enable_order = local.flux_enable_order + 1
+  helm_enable_order  = local.flux_version_order + 1
+  helm_version_order = local.helm_enable_order + 1
+}
+
+data "coder_parameter" "helm_version" {
+  type         = "string"
+  name         = "helm_version"
+  display_name = "Helm Version"
+  default      = "4.0.1"
+  description  = "The version of Helm to install"
+  mutable      = false
+  icon         = "/icon/k8s.svg"
+  order        = local.helm_version_order
+
+  option {
+    name  = "4.0.1"
+    value = "4.0.1"
+  }
+  option {
+    name  = "4.0.0"
+    value = "4.0.0"
+  }
+  option {
+    name  = "3.19.2"
+    value = "3.19.2"
+  }
+  option {
+    name  = "3.19.1"
+    value = "3.19.1"
+  }
 }
 
 resource "coder_script" "install_helm" {
@@ -388,7 +448,9 @@ resource "coder_script" "install_helm" {
   start_blocks_login = false
   timeout            = 300
 
-  script = templatefile("./install-helm.sh.tftpl", {})
+  script = templatefile("./install-helm.sh.tftpl", {
+    HELM_VERSION = data.coder_parameter.helm_version.value
+  })
 }
 
 # ============================================================================
@@ -408,7 +470,7 @@ data "coder_parameter" "enable_krew" {
 }
 
 locals {
-  krew_enable_order = local.helm_enable_order + 1
+  krew_enable_order = local.helm_version_order + 1
 }
 
 resource "coder_script" "install_krew" {
@@ -440,7 +502,65 @@ data "coder_parameter" "enable_talos_tools" {
 }
 
 locals {
-  talos_tools_enable_order = local.krew_enable_order + 1
+  talos_tools_enable_order      = local.krew_enable_order + 1
+  talosctl_version_order        = local.talos_tools_enable_order + 1
+  talhelper_version_order       = local.talosctl_version_order + 1
+}
+
+data "coder_parameter" "talosctl_version" {
+  type         = "string"
+  name         = "talosctl_version"
+  display_name = "Talosctl Version"
+  default      = "1.11.5"
+  description  = "The version of talosctl to install"
+  mutable      = false
+  icon         = "/icon/k8s.svg"
+  order        = local.talosctl_version_order
+
+  option {
+    name  = "1.11.5"
+    value = "1.11.5"
+  }
+  option {
+    name  = "1.10.8"
+    value = "1.10.8"
+  }
+  option {
+    name  = "1.11.4"
+    value = "1.11.4"
+  }
+  option {
+    name  = "1.11.3"
+    value = "1.11.3"
+  }
+}
+
+data "coder_parameter" "talhelper_version" {
+  type         = "string"
+  name         = "talhelper_version"
+  display_name = "Talhelper Version"
+  default      = "3.0.41"
+  description  = "The version of talhelper to install"
+  mutable      = false
+  icon         = "/icon/k8s.svg"
+  order        = local.talhelper_version_order
+
+  option {
+    name  = "3.0.41"
+    value = "3.0.41"
+  }
+  option {
+    name  = "3.0.40"
+    value = "3.0.40"
+  }
+  option {
+    name  = "3.0.39"
+    value = "3.0.39"
+  }
+  option {
+    name  = "3.0.38"
+    value = "3.0.38"
+  }
 }
 
 resource "coder_script" "install_talos_tools" {
@@ -452,7 +572,10 @@ resource "coder_script" "install_talos_tools" {
   start_blocks_login = false
   timeout            = 300
 
-  script = templatefile("./install-talos-tools.sh.tftpl", {})
+  script = templatefile("./install-talos-tools.sh.tftpl", {
+    TALOSCTL_VERSION  = data.coder_parameter.talosctl_version.value
+    TALHELPER_VERSION = data.coder_parameter.talhelper_version.value
+  })
 }
 
 # ============================================================================
@@ -472,8 +595,9 @@ data "coder_parameter" "enable_terraform_tools" {
 }
 
 locals {
-  terraform_tools_enable_order  = local.talos_tools_enable_order + 1
-  terraform_tools_version_order = local.terraform_tools_enable_order + 1
+  terraform_tools_enable_order  = local.talhelper_version_order + 1
+  terraform_version_order       = local.terraform_tools_enable_order + 1
+  tflint_version_order          = local.terraform_version_order + 1
 }
 
 data "coder_parameter" "terraform_version" {
@@ -484,7 +608,7 @@ data "coder_parameter" "terraform_version" {
   description  = "The version of Terraform to install"
   mutable      = false
   icon         = "/icon/gateway.svg"
-  order        = local.terraform_tools_version_order
+  order        = local.terraform_version_order
 
   option {
     name  = "Latest"
@@ -504,6 +628,34 @@ data "coder_parameter" "terraform_version" {
   }
 }
 
+data "coder_parameter" "tflint_version" {
+  type         = "string"
+  name         = "tflint_version"
+  display_name = "tflint Version"
+  default      = "0.60.0"
+  description  = "The version of tflint to install"
+  mutable      = false
+  icon         = "/icon/gateway.svg"
+  order        = local.tflint_version_order
+
+  option {
+    name  = "0.60.0"
+    value = "0.60.0"
+  }
+  option {
+    name  = "0.59.1"
+    value = "0.59.1"
+  }
+  option {
+    name  = "0.58.1"
+    value = "0.58.1"
+  }
+  option {
+    name  = "0.57.0"
+    value = "0.57.0"
+  }
+}
+
 resource "coder_script" "install_terraform_tools" {
   count              = data.coder_parameter.enable_terraform_tools.value ? 1 : 0
   agent_id           = coder_agent.main.id
@@ -515,6 +667,7 @@ resource "coder_script" "install_terraform_tools" {
 
   script = templatefile("./install-terraform-tools.sh.tftpl", {
     TERRAFORM_VERSION = data.coder_parameter.terraform_version.value
+    TFLINT_VERSION    = data.coder_parameter.tflint_version.value
   })
 }
 
@@ -535,7 +688,7 @@ data "coder_parameter" "enable_postgresql" {
 }
 
 locals {
-  postgresql_enable_order = local.terraform_tools_version_order + 1
+  postgresql_enable_order = local.tflint_version_order + 1
 }
 
 resource "coder_script" "install_postgresql" {

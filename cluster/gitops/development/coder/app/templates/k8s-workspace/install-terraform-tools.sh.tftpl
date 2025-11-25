@@ -6,8 +6,13 @@ set -euo pipefail
 TERRAFORM_VERSION="${TERRAFORM_VERSION}"
 : "$${TERRAFORM_VERSION:?TERRAFORM_VERSION is not set}"
 
+# shellcheck disable=SC2269
+TFLINT_VERSION="${TFLINT_VERSION}"
+: "$${TFLINT_VERSION:?TFLINT_VERSION is not set}"
+
 echo "Installing Terraform tools..."
 
+# Install Terraform via HashiCorp APT repository
 # Add HashiCorp GPG key
 wget -O- https://apt.releases.hashicorp.com/gpg | \
   sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -28,16 +33,20 @@ else
   sudo apt-get install -y "terraform=$${TERRAFORM_VERSION}-*"
 fi
 
-# Install tflint
-echo "Installing tflint..."
-curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | sudo bash
+# Install tflint from GitHub releases
+echo "Installing tflint version $${TFLINT_VERSION}..."
+cd /tmp
+wget -q "https://github.com/terraform-linters/tflint/releases/download/v$${TFLINT_VERSION}/tflint_linux_amd64.zip"
+unzip -q tflint_linux_amd64.zip
+sudo install -o root -g root -m 0755 tflint /usr/local/bin/tflint
+rm tflint tflint_linux_amd64.zip
 
 # Verify installations
-if command -v terraform &> /dev/null && command -v tflint &> /dev/null; then
-  echo "Terraform tools installed successfully:"
-  terraform version
-  tflint --version
-else
+if ! command -v terraform &> /dev/null || ! command -v tflint &> /dev/null; then
   echo "ERROR: Terraform tools installation failed"
   exit 1
 fi
+
+echo "Terraform tools installed successfully:"
+terraform version
+tflint --version

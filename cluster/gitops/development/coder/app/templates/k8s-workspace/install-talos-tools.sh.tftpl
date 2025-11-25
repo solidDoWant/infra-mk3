@@ -1,22 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Talos tools (talosctl and talhelper)..."
+# Convert Terraform variables to bash variables
+# shellcheck disable=SC2269
+TALOSCTL_VERSION="${TALOSCTL_VERSION}"
+: "$${TALOSCTL_VERSION:?TALOSCTL_VERSION is not set}"
+
+# shellcheck disable=SC2269
+TALHELPER_VERSION="${TALHELPER_VERSION}"
+: "$${TALHELPER_VERSION:?TALHELPER_VERSION is not set}"
+
+echo "Installing Talos tools..."
 
 # Install talosctl
-echo "Installing talosctl..."
-curl -sL https://talos.dev/install | sudo sh
+echo "Installing talosctl version $${TALOSCTL_VERSION}..."
+cd /tmp
+wget -q "https://github.com/siderolabs/talos/releases/download/v$${TALOSCTL_VERSION}/talosctl-linux-amd64"
+sudo install -o root -g root -m 0755 talosctl-linux-amd64 /usr/local/bin/talosctl
+rm talosctl-linux-amd64
 
 # Install talhelper
-echo "Installing talhelper..."
-curl -sL https://i.jpillora.com/talhelper | sudo bash
+echo "Installing talhelper version $${TALHELPER_VERSION}..."
+wget -q "https://github.com/budimanjojo/talhelper/releases/download/v$${TALHELPER_VERSION}/talhelper_linux_amd64.tar.gz"
+tar -xzf talhelper_linux_amd64.tar.gz
+sudo install -o root -g root -m 0755 talhelper /usr/local/bin/talhelper
+rm talhelper talhelper_linux_amd64.tar.gz
 
 # Verify installations
-if command -v talosctl &> /dev/null && command -v talhelper &> /dev/null; then
-  echo "Talos tools installed successfully:"
-  talosctl version --client
-  talhelper --version
-else
+if ! command -v talosctl &> /dev/null || ! command -v talhelper &> /dev/null; then
   echo "ERROR: Talos tools installation failed"
   exit 1
 fi
+
+echo "Talos tools installed successfully:"
+talosctl version --client
+talhelper --version
