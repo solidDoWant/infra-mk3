@@ -8,10 +8,10 @@ sudo apt-get update
 sudo apt-get install -y postgresql-client
 
 # Verify installation
-if command -v psql &> /dev/null; then
-  echo "PostgreSQL client installed successfully:"
-  psql --version
-else
+if ! command -v psql &> /dev/null; then
   echo "ERROR: PostgreSQL client installation failed"
   exit 1
 fi
+
+echo "PostgreSQL client installed successfully:"
+psql --version

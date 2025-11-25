@@ -22,10 +22,10 @@ sudo chmod +x /etc/profile.d/krew.sh
 export PATH="$${KREW_ROOT:-$$HOME/.krew}/bin:$$PATH"
 
 # Verify installation
-if kubectl krew version &> /dev/null; then
-  echo "Krew installed successfully:"
-  kubectl krew version
-else
+if ! kubectl krew version &> /dev/null; then
   echo "ERROR: Krew installation failed"
   exit 1
 fi
+
+echo "Krew installed successfully:"
+kubectl krew version

@@ -28,12 +28,12 @@ sudo apt-get update
 sudo apt-get install -y docker-ce-cli docker-buildx-plugin docker-compose-plugin
 
 # Verify installation
-if command -v docker &> /dev/null; then
-  echo "Docker CLI tools installed successfully:"
-  docker --version
-  docker buildx version
-  docker compose version
-else
+if ! command -v docker &> /dev/null; then
   echo "ERROR: Docker CLI installation failed"
   exit 1
 fi
+
+echo "Docker CLI tools installed successfully:"
+docker --version
+docker buildx version
+docker compose version
