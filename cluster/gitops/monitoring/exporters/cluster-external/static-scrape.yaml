@@ -2,7 +2,7 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMStaticScrape
 metadata:
-  name: external-hosts
+  name: external-hosts-node-exporter
   labels:
     app.kubernetes.io/name: node-exporter
     app.kubernetes.io/instance: external-hosts
@@ -41,3 +41,31 @@ spec:
           if: '{__address__="10.4.0.128:9100"}'
           target_label: instance
           replacement: ubuntu-development-01
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: external-hosts-smartctl-exporter
+  labels:
+    app.kubernetes.io/name: smartctl-exporter
+    app.kubernetes.io/instance: external-hosts
+    app.kubernetes.io/component: monitoring
+spec:
+  jobName: smartctl-exporter
+  targetEndpoints:
+    - targets:
+        - 10.2.2.1:9633 # proxmox-vm-host-01
+        - 10.2.3.1:9633 # ubuntu-storage-host-01
+      interval: 1m
+      scrapeTimeout: 10s
+      # This is the only way to relabel the instances with hostname
+      # until I setup DNS for non-k8s nodes.
+      relabelConfigs:
+        - action: replace
+          if: '{__address__="10.2.2.1:9633"}'
+          target_label: instance
+          replacement: proxmox-vm-host-01
+        - action: replace
+          if: '{__address__="10.2.3.1:9633"}'
+          target_label: instance
+          replacement: ubuntu-storage-host-01

@@ -50,3 +50,155 @@
         name: prometheus-node-exporter-nvme.timer
         enabled: false
         state: stopped
+- name: smartctl exporter
+  block:
+    - name: Install smartmontools
+      ansible.builtin.apt:
+        name:
+          - smartmontools
+        state: latest
+        update_cache: true
+        cache_valid_time: 600
+        autoclean: true
+        autoremove: true
+    - name: Install smartctl exporter via GitHub release
+      vars:
+        smartctl_exporter_version: 0.14.0
+      block:
+        - name: Create temporary directory for smartctl exporter download 
+          ansible.builtin.tempfile:
+            state: directory
+            prefix: smartctl-exporter-download-
+          notify:
+            - Cleanup the smartctl exporter temporary directory
+          register: temp_smartctl_exporter_dir
+        - name: Download smartctl exporter tarball
+          ansible.builtin.get_url:
+            url: https://github.com/prometheus-community/smartctl_exporter/releases/download/v{{ smartctl_exporter_version }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-amd64.tar.gz
+            dest: "{{ temp_smartctl_exporter_dir.path }}/smartctl_exporter.tar.gz"
+            mode: '0644'
+        - name: Extract smartctl exporter binary
+          ansible.builtin.unarchive:
+            src: "{{ temp_smartctl_exporter_dir.path }}/smartctl_exporter.tar.gz"
+            dest: "{{ temp_smartctl_exporter_dir.path }}"
+            remote_src: true
+        - name: Install smartctl exporter binary
+          ansible.builtin.copy:
+            src: "{{ temp_smartctl_exporter_dir.path }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-amd64/smartctl_exporter"
+            dest: /usr/local/bin/smartctl_exporter
+            owner: root
+            group: root
+            mode: '0755'
+    - name: Create systemd service for smartctl exporter
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/smartctl_exporter.service
+        content: |
+          [Unit]
+          Description=Smartctl Exporter
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          PIDFile=/run/smartctl_exporter.pid
+          ExecStart=/usr/local/bin/smartctl_exporter --web.listen-address={{ listening_address }}:9633
+          User=root
+          Group=root
+          SyslogIdentifier=smartctl_exporter
+          Restart=on-failure
+          RemainAfterExit=no
+          RestartSec=100ms
+          StandardOutput=journal
+          StandardError=journal
+
+          [Install]
+          WantedBy=multi-user.target
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Enable and start smartctl exporter service
+      ansible.builtin.systemd:
+        name: smartctl_exporter
+        enabled: true
+        state: started
+- name: Setup SMART monitoring via smartd
+  block:
+    - name: Override smartd ConditionVirtualization so that physical drives are monitored
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/smartd.service.d/override.conf
+        content: |
+          [Unit]
+          ConditionVirtualization=
+        owner: root
+        group: root
+        mode: 0644
+        directory_mode: 0755
+    - name: Gather unique physical disks for SMART testing
+      ansible.builtin.shell: |
+        set -euo pipefail
+        # Use smartctl --scan to find all SMART-capable devices
+        # Use WWN or serial to identify unique physical disks and avoid testing the same disk twice
+        declare -A seen_ids
+        while IFS= read -r line; do
+          # Extract device path (first field) and device type flag if present
+          dev=$(echo "$line" | awk '{print $1}')
+          dev_type=$(echo "$line" | grep -oE -- '-d [^ ]+' || true)
+          
+          [[ -z "$dev" ]] && continue
+          
+          # Get smartctl info for this device
+          info=$(smartctl -i $dev_type "$dev" 2>/dev/null || true)
+          
+          # Get the WWN, logical unit ID, or serial number to identify unique physical disks
+          # Try multiple patterns as different drives report differently
+          disk_id=$(echo "$info" | grep -iE "^(LU WWN Device Id|Logical Unit id|Serial [Nn]umber):" | head -1 | sed 's/.*:\s*//' || true)
+          
+          # If we can't get an ID, use the device path itself
+          if [[ -z "$disk_id" ]]; then
+            disk_id="$dev"
+          fi
+          
+          # Skip if we've already seen this physical disk
+          [[ -n "${seen_ids[$disk_id]:-}" ]] && continue
+          seen_ids[$disk_id]=1
+          
+          # Output device path and type flag (if any) for smartd config
+          echo "$dev $dev_type"
+        done < <(smartctl --scan)
+      args:
+        executable: /bin/bash
+      register: smart_capable_disks
+      changed_when: false
+    - name: Configure smartd to run short and long tests on all drives
+      ansible.builtin.copy:
+        dest: /etc/smartd.conf
+        content: |
+          # Smartd configuration - auto-generated by Ansible
+          # Do not edit manually
+          
+          # DEVICESCAN is disabled to allow explicit device configuration
+          # with scheduled self-tests
+          
+          # -a: Monitor all SMART attributes
+          # -o on: Enable automatic offline testing
+          # -S on: Enable attribute autosave
+          # -s: Schedule self-tests
+          #   S/../.././02: Short test every day at 2am
+          #   L/../../6/03: Long test every Saturday at 3am
+          # -m root: Mail alerts to root
+          # -M exec /usr/share/smartmontools/smartd-runner: Run smartd-runner on alerts
+          {% for disk in smart_capable_disks.stdout_lines %}
+          {{ disk }} -a -o on -S on -s (S/../.././02|L/../../6/03) -m root -M exec /usr/share/smartmontools/smartd-runner
+          {% endfor %}
+        owner: root
+        group: root
+        mode: 0644
+      register: smartd_config
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+    - name: Restart smartd service
+      ansible.builtin.systemd:
+        name: smartd
+        enabled: true
+        state: restarted
+      when: smartd_config.changed

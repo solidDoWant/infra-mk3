@@ -1,0 +1,5 @@
+---
+- name: Cleanup the smartctl exporter temporary directory
+  ansible.builtin.file:
+    path: "{{ temp_smartctl_exporter_dir.path }}"
+    state: absent
