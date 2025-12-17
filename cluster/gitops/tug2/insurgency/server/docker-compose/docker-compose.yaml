@@ -10,7 +10,7 @@ services:
   tug2-insurgency-main:
     depends_on:
       - envoy
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.84-dev
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.85-dev
     pull_policy: always
     environment:
       - PORT=27000
