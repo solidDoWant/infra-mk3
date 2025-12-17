@@ -37,6 +37,8 @@ spec:
                   virtiofs: {}
                 - name: insurgency-postgres-insurgency-user
                   virtiofs: {}
+                - name: discord-webhook
+                  virtiofs: {}
               disks:
                 - name: rootfs
                   disk:
@@ -68,6 +70,9 @@ spec:
             - name: insurgency-postgres-insurgency-user
               secret:
                 secretName: insurgency-postgres-insurgency-user
+            - name: discord-webhook
+              secret:
+                secretName: insurgency-server-discord-webhook
             - name: cloudinit
               cloudInitNoCloud:
                 userData: |

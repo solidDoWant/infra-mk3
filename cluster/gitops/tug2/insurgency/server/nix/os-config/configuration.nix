@@ -79,6 +79,16 @@ in
         "nofail"
       ];
     };
+
+    # Mount the Discord webhook secret into the VM
+    "/mnt/discord-webhook" = {
+      device = "discord-webhook";
+      fsType = "virtiofs";
+      options = [
+        "ro"
+        "nofail"
+      ];
+    };
   };
 
   environment = {

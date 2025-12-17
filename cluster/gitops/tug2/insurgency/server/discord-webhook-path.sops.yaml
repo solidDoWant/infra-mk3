@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: insurgency-server-discord-webhook
+type: Opaque
+stringData:
+  webhookUrl: ENC[AES256_GCM,data:sbuXSDaGxWjkTSq9/62XgJPyhle5gRQthIJjZbGt01oI8Qn5fVK4mhsfB4sWO/Q+N09G6LX5k3QShBlrQcMxMMfGYUK/7i1b1uoF75qqX59LW+VYK/OSpB1XZD2pC0h83WxvR3d9hDroV0URDWt/IyIzaYMiMNSIoQ==,iv:qpPwJqL4Z2ArWwEYNo8W45iH3r89f2+oq0wyR5ISY9Q=,tag:eg2CaiZWg2CKU7PhKpPWRg==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAxRS9ic0tVZUNLWHhPNmhj
+        ak5FbzdjS2J5NWJQc3RWZ3ZiSW4zTVJub2pJCnVER0llbG9ZWHJaekUwTCtCdTFW
+        QWU2MXZWR2F3TEVMdmdUcUljalpuYk0KLS0tIEdNNkNQU2VJcThodUZaVVFxZXdB
+        WXlTbWsrMlRGRGRHeklBR1lSblMvZ1kKMzK5QPZd76oco10ks6UomYh/U0ipAldd
+        DhS0Wfy9Ld1XeHchZqCAP6UkoClpJq+zzRJMAUoHMmgKcRVuRLINqg==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA2NitUeWw3NE84WDIrOWw1
+        WE5sR0ViZTRFdUR3UXNVT2o1cDJueGZIVkJzCkkvV2hvQUVmMXo5cmMyQzh4S1cr
+        S1dyWUhWeWZkbUx4QXlnNCtlNTArNlEKLS0tIHp2VTNtbnZ1VEo2cEt0c29wVkh5
+        Ni9tbng2cWJ3WHBsRWFBdGxucE9TMjgK9JsZkrdhA4edogYoD+7gYcy4JCLGpzKm
+        BGjaSHmy9ctBmBHz9KzSVlGSakN9c+7zkWoQCrO4ZRrXCAgzrRlDOg==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2025-12-17T04:08:37Z"
+  mac: ENC[AES256_GCM,data:3Xb13onXgOB7V8tLe2/eJJQa7XpxH3DDfqIYD2MikqfWENkjOuWaeDzg7cA1+5HQxrOKg931VHFo5cpkac8yTmPbt2e4PLymdvJyGpd8JS/EEWFsWvqfEYsP8NpzNby9GORDjqXjzOKJh9bPhPgqxL4F21iHOp4eFnhi29j/qXQ=,iv:8vGZhpphBAPenE5EL90KZVmYmGXPz6cmJYZR3+nIhtc=,tag:ln7J1Kxf7dGdMoLgb7JIyA==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0
