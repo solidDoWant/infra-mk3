@@ -130,10 +130,9 @@ static_resources:
                       domains: ["*"]
                       routes:
                         - match:
-                            path: /discord-webhook
+                            prefix: /
                           route:
                             cluster: discord_cluster
-                            # The path will be rewritten by the Lua filter below
                             auto_host_rewrite: true
                 http_filters:
                   - name: envoy.filters.http.lua
@@ -184,6 +183,8 @@ static_resources:
                               else
                                 request_handle:respond({[":status"] = "500"}, "Webhook path not configured")
                               end
+                            else
+                              request_handle:respond({[":status"] = "404"}, "Not found")
                             end
                           end
                   - name: envoy.filters.http.router

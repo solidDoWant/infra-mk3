@@ -10,7 +10,7 @@ services:
   tug2-insurgency-main:
     depends_on:
       - envoy
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.85-dev
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.93-dev.migration
     pull_policy: always
     environment:
       - PORT=27000
@@ -45,6 +45,8 @@ services:
       # Mount TLS certs for Postgres connections
       - /mnt/postgres:/mnt/postgres:ro
       - /mnt/root-ca:/mnt/root-ca:ro
+      # Mount the Discord webhook secret
+      - /mnt/discord-webhook:/mnt/discord-webhook:ro
       # Mount the Envoy config files
       - /mnt/docker-compose/envoy-config.yaml:/etc/envoy/envoy.yaml:ro
       - /mnt/docker-compose/postgres-client-cert-sds.yaml:/etc/envoy/postgres-client-cert-sds.yaml:ro
@@ -52,6 +54,7 @@ services:
     ports:
       - "8000:8000" # Admin interface
       - "5432:5432" # Postgres listener
+      - "80:80" # Discord webhook proxy
     networks:
       - insurgency-net
     # Do not run as root (envoy doesn't like this despite being UID 0 by default in the container)
