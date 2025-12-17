@@ -17,6 +17,8 @@ spec:
       template:
         metadata:
           labels: *labels
+          annotations:
+            k8tz.io/inject: "false"
         spec:
           domain:
             cpu:
