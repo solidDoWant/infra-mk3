@@ -67,9 +67,11 @@ specs:
               - port: "27018"
                 endPort: 27036
                 protocol: TCP
-      # To Let's Encrypt to get CRLs
       - toFQDNs:
+          # To Let's Encrypt to get CRLs
           - matchPattern: "*.c.lencr.org"
+          # To digicert to get CRLs
+          - matchPattern: "*.digicert.com"
         toPorts:
           - ports:
               - port: "80"
