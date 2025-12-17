@@ -92,6 +92,13 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+      # Access to Discord for webhook notifications
+      - toFQDNs:
+          - matchPattern: "discord.com"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
     ingress:
       # Host for bootstrapping
       - fromEntities:
