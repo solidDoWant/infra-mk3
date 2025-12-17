@@ -10,6 +10,7 @@ spec:
       featureGates:
         - EnableVirtioFsConfigVolumes
         - EnableVirtioFsStorageVolumes
+        - CPUManager
     evictionStrategy: LiveMigrate
     migrations:
       allowAutoConverge: true
