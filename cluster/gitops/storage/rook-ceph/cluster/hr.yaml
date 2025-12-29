@@ -125,16 +125,16 @@ spec:
           enabled: true
           crushLocationLabels:
             - topology.rook.io/chassis
-    resources:
-      osd:
-        requests:
-          cpu: 500m
-      mon:
-        requests:
-          cpu: 100m
-      logcollector:
-        requests:
-          cpu: 10m
+      resources:
+        osd:
+          requests:
+            cpu: 500m
+        mon:
+          requests:
+            cpu: 100m
+        logcollector:
+          requests:
+            cpu: 10m
     cephBlockPools:
       - name: ssd-replicated-3x
         spec:
