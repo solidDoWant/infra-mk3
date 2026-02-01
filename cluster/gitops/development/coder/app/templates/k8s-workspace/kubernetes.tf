@@ -97,7 +97,7 @@ data "coder_parameter" "memory" {
 
   validation {
     min = 2
-    max = 8
+    max = 16
   }
 }
 
