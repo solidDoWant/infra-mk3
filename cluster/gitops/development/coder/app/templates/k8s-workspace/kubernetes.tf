@@ -323,6 +323,7 @@ resource "kubectl_manifest" "netpol" {
   count             = data.coder_workspace.me.start_count
   server_side_apply = true
   wait              = true
+  ignore_fields     = ["status"]
 
   yaml_body = yamlencode({
     "apiVersion" = "cilium.io/v2"
