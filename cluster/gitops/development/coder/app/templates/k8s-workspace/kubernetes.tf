@@ -319,7 +319,7 @@ resource "kubernetes_deployment" "main" {
 }
 
 # Prevent evictions from disrupting the workspace
-resource "kubernetes_pod_disruption_budget" "main" {
+resource "kubernetes_pod_disruption_budget_v1" "main" {
   metadata {
     name        = local.name
     namespace   = local.namespace
