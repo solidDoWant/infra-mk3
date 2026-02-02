@@ -44,6 +44,13 @@ spec:
               - ciliumnetworkpolicies
             verbs:
               - "*"
+          # Rule to manage PDBs for workspaces
+          - apiGroups:
+              - policy
+            resources:
+              - poddisruptionbudgets
+            verbs:
+              - "*"
           # Manage service accounts for workspaces
           - apiGroups:
               - ""

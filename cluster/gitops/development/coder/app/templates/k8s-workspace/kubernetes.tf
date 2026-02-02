@@ -318,6 +318,24 @@ resource "kubernetes_deployment" "main" {
   }
 }
 
+# Prevent evictions from disrupting the workspace
+resource "kubernetes_pod_disruption_budget" "main" {
+  metadata {
+    name        = local.name
+    namespace   = local.namespace
+    labels      = local.labels
+    annotations = local.annotations
+  }
+
+  spec {
+    min_available = 1
+
+    selector {
+      match_labels = local.labels
+    }
+  }
+}
+
 # CiliumNetworkPolicy for coder-workspace
 resource "kubectl_manifest" "netpol" {
   count             = data.coder_workspace.me.start_count
