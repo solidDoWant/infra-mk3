@@ -5,29 +5,30 @@ This repo is both the documentation of, and, in part, the implementation of the 
 Excluding secrets, this project is designed to be reproducible by anybody with the same physical hardware. See [here](./docs/setup.md) to get started.
 
 ## Overview
-- [infra-mk3](#infra-mk3)
-  - [Overview](#overview)
-  - [Hardware Architecture](#hardware-architecture)
-    - [Power](#power)
-    - [Network](#network)
-      - [Physical layout](#physical-layout)
-      - [Virtual/VLAN layout](#virtualvlan-layout)
-      - [Kubernetes route propagation](#kubernetes-route-propagation)
-      - [Firewall rules and NAT port forwarding](#firewall-rules-and-nat-port-forwarding)
-      - [External DNS](#external-dns)
-    - [Storage](#storage)
-      - [Persistent storage](#persistent-storage)
-      - [Backups](#backups)
-    - [Compute](#compute)
-      - [VM host](#vm-host)
-      - [Kubernetes hosts](#kubernetes-hosts)
-  - [Software architecture](#software-architecture)
-    - [Workload deployments](#workload-deployments)
-    - [Monitoring](#monitoring)
-    - [Updates](#updates)
-    - [Identity and access management](#identity-and-access-management)
-    - [Secrets](#secrets)
-    - [Bootstrapping](#bootstrapping)
+* [infra-mk3](#infra-mk3)
+  * [Overview](#overview)
+  * [Hardware Architecture](#hardware-architecture)
+    * [Power](#power)
+    * [Network](#network)
+      * [Physical layout](#physical-layout)
+      * [Virtual/VLAN layout](#virtualvlan-layout)
+      * [Kubernetes route propagation](#kubernetes-route-propagation)
+      * [Firewall rules and NAT port forwarding](#firewall-rules-and-nat-port-forwarding)
+      * [External DNS](#external-dns)
+      * [VPN gateway network](#vpn-gateway-network)
+    * [Storage](#storage)
+      * [Persistent storage](#persistent-storage)
+      * [Backups](#backups)
+    * [Compute](#compute)
+      * [VM host](#vm-host)
+      * [Kubernetes hosts](#kubernetes-hosts)
+  * [Software architecture](#software-architecture)
+    * [Workload deployments](#workload-deployments)
+    * [Monitoring](#monitoring)
+    * [Updates](#updates)
+    * [Identity and access management](#identity-and-access-management)
+    * [Secrets](#secrets)
+    * [Bootstrapping](#bootstrapping)
 
 <!-- 
 TODO:
@@ -182,6 +183,10 @@ OPNSense firewall rules and NAT port forwarding are handled via a custom OPNSens
 I have a publicly-resolvable domain resolving to my WAN IP address. Because my IP address is dynamic (although it changes infrequently), I have custom tooling update this A record periodically. The external DNS project is used to manage records that should resolve to specific services within my cluster.
 
 DNS records are pushed to Cloudflare for public resolution. Internally, Unbound (the DNS resolver on the OPNsense routers) forwards requests for the domain to the cluster's CoreDNS service.
+
+#### VPN gateway network
+
+I built a novel solution that reliably routes both ingress and egress traffic, randomly on a per-stream basis, out of a variable number of VPN tunnels. See [here](./cluster/gitops/networking/vpn/README.md) for a complete writeup.
 
 ### Storage
 
