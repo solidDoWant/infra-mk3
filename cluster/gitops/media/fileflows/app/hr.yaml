@@ -23,7 +23,7 @@ spec:
               repository: ghcr.io/soliddowant/fileflows
               # This tag is ultra fat (>5GB) but it avoids the need to download and install most things
               # after startup.
-              tag: 25.10.1.5977
+              tag: 25.10.1.5977-dev.fixed-time
             args:
               - FileFlows.Server.dll
               - --urls=http://*:5000

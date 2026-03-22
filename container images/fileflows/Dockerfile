@@ -133,6 +133,8 @@ RUN \
         unrar \
         ffmpeg \
         && \
+    # Needed to trick fileflows into not crashing on startup because it wants the user to update to a newer version
+    apt install -y --no-install-recommends libfaketime && \
     # Needed for certain ffmpeg commands to work when called via FileFlows
     ln -s /usr/bin/ffmpeg /usr/local/bin/ffmpeg && \
     # Install dependencies that are available via apt in 24.04, but not anything newer
@@ -176,4 +178,6 @@ RUN \
 # require additional permissions. Just run the application itself.
 USER 1000:1000
 WORKDIR /app/Server
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
+ENV FAKETIME="@2026-03-01 00:00:00"
 ENTRYPOINT ["dotnet"]
