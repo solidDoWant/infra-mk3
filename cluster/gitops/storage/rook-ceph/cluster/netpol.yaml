@@ -117,6 +117,9 @@ specs:
       - fromEndpoints:
           - *csi_cephfsplugin_provisioner_selector
           - *managers_selector
+          - &rook_ceph_tools_selector
+            matchLabels:
+              app: rook-ceph-tools
           - &csi_cephfsplugin_selector
             matchLabels:
               app: csi-cephfsplugin
@@ -179,9 +182,7 @@ specs:
           - &csi_rbdplugin_selector
             matchLabels:
               app: csi-rbdplugin
-          - &rook_ceph_tools_selector
-            matchLabels:
-              app: rook-ceph-tools
+          - *rook_ceph_tools_selector
           - &rook_ceph_crashcollector_selector
             matchLabels:
               app: rook-ceph-crashcollector
@@ -274,6 +275,7 @@ specs:
     endpointSelector: *rook_ceph_crashcollector_selector
     egress:
       - *to_monitors
+      - *to_managers
   - description: csi-cephfsplugin
     endpointSelector: *csi_cephfsplugin_selector
     egress:
@@ -297,3 +299,4 @@ specs:
       - *to_monitors
       - *to_managers
       - *to_osds
+      - *to_mds
