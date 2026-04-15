@@ -58,6 +58,13 @@ spec:
               - serviceaccounts
             verbs:
               - "*"
+          # Rule to manage resource claim templates for workspaces
+          - apiGroups:
+              - resource.k8s.io
+            resources:
+              - resourceclaimtemplates
+            verbs:
+              - "*"
       podSecurityContext:
         fsGroup: 1000
       volumes:
