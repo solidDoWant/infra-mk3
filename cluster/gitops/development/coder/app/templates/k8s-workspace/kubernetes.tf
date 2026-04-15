@@ -268,7 +268,10 @@ resource "kubectl_manifest" "deployment" {
         }
         spec = merge(
           {
-            runtimeClassName   = local.runtime_class
+            # User namespace isolation: root (uid 0) inside the container maps to an
+            # unprivileged UID on the host, providing VM-equivalent containment without
+            # needing Kata when GPU passthrough is required.
+            hostUsers          = local.enable_gpu
             enableServiceLinks = false
             hostname           = data.coder_workspace.me.name
             securityContext = {
@@ -286,24 +289,30 @@ resource "kubectl_manifest" "deployment" {
               volumeMounts    = [for k, v in local.pvcs : { name = k, mountPath = v.mount_path }]
               resources = merge(
                 {
-                  # The limits are what actually matters with kata containers. This determines how many
-                  # CPUs and how much memory the VM gets.
-                  limits = {
-                    # For some weird reason that is very vaguely alluded to in some of the kata container docs
-                    # and issues, it will assign the number of CPUs as limits + 1, and memory as limits + 2Gi.
-                    # Offset accordingly to get the actually specified amount.
+                  limits = local.enable_gpu ? {
+                    cpu    = tostring(data.coder_parameter.cpu.value)
+                    memory = "${data.coder_parameter.memory.value}Gi"
+                    } : {
+                    # Kata overhead: the VM is assigned limits+1 CPUs and limits+2Gi memory.
+                    # Offset accordingly to get the actually requested amount.
                     cpu    = tostring(tonumber(data.coder_parameter.cpu.value) - 1)
                     memory = "${tonumber(data.coder_parameter.memory.value) - 2}Gi"
                   }
                 },
                 local.enable_gpu ? { claims = [{ name = "gpu" }] } : {}
               )
-              securityContext = {
-                privileged = true
-                capabilities = {
-                  add = ["SYS_ADMIN"]
-                }
-              }
+              securityContext = merge(
+                {
+                  privileged = true
+                  capabilities = {
+                    add = ["SYS_ADMIN"]
+                  }
+                },
+                local.enable_gpu ? {
+                  privileged   = null
+                  capabilities = null
+                } : {}
+              )
             }]
             volumes = [for k, v in local.pvcs : {
               name = k
@@ -339,7 +348,8 @@ resource "kubectl_manifest" "deployment" {
               name                      = "gpu"
               resourceClaimTemplateName = "${local.name}-gpu"
             }]
-          } : {}
+          } : {},
+          local.enable_gpu ? {} : { runtimeClassName = local.runtime_class }
         )
       }
     }
