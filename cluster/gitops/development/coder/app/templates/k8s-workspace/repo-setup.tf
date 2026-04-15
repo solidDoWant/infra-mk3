@@ -89,6 +89,7 @@ data "coder_parameter" "create_repo_name" {
   name         = "create_repo_name"
   display_name = "Repository name"
   description  = "The name of the repository to create."
+  default      = ""
   type         = "string"
   icon         = "/icon/git.svg"
   mutable      = false
