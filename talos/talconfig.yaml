@@ -257,6 +257,8 @@ patches:
             # I'm not using these yet, but they might be useful in future
             # - net.ipv4.fib_multipath_hash_fields
             # - net.ipv4.ip_forward
+          # Allow pinning CPUs for workloads when QoS is Guaranteed
+          cpuManagerPolicy: static
         extraArgs:
           # Feature enablement
           feature-gates: DynamicResourceAllocation=true,DRAAdminAccess=true,UserNamespacesPodSecurityStandards=true,ImageVolume=true
