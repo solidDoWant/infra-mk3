@@ -64,7 +64,7 @@ locals {
 # Parameters
 locals {
   workspace_resources_order_start = local.claude_order_start + local.claude_size
-  workspace_resources_size        = 4
+  workspace_resources_size        = 7
 }
 
 data "coder_parameter" "cpu" {
@@ -135,6 +135,48 @@ data "coder_parameter" "workspace_disk_size" {
   }
 }
 
+data "coder_parameter" "enable_gpu" {
+  name         = "enable_gpu"
+  display_name = "GPU"
+  description  = "Attach an Intel GPU to the workspace"
+  type         = "bool"
+  default      = "false"
+  mutable      = true
+  icon         = "/icon/memory.svg"
+  order        = local.workspace_resources_order_start + 4
+}
+
+data "coder_parameter" "gpu_type" {
+  name         = "gpu_type"
+  display_name = "GPU type"
+  description  = "Which GPU to attach. Arc Pro = discrete B40 card; Iris Xe = CPU integrated GPU"
+  type         = "string"
+  default      = "arc-pro"
+  mutable      = true
+  icon         = "/icon/memory.svg"
+  order        = local.workspace_resources_order_start + 5
+
+  option {
+    name  = "Arc Pro (discrete)"
+    value = "arc-pro"
+  }
+  option {
+    name  = "Iris Xe (integrated)"
+    value = "iris-xe"
+  }
+}
+
+data "coder_parameter" "gpu_admin_access" {
+  name         = "gpu_admin_access"
+  display_name = "GPU admin access"
+  description  = "Use adminAccess mode: attaches the GPU without consuming it from the allocatable pool. Use when GPU access is infrequent."
+  type         = "bool"
+  default      = "false"
+  mutable      = true
+  icon         = "/icon/memory.svg"
+  order        = local.workspace_resources_order_start + 6
+}
+
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
@@ -158,6 +200,10 @@ data "external" "env" {
 
 locals {
   is_in_cluster = data.external.env.result["KUBE_POD_IP"] != ""
+
+  enable_gpu       = data.coder_parameter.enable_gpu.value == "true"
+  gpu_admin_access = data.coder_parameter.gpu_admin_access.value == "true"
+  gpu_cel_selector = data.coder_parameter.gpu_type.value == "arc-pro" ? "device.attributes[\"gpu.intel.com\"].family == 'Arc Pro'" : "device.attributes[\"gpu.intel.com\"].family == 'Iris Xe'"
 }
 
 provider "kubectl" {
@@ -191,131 +237,113 @@ resource "kubernetes_persistent_volume_claim" "pvcs" {
   }
 }
 
-resource "kubernetes_deployment" "main" {
-  wait_for_rollout = false
+resource "kubectl_manifest" "deployment" {
+  wait              = false
+  wait_for_rollout  = true
+  server_side_apply = true
+  ignore_fields     = ["status"]
 
-  metadata {
-    name        = local.name
-    namespace   = local.namespace
-    labels      = local.labels
-    annotations = local.annotations
-  }
-
-  spec {
-    # This is how coder knows what resource to delete upon shutdown.
-    replicas = data.coder_workspace.me.start_count
-
-    selector {
-      match_labels = local.labels
+  yaml_body = yamlencode({
+    apiVersion = "apps/v1"
+    kind       = "Deployment"
+    metadata = {
+      name        = local.name
+      namespace   = local.namespace
+      labels      = local.labels
+      annotations = local.annotations
     }
-
-    strategy {
-      type = "Recreate"
-    }
-
-    template {
-      metadata {
-        labels      = local.labels
-        annotations = local.annotations
+    spec = {
+      # This is how coder knows what resource to delete upon shutdown.
+      replicas = data.coder_workspace.me.start_count
+      selector = {
+        matchLabels = local.labels
       }
-
-      spec {
-        runtime_class_name = local.runtime_class
-
-        security_context {
-          run_as_user     = local.uid
-          run_as_group    = local.gid
-          fs_group        = local.gid
-          run_as_non_root = true
+      strategy = {
+        type = "Recreate"
+      }
+      template = {
+        metadata = {
+          labels      = local.labels
+          annotations = local.annotations
         }
-
-        container {
-          name              = "dev"
-          image             = "codercom/enterprise-base:ubuntu"
-          image_pull_policy = "Always"
-          command           = ["sh", "-c", coder_agent.main.init_script]
-
-          dynamic "env" {
-            for_each = local.env_vars
-            content {
-              name  = env.key
-              value = env.value
+        spec = merge(
+          {
+            runtimeClassName   = local.runtime_class
+            enableServiceLinks = false
+            hostname           = data.coder_workspace.me.name
+            securityContext = {
+              runAsUser    = local.uid
+              runAsGroup   = local.gid
+              fsGroup      = local.gid
+              runAsNonRoot = true
             }
-          }
-
-          dynamic "volume_mount" {
-            for_each = local.pvcs
-            content {
-              name       = volume_mount.key
-              mount_path = volume_mount.value.mount_path
-            }
-          }
-
-          resources {
-            # The limits are what actually matters with kata containers. This determines how many
-            # CPUs and how much memory the VM gets.
-            limits = {
-              # For some weird reason that is very vaguely alluded to in some of the kata container docs
-              # and issues, it will assign the number of CPUs as limits + 1, and memory as limits + 2Gi.
-              # Offset accordingly to get the actually specified amount.
-              cpu    = tonumber(data.coder_parameter.cpu.value) - 1
-              memory = "${tonumber(data.coder_parameter.memory.value) - 2}Gi"
-            }
-          }
-
-          security_context {
-            privileged = true
-            capabilities {
-              add = [
-                "SYS_ADMIN"
-              ]
-            }
-          }
-        }
-
-        dynamic "volume" {
-          for_each = local.pvcs
-          content {
-            name = volume.key
-            persistent_volume_claim {
-              claim_name = kubernetes_persistent_volume_claim.pvcs[volume.key].metadata[0].name
-            }
-          }
-        }
-
-        host_aliases {
-          hostnames = local.blackhole_domains
-          ip        = local.blackhole_address
-        }
-
-        # This is just noise
-        enable_service_links = false
-        hostname             = data.coder_workspace.me.name
-
-        affinity {
-          // This affinity attempts to spread out all workspace pods evenly across
-          // nodes.
-          pod_anti_affinity {
-            preferred_during_scheduling_ignored_during_execution {
-              weight = 1
-              pod_affinity_term {
-                topology_key = "kubernetes.io/hostname"
-                label_selector {
-                  match_expressions {
-                    key      = "app.kubernetes.io/name"
-                    operator = "In"
-                    values = [
-                      "coder-workspace"
-                    ]
+            containers = [{
+              name            = "dev"
+              image           = "codercom/enterprise-base:ubuntu"
+              imagePullPolicy = "Always"
+              command         = ["sh", "-c", coder_agent.main.init_script]
+              env             = [for k, v in local.env_vars : { name = k, value = v }]
+              volumeMounts    = [for k, v in local.pvcs : { name = k, mountPath = v.mount_path }]
+              resources = merge(
+                {
+                  # The limits are what actually matters with kata containers. This determines how many
+                  # CPUs and how much memory the VM gets.
+                  limits = {
+                    # For some weird reason that is very vaguely alluded to in some of the kata container docs
+                    # and issues, it will assign the number of CPUs as limits + 1, and memory as limits + 2Gi.
+                    # Offset accordingly to get the actually specified amount.
+                    cpu    = tostring(tonumber(data.coder_parameter.cpu.value) - 1)
+                    memory = "${tonumber(data.coder_parameter.memory.value) - 2}Gi"
                   }
+                },
+                local.enable_gpu ? { claims = [{ name = "gpu" }] } : {}
+              )
+              securityContext = {
+                privileged = true
+                capabilities = {
+                  add = ["SYS_ADMIN"]
                 }
               }
+            }]
+            volumes = [for k, v in local.pvcs : {
+              name = k
+              persistentVolumeClaim = {
+                claimName = kubernetes_persistent_volume_claim.pvcs[k].metadata[0].name
+              }
+            }]
+            hostAliases = [{
+              hostnames = local.blackhole_domains
+              ip        = local.blackhole_address
+            }]
+            affinity = {
+              # This affinity attempts to spread out all workspace pods evenly across nodes.
+              podAntiAffinity = {
+                preferredDuringSchedulingIgnoredDuringExecution = [{
+                  weight = 1
+                  podAffinityTerm = {
+                    topologyKey = "kubernetes.io/hostname"
+                    labelSelector = {
+                      matchExpressions = [{
+                        key      = "app.kubernetes.io/name"
+                        operator = "In"
+                        values   = ["coder-workspace"]
+                      }]
+                    }
+                  }
+                }]
+              }
             }
-          }
-        }
+          },
+          local.enable_gpu ? {
+            resourceClaims = [{
+              name                      = "gpu"
+              resourceClaimTemplateName = "${local.name}-gpu"
+            }]
+          } : {}
+        )
       }
     }
-  }
+  })
 }
 
 # Prevent evictions from disrupting the workspace
