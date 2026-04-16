@@ -301,18 +301,12 @@ resource "kubectl_manifest" "deployment" {
                 },
                 local.enable_gpu ? { claims = [{ name = "gpu" }] } : {}
               )
-              securityContext = merge(
-                {
-                  privileged = true
-                  capabilities = {
-                    add = ["SYS_ADMIN"]
-                  }
-                },
-                local.enable_gpu ? {
-                  privileged   = null
-                  capabilities = null
-                } : {}
-              )
+              securityContext = {
+                privileged = true
+                capabilities = {
+                  add = ["SYS_ADMIN"]
+                }
+              }
             }]
             volumes = [for k, v in local.pvcs : {
               name = k

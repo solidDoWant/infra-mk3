@@ -12,7 +12,7 @@ data "coder_parameter" "enable_nix" {
   type         = "bool"
   form_type    = "checkbox"
   icon         = "/icon/nix.svg"
-  mutable      = false
+  mutable      = true
   order        = local.nix_order_start + 0
 }
 
