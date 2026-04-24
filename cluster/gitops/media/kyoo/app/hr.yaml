@@ -270,7 +270,8 @@ spec:
         # Needs to be able to keep up with the scanner. Each instance is independent.
         # Alternatively just wait for the scanner and matcher to be joined into one service.
         # PR pending
-        replicas: 10
+        # Each matcher generates significant thexem.info load. Suspend for now.
+        replicas: 0
         strategy: RollingUpdate
         containers:
           matcher:
