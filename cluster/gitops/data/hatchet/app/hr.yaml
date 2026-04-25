@@ -130,7 +130,7 @@ spec:
               SERVER_GRPC_PORT: "7070"
               SERVER_GRPC_BIND_ADDRESS: "0.0.0.0"
               # Used when generating tokens via the UI. Workers will use the install worker-token credential instead, which points to the engine service.
-              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}:443"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
@@ -184,7 +184,7 @@ spec:
               SERVER_URL: "https://hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               # Used when generating tokens via the UI. Workers will use the install worker-token credential instead, which points to the engine service.
-              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}:443"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
