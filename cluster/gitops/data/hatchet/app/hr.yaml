@@ -138,6 +138,8 @@ spec:
               SERVER_PROMETHEUS_ENABLED: "true"
               SERVER_PROMETHEUS_ADDRESS: ":9090"
               SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
+              # Enable tracing
+              SERVER_OBSERVABILITY_ENABLED: true
               # Don't phone home for update checks
               SERVER_SECURITY_CHECK_ENABLED: false
             # No OIDC/SSO yet; using Hatchet's built-in email/password auth.
