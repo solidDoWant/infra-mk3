@@ -1,0 +1,161 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: hatchet
+specs:
+  - description: hatchet bootstrap (pre-install hook job)
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: hatchet
+        app.kubernetes.io/controller: bootstrap
+        app.kubernetes.io/instance: hatchet
+    egress:
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Kubernetes API — create the hatchet-credentials Secret
+      - toEntities:
+          - kube-apiserver
+
+  - description: hatchet worker-token (post-install hook job)
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: hatchet
+        app.kubernetes.io/controller: worker-token
+        app.kubernetes.io/instance: hatchet
+    egress:
+      - *dns_resolution
+      # PostgreSQL — token is registered in the database
+      - &postgres_egress
+        toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: hatchet-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Kubernetes API — write the token into the hatchet-worker-token Secret
+      - toEntities:
+          - kube-apiserver
+
+  - description: hatchet seed (pre-install hook job)
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: hatchet
+        app.kubernetes.io/controller: seed
+        app.kubernetes.io/instance: hatchet
+    egress:
+      - *dns_resolution
+      - *postgres_egress
+
+  - description: hatchet migrate (pre-install/pre-upgrade hook job)
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: hatchet
+        app.kubernetes.io/controller: migrate
+        app.kubernetes.io/instance: hatchet
+    egress:
+      - *dns_resolution
+      - *postgres_egress
+
+  - description: hatchet engine
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: hatchet
+        app.kubernetes.io/controller: engine
+        app.kubernetes.io/instance: hatchet
+    egress:
+      - *dns_resolution
+      - *postgres_egress
+    ingress:
+      # Kubelet health checks on the dedicated health port
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8733"
+                protocol: TCP
+      # gRPC workers — any pod in the cluster connects here to execute tasks
+      - fromEntities:
+          - cluster
+        toPorts:
+          - ports:
+              - port: "7070"
+                protocol: TCP
+      # Metrics scraping
+      - &metrics_ingress
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
+
+  - description: hatchet api
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: hatchet
+        app.kubernetes.io/controller: api
+        app.kubernetes.io/instance: hatchet
+    egress:
+      - *dns_resolution
+      - *postgres_egress
+    ingress:
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Internal gateway — routes /api/* to the REST API
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      - *metrics_ingress
+
+  - description: hatchet frontend
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: hatchet
+        app.kubernetes.io/controller: frontend
+        app.kubernetes.io/instance: hatchet
+    egress:
+      - *dns_resolution
+    ingress:
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Internal gateway — routes /* to the static frontend
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP

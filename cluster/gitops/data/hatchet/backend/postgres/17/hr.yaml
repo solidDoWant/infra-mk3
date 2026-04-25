@@ -38,10 +38,10 @@ spec:
           rotationPolicy: Always
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
-    # netpol:
-    #   applicationAccess:
-    #     selectors:
-    #       - matchLabels:
-    #           app.kubernetes.io/name: hatchet
-    #           app.kubernetes.io/controller: hatchet
-    #           app.kubernetes.io/instance: hatchet
+    netpol:
+      applicationAccess:
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: hatchet
+              app.kubernetes.io/controller: hatchet
+              app.kubernetes.io/instance: hatchet

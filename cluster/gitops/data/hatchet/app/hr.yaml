@@ -1,0 +1,378 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: hatchet
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      # Bootstrap runs once on install to generate credentials into a k8s Secret.
+      # It does not run on upgrade — credentials must never be rotated without a migration plan.
+      bootstrap:
+        type: job
+        annotations:
+          helm.sh/hook: pre-install
+          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-weight: "0"
+        job:
+          backoffLimit: 3
+        serviceAccount:
+          identifier: hatchet-bootstrap
+        pod:
+          restartPolicy: OnFailure
+        containers:
+          bootstrap:
+            image:
+              repository: ghcr.io/hatchet-dev/hatchet/hatchet-admin
+              tag: &tag v0.83.48
+            command:
+              - /hatchet/hatchet-admin
+              - k8s
+              - quickstart
+              - --namespace=data
+              - --resource-name=hatchet-credentials
+              - --resource-type=secret
+            securityContext: &container_security_context
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - all
+
+      # Migration runs on every install and upgrade before the main deployments start.
+      migrate:
+        type: job
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+          helm.sh/hook-weight: "1"
+        job:
+          backoffLimit: 3
+        pod:
+          restartPolicy: OnFailure
+        containers:
+          migrate:
+            image:
+              repository: ghcr.io/hatchet-dev/hatchet/hatchet-migrate
+              tag: *tag
+            env:
+              DATABASE_URL:
+                &database_url "postgresql://hatchet@hatchet-postgres-17-rw.data.svc.cluster.local:5432/hatchet?\
+                sslmode=verify-full&\
+                sslrootcert=/etc/hatchet/certs/postgres/ca.crt&\
+                sslcert=/etc/hatchet/certs/postgres/tls.crt&\
+                sslkey=/etc/hatchet/certs/postgres/tls.key"
+            securityContext: *container_security_context
+
+      # Seeds the default tenant and admin user after migration.
+      # Runs pre-install only — idempotent, but re-seeding on upgrade is unnecessary.
+      seed:
+        type: job
+        annotations:
+          helm.sh/hook: pre-install
+          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-weight: "2"
+        job:
+          backoffLimit: 3
+        pod:
+          restartPolicy: OnFailure
+        containers:
+          seed:
+            image:
+              repository: ghcr.io/hatchet-dev/hatchet/hatchet-admin
+              tag: *tag
+            command:
+              - /hatchet/hatchet-admin
+              - seed
+            env:
+              DATABASE_URL: *database_url
+            envFrom:
+              - secret: hatchet-seed-credentials
+            securityContext: *container_security_context
+
+      engine:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          engine:
+            image:
+              repository: ghcr.io/hatchet-dev/hatchet/hatchet-engine
+              tag: *tag
+            env:
+              DATABASE_URL: *database_url
+              SERVER_TASKQUEUE_KIND: postgres
+              SERVER_GRPC_PORT: "7070"
+              SERVER_GRPC_BIND_ADDRESS: "0.0.0.0"
+              # Address broadcast to workers — points to the engine ClusterIP service
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.data.svc.cluster.local:7070"
+              SERVER_PROMETHEUS_ENABLED: "true"
+              SERVER_PROMETHEUS_ADDRESS: ":9090"
+            # No OIDC/SSO yet; using Hatchet's built-in email/password auth.
+            # Track OIDC support: https://github.com/hatchet-dev/hatchet/issues/3052
+            envFrom: &credentials_env_from
+              - secretRef:
+                  name: hatchet-credentials
+            ports:
+              - name: grpc
+                containerPort: 7070
+              - name: metrics
+                containerPort: 9090
+            probes:
+              readiness: &engine_probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /live
+                    port: 8733
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  failureThreshold: 3
+              liveness: *engine_probe
+            securityContext: *container_security_context
+
+      api:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          api:
+            image:
+              repository: ghcr.io/hatchet-dev/hatchet/hatchet-api
+              tag: *tag
+            env:
+              DATABASE_URL: *database_url
+              SERVER_TASKQUEUE_KIND: postgres
+              SERVER_PORT: "8080"
+              SERVER_URL: "https://hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
+              SERVER_AUTH_COOKIE_DOMAIN: "${SECRET_PUBLIC_DOMAIN_NAME}"
+              # Advertised to workers so they know where to reach the engine
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.data.svc.cluster.local:7070"
+              SERVER_PROMETHEUS_ENABLED: "true"
+              SERVER_PROMETHEUS_ADDRESS: ":9090"
+            envFrom: *credentials_env_from
+            ports:
+              - name: web
+                containerPort: &api_port 8080
+              - name: metrics
+                containerPort: 9090
+            probes:
+              readiness: &api_probe
+                enabled: true
+                type: HTTP
+                path: /api/live
+              liveness: *api_probe
+            securityContext: *container_security_context
+
+      frontend:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          frontend:
+            image:
+              repository: ghcr.io/hatchet-dev/hatchet/hatchet-frontend
+              tag: *tag
+            ports:
+              - name: web
+                # staticfileserver default — adjust to 80 + NET_BIND_SERVICE if needed
+                containerPort: &frontend_port 8080
+            probes:
+              readiness: &frontend_probe
+                enabled: true
+                type: HTTP
+                path: /
+              liveness: *frontend_probe
+            securityContext: *container_security_context
+
+      # Creates a long-lived worker token into a Secret after the instance is running.
+      # Runs post-install only — the token is stable and must not be rotated unexpectedly.
+      worker-token:
+        type: job
+        annotations:
+          helm.sh/hook: post-install
+          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-weight: "0"
+        job:
+          backoffLimit: 3
+        serviceAccount:
+          identifier: hatchet-worker-token
+        pod:
+          restartPolicy: OnFailure
+        containers:
+          worker-token:
+            image:
+              repository: ghcr.io/hatchet-dev/hatchet/hatchet-admin
+              tag: *tag
+            command:
+              - /hatchet/hatchet-admin
+              - k8s
+              - create-worker-token
+              - --namespace=data
+              - --resource-name=hatchet-worker-token
+              - --resource-type=secret
+            env:
+              DATABASE_URL: *database_url
+            envFrom:
+              - secretRef:
+                  name: hatchet-credentials
+            securityContext: *container_security_context
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+
+    serviceAccount:
+      hatchet-bootstrap: {}
+      hatchet-worker-token: {}
+
+    rbac:
+      roles:
+        hatchet-jobs:
+          type: Role
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              resourceNames:
+                - hatchet-credentials
+                - hatchet-worker-token
+              verbs:
+                - get
+                - create
+      bindings:
+        hatchet-jobs:
+          type: RoleBinding
+          roleRef:
+            identifier: hatchet-jobs
+          subjects:
+            - identifier: hatchet-bootstrap
+            - identifier: hatchet-worker-token
+
+    service:
+      engine:
+        controller: engine
+        ports:
+          grpc:
+            port: 7070
+          metrics:
+            port: 9090
+      api:
+        controller: api
+        ports:
+          web:
+            port: *api_port
+            primary: true
+          metrics:
+            port: 9090
+      frontend:
+        controller: frontend
+        ports:
+          web:
+            port: *frontend_port
+            primary: true
+
+    serviceMonitor:
+      engine:
+        endpoints:
+          - port: metrics
+            interval: 1m
+      api:
+        endpoints:
+          - port: metrics
+            interval: 1m
+
+    route:
+      hatchet:
+        hostnames:
+          - hatchet.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api
+            backendRefs:
+              - identifier: api
+                port: *api_port
+          - backendRefs:
+              - identifier: frontend
+                port: *frontend_port
+
+    persistence:
+      postgres-user-cert:
+        type: secret
+        name: hatchet-postgres-hatchet-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          engine:
+            engine:
+              - path: /etc/hatchet/certs/postgres
+          api:
+            api:
+              - path: /etc/hatchet/certs/postgres
+          migrate:
+            migrate:
+              - path: /etc/hatchet/certs/postgres
+          seed:
+            seed:
+              - path: /etc/hatchet/certs/postgres
+          worker-token:
+            worker-token:
+              - path: /etc/hatchet/certs/postgres
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          engine:
+            engine:
+              - path: /etc/hatchet/certs/postgres/ca.crt
+                subPath: ca.crt
+          api:
+            api:
+              - path: /etc/hatchet/certs/postgres/ca.crt
+                subPath: ca.crt
+          migrate:
+            migrate:
+              - path: /etc/hatchet/certs/postgres/ca.crt
+                subPath: ca.crt
+          seed:
+            seed:
+              - path: /etc/hatchet/certs/postgres/ca.crt
+                subPath: ca.crt
+          worker-token:
+            worker-token:
+              - path: /etc/hatchet/certs/postgres/ca.crt
+                subPath: ca.crt
