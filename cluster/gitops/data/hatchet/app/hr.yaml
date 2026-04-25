@@ -130,7 +130,7 @@ spec:
               SERVER_GRPC_PORT: "7070"
               SERVER_GRPC_BIND_ADDRESS: "0.0.0.0"
               # Used when generating tokens via the UI. Workers will use the install worker-token credential instead, which points to the engine service.
-              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}:443"
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.${SECRET_PUBLIC_DOMAIN_NAME}:443"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
@@ -146,7 +146,7 @@ spec:
                   name: hatchet-credentials
             ports:
               - name: grpc
-                containerPort: 7070
+                containerPort: &engine_port 7070
               - name: metrics
                 containerPort: 9090
             probes:
@@ -184,7 +184,7 @@ spec:
               SERVER_URL: "https://hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               # Used when generating tokens via the UI. Workers will use the install worker-token credential instead, which points to the engine service.
-              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}:443"
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.${SECRET_PUBLIC_DOMAIN_NAME}:443"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
@@ -375,7 +375,7 @@ spec:
         controller: engine
         ports:
           grpc:
-            port: 7070
+            port: *engine_port
           metrics:
             port: 9090
       api:
@@ -400,7 +400,7 @@ spec:
             interval: 1m
 
     route:
-      hatchet:
+      ui:
         hostnames:
           - hatchet.${SECRET_PUBLIC_DOMAIN_NAME}
         parentRefs:
@@ -417,6 +417,16 @@ spec:
           - backendRefs:
               - identifier: frontend
                 port: *frontend_port
+      engine:
+        hostnames:
+          - hatchet-engine.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: engine
+                port: *engine_port
 
     persistence:
       postgres-user-cert:
