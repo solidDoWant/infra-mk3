@@ -91,8 +91,6 @@ spec:
           identifier: seed
         pod:
           restartPolicy: OnFailure
-          annotations:
-            k8tz.io/timezone: UTC
         containers:
           seed:
             image:

@@ -36,6 +36,10 @@ spec:
           size: 384
           encoding: PKCS8
           rotationPolicy: Always
+    additionalClusterConfig:
+      inheritedMetadata:
+        annotations:
+          k8tz.io/timezone: UTC
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:
