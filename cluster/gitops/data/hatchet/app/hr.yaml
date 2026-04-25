@@ -129,8 +129,8 @@ spec:
               SERVER_TASKQUEUE_KIND: postgres
               SERVER_GRPC_PORT: "7070"
               SERVER_GRPC_BIND_ADDRESS: "0.0.0.0"
-              # Address broadcast to workers — points to the engine ClusterIP service
-              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.data.svc.cluster.local:7070"
+              # Used when generating tokens via the UI. Workers will use the install worker-token credential instead, which points to the engine service.
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
@@ -183,8 +183,8 @@ spec:
               SERVER_PORT: "8080"
               SERVER_URL: "https://hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
-              # Advertised to workers so they know where to reach the engine
-              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.data.svc.cluster.local:7070"
+              # Used when generating tokens via the UI. Workers will use the install worker-token credential instead, which points to the engine service.
+              SERVER_GRPC_BROADCAST_ADDRESS: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
