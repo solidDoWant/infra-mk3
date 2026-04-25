@@ -191,6 +191,8 @@ spec:
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
+              # Enable tracing
+              SERVER_OBSERVABILITY_ENABLED: true
               SERVER_SECURITY_CHECK_ENABLED: false
             envFrom: *credentials_env_from
             ports:
