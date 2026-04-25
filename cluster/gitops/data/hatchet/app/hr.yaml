@@ -188,8 +188,6 @@ spec:
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
-              SERVER_PROMETHEUS_ENABLED: "true"
-              SERVER_PROMETHEUS_ADDRESS: ":9090"
               SERVER_SECURITY_CHECK_ENABLED: false
             envFrom: *credentials_env_from
             ports:
@@ -375,14 +373,6 @@ spec:
             port: 7070
           metrics:
             port: 9090
-      api:
-        controller: api
-        ports:
-          web:
-            port: *api_port
-            primary: true
-          metrics:
-            port: 9090
       frontend:
         controller: frontend
         ports:
@@ -394,12 +384,6 @@ spec:
       engine:
         service:
           identifier: engine
-        endpoints:
-          - port: metrics
-            interval: 1m
-      api:
-        service:
-          identifier: api
         endpoints:
           - port: metrics
             interval: 1m
