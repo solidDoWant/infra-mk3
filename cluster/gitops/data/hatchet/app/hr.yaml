@@ -258,6 +258,7 @@ spec:
               # Address broadcast to workers — points to the engine ClusterIP service
               SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.data.svc.cluster.local:7070"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
+              SERVER_URL: "https://hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
             envFrom:
               - secretRef:
                   name: hatchet-credentials
