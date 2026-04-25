@@ -134,6 +134,7 @@ spec:
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
+              SERVER_URL: "https://hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               SERVER_PROMETHEUS_ENABLED: "true"
               SERVER_PROMETHEUS_ADDRESS: ":9090"
               SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
