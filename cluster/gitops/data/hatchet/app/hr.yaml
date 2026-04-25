@@ -28,7 +28,7 @@ spec:
         job:
           backoffLimit: 3
         serviceAccount:
-          identifier: hatchet-bootstrap
+          identifier: bootstrap
         pod:
           restartPolicy: OnFailure
         containers:
@@ -214,11 +214,11 @@ spec:
         annotations:
           helm.sh/hook: post-install
           helm.sh/hook-delete-policy: hook-succeeded
-          helm.sh/hook-weight: "0"
+          helm.sh/hook-weight: "1"
         job:
           backoffLimit: 3
         serviceAccount:
-          identifier: hatchet-worker-token
+          identifier: worker-token
         pod:
           restartPolicy: OnFailure
         containers:
@@ -254,29 +254,54 @@ spec:
 
     serviceAccount:
       default: {}
-      hatchet-bootstrap:
+      bootstrap:
         annotations:
-          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook: pre-install
+          helm.sh/hook-delete-policy: hook-succeeded
           helm.sh/hook-weight: "0"
-      hatchet-worker-token:
+      worker-token:
         annotations:
-          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook: post-install
+          helm.sh/hook-delete-policy: hook-succeeded
           helm.sh/hook-weight: "0"
 
     rbac:
       roles:
-        hatchet-jobs:
+        bootstrap:
           type: Role
           annotations:
-            helm.sh/hook: pre-install,pre-upgrade
+            helm.sh/hook: pre-install
+            helm.sh/hook-delete-policy: hook-succeeded
             helm.sh/hook-weight: "0"
           rules:
-            - apiGroups: [""]
-              resources: [secrets]
-              resourceNames: [hatchet-credentials, hatchet-worker-token]
-              verbs: [get, create]
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              resourceNames:
+                - hatchet-credentials
+              verbs:
+                - get
+                - create
+        worker-token:
+          type: Role
+          annotations:
+            helm.sh/hook: post-install
+            helm.sh/hook-delete-policy: hook-succeeded
+            helm.sh/hook-weight: "0"
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              resourceNames:
+                - hatchet-worker-token
+              verbs:
+                - get
+                - create
+
       bindings:
-        hatchet-jobs:
+        bootstrap: &binding
           type: RoleBinding
           annotations:
             helm.sh/hook: pre-install,pre-upgrade
@@ -285,6 +310,9 @@ spec:
             identifier: hatchet-jobs
           subjects:
             - identifier: hatchet-bootstrap
+        worker-token:
+          <<: *binding
+          subjects:
             - identifier: hatchet-worker-token
 
     service:
