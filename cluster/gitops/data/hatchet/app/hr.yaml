@@ -253,14 +253,23 @@ spec:
             value: "1"
 
     serviceAccount:
-      hatchet-bootstrap: {}
-      hatchet-worker-token: {}
+      hatchet-bootstrap:
+        annotations:
+          helm.sh/hook: pre-install
+          helm.sh/hook-weight: "0"
+      hatchet-worker-token:
+        annotations:
+          helm.sh/hook: post-install
+          helm.sh/hook-weight: "0"
       default: {}
 
     rbac:
       roles:
         hatchet-jobs:
           type: Role
+          annotations:
+            helm.sh/hook: pre-install,post-install
+            helm.sh/hook-weight: "0"
           rules:
             - apiGroups:
                 - ""
@@ -275,6 +284,9 @@ spec:
       bindings:
         hatchet-jobs:
           type: RoleBinding
+          annotations:
+            helm.sh/hook: pre-install,post-install
+            helm.sh/hook-weight: "0"
           roleRef:
             identifier: hatchet-jobs
           subjects:
