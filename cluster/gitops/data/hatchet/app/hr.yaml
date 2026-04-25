@@ -72,7 +72,7 @@ spec:
               DATABASE_URL:
                 &database_url "postgresql://hatchet@hatchet-postgres-17-rw.data.svc.cluster.local:5432/hatchet?\
                 sslmode=verify-full&\
-                sslrootcert=/etc/hatchet/certs/postgres/ca.crt&\
+                sslrootcert=/etc/hatchet/certs/root-ca/ca.crt&\
                 sslcert=/etc/hatchet/certs/postgres/tls.crt&\
                 sslkey=/etc/hatchet/certs/postgres/tls.key"
             securityContext: *container_security_context
@@ -438,21 +438,16 @@ spec:
         advancedMounts:
           engine:
             engine:
-              - path: /etc/hatchet/certs/postgres/ca.crt
-                subPath: ca.crt
+              - path: /etc/hatchet/certs/root-ca
           api:
             api:
-              - path: /etc/hatchet/certs/postgres/ca.crt
-                subPath: ca.crt
+              - path: /etc/hatchet/certs/root-ca
           migrate:
             migrate:
-              - path: /etc/hatchet/certs/postgres/ca.crt
-                subPath: ca.crt
+              - path: /etc/hatchet/certs/root-ca
           seed:
             seed:
-              - path: /etc/hatchet/certs/postgres/ca.crt
-                subPath: ca.crt
+              - path: /etc/hatchet/certs/root-ca
           worker-token:
             worker-token:
-              - path: /etc/hatchet/certs/postgres/ca.crt
-                subPath: ca.crt
+              - path: /etc/hatchet/certs/root-ca
