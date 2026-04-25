@@ -59,6 +59,8 @@ spec:
           helm.sh/hook-weight: "1"
         job:
           backoffLimit: 3
+        serviceAccount:
+          identifier: default
         pod:
           restartPolicy: OnFailure
         containers:
@@ -85,6 +87,8 @@ spec:
           helm.sh/hook-weight: "2"
         job:
           backoffLimit: 3
+        serviceAccount:
+          identifier: default
         pod:
           restartPolicy: OnFailure
         containers:
@@ -105,6 +109,8 @@ spec:
         replicas: 2
         podDisruptionBudget:
           minAvailable: 1
+        serviceAccount:
+          identifier: default
         containers:
           engine:
             image:
@@ -147,6 +153,8 @@ spec:
         replicas: 2
         podDisruptionBudget:
           minAvailable: 1
+        serviceAccount:
+          identifier: default
         containers:
           api:
             image:
@@ -180,6 +188,8 @@ spec:
         replicas: 2
         podDisruptionBudget:
           minAvailable: 1
+        serviceAccount:
+          identifier: default
         containers:
           frontend:
             image:
