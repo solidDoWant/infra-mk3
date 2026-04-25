@@ -1,0 +1,81 @@
+# Reusable Envoy config for PostgreSQL mTLS proxying
+#
+# Copy this to app/envoy-config/pg.yaml (or pg-only.yaml) and update:
+#   - <service>-postgres-17-rw.<namespace>.svc.cluster.local  → actual postgres hostname
+#
+# Reference: cluster/gitops/development/harbor/app/envoy-config/pg-only.yaml
+# Note: Must use envoyproxy/envoy:contrib-vX.Y.Z — the postgres_proxy filter is contrib-only.
+
+admin:
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 8000
+
+static_resources:
+  clusters:
+    - name: postgres_cluster
+      connect_timeout: 1s
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: postgres_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      # UPDATE: replace with the actual postgres service hostname
+                      address: <service>-postgres-17-rw.<namespace>.svc.cluster.local
+                      port_value: 5432
+      health_checks:
+        - timeout: 1s
+          interval: 3s
+          unhealthy_threshold: 2
+          healthy_threshold: 1
+          tcp_health_check: {}
+      dns_lookup_family: V4_ONLY
+      transport_socket:
+        name: postgres_upstream_tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.starttls.v3.UpstreamStartTlsConfig
+          tls_socket_config:
+            common_tls_context:
+              tls_params:
+                tls_minimum_protocol_version: TLSv1_3
+                tls_maximum_protocol_version: TLSv1_3
+              tls_certificates:
+                - certificate_chain:
+                    filename: /etc/envoy/secrets/postgres/tls.crt
+                  private_key:
+                    filename: /etc/envoy/secrets/postgres/tls.key
+              validation_context:
+                trusted_ca:
+                  filename: /etc/envoy/secrets/postgres/ca.crt
+            auto_host_sni: true
+            auto_sni_san_validation: true
+      close_connections_on_host_health_failure: true
+      ignore_health_on_host_removal: true
+
+  listeners:
+    - name: postgres_listener
+      address:
+        socket_address:
+          address: 127.0.0.1
+          port_value: 5432
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.postgres_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.postgres_proxy.v3alpha.PostgresProxy
+                stat_prefix: egress_postgres
+                enable_sql_parsing: false
+                upstream_ssl: REQUIRE
+            - name: envoy.tcp_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                stat_prefix: tcp_postgres
+                cluster: postgres_cluster
+                # Disable idle timeout — let the application manage idle connections.
+                # Some applications (e.g., Harbor) don't handle Envoy-terminated connections
+                # gracefully, leading to errors on idle connection reuse.
+                idle_timeout: 0s
