@@ -253,6 +253,7 @@ spec:
             value: "1"
 
     serviceAccount:
+      default: {}
       hatchet-bootstrap:
         annotations:
           helm.sh/hook: pre-install,pre-upgrade
