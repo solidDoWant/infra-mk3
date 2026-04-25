@@ -126,6 +126,8 @@ spec:
               SERVER_PROMETHEUS_ENABLED: "true"
               SERVER_PROMETHEUS_ADDRESS: ":9090"
               SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
+              # Don't phone home for update checks
+              SERVER_SECURITY_CHECK_ENABLED: false
             # No OIDC/SSO yet; using Hatchet's built-in email/password auth.
             # Track OIDC support: https://github.com/hatchet-dev/hatchet/issues/3052
             envFrom: &credentials_env_from
@@ -171,7 +173,6 @@ spec:
               SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.data.svc.cluster.local:7070"
               SERVER_PROMETHEUS_ENABLED: "true"
               SERVER_PROMETHEUS_ADDRESS: ":9090"
-              # Don't phone home for update checks
               SERVER_SECURITY_CHECK_ENABLED: false
             envFrom: *credentials_env_from
             ports:
