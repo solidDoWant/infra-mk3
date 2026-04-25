@@ -41,7 +41,19 @@ spec:
     netpol:
       applicationAccess:
         selectors:
-          - matchLabels:
+          - matchLabels: &application_labels
               app.kubernetes.io/name: hatchet
-              app.kubernetes.io/controller: hatchet
+              app.kubernetes.io/controller: engine
               app.kubernetes.io/instance: hatchet
+          - matchLabels:
+              <<: *application_labels
+              app.kubernetes.io/controller: api
+          - matchLabels:
+              <<: *application_labels
+              app.kubernetes.io/controller: migrate
+          - matchLabels:
+              <<: *application_labels
+              app.kubernetes.io/controller: seed
+          - matchLabels:
+              <<: *application_labels
+              app.kubernetes.io/controller: worker-token
