@@ -199,12 +199,9 @@ spec:
             image:
               repository: ghcr.io/hatchet-dev/hatchet/hatchet-frontend
               tag: *tag
-            args:
-              - --port=8080
             ports:
               - name: web
-                # staticfileserver default — adjust to 80 + NET_BIND_SERVICE if needed
-                containerPort: &frontend_port 8080
+                containerPort: &frontend_port 80
             probes:
               readiness: &frontend_probe
                 enabled: true
