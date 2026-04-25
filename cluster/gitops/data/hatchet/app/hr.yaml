@@ -254,6 +254,7 @@ spec:
               - --resource-type=secret
             env:
               DATABASE_URL: *database_url
+              SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
             envFrom:
               - secretRef:
                   name: hatchet-credentials
