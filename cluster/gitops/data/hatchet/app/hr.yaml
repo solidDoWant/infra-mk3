@@ -60,7 +60,7 @@ spec:
         job:
           backoffLimit: 3
         serviceAccount:
-          identifier: default
+          identifier: migrate
         pod:
           restartPolicy: OnFailure
         containers:
@@ -88,7 +88,7 @@ spec:
         job:
           backoffLimit: 3
         serviceAccount:
-          identifier: default
+          identifier: seed
         pod:
           restartPolicy: OnFailure
         containers:
@@ -110,7 +110,7 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         serviceAccount:
-          identifier: default
+          identifier: engine
         containers:
           engine:
             image:
@@ -154,7 +154,7 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         serviceAccount:
-          identifier: default
+          identifier: api
         containers:
           api:
             image:
@@ -189,7 +189,7 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         serviceAccount:
-          identifier: default
+          identifier: frontend
         containers:
           frontend:
             image:
@@ -253,17 +253,31 @@ spec:
             value: "1"
 
     serviceAccount:
-      default: {}
+      # Hook job SAs — must exist before their respective hooks run
       bootstrap:
         annotations:
           helm.sh/hook: pre-install
-          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+          helm.sh/hook-delete-policy: before-hook-creation
+          helm.sh/hook-weight: "0"
+      migrate:
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook-delete-policy: before-hook-creation
+          helm.sh/hook-weight: "0"
+      seed:
+        annotations:
+          helm.sh/hook: pre-install
+          helm.sh/hook-delete-policy: before-hook-creation
           helm.sh/hook-weight: "0"
       worker-token:
         annotations:
           helm.sh/hook: post-install
-          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+          helm.sh/hook-delete-policy: before-hook-creation
           helm.sh/hook-weight: "0"
+      # Regular deployment SAs
+      engine: {}
+      api: {}
+      frontend: {}
 
     rbac:
       roles:
@@ -271,7 +285,7 @@ spec:
           type: Role
           annotations:
             helm.sh/hook: pre-install
-            helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+            helm.sh/hook-delete-policy: before-hook-creation
             helm.sh/hook-weight: "0"
           rules:
             - apiGroups:
@@ -287,7 +301,7 @@ spec:
           type: Role
           annotations:
             helm.sh/hook: post-install
-            helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+            helm.sh/hook-delete-policy: before-hook-creation
             helm.sh/hook-weight: "0"
           rules:
             - apiGroups:
@@ -304,7 +318,8 @@ spec:
         bootstrap:
           type: RoleBinding
           annotations:
-            helm.sh/hook: pre-install,pre-upgrade
+            helm.sh/hook: pre-install
+            helm.sh/hook-delete-policy: before-hook-creation
             helm.sh/hook-weight: "0"
           roleRef:
             identifier: bootstrap
@@ -314,7 +329,7 @@ spec:
           type: RoleBinding
           annotations:
             helm.sh/hook: post-install
-            helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+            helm.sh/hook-delete-policy: before-hook-creation
             helm.sh/hook-weight: "0"
           roleRef:
             identifier: worker-token
