@@ -206,7 +206,6 @@ controllers:
   <name>:
     replicas: 2
     podDisruptionBudget:
-      enabled: true
       minAvailable: 1
 ```
 For non-app-template charts, use a standalone `pdb.yaml`.
@@ -231,6 +230,7 @@ For non-app-template charts, use a standalone `pdb.yaml`.
 The skill should handle all of the following automatically (don't tell the user to do them):
 - Add the new service's `ks.yaml` to the domain's `kustomization.yaml`
 - If this is a new domain: create `namespace.yaml`, `kustomization.yaml`, and `issuers/` if postgres is used
+- If any new `endpoints.netpols.home.arpa/` labels were created: add them to `docs/labels and annotations.md` with key, value (`true`), valid resources (`Pod`), required (`No`), and a description
 
 The user must handle:
 - Creating and SOPS-encrypting all secret files

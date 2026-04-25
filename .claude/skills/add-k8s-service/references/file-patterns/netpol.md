@@ -114,20 +114,27 @@ Always verify these match the actual pod labels — they're set by app-template 
 
 ## Custom labels for cross-service access
 
-If other services need to select this service's pods in their network policies, add a custom label to the pod:
+If other services need to select this service's pods in their network policies (or vice versa), define a new `endpoints.netpols.home.arpa/<role>` label. These labels are the canonical way to express cross-service network policy relationships in this cluster.
 
+**When to create a new label**: whenever a service needs to be reachable by, or needs to reach, pods outside its own namespace that aren't already covered by an existing label in `docs/labels and annotations.md`.
+
+**Process**:
+1. Choose a descriptive role name (e.g. `metrics-supplier`, `auth-server`, `queue-consumer`)
+2. Add the label to the pod in `hr.yaml`:
 ```yaml
 # In hr.yaml under controllers.<name>.pod.labels:
-endpoints.netpols.home.arpa/my-role: "true"
+endpoints.netpols.home.arpa/<service>-<role>: "true"
 ```
-
-Then in other services' netpols:
+3. Reference it in network policies:
 ```yaml
 - toEndpoints:
     - matchLabels:
-        endpoints.netpols.home.arpa/my-role: "true"
+        endpoints.netpols.home.arpa/<service>-<role>: "true"
         io.kubernetes.pod.namespace: <namespace>
 ```
+4. **Add the new label to `docs/labels and annotations.md`** — include the key, value, valid resources, and a description. This keeps the label registry current so future agents and operators know what labels exist and what they mean.
+
+Existing `endpoints.netpols.home.arpa/` labels are documented in `docs/labels and annotations.md` — check there first before creating a new one, as a suitable label may already exist (e.g. `metrics-scraper`, `email-sender`).
 
 ## Envoy sidecar netpol consideration
 
