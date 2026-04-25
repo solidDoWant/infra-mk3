@@ -306,10 +306,14 @@ spec:
 
     serviceMonitor:
       engine:
+        service:
+          identifier: engine
         endpoints:
           - port: metrics
             interval: 1m
       api:
+        service:
+          identifier: api
         endpoints:
           - port: metrics
             interval: 1m
