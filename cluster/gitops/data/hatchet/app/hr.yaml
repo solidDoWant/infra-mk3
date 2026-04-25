@@ -120,7 +120,7 @@ spec:
             env:
               DATABASE_URL: *database_url
               READ_REPLICA_ENABLED: true
-              READ_REPLICA_URL:
+              READ_REPLICA_DATABASE_URL:
                 &database_read_replica_url "postgresql://hatchet@hatchet-postgres-17-ro.data.svc.cluster.local:5432/hatchet?\
                 sslmode=verify-full&\
                 sslrootcert=/etc/hatchet/certs/root-ca/ca.crt&\
@@ -178,7 +178,7 @@ spec:
             env:
               DATABASE_URL: *database_url
               READ_REPLICA_ENABLED: true
-              READ_REPLICA_URL: *database_read_replica_url
+              READ_REPLICA_DATABASE_URL: *database_read_replica_url
               SERVER_TASKQUEUE_KIND: postgres
               SERVER_PORT: "8080"
               SERVER_URL: "https://hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
