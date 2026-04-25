@@ -296,6 +296,11 @@ spec:
                 - hatchet-credentials
               verbs:
                 - get
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              verbs:
                 - create
         worker-token:
           type: Role
@@ -312,6 +317,11 @@ spec:
                 - hatchet-worker-token
               verbs:
                 - get
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              verbs:
                 - create
 
       bindings:
