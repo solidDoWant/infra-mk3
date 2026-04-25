@@ -373,6 +373,12 @@ spec:
             port: 7070
           metrics:
             port: 9090
+      api:
+        controller: api
+        ports:
+          web:
+            port: *api_port
+            primary: true
       frontend:
         controller: frontend
         ports:
