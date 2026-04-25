@@ -23,7 +23,7 @@ spec:
         type: job
         annotations:
           helm.sh/hook: pre-install
-          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
           helm.sh/hook-weight: "1"
         job:
           backoffLimit: 3
@@ -83,7 +83,7 @@ spec:
         type: job
         annotations:
           helm.sh/hook: pre-install
-          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
           helm.sh/hook-weight: "3"
         job:
           backoffLimit: 3
@@ -213,7 +213,7 @@ spec:
         type: job
         annotations:
           helm.sh/hook: post-install
-          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
           helm.sh/hook-weight: "1"
         job:
           backoffLimit: 3
@@ -257,12 +257,12 @@ spec:
       bootstrap:
         annotations:
           helm.sh/hook: pre-install
-          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
           helm.sh/hook-weight: "0"
       worker-token:
         annotations:
           helm.sh/hook: post-install
-          helm.sh/hook-delete-policy: hook-succeeded
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
           helm.sh/hook-weight: "0"
 
     rbac:
@@ -271,7 +271,7 @@ spec:
           type: Role
           annotations:
             helm.sh/hook: pre-install
-            helm.sh/hook-delete-policy: hook-succeeded
+            helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
             helm.sh/hook-weight: "0"
           rules:
             - apiGroups:
@@ -287,7 +287,7 @@ spec:
           type: Role
           annotations:
             helm.sh/hook: post-install
-            helm.sh/hook-delete-policy: hook-succeeded
+            helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
             helm.sh/hook-weight: "0"
           rules:
             - apiGroups:
@@ -314,7 +314,7 @@ spec:
           type: RoleBinding
           annotations:
             helm.sh/hook: post-install
-            helm.sh/hook-delete-policy: hook-succeeded
+            helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
             helm.sh/hook-weight: "0"
           roleRef:
             identifier: worker-token
