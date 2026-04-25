@@ -139,6 +139,8 @@ App-template supports inline serviceMonitor config. Use this instead of a standa
 ```yaml
     serviceMonitor:
       <service>:
+        service:
+          identifier: <service>
         endpoints:
           - port: metrics
             interval: 1m
