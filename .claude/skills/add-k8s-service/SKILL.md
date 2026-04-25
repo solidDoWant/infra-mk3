@@ -7,7 +7,7 @@ description: Add a new service to the Kubernetes cluster. Use this skill wheneve
 
 This skill guides through adding a new service to the cluster, following the established patterns in this repo. The cluster uses Flux CD for GitOps, Cilium for networking, cert-manager for certificates, CloudNative-PG/Dragonfly/RabbitMQ operators for backends, and Authentik for user authentication.
 
-**Critical rule: Always check with the user and get confirmation before writing any files.**
+**Critical rule: Always present the full plan (Step 3) and receive explicit user confirmation before writing any files. Research → clarifying questions → plan → confirmation → write. Never skip or merge these stages.**
 
 ## Step 1: Research First
 
@@ -35,6 +35,8 @@ For each finding, include the source URL and a brief note on what confirmed it (
 ```
 
 Use the sub-agent's structured summary to inform the plan. Then gather the remaining unknowns from the user in a single grouped set of questions. Don't ask about things the sub-agent already found.
+
+**After receiving the user's answers, go to Step 2 — do not start writing files yet.**
 
 ## Step 2: Propose the Plan
 
@@ -154,7 +156,9 @@ The skill cannot encrypt secrets — the user must do this.
 
 ## Step 3: Ask for Confirmation
 
-Present the full plan as a concise summary covering all 8 areas above. Include open questions and flag anything unusual (new backend type, external-gateway, proxy auth, multi-writer storage, etc.). Wait for confirmation before proceeding.
+**This step is mandatory and must not be skipped.** Present the full plan as a concise summary covering all 8 areas above. Include open questions and flag anything unusual (new backend type, external-gateway, proxy auth, multi-writer storage, etc.). Explicitly ask the user to confirm before proceeding.
+
+Do not write any files until the user confirms the plan.
 
 ## Step 4: Write the Files
 
