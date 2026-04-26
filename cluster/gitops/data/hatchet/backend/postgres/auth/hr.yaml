@@ -25,5 +25,7 @@ spec:
             - infra-mk3
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     users:
+      pooler:
+        disabled: false
       hatchet:
         username: hatchet
