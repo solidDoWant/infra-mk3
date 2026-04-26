@@ -1,0 +1,12 @@
+{{- if and .Values.pooler.enabled (gt (int .Values.pooler.instances) 1) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pooler-name" . }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      cnpg.io/poolerName: {{ include "pooler-name" . }}
+{{- end }}

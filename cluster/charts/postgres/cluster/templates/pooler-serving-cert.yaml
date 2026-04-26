@@ -1,0 +1,20 @@
+{{- if .Values.pooler.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "pooler-serving-cert-name" . }}
+spec:
+  commonName: {{ include "pooler-name" . }}
+  dnsNames: {{ include "pooler-serving-domain-names" . | nindent 4 }}
+  subject: {{ .Values.certificates.serving.subject | toYaml | nindent 4 }}
+  usages:
+    - server auth
+  duration: 720h # One month
+  privateKey: {{ .Values.certificates.serving.privateKey | toYaml | nindent 4 }}
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  issuerRef: {{ .Values.certificates.serving.issuerRef | toYaml | nindent 4 }}
+  secretName: {{ include "pooler-serving-cert-name" . }}
+{{- end }}

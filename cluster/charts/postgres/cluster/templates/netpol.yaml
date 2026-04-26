@@ -82,6 +82,11 @@ specs:
           # Access from applications
           {{ .Values.netpol.applicationAccess.selectors | toYaml | nindent 10 | trim }}
           {{- end }}
+          {{- if .Values.pooler.enabled }}
+          # Access from PgBouncer
+          - matchLabels:
+              cnpg.io/poolerName: {{ include "pooler-name" . }}
+          {{- end }}
         toPorts:
           - ports:
               - port: postgresql
@@ -144,3 +149,61 @@ specs:
           - ports:
               - port: postgresql
                 protocol: TCP
+  {{- if .Values.pooler.enabled }}
+  - description: pooler
+    endpointSelector:
+      matchLabels:
+        cnpg.io/poolerName: {{ include "pooler-name" . }}
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - {{ .Values.netpol.dns.selector | toYaml | nindent 12 | trim }}
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # PostgreSQL connections to cluster instances
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+              cnpg.io/podRole: instance
+        toPorts:
+          - ports:
+              - port: postgresql
+                protocol: TCP
+      # Access k8s resources (e.g. TLS certificate secrets)
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Kubelet health probes
+      - fromEntities:
+          - host
+        toPorts: &pooler_client_port
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Client access (same selectors as direct cluster access)
+      {{- if .Values.netpol.applicationAccess.selector }}
+      - fromEndpoints:
+          - {{ .Values.netpol.applicationAccess.selector | toYaml | nindent 12 | trim }}
+        toPorts: *pooler_client_port
+      {{- end }}
+      {{- if .Values.netpol.applicationAccess.selectors }}
+      - fromEndpoints:
+          {{ .Values.netpol.applicationAccess.selectors | toYaml | nindent 10 | trim }}
+        toPorts: *pooler_client_port
+      {{- end }}
+      # Metrics scraping
+      - fromEndpoints:
+          - {{ .Values.netpol.metricsScraper.selector | toYaml | nindent 12 | trim }}
+        toPorts:
+          - ports:
+              - port: "9127"
+                protocol: TCP
+  {{- end }}

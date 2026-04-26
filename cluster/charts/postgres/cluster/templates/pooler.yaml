@@ -1,0 +1,39 @@
+{{- if .Values.pooler.enabled }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: {{ include "pooler-name" . }}
+spec:
+  cluster:
+    name: {{ include "cluster-resource-name" . }}
+  instances: {{ .Values.pooler.instances }}
+  type: rw
+  pgbouncer:
+    poolMode: {{ .Values.pooler.poolMode }}
+    # Cert PgBouncer presents to clients — issued by the same CA as the cluster serving cert.
+    clientTLSSecret:
+      name: {{ include "pooler-serving-cert-name" . }}
+    # CA used to validate incoming client certs — same as the cluster's clientCASecret,
+    # so a single client cert works for both direct and pooled connections.
+    clientCASecret:
+      name: {{ tpl .Values.certificates.clientCA.secretName . }}
+    parameters:
+      # Require client certificates; the CN is used as the PostgreSQL username.
+      # pg_ident pooler_map (added to the Cluster when pooler is enabled) allows
+      # cnpg_pooler_pgbouncer's backend cert to connect as any user.
+      auth_type: cert
+      client_tls_sslmode: verify-full
+      {{- with .Values.pooler.parameters }}
+      {{- . | toYaml | nindent 6 }}
+      {{- end }}
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              cnpg.io/poolerName: {{ include "pooler-name" . }}
+{{- end }}

@@ -14,8 +14,19 @@ spec:
   postgresql:
     parameters: {{ .Values.parameters | toYaml | nindent 6 }}
     pg_hba:
-      # Require TLS auth for all databases, users, and IP addresses
+      {{- if .Values.pooler.enabled }}
+      # pooler_map lets cnpg_pooler_pgbouncer's cert authenticate as any user,
+      # and passes direct client cert CNs through to the same-named role.
+      - hostssl all all all cert map=pooler_map
+      {{- else }}
+      # Require TLS cert auth for all databases, users, and IP addresses
       - hostssl all all all cert
+      {{- end }}
+    {{- if .Values.pooler.enabled }}
+    pg_ident:
+      - "pooler_map  cnpg_pooler_pgbouncer  all"
+      - "pooler_map  /^(.*)$  \\1"
+    {{- end }}
   storage: {{ .Values.storage | toYaml | nindent 4 }}
   resources: {{ .Values.resources | toYaml | nindent 4 }}
   primaryUpdateMethod: switchover

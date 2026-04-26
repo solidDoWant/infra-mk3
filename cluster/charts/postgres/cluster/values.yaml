@@ -96,6 +96,11 @@ bucket:
 backups:
   volumeSnapshot:
     className: postgres
+pooler:
+  enabled: false
+  instances: 2
+  poolMode: session
+  parameters: {}
 netpol:
   dns:
     selector:

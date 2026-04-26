@@ -36,3 +36,19 @@
 {{ default 443 (regexSplit ":" (urlParse .Values.bucket.endpoint).host 2 | rest | first) | quote }}
 {{- end -}}
 {{- end -}}
+
+{{- define "pooler-name" -}}
+{{ include "cluster-resource-name" . }}-pooler-rw
+{{- end -}}
+
+{{- define "pooler-serving-cert-name" -}}
+{{ include "pooler-name" . }}-serving-cert
+{{- end -}}
+
+{{/*
+    Same rule as serving-domain-names: namespace must be included in the SAN.
+*/}}
+{{- define "pooler-serving-domain-names" -}}
+- {{ include "pooler-name" . }}.{{ .Release.Namespace }}.svc
+- {{ include "pooler-name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+{{- end -}}
