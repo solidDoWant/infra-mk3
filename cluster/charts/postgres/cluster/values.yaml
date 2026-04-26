@@ -97,7 +97,7 @@ backups:
   volumeSnapshot:
     className: postgres
 pooler:
-  # Secret name created by the auth chart for the cnpg-pooler-pgbouncer user (will be templated).
+  # Secret name created by the auth chart for the cnpg_pooler_pgbouncer user (will be templated).
   clusterCertSecretName: "{{ .Values.clusterName }}-postgres-pooler-user"
   rw:
     enabled: false
