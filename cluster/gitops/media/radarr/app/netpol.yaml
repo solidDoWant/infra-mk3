@@ -88,6 +88,11 @@ specs:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
+          # media-processor worker imports transcoded movie files
+          - matchLabels:
+              app.kubernetes.io/name: media-processor
+              app.kubernetes.io/controller: worker
+              app.kubernetes.io/instance: media-processor
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector
