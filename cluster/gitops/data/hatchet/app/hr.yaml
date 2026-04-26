@@ -192,6 +192,8 @@ spec:
               # Used when generating tokens via the UI. Workers will use the install worker-token credential instead, which points to the engine service.
               SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.${SECRET_PUBLIC_DOMAIN_NAME}:443"
               SERVER_GRPC_INSECURE: true # TLS termination is handled elsewhere or disabled for internal traffic
+              SERVER_INTERNAL_CLIENT_INTERNAL_GRPC_BROADCAST_ADDRESS: hatchet-engine.data.svc.cluster.local:7070
+              SERVER_INTERNAL_CLIENT_BASE_STRATEGY: none
               SERVER_ALLOW_SIGNUP: false
               SERVER_ALLOW_INVITES: false
               # Enable tracing
