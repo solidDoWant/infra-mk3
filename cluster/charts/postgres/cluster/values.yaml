@@ -97,16 +97,20 @@ backups:
   volumeSnapshot:
     className: postgres
 pooler:
+  # Secret name created by the auth chart for the cnpg-pooler-pgbouncer user (will be templated).
+  clusterCertSecretName: "{{ .Values.clusterName }}-postgres-pooler-user"
   rw:
     enabled: false
     instances: 2
     poolMode: session
-    parameters: {}
+    parameters:
+      server_tls_sslmode: verify-full
   ro:
     enabled: false
     instances: 2
     poolMode: session
-    parameters: {}
+    parameters:
+      server_tls_sslmode: verify-full
 netpol:
   dns:
     selector:
@@ -139,8 +143,7 @@ netpol:
     selector:
       # matchLabels:
       #   app: some-application
-    selectors:
-      []
+    selectors: []
       # - matchLabels:
       #     app: some-application-1
       # - matchLabels:

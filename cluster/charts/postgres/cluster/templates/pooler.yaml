@@ -18,6 +18,13 @@ spec:
     # so a single client cert works for both direct and pooled connections.
     clientCASecret:
       name: {{ tpl .Values.certificates.clientCA.secretName . }}
+    # Client keypair PgBouncer uses when connecting to Postgres (CN = cnpg_pooler_pgbouncer,
+    # matched by the pg_ident pooler_map to allow connecting as any user).
+    serverTLSSecret:
+      name: {{ tpl .Values.pooler.clusterCertSecretName . }}
+    # CA used to validate the Postgres server cert (ca.crt from the cluster serving cert secret).
+    serverCASecret:
+      name: {{ include "serving-cert-name" . }}
     parameters:
       # Require client certificates; the CN is used as the PostgreSQL username.
       # pg_ident pooler_map (added to the Cluster when pooler is enabled) allows
@@ -55,6 +62,10 @@ spec:
       name: {{ include "pooler-ro-serving-cert-name" . }}
     clientCASecret:
       name: {{ tpl .Values.certificates.clientCA.secretName . }}
+    serverTLSSecret:
+      name: {{ tpl .Values.pooler.backendCertSecretName . }}
+    serverCASecret:
+      name: {{ include "serving-cert-name" . }}
     parameters:
       auth_type: cert
       client_tls_sslmode: verify-full
