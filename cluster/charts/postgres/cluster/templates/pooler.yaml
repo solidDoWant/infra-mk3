@@ -11,6 +11,9 @@ spec:
   type: rw
   pgbouncer:
     poolMode: {{ .Values.pooler.rw.poolMode }}
+    # Dummy query matching the test fixture here:
+    # https://github.com/leonardoce/cloudnative-pg/blob/5fb49f059c7dbdf42020b59025b35eb4f990a2ef/tests/e2e/fixtures/pgbouncer/pgbouncer_user_supplied_certificates/pgbouncer-verify-full.yaml#L15
+    authQuery: "SELECT $1, NULL"
     # Cert PgBouncer presents to clients — issued by the same CA as the cluster serving cert.
     clientTLSSecret:
       name: {{ include "pooler-rw-serving-cert-name" . }}
@@ -58,6 +61,9 @@ spec:
   type: ro
   pgbouncer:
     poolMode: {{ .Values.pooler.ro.poolMode }}
+    # Dummy query matching the test fixture here:
+    # https://github.com/leonardoce/cloudnative-pg/blob/5fb49f059c7dbdf42020b59025b35eb4f990a2ef/tests/e2e/fixtures/pgbouncer/pgbouncer_user_supplied_certificates/pgbouncer-verify-full.yaml#L15
+    authQuery: "SELECT $1, NULL"
     clientTLSSecret:
       name: {{ include "pooler-ro-serving-cert-name" . }}
     clientCASecret:
