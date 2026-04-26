@@ -75,6 +75,11 @@ spec:
     parameters:
       auth_type: cert
       client_tls_sslmode: verify-full
+      # Unfortunately this is required because CNPG hard-codes the service hostname in the pgbouncer config,
+      # which is fundamentally incompatible with my PKI setup that limits the scope of intermediary CAs to a
+      # specific namespace.
+      # For details, see https://github.com/cloudnative-pg/cloudnative-pg/issues/10551#issuecomment-4323332386
+      server_tls_sslmode: verify-ca
       {{- with .Values.pooler.ro.parameters }}
       {{- . | toYaml | nindent 6 }}
       {{- end }}

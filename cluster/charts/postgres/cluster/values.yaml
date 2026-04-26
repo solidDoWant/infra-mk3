@@ -103,14 +103,10 @@ pooler:
     enabled: false
     instances: 2
     poolMode: session
-    parameters:
-      server_tls_sslmode: verify-full
   ro:
     enabled: false
     instances: 2
     poolMode: session
-    parameters:
-      server_tls_sslmode: verify-full
 netpol:
   dns:
     selector:
