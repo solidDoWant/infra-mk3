@@ -96,6 +96,9 @@ specs:
               gateway.networking.k8s.io/gateway-name: internal-gateway
           - matchLabels:
               endpoints.netpols.home.arpa/hatchet-worker: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
         toPorts:
           - ports:
               - port: "7070"
