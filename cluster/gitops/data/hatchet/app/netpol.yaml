@@ -72,7 +72,7 @@ specs:
       - *postgres_egress
 
   - description: hatchet engine
-    endpointSelector:
+    endpointSelector: &engine_selector
       matchLabels:
         app.kubernetes.io/name: hatchet
         app.kubernetes.io/controller: engine
@@ -99,7 +99,12 @@ specs:
             matchExpressions:
               - key: io.kubernetes.pod.namespace
                 operator: Exists
-        toPorts:
+          - &api_selector
+            matchLabels:
+              app.kubernetes.io/name: hatchet
+              app.kubernetes.io/controller: api
+              app.kubernetes.io/instance: hatchet
+        toPorts: &engine_ports
           - ports:
               - port: "7070"
                 protocol: TCP
@@ -115,14 +120,13 @@ specs:
                 protocol: TCP
 
   - description: hatchet api
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: hatchet
-        app.kubernetes.io/controller: api
-        app.kubernetes.io/instance: hatchet
+    endpointSelector: *api_selector
     egress:
       - *dns_resolution
       - *postgres_egress
+      - toEndpoints:
+          - *engine_selector
+        toPorts: *engine_ports
     ingress:
       - fromEntities:
           - host
