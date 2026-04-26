@@ -124,14 +124,14 @@ spec:
               DATABASE_PGBOUNCER_ENABLED: true
               DATABASE_DIRECT_URL: *database_direct_url
               DATABASE_URL:
-                &database_pooler_url "postgresql://hatchet@hatchet-postgres-pooler-17-rw.data.svc.cluster.local:5432/hatchet?\
+                &database_pooler_url "postgresql://hatchet@hatchet-postgres-17-pooler-rw.data.svc.cluster.local:5432/hatchet?\
                 sslmode=verify-full&\
                 sslrootcert=/etc/hatchet/certs/root-ca/ca.crt&\
                 sslcert=/etc/hatchet/certs/postgres/tls.crt&\
                 sslkey=/etc/hatchet/certs/postgres/tls.key"
               READ_REPLICA_ENABLED: true
               READ_REPLICA_DATABASE_URL:
-                &database_read_replica_url "postgresql://hatchet@hatchet-postgres-pooler-17-ro.data.svc.cluster.local:5432/hatchet?\
+                &database_read_replica_url "postgresql://hatchet@hatchet-postgres-17-pooler-ro.data.svc.cluster.local:5432/hatchet?\
                 sslmode=verify-full&\
                 sslrootcert=/etc/hatchet/certs/root-ca/ca.crt&\
                 sslcert=/etc/hatchet/certs/postgres/tls.crt&\
