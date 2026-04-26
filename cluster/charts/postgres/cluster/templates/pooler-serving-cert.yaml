@@ -1,12 +1,12 @@
-{{- if .Values.pooler.enabled }}
+{{- if .Values.pooler.rw.enabled }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "pooler-serving-cert-name" . }}
+  name: {{ include "pooler-rw-serving-cert-name" . }}
 spec:
-  commonName: {{ include "pooler-name" . }}
-  dnsNames: {{ include "pooler-serving-domain-names" . | nindent 4 }}
+  commonName: {{ include "pooler-rw-name" . }}
+  dnsNames: {{ include "pooler-rw-serving-domain-names" . | nindent 4 }}
   subject: {{ .Values.certificates.serving.subject | toYaml | nindent 4 }}
   usages:
     - server auth
@@ -16,5 +16,25 @@ spec:
     labels:
       cnpg.io/reload: "true"
   issuerRef: {{ .Values.certificates.serving.issuerRef | toYaml | nindent 4 }}
-  secretName: {{ include "pooler-serving-cert-name" . }}
+  secretName: {{ include "pooler-rw-serving-cert-name" . }}
+{{- end }}
+{{- if .Values.pooler.ro.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "pooler-ro-serving-cert-name" . }}
+spec:
+  commonName: {{ include "pooler-ro-name" . }}
+  dnsNames: {{ include "pooler-ro-serving-domain-names" . | nindent 4 }}
+  subject: {{ .Values.certificates.serving.subject | toYaml | nindent 4 }}
+  usages:
+    - server auth
+  duration: 720h # One month
+  privateKey: {{ .Values.certificates.serving.privateKey | toYaml | nindent 4 }}
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  issuerRef: {{ .Values.certificates.serving.issuerRef | toYaml | nindent 4 }}
+  secretName: {{ include "pooler-ro-serving-cert-name" . }}
 {{- end }}

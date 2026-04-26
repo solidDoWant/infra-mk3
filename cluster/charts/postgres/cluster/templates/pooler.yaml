@@ -1,19 +1,19 @@
-{{- if .Values.pooler.enabled }}
+{{- if .Values.pooler.rw.enabled }}
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: Pooler
 metadata:
-  name: {{ include "pooler-name" . }}
+  name: {{ include "pooler-rw-name" . }}
 spec:
   cluster:
     name: {{ include "cluster-resource-name" . }}
-  instances: {{ .Values.pooler.instances }}
+  instances: {{ .Values.pooler.rw.instances }}
   type: rw
   pgbouncer:
-    poolMode: {{ .Values.pooler.poolMode }}
+    poolMode: {{ .Values.pooler.rw.poolMode }}
     # Cert PgBouncer presents to clients — issued by the same CA as the cluster serving cert.
     clientTLSSecret:
-      name: {{ include "pooler-serving-cert-name" . }}
+      name: {{ include "pooler-rw-serving-cert-name" . }}
     # CA used to validate incoming client certs — same as the cluster's clientCASecret,
     # so a single client cert works for both direct and pooled connections.
     clientCASecret:
@@ -24,7 +24,7 @@ spec:
       # cnpg_pooler_pgbouncer's backend cert to connect as any user.
       auth_type: cert
       client_tls_sslmode: verify-full
-      {{- with .Values.pooler.parameters }}
+      {{- with .Values.pooler.rw.parameters }}
       {{- . | toYaml | nindent 6 }}
       {{- end }}
   template:
@@ -35,5 +35,38 @@ spec:
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
-              cnpg.io/poolerName: {{ include "pooler-name" . }}
+              cnpg.io/poolerName: {{ include "pooler-rw-name" . }}
+{{- end }}
+{{- if .Values.pooler.ro.enabled }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: {{ include "pooler-ro-name" . }}
+spec:
+  cluster:
+    name: {{ include "cluster-resource-name" . }}
+  instances: {{ .Values.pooler.ro.instances }}
+  type: ro
+  pgbouncer:
+    poolMode: {{ .Values.pooler.ro.poolMode }}
+    clientTLSSecret:
+      name: {{ include "pooler-ro-serving-cert-name" . }}
+    clientCASecret:
+      name: {{ tpl .Values.certificates.clientCA.secretName . }}
+    parameters:
+      auth_type: cert
+      client_tls_sslmode: verify-full
+      {{- with .Values.pooler.ro.parameters }}
+      {{- . | toYaml | nindent 6 }}
+      {{- end }}
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              cnpg.io/poolerName: {{ include "pooler-ro-name" . }}
 {{- end }}

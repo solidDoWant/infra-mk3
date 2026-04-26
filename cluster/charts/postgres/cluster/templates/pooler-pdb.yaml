@@ -1,12 +1,24 @@
-{{- if and .Values.pooler.enabled (gt (int .Values.pooler.instances) 1) }}
+{{- if and .Values.pooler.rw.enabled (gt (int .Values.pooler.rw.instances) 1) }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "pooler-name" . }}
+  name: {{ include "pooler-rw-name" . }}
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      cnpg.io/poolerName: {{ include "pooler-name" . }}
+      cnpg.io/poolerName: {{ include "pooler-rw-name" . }}
+{{- end }}
+{{- if and .Values.pooler.ro.enabled (gt (int .Values.pooler.ro.instances) 1) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pooler-ro-name" . }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      cnpg.io/poolerName: {{ include "pooler-ro-name" . }}
 {{- end }}

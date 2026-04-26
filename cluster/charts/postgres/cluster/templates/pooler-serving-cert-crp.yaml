@@ -1,10 +1,10 @@
-{{- if .Values.pooler.enabled }}
+{{- if .Values.pooler.rw.enabled }}
 ---
-# Approve the {{ include "pooler-name" . }} serving certificate specifically.
+# Approve the {{ include "pooler-rw-name" . }} serving certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: {{ .Values.certificates.serving.issuerRef.name }}-{{ include "pooler-name" . }}-serving-cert
+  name: {{ .Values.certificates.serving.issuerRef.name }}-{{ include "pooler-rw-name" . }}-serving-cert
 spec:
   selector:
     issuerRef: {{ .Values.certificates.serving.issuerRef | toYaml | nindent 6 }}
@@ -14,10 +14,43 @@ spec:
   allowed:
     commonName:
       required: true
-      value: {{ include "pooler-name" . }}
+      value: {{ include "pooler-rw-name" . }}
     dnsNames:
       required: true
-      values: {{ include "pooler-serving-domain-names" . | nindent 8 }}
+      values: {{ include "pooler-rw-serving-domain-names" . | nindent 8 }}
+    {{- if .Values.certificates.serving.subject }}
+    subject:
+      {{- range $field, $value := .Values.certificates.serving.subject }}
+      {{ $field }}:
+        required: true
+        values: {{ $value | toYaml | nindent 10 }}
+      {{- end }}
+    {{- end }}
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 720h # One month
+{{- end }}
+{{- if .Values.pooler.ro.enabled }}
+---
+# Approve the {{ include "pooler-ro-name" . }} serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: {{ .Values.certificates.serving.issuerRef.name }}-{{ include "pooler-ro-name" . }}-serving-cert
+spec:
+  selector:
+    issuerRef: {{ .Values.certificates.serving.issuerRef | toYaml | nindent 6 }}
+    namespace:
+      matchNames:
+        - {{ .Release.Namespace }}
+  allowed:
+    commonName:
+      required: true
+      value: {{ include "pooler-ro-name" . }}
+    dnsNames:
+      required: true
+      values: {{ include "pooler-ro-serving-domain-names" . | nindent 8 }}
     {{- if .Values.certificates.serving.subject }}
     subject:
       {{- range $field, $value := .Values.certificates.serving.subject }}

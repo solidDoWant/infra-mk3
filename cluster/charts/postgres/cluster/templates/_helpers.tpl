@@ -37,18 +37,31 @@
 {{- end -}}
 {{- end -}}
 
-{{- define "pooler-name" -}}
+{{- define "pooler-rw-name" -}}
 {{ include "cluster-resource-name" . }}-pooler-rw
 {{- end -}}
 
-{{- define "pooler-serving-cert-name" -}}
-{{ include "pooler-name" . }}-serving-cert
+{{- define "pooler-ro-name" -}}
+{{ include "cluster-resource-name" . }}-pooler-ro
+{{- end -}}
+
+{{- define "pooler-rw-serving-cert-name" -}}
+{{ include "pooler-rw-name" . }}-serving-cert
+{{- end -}}
+
+{{- define "pooler-ro-serving-cert-name" -}}
+{{ include "pooler-ro-name" . }}-serving-cert
 {{- end -}}
 
 {{/*
     Same rule as serving-domain-names: namespace must be included in the SAN.
 */}}
-{{- define "pooler-serving-domain-names" -}}
-- {{ include "pooler-name" . }}.{{ .Release.Namespace }}.svc
-- {{ include "pooler-name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+{{- define "pooler-rw-serving-domain-names" -}}
+- {{ include "pooler-rw-name" . }}.{{ .Release.Namespace }}.svc
+- {{ include "pooler-rw-name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+{{- end -}}
+
+{{- define "pooler-ro-serving-domain-names" -}}
+- {{ include "pooler-ro-name" . }}.{{ .Release.Namespace }}.svc
+- {{ include "pooler-ro-name" . }}.{{ .Release.Namespace }}.svc.cluster.local
 {{- end -}}

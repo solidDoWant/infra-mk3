@@ -97,10 +97,16 @@ backups:
   volumeSnapshot:
     className: postgres
 pooler:
-  enabled: false
-  instances: 2
-  poolMode: session
-  parameters: {}
+  rw:
+    enabled: false
+    instances: 2
+    poolMode: session
+    parameters: {}
+  ro:
+    enabled: false
+    instances: 2
+    poolMode: session
+    parameters: {}
 netpol:
   dns:
     selector:
