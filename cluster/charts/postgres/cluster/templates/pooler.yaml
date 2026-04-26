@@ -63,7 +63,7 @@ spec:
     clientCASecret:
       name: {{ tpl .Values.certificates.clientCA.secretName . }}
     serverTLSSecret:
-      name: {{ tpl .Values.pooler.backendCertSecretName . }}
+      name: {{ tpl .Values.pooler.clusterCertSecretName . }}
     serverCASecret:
       name: {{ include "serving-cert-name" . }}
     parameters:
