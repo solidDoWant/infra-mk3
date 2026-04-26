@@ -70,7 +70,7 @@ spec:
               tag: *tag
             env:
               DATABASE_URL:
-                &database_url "postgresql://hatchet@hatchet-postgres-17-rw.data.svc.cluster.local:5432/hatchet?\
+                &database_direct_url "postgresql://hatchet@hatchet-postgres-17-rw.data.svc.cluster.local:5432/hatchet?\
                 sslmode=verify-full&\
                 sslrootcert=/etc/hatchet/certs/root-ca/ca.crt&\
                 sslcert=/etc/hatchet/certs/postgres/tls.crt&\
@@ -100,7 +100,7 @@ spec:
               - /hatchet/hatchet-admin
               - seed
             env:
-              DATABASE_URL: *database_url
+              DATABASE_URL: *database_direct_url
             envFrom:
               - secret: hatchet-seed-credentials
             securityContext: *container_security_context
@@ -121,10 +121,17 @@ spec:
               repository: ghcr.io/hatchet-dev/hatchet/hatchet-engine
               tag: *tag
             env:
-              DATABASE_URL: *database_url
+              DATABASE_PGBOUNCER_ENABLED: true
+              DATABASE_DIRECT_URL: *database_direct_url
+              DATABASE_URL:
+                &database_pooler_url "postgresql://hatchet@hatchet-postgres-pooler-17-rw.data.svc.cluster.local:5432/hatchet?\
+                sslmode=verify-full&\
+                sslrootcert=/etc/hatchet/certs/root-ca/ca.crt&\
+                sslcert=/etc/hatchet/certs/postgres/tls.crt&\
+                sslkey=/etc/hatchet/certs/postgres/tls.key"
               READ_REPLICA_ENABLED: true
               READ_REPLICA_DATABASE_URL:
-                &database_read_replica_url "postgresql://hatchet@hatchet-postgres-17-ro.data.svc.cluster.local:5432/hatchet?\
+                &database_read_replica_url "postgresql://hatchet@hatchet-postgres-pooler-17-ro.data.svc.cluster.local:5432/hatchet?\
                 sslmode=verify-full&\
                 sslrootcert=/etc/hatchet/certs/root-ca/ca.crt&\
                 sslcert=/etc/hatchet/certs/postgres/tls.crt&\
@@ -182,7 +189,9 @@ spec:
               repository: ghcr.io/hatchet-dev/hatchet/hatchet-api
               tag: *tag
             env:
-              DATABASE_URL: *database_url
+              DATABASE_PGBOUNCER_ENABLED: true
+              DATABASE_DIRECT_URL: *database_direct_url
+              DATABASE_URL: *database_pooler_url
               READ_REPLICA_ENABLED: true
               READ_REPLICA_DATABASE_URL: *database_read_replica_url
               SERVER_TASKQUEUE_KIND: postgres
@@ -263,7 +272,7 @@ spec:
               - --resource-name=hatchet-worker-token
               - --resource-type=secret
             env:
-              DATABASE_URL: *database_url
+              DATABASE_URL: *database_pooler_url
               SERVER_AUTH_COOKIE_DOMAIN: "hatchet.${SECRET_PUBLIC_DOMAIN_NAME}"
               # Address broadcast to workers — points to the engine ClusterIP service
               SERVER_GRPC_BROADCAST_ADDRESS: "hatchet-engine.data.svc.cluster.local:7070"
