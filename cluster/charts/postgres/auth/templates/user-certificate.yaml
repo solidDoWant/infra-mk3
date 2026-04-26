@@ -1,4 +1,5 @@
 {{ range $name, $info := .Values.users }}
+{{- if not $info.disabled }}
 {{- $certName := printf "%s-postgres-%s-user" $.Values.serviceName $name -}}
 ---
 apiVersion: cert-manager.io/v1
@@ -18,4 +19,5 @@ spec:
   secretTemplate: {{ include "cnpg-labels" $ | nindent 4 }}
 {{- end }}
   issuerRef: {{ include "ca-issuer-ref" $ | nindent 4 }}
+{{- end }}
 {{ end }}

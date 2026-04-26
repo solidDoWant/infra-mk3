@@ -1,4 +1,5 @@
 {{ range $name, $info := .Values.users }}
+{{- if not $info.disabled }}
 ---
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
@@ -18,4 +19,5 @@ spec:
       - client auth
   constraints:
     maxDuration: {{ $info.duration | default "1h" }}
+{{- end }}
 {{ end }}

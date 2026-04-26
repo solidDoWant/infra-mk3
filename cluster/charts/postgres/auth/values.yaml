@@ -10,8 +10,12 @@ teleportDomainName: ""
 users:
   streaming-replica:
     username: streaming_replica
+  pooler:
+    username: cnpg_pooler_pgbouncer
+    disabled: true
   # example-application:
   #   name: example-application
+  #   disabled: true # If true, no Certificate or CertificateRequestPolicy is created
   #   disableReloading: true # If true, pods mounting this cert will NOT be reloaded on cert changes
   #   duration: 8760h # 1 year # If set, override the default duration for user certificate (1h)
   #   renewBefore: 720h # 30 days # Optionally set renewBefore for user certificate
