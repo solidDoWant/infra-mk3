@@ -38,6 +38,14 @@ spec:
           rotationPolicy: Always
     parameters:
       max_connections: "300"
+    pooler:
+      rw: &pooler_config
+        enabled: true
+        poolMode: transaction
+        parameters:
+          max_client_conn: "1000"
+          default_pool_size: "50"
+      ro: *pooler_config
     additionalClusterConfig:
       inheritedMetadata:
         annotations:
