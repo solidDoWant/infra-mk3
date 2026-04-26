@@ -36,6 +36,8 @@ spec:
           size: 384
           encoding: PKCS8
           rotationPolicy: Always
+    parameters:
+      max_connections: "300"
     additionalClusterConfig:
       inheritedMetadata:
         annotations:
