@@ -19,6 +19,7 @@ spec:
   chart:
     spec:
       chart: ./cluster/charts/postgres/auth
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         namespace: flux-system
