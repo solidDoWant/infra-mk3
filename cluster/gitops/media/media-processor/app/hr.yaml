@@ -1,0 +1,117 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: media-processor
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: media-processor
+      version: 0.0.3
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: soliddowant-charts
+  values:
+    config:
+      hatchet:
+        token:
+          secretKeyRef:
+            name: hatchet-worker-token
+            key: HATCHET_CLIENT_TOKEN
+
+      # Full NFS restricted to the downloads subtree — watcher gets read-only, worker read-write.
+      inputVolume:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        subPath: downloads
+
+      watcher:
+        watches:
+          - name: bittorrent-movies
+            watchedPath: /media/input/bittorrent/Movies
+            mediaType: movie
+            output: &movie_output
+              volumeName: media
+              mountPath: /media/output/movies
+              subPath: converted/Movies
+              remotePath: /mnt/complete
+            preserveSource: true
+            ignorePatterns: &qbittorrent_ignore
+              - '\.!qB$' # qbittorrent incomplete downloads
+          - name: bittorrent-shows
+            watchedPath: /media/input/bittorrent/Series
+            mediaType: show
+            output: &show_output
+              volumeName: media
+              mountPath: /media/output/shows
+              subPath: converted/Shows
+              remotePath: /mnt/complete
+            preserveSource: true
+            ignorePatterns: *qbittorrent_ignore
+          - name: usenet-movies
+            watchedPath: /media/input/usenet/Movies
+            mediaType: movie
+            output: *movie_output
+            preserveSource: false
+            ignorePatterns: &nzbget_ignore
+              - "(^|/)_unpack(/|$)" # nzbget in-progress extraction directories
+          - name: usenet-shows
+            watchedPath: /media/input/usenet/Series
+            mediaType: show
+            output: *show_output
+            preserveSource: false
+            ignorePatterns: *nzbget_ignore
+        volumes:
+          media:
+            type: nfs
+            server: ${NFS_ADDRESS}
+            path: ${NFS_MEDIA_PATH}
+        metrics:
+          enabled: true
+
+      worker:
+        media:
+        metrics:
+          enabled: true
+        radarr:
+          url: "http://radarr.media.svc:7878"
+          apiKey:
+            secretKeyRef:
+              name: radarr-api-key
+              key: API_KEY
+        sonarr:
+          url: "http://sonarr.media.svc:8989"
+          apiKey:
+            secretKeyRef:
+              name: sonarr-api-key
+              key: API_KEY
+
+    resources:
+      controllers:
+        watcher:
+          pod:
+            labels:
+              endpoints.netpols.home.arpa/hatchet-worker: "true"
+          containers:
+            watcher:
+              env:
+                # Engine runs with SERVER_GRPC_INSECURE=true — disable client-side TLS.
+                HATCHET_CLIENT_TLS_STRATEGY: none
+        worker:
+          replicas: 2
+          pod:
+            labels:
+              endpoints.netpols.home.arpa/hatchet-worker: "true"
+            resourceClaims:
+              - name: gpu
+                resourceClaimTemplateName: media-processor-worker-gpu
+          containers:
+            worker:
+              env:
+                HATCHET_CLIENT_TLS_STRATEGY: none
+              resources:
+                claims:
+                  - name: gpu

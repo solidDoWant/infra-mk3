@@ -1,0 +1,105 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: media-processor
+specs:
+  - description: watcher
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: media-processor
+        app.kubernetes.io/controller: watcher
+        app.kubernetes.io/instance: media-processor
+    egress:
+      # DNS resolution — required for cluster DNS lookups
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Hatchet engine — watcher submits scan jobs via gRPC
+      - &hatchet_engine_egress
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: data
+              endpoints.netpols.home.arpa/hatchet-engine: "true"
+        toPorts:
+          - ports:
+              - port: "7070"
+                protocol: TCP
+    ingress:
+      # Kubelet health probes — liveness/readiness on watcher health port
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
+      # Victoria Metrics agent — Prometheus metrics scraping
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
+
+  - description: worker
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: media-processor
+        app.kubernetes.io/controller: worker
+        app.kubernetes.io/instance: media-processor
+    egress:
+      # DNS resolution — required for cluster DNS lookups
+      - *dns_resolution
+      # Hatchet engine — worker polls for and completes transcoding jobs via gRPC
+      - *hatchet_engine_egress
+      # Radarr — worker notifies Radarr to import transcoded movie files
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: radarr
+              app.kubernetes.io/controller: radarr
+              app.kubernetes.io/instance: radarr
+        toPorts:
+          - ports:
+              - port: "7878"
+                protocol: TCP
+      # Sonarr — worker notifies Sonarr to import transcoded show files
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: sonarr
+              app.kubernetes.io/controller: sonarr
+              app.kubernetes.io/instance: sonarr
+        toPorts:
+          - ports:
+              - port: "8989"
+                protocol: TCP
+    ingress:
+      # Kubelet health probes — liveness/readiness on worker health port
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Victoria Metrics agent — Prometheus metrics scraping
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP

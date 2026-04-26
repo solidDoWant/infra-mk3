@@ -1,0 +1,21 @@
+---
+# Provides the Intel Arc Pro GPU to the worker pod via DRA.
+# The worker auto-detects the device path; no MEDIA_HARDWARE_DEVICE_PATH env var is needed.
+apiVersion: resource.k8s.io/v1beta2
+kind: ResourceClaimTemplate
+metadata:
+  name: media-processor-worker-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.intel.com
+            # adminAccess avoids consuming the node's single GPU allocation slot,
+            # since the worker is not the only consumer (fileflows also uses it).
+            adminAccess: true
+            allocationMode: All
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro'
