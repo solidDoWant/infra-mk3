@@ -29,6 +29,7 @@ spec:
       {{- end }}
   template:
     spec:
+      containers: []
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -62,6 +63,7 @@ spec:
       {{- end }}
   template:
     spec:
+      containers: []
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
