@@ -88,9 +88,14 @@ specs:
           - ports:
               - port: "8733"
                 protocol: TCP
-      # gRPC workers — any pod in the cluster connects here to execute tasks
-      - fromEntities:
-          - cluster
+      # gRPC — internal gateway (for external worker token connections) and labeled worker pods
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          - matchLabels:
+              endpoints.netpols.home.arpa/hatchet-worker: "true"
         toPorts:
           - ports:
               - port: "7070"

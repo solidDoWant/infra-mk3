@@ -112,6 +112,9 @@ spec:
         strategy: RollingUpdate
         serviceAccount:
           identifier: engine
+        pod:
+          labels:
+            endpoints.netpols.home.arpa/hatchet-engine: "true"
         containers:
           engine:
             image:
