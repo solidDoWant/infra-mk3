@@ -43,7 +43,7 @@ spec:
             requests:
               cpu: 10m
               # Why does multus need so much at startup??
-              memory: &memory 512Mi
+              memory: &memory 1Gi
             limits:
               memory: *memory
         initContainers:
