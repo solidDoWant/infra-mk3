@@ -305,6 +305,10 @@ specs:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: matching
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: history
         toPorts:
           - ports:
