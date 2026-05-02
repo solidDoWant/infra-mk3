@@ -52,11 +52,27 @@ list_desired_namespaces() {
         | sort -u
 }
 
+# All Registered namespaces in Temporal, regardless of who owns them. Used
+# to decide what to *create*: only namespaces missing from Temporal entirely
+# get a create call. Manually-created or pre-existing namespaces (without the
+# managed-by tag) are left alone instead of being re-attempted every cycle.
+list_existing_namespaces() {
+    echo "${TEMPORAL_NS_RAW}" \
+        | jq -r '
+            .[]?
+            | select(.namespaceInfo.state == "Registered")
+            | .namespaceInfo.name' \
+        | sort -u
+}
+
+# Subset of Registered namespaces tagged as managed-by this controller. Used
+# to decide what to *delete*: only namespaces this controller created can be
+# pruned when the corresponding k8s namespace goes away.
 list_managed_namespaces() {
-    "${TEMPORAL}" operator namespace list -o json \
+    echo "${TEMPORAL_NS_RAW}" \
         | jq -r --arg tag "${MANAGED_BY_TAG}" '
             .[]?
-            | select(.namespaceInfo.data["managed-by"] == $tag)
+            | select(.namespaceInfo.data["managed-by"]? == $tag)
             | select(.namespaceInfo.state == "Registered")
             | .namespaceInfo.name' \
         | sort -u
@@ -71,34 +87,43 @@ reconcile() {
         echo "k8s namespace list failed; skipping reconcile" >&2
         return 1
     }
-    managed=$(list_managed_namespaces) || {
+    TEMPORAL_NS_RAW=$("${TEMPORAL}" operator namespace list -o json) || {
         echo "temporal namespace list failed; skipping reconcile" >&2
         return 1
     }
+    existing=$(list_existing_namespaces)
+    managed=$(list_managed_namespaces)
 
     # POSIX sh has no <(...) process substitution; use temp files for `comm`.
     desired_file=$(mktemp)
+    existing_file=$(mktemp)
     managed_file=$(mktemp)
     # shellcheck disable=SC2064
-    trap "rm -f '${desired_file}' '${managed_file}'" EXIT
+    trap "rm -f '${desired_file}' '${existing_file}' '${managed_file}'" EXIT
     printf '%s\n' "${desired}" > "${desired_file}"
+    printf '%s\n' "${existing}" > "${existing_file}"
     printf '%s\n' "${managed}" > "${managed_file}"
-    to_create=$(comm -23 "${desired_file}" "${managed_file}")
-    to_delete=$(comm -13 "${desired_file}" "${managed_file}")
-    rm -f "${desired_file}" "${managed_file}"
+    # Create: in desired, not in temporal at all (skip pre-existing untagged
+    # namespaces — the operator can adopt them by tagging manually if wanted).
+    to_create=$(comm -23 "${desired_file}" "${existing_file}")
+    # Delete: tagged as managed by us, but no longer desired.
+    to_delete=$(comm -23 "${managed_file}" "${desired_file}")
+    rm -f "${desired_file}" "${existing_file}" "${managed_file}"
     trap - EXIT
 
     printf '%s\n' "${to_create}" | while IFS= read -r ns; do
         [ -z "${ns}" ] && continue
         echo "+ creating temporal namespace: ${ns}"
+        # 2160h = 90d. Temporal's --retention parses via Go time.ParseDuration,
+        # which doesn't accept the `d` suffix.
         "${TEMPORAL}" operator namespace create \
             --namespace "${ns}" \
             --data "managed-by=${MANAGED_BY_TAG}" \
             --retention 90d \
             --history-archival-state enabled \
-            --history-archival-uri "${ARCHIVAL_URI}" \
+            --history-uri "${ARCHIVAL_URI}" \
             --visibility-archival-state enabled \
-            --visibility-archival-uri "${ARCHIVAL_URI}" \
+            --visibility-uri "${ARCHIVAL_URI}" \
             || echo "  failed to create ${ns}" >&2
     done
 
