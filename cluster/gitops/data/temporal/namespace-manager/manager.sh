@@ -129,7 +129,9 @@ reconcile() {
         if create_output=$("${TEMPORAL}" operator namespace create \
             --namespace "${ns}" \
             --data "managed-by=${MANAGED_BY_TAG}" \
-            --retention 2160h 2>&1); then
+            --retention 2160h \
+            --history-archival-state enabled \
+            --visibility-archival-state enabled 2>&1); then
             :
         elif printf '%s' "${create_output}" | grep -q 'already exists'; then
             echo "  ${ns} already exists in temporal — skipping"
