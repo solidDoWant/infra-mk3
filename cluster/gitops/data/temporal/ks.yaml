@@ -17,6 +17,13 @@ spec:
     kind: GitRepository
     name: infra-mk3
   wait: true
+  # Verify that all databases have been applied
+  healthCheckExprs:
+    - apiVersion: postgresql.cnpg.io/v1
+      kind: Database
+      inProgress: "!has(status.applied)"
+      failed: has(status.applied) && status.applied == false
+      current: has(status.applied) && status.applied == true
   dependsOn:
     - name: cloudnative-pg
     - name: cluster-issuers
