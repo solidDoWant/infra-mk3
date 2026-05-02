@@ -47,6 +47,11 @@ spec:
         tag: 1.31.0
       # Default replicas for every server component (frontend/history/matching/worker).
       replicaCount: 2
+      # Applied to every server pod (frontend/internal-frontend/history/matching/
+      # worker). All five fetch JWKS for JWT validation; this label opens the
+      # netpol path to oidc-supplier pods (Authentik server, Teleport proxy).
+      podLabels:
+        endpoints.netpols.home.arpa/oidc-querier: "true"
 
       # Mount the postgres user cert (auth) and serving CA (verify-full) into every
       # server pod. The same mounts back the persistence.tls.* paths in server.config.
@@ -233,11 +238,6 @@ spec:
 
       worker:
         replicaCount: 2
-        # Worker is the only server service observed actively polling JWKS for
-        # JWT validation. Label opens the netpol path to oidc-supplier pods
-        # (Authentik server, Teleport proxy) for in-cluster JWKS fetches.
-        podLabels:
-          endpoints.netpols.home.arpa/oidc-querier: "true"
         resources:
           requests:
             cpu: 50m

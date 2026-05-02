@@ -62,6 +62,24 @@ specs:
           - ports:
               - port: "7235"
                 protocol: TCP
+      # JWKS polling for JWT validation. All five server services init the
+      # JWT key provider when authorization is configured; each pod refreshes
+      # JWKS on its own cycle. Hits any in-cluster pod labeled as an OIDC
+      # supplier (Authentik server pod port 9000, Teleport proxy pod port
+      # 3080).
+      - &jwks_egress
+        toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/oidc-supplier: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+        toPorts:
+          - ports:
+              - port: "9000"
+                protocol: TCP
+              - port: "3080"
+                protocol: TCP
       # Ringpop membership gossip to all sister services. Each service uses a
       # distinct membership port: frontend 6933, history 6934, matching 6935,
       # internal-frontend 6936, worker 6939. Members talk to all peers on every
@@ -167,6 +185,7 @@ specs:
           - ports:
               - port: "7235"
                 protocol: TCP
+      - *jwks_egress
       - *ringpop_egress
     ingress:
       # Internal callers: Worker for system workflows, admintools deployment,
@@ -227,6 +246,7 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+      - *jwks_egress
       - *ringpop_egress
     ingress:
       # gRPC from Frontend / Internal Frontend (forwarded workflow ops) and
@@ -293,6 +313,7 @@ specs:
           - ports:
               - port: "7235"
                 protocol: TCP
+      - *jwks_egress
       - *ringpop_egress
     ingress:
       # gRPC from Frontend / Internal Frontend, History, and sister matching
@@ -353,22 +374,7 @@ specs:
           - ports:
               - port: "7236"
                 protocol: TCP
-      # JWKS polling for JWT validation. Hits any in-cluster pod labeled as an
-      # OIDC supplier (currently Authentik server on port 80 and the Teleport
-      # proxy on port 3080 — the proxy isn't behind the ingress gateway because
-      # of Teleport's TLS routing).
-      - toEndpoints:
-          - matchLabels:
-              endpoints.netpols.home.arpa/oidc-supplier: "true"
-            matchExpressions:
-              - key: io.kubernetes.pod.namespace
-                operator: Exists
-        toPorts:
-          - ports:
-              - port: "9000"
-                protocol: TCP
-              - port: "3080"
-                protocol: TCP
+      - *jwks_egress
       - *ringpop_egress
     ingress:
       # Ringpop membership ingress only — no service gRPC port.
