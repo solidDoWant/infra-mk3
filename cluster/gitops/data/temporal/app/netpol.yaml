@@ -73,6 +73,18 @@ specs:
           - ports:
               - port: "7236"
                 protocol: TCP
+      # Internal gateway. Frontend uses this to read archived workflow
+      # histories from Rook Ceph S3 when answering describe/list workflow
+      # queries against archived data.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
       # JWKS polling for JWT validation. All five server services init the
       # JWT key provider when authorization is configured; each pod refreshes
       # JWKS on its own cycle. Hits any in-cluster pod labeled as an OIDC
