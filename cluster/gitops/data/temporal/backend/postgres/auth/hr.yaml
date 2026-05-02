@@ -1,0 +1,31 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: temporal-postgres-auth
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/auth
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    serviceName: temporal
+    certificates:
+      ca:
+        subject:
+          countries:
+            - US
+          provinces:
+            - ${SECRET_STATE}
+          organizations:
+            - infra-mk3
+    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    users:
+      temporal:
+        username: temporal
+        disableReloading: true

@@ -1,0 +1,10 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: temporal-persistence
+spec:
+  name: temporal_persistence
+  owner: temporal
+  cluster:
+    name: temporal-postgres-17

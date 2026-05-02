@@ -1,0 +1,58 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: temporal-postgres-17
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  dependsOn:
+    - name: temporal-postgres-auth
+  values:
+    clusterName: temporal
+    certificates:
+      serving:
+        issuerRef:
+          name: data-intermediary-ca
+        subject:
+          countries:
+            - US
+          provinces:
+            - ${SECRET_STATE}
+          organizations:
+            - infra-mk3
+        # ECDSA used cluster-wide for postgres serving certs (.NET / Npgsql does not
+        # support Ed25519). Kept here for consistency with other postgres clusters.
+        privateKey:
+          algorithm: ECDSA
+          size: 384
+          encoding: PKCS8
+          rotationPolicy: Always
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    # Sized for Temporal's connection load: 8 server pods × 15 conns/pod = 120 + ~12 internal
+    # = ~132. max_connections=150 leaves a 16-conn buffer for chart upgrades / admintools.
+    # Per-conn ~8MiB measured + 512MiB shared_buffers + ~250MiB overhead ≈ 2GiB needed.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 2Gi
+      limits:
+        memory: 2Gi
+    parameters:
+      max_connections: "150"
+      shared_buffers: 512MB
+      work_mem: 16MB # TODO should this shrink?
+    netpol:
+      applicationAccess:
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
