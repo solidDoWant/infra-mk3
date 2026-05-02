@@ -282,6 +282,17 @@ specs:
           - ports:
               - port: "7234"
                 protocol: TCP
+      # Cross-partition forwarding between matching pods (sticky workflows route
+      # to the matching pod that owns the partition).
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: matching
+        toPorts:
+          - ports:
+              - port: "7235"
+                protocol: TCP
       - *ringpop_egress
     ingress:
       # gRPC from Frontend / Internal Frontend, History, and sister matching
