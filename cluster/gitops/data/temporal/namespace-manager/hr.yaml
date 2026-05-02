@@ -1,0 +1,123 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# cspell:words badouralix mktemp temporalio
+# Periodically reconciles Temporal namespaces against k8s namespaces labeled
+# `temporal.home.arpa/enabled=true`. Connects to Temporal's internal-frontend
+# (port 7236) which bypasses JWT auth, so the manager doesn't need an OIDC
+# token to do CRUD on namespaces.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: temporal-namespace-manager
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      temporal-namespace-manager:
+        # 1 replica: this is a singleton control loop. Bash leader-election is
+        # fragile, and create/delete are idempotent enough that brief downtime
+        # on a pod restart only delays the next reconcile by ~POLL_INTERVAL.
+        replicas: 1
+        strategy: Recreate
+        defaultContainerOptions:
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        serviceAccount:
+          identifier: temporal-namespace-manager
+        containers:
+          # Base image ships busybox sh + curl + jq + a real CA bundle. Pinned
+          # by digest because the upstream tag is :latest. The `temporal` CLI
+          # is brought in via the admin-tools image volume below.
+          manager:
+            image:
+              repository: badouralix/curl-jq
+              tag: latest@sha256:3670578737d1d2019b10a4f9e607284101feb9fdd6b0478e78ea87bf61d96145
+            command:
+              - /script/manager.sh
+            env:
+              TEMPORAL_ADDRESS: temporal-internal-frontend.data.svc.cluster.local:7236
+              NAMESPACE_LABEL: temporal.home.arpa/enabled
+              POLL_INTERVAL_SECONDS: "300"
+              MANAGED_BY_TAG: temporal-namespace-manager
+              TEMPORAL: /img/admin-tools/usr/local/bin/temporal
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 64Mi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      script:
+        type: configMap
+        name: manager-scripts
+        defaultMode: 0555
+        advancedMounts:
+          temporal-namespace-manager:
+            manager:
+              - path: /script
+      # OCI image volume — mounts the rootfs of temporalio/admin-tools
+      # read-only. Provides the `temporal` CLI binary at
+      # /img/admin-tools/usr/local/bin/temporal (referenced via $TEMPORAL).
+      admin-tools:
+        type: image
+        image: temporalio/admin-tools:1.31.0
+        advancedMounts:
+          temporal-namespace-manager:
+            manager:
+              - path: /img/admin-tools
+      # readOnlyRootFilesystem: true means /tmp must be a separate writable
+      # mount. mktemp / curl / jq may write small temp files here.
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          temporal-namespace-manager:
+            manager:
+              - path: /tmp
+    serviceAccount:
+      temporal-namespace-manager: {}
+    rbac:
+      roles:
+        temporal-namespace-manager:
+          type: ClusterRole
+          rules:
+            # Read-only on namespaces cluster-wide. The manager only reads k8s
+            # state; all writes go to Temporal via gRPC.
+            - apiGroups:
+                - ""
+              resources:
+                - namespaces
+              verbs:
+                - get
+                - list
+                - watch
+      bindings:
+        temporal-namespace-manager:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: temporal-namespace-manager
+          subjects:
+            - identifier: temporal-namespace-manager

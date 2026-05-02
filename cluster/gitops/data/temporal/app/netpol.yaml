@@ -189,7 +189,7 @@ specs:
       - *ringpop_egress
     ingress:
       # Internal callers: Worker for system workflows, admintools deployment,
-      # namespace-management Jobs.
+      # and the namespace-manager.
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: temporal
@@ -199,6 +199,10 @@ specs:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: admintools
+          - matchLabels:
+              app.kubernetes.io/name: temporal-namespace-manager
+              app.kubernetes.io/instance: temporal-namespace-manager
+              app.kubernetes.io/controller: temporal-namespace-manager
         toPorts:
           - ports:
               - port: "7236"

@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: temporal-namespace-manager
+specs:
+  - description: temporal-namespace-manager
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal-namespace-manager
+        app.kubernetes.io/instance: temporal-namespace-manager
+        app.kubernetes.io/controller: temporal-namespace-manager
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # k8s API server — to list namespaces filtered by the enable label.
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Temporal internal-frontend — the only path for namespace CRUD without
+      # presenting a JWT. The reciprocal ingress rule lives in
+      # data/temporal/app/netpol.yaml on the temporal-internal-frontend spec.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: internal-frontend
+        toPorts:
+          - ports:
+              - port: "7236"
+                protocol: TCP
