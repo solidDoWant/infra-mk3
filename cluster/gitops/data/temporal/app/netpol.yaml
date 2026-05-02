@@ -207,16 +207,32 @@ specs:
           - ports:
               - port: "7235"
                 protocol: TCP
+      # Sister internal-frontend pods (gRPC). Required for any cross-pod
+      # internal API call routed via membership.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: internal-frontend
+        toPorts:
+          - ports:
+              - port: "7236"
+                protocol: TCP
       - *jwks_egress
       - *ringpop_egress
     ingress:
-      # Internal callers: Frontend (redirects internal calls), Worker for
-      # system workflows, admintools deployment, and the namespace-manager.
+      # Internal callers: Frontend (redirects internal calls), sister
+      # internal-frontend pods, Worker for system workflows, admintools
+      # deployment, and the namespace-manager.
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: frontend
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: internal-frontend
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
