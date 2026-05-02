@@ -218,6 +218,18 @@ specs:
           - ports:
               - port: "7236"
                 protocol: TCP
+      # Internal gateway. Internal Frontend uses this to read archived
+      # workflow histories from Rook Ceph S3 when answering describe/list
+      # workflow queries against archived data.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
       - *jwks_egress
       - *ringpop_egress
     ingress:
