@@ -52,16 +52,29 @@ list_desired_namespaces() {
         | sort -u
 }
 
+# Normalize the temporal CLI's namespace-list output to a flat stream of
+# namespace records. The CLI may emit a JSON array, JSON-Lines, or a wrapper
+# object with a `namespaces` field depending on version, and the inner record
+# may or may not be wrapped in `namespaceInfo`. `--slurp` collects every
+# top-level value into one array; the unwrap step then peels back nesting so
+# downstream filters always see a uniform `{name, state, data}` object.
+NAMESPACE_FILTER='
+    (if length == 1 and (.[0] | type) == "array" then .[0]
+     elif length == 1 and (.[0] | type) == "object" and (.[0] | has("namespaces")) then .[0].namespaces
+     else . end)
+    | .[]?
+    | (if has("namespaceInfo") then .namespaceInfo else . end)
+    | select((.state | tostring) == "Registered"
+          or (.state | tostring) == "NAMESPACE_STATE_REGISTERED")
+'
+
 # All Registered namespaces in Temporal, regardless of who owns them. Used
 # to decide what to *create*: only namespaces missing from Temporal entirely
 # get a create call. Manually-created or pre-existing namespaces (without the
 # managed-by tag) are left alone instead of being re-attempted every cycle.
 list_existing_namespaces() {
     echo "${TEMPORAL_NS_RAW}" \
-        | jq -r '
-            .[]?
-            | select(.namespaceInfo.state == "Registered")
-            | .namespaceInfo.name' \
+        | jq -rs "${NAMESPACE_FILTER} | .name" \
         | sort -u
 }
 
@@ -70,11 +83,10 @@ list_existing_namespaces() {
 # pruned when the corresponding k8s namespace goes away.
 list_managed_namespaces() {
     echo "${TEMPORAL_NS_RAW}" \
-        | jq -r --arg tag "${MANAGED_BY_TAG}" '
-            .[]?
-            | select(.namespaceInfo.data["managed-by"]? == $tag)
-            | select(.namespaceInfo.state == "Registered")
-            | .namespaceInfo.name' \
+        | jq -rs --arg tag "${MANAGED_BY_TAG}" "
+            ${NAMESPACE_FILTER}
+            | select(.data[\"managed-by\"]? == \$tag)
+            | .name" \
         | sort -u
 }
 
@@ -116,15 +128,26 @@ reconcile() {
         echo "+ creating temporal namespace: ${ns}"
         # 2160h = 90d. Temporal's --retention parses via Go time.ParseDuration,
         # which doesn't accept the `d` suffix.
-        "${TEMPORAL}" operator namespace create \
+        #
+        # Capture combined output so we can quietly absorb "already exists"
+        # without spamming the log on every tick. That can happen if the list
+        # parsing missed a namespace (e.g. unexpected output shape) or if the
+        # namespace was created out of band between the list and create.
+        if create_output=$("${TEMPORAL}" operator namespace create \
             --namespace "${ns}" \
             --data "managed-by=${MANAGED_BY_TAG}" \
-            --retention 90d \
+            --retention 2160h \
             --history-archival-state enabled \
             --history-uri "${ARCHIVAL_URI}" \
             --visibility-archival-state enabled \
-            --visibility-uri "${ARCHIVAL_URI}" \
-            || echo "  failed to create ${ns}" >&2
+            --visibility-uri "${ARCHIVAL_URI}" 2>&1); then
+            :
+        elif printf '%s' "${create_output}" | grep -q 'already exists'; then
+            echo "  ${ns} already exists in temporal — skipping"
+        else
+            printf '%s\n' "${create_output}" >&2
+            echo "  failed to create ${ns}" >&2
+        fi
     done
 
     printf '%s\n' "${to_delete}" | while IFS= read -r ns; do
