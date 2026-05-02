@@ -23,6 +23,13 @@ set -o pipefail
 : "${POLL_INTERVAL_SECONDS:?missing required env var}"
 : "${MANAGED_BY_TAG:?missing required env var}"
 : "${TEMPORAL:?missing required env var}"
+: "${ARCHIVAL_BUCKET_NAME:?missing required env var}"
+
+# Per-namespace archival URI. The bucket-level S3 endpoint, region, and
+# credentials are configured cluster-wide in the chart's archival.{history,
+# visibility}.provider.s3store block, so the URI here only needs to identify
+# the bucket. Temporal organizes history vs. visibility paths internally.
+ARCHIVAL_URI="s3://${ARCHIVAL_BUCKET_NAME}"
 
 # `temporal` CLI reads this env var implicitly.
 export TEMPORAL_ADDRESS
@@ -87,6 +94,11 @@ reconcile() {
         "${TEMPORAL}" operator namespace create \
             --namespace "${ns}" \
             --data "managed-by=${MANAGED_BY_TAG}" \
+            --retention 90d \
+            --history-archival-state enabled \
+            --history-archival-uri "${ARCHIVAL_URI}" \
+            --visibility-archival-state enabled \
+            --visibility-archival-uri "${ARCHIVAL_URI}" \
             || echo "  failed to create ${ns}" >&2
     done
 

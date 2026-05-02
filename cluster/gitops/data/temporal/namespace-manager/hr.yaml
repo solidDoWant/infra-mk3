@@ -53,6 +53,11 @@ spec:
               POLL_INTERVAL_SECONDS: "300"
               MANAGED_BY_TAG: temporal-namespace-manager
               TEMPORAL: /img/admin-tools/usr/local/bin/temporal
+              ARCHIVAL_BUCKET_NAME:
+                valueFrom:
+                  configMapKeyRef:
+                    name: temporal-archival
+                    key: BUCKET_NAME
             resources:
               requests:
                 cpu: 10m
