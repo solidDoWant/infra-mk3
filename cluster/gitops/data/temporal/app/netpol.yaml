@@ -62,6 +62,17 @@ specs:
           - ports:
               - port: "7235"
                 protocol: TCP
+      # Internal Frontend gRPC (no JWT). Frontend redirects internal callers
+      # here for system workflows / namespace ops.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: internal-frontend
+        toPorts:
+          - ports:
+              - port: "7236"
+                protocol: TCP
       # JWKS polling for JWT validation. All five server services init the
       # JWT key provider when authorization is configured; each pod refreshes
       # JWKS on its own cycle. Hits any in-cluster pod labeled as an OIDC
@@ -188,9 +199,13 @@ specs:
       - *jwks_egress
       - *ringpop_egress
     ingress:
-      # Internal callers: Worker for system workflows, admintools deployment,
-      # and the namespace-manager.
+      # Internal callers: Frontend (redirects internal calls), Worker for
+      # system workflows, admintools deployment, and the namespace-manager.
       - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
