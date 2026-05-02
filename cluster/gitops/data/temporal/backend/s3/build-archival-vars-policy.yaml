@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
+# The OBC bucket name has a random suffix and the S3 endpoint host is derived
+# from cluster config — neither is known at chart-render time. This policy
+# rebuilds them as a flat ConfigMap whose keys the temporal HelmRelease pulls
+# in via `valuesFrom` (cluster-level archival endpoint + namespaceDefaults
+# archival URI for new namespaces).
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: &name build-temporal-archival-vars
+spec:
+  rules:
+    - name: *name
+      match:
+        any:
+          - resources:
+              kinds:
+                - ConfigMap
+              name: temporal-archival
+      skipBackgroundRequests: true
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: temporal-archival-hr-vars
+        namespace: data
+        data:
+          data:
+            endpoint: https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}
+            uri: s3://{{ request.object.data.BUCKET_NAME }}

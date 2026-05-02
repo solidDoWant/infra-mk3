@@ -23,13 +23,6 @@ set -o pipefail
 : "${POLL_INTERVAL_SECONDS:?missing required env var}"
 : "${MANAGED_BY_TAG:?missing required env var}"
 : "${TEMPORAL:?missing required env var}"
-: "${ARCHIVAL_BUCKET_NAME:?missing required env var}"
-
-# Per-namespace archival URI. The bucket-level S3 endpoint, region, and
-# credentials are configured cluster-wide in the chart's archival.{history,
-# visibility}.provider.s3store block, so the URI here only needs to identify
-# the bucket. Temporal organizes history vs. visibility paths internally.
-ARCHIVAL_URI="s3://${ARCHIVAL_BUCKET_NAME}"
 
 # `temporal` CLI reads this env var implicitly.
 export TEMPORAL_ADDRESS
@@ -136,11 +129,7 @@ reconcile() {
         if create_output=$("${TEMPORAL}" operator namespace create \
             --namespace "${ns}" \
             --data "managed-by=${MANAGED_BY_TAG}" \
-            --retention 2160h \
-            --history-archival-state enabled \
-            --history-uri "${ARCHIVAL_URI}" \
-            --visibility-archival-state enabled \
-            --visibility-uri "${ARCHIVAL_URI}" 2>&1); then
+            --retention 2160h 2>&1); then
             :
         elif printf '%s' "${create_output}" | grep -q 'already exists'; then
             echo "  ${ns} already exists in temporal — skipping"
@@ -153,11 +142,9 @@ reconcile() {
     printf '%s\n' "${to_delete}" | while IFS= read -r ns; do
         [ -z "${ns}" ] && continue
         echo "- deleting temporal namespace: ${ns}"
-        # The CLI prompts "Type namespace name to confirm:" and there is no
-        # flag to skip it — the only way through is to pipe the name back in
-        # on stdin so the CLI reads its own match value.
-        printf '%s\n' "${ns}" \
-            | "${TEMPORAL}" operator namespace delete --namespace "${ns}" \
+        "${TEMPORAL}" operator namespace delete \
+            --namespace "${ns}" \
+            --yes \
             || echo "  failed to delete ${ns}" >&2
     done
 }

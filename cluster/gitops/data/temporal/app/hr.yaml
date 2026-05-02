@@ -16,6 +16,23 @@ spec:
         namespace: flux-system
         name: temporal-charts
       version: 1.2.0
+  valuesFrom:
+    - kind: ConfigMap
+      name: &archival_hr_vars temporal-archival-hr-vars
+      valuesKey: endpoint
+      targetPath: server.archival.history.provider.s3store.endpoint
+    - kind: ConfigMap
+      name: *archival_hr_vars
+      valuesKey: endpoint
+      targetPath: server.archival.visibility.provider.s3store.endpoint
+    - kind: ConfigMap
+      name: *archival_hr_vars
+      valuesKey: uri
+      targetPath: server.namespaceDefaults.archival.history.URI
+    - kind: ConfigMap
+      name: *archival_hr_vars
+      valuesKey: uri
+      targetPath: server.namespaceDefaults.archival.visibility.URI
   values:
     # Temporal 1.30+: shims are no longer needed.
     shims:
@@ -90,6 +107,27 @@ spec:
         serviceMonitor:
           enabled: true
 
+      # Cluster-level archival. The chart pastes this verbatim under the
+      # server `archival:` key (NOT `server.config.archival` — that path is
+      # silently ignored). The s3store `endpoint` field is filled in by
+      # `valuesFrom` above from the Kyverno-generated ConfigMap.
+      archival:
+        history: &archival_config
+          state: enabled
+          enableRead: true
+          provider:
+            s3store:
+              region: us-east-1
+              s3ForcePathStyle: true
+        visibility: *archival_config
+
+      namespaceDefaults:
+        archival:
+          history:
+            state: enabled
+          visibility:
+            state: enabled
+
       config:
         logLevel: info
 
@@ -144,26 +182,6 @@ spec:
                   keyFile: /etc/temporal/certs/postgres/user/tls.key
                   enableHostVerification: true
                   serverName: temporal-postgres-17-rw.data.svc.cluster.local
-
-        # Cluster-level archival capability. Per-namespace enable + URI is set by the
-        # namespace-creation Jobs in app/namespaces/.
-        archival:
-          history:
-            state: enabled
-            enableRead: true
-            provider:
-              s3store:
-                region: us-east-1
-                endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
-                s3ForcePathStyle: true
-          visibility:
-            state: enabled
-            enableRead: true
-            provider:
-              s3store:
-                region: us-east-1
-                endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
-                s3ForcePathStyle: true
 
         # Namespaces are managed externally via Job manifests in app/namespaces/, not
         # by the chart's namespace-creation feature.
