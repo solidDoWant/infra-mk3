@@ -76,6 +76,7 @@ specs:
                 operator: In
                 values:
                   - frontend
+                  - internal-frontend
                   - history
                   - matching
                   - worker
@@ -90,24 +91,14 @@ specs:
               - port: "6939"
                 protocol: TCP
     ingress:
-      # External callers: web UI, admintools, namespace-management Jobs.
-      # Worker also calls the Frontend (it acts as an SDK client for system workflows).
+      # Web UI is the only in-cluster client of the public Frontend now —
+      # everything else (Worker system workflows, admintools, namespace-jobs)
+      # goes through the Internal Frontend so they don't need to present a JWT.
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: web
-          - matchLabels:
-              app.kubernetes.io/name: temporal
-              app.kubernetes.io/instance: temporal
-              app.kubernetes.io/component: admintools
-          - matchLabels:
-              app.kubernetes.io/name: temporal
-              app.kubernetes.io/instance: temporal
-              app.kubernetes.io/component: worker
-          - matchLabels:
-              app.kubernetes.io/name: temporal
-              temporal.home.arpa/role: namespace-manager
         toPorts:
           - ports:
               - port: "7233"
@@ -137,6 +128,67 @@ specs:
           - ports:
               - port: "7233"
                 protocol: TCP
+
+  # ---------------------------------------------------------------------------
+  # Internal Frontend service. Same gRPC API as Frontend on port 7236, but with
+  # a noop authorizer so internal services (Worker for system workflows,
+  # admintools, namespace-creation jobs) can call it without a JWT. Never
+  # exposed externally — only sister services and admintools-class clients.
+  # ---------------------------------------------------------------------------
+  - description: temporal-internal-frontend
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: internal-frontend
+    egress:
+      - *dns_egress
+      - *postgres_egress
+      # Forward workflow operations to History
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: history
+        toPorts:
+          - ports:
+              - port: "7234"
+                protocol: TCP
+      # Forward task-queue ops / worker polls to Matching
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: matching
+        toPorts:
+          - ports:
+              - port: "7235"
+                protocol: TCP
+      - *ringpop_egress
+    ingress:
+      # Internal callers: Worker for system workflows, admintools deployment,
+      # namespace-management Jobs.
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: worker
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: admintools
+        toPorts:
+          - ports:
+              - port: "7236"
+                protocol: TCP
+      # Ringpop membership ingress from all peers
+      - fromEndpoints:
+          - *all_temporal_servers
+        toPorts:
+          - ports:
+              - port: "6936"
+                protocol: TCP
+      - *metrics_ingress
 
   # ---------------------------------------------------------------------------
   # History service. Owns workflow execution state. The only service that runs
@@ -266,15 +318,17 @@ specs:
     egress:
       - *dns_egress
       - *postgres_egress
-      # Worker calls Frontend as a client for system workflows
+      # Worker calls Internal Frontend (port 7236) — not the public Frontend —
+      # for system workflows. The Internal Frontend bypasses JWT authorization
+      # so internal calls don't need a token.
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
-              app.kubernetes.io/component: frontend
+              app.kubernetes.io/component: internal-frontend
         toPorts:
           - ports:
-              - port: "7233"
+              - port: "7236"
                 protocol: TCP
       # JWKS polling for JWT validation. Hits any in-cluster pod labeled as an
       # OIDC supplier (currently Authentik server on port 80 and the Teleport
@@ -354,7 +408,7 @@ specs:
                 protocol: TCP
 
   # ---------------------------------------------------------------------------
-  # Admintools deployment. Connects to Frontend gRPC for tctl operations.
+  # Admintools deployment. Uses Internal Frontend (no JWT) for tctl operations.
   # ---------------------------------------------------------------------------
   - description: temporal-admintools
     endpointSelector:
@@ -368,10 +422,10 @@ specs:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
-              app.kubernetes.io/component: frontend
+              app.kubernetes.io/component: internal-frontend
         toPorts:
           - ports:
-              - port: "7233"
+              - port: "7236"
                 protocol: TCP
 
   # ---------------------------------------------------------------------------
@@ -388,25 +442,3 @@ specs:
     egress:
       - *dns_egress
       - *postgres_egress
-
-  # ---------------------------------------------------------------------------
-  # Namespace-management Jobs (per-namespace YAMLs in app/namespaces/). Tagged
-  # with temporal.home.arpa/role=namespace-manager so the frontend ingress rule
-  # picks them up without listing each Job by name.
-  # ---------------------------------------------------------------------------
-  - description: temporal-namespace-jobs
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: temporal
-        temporal.home.arpa/role: namespace-manager
-    egress:
-      - *dns_egress
-      - toEndpoints:
-          - matchLabels:
-              app.kubernetes.io/name: temporal
-              app.kubernetes.io/instance: temporal
-              app.kubernetes.io/component: frontend
-        toPorts:
-          - ports:
-              - port: "7233"
-                protocol: TCP

@@ -191,6 +191,24 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
 
+      # Internal Frontend: a second gRPC endpoint (port 7236) that bypasses the
+      # JWT authorizer. Required when `authorization.authorizer: default` is set,
+      # otherwise internal services (Worker for system workflows, admintools,
+      # namespace-creation jobs) get "Request unauthorized" because they have
+      # no JWT to present. Temporal's binary auto-routes Worker → internal
+      # frontend when this is enabled.
+      internal-frontend:
+        enabled: true
+        replicaCount: 2
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            memory: 256Mi
+        podDisruptionBudget:
+          minAvailable: 1
+
       history:
         replicaCount: 2
         resources:
