@@ -167,6 +167,10 @@ spec:
 
         authorization:
           jwtKeyProvider:
+            # Both go through the internal gateway. Going direct to Authentik's
+            # in-cluster service would work but Teleport's JWKS can't be reached
+            # in-cluster, and asymmetric routing isn't worth the complexity for
+            # an infrequent cached fetch.
             keySourceURIs:
               - https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/temporal/jwks/
               - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/.well-known/jwks.json
