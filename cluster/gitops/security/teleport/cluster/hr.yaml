@@ -100,6 +100,9 @@ spec:
       annotations:
         service:
           coredns.io/hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+      extraLabels:
+        pod:
+          endpoints.netpols.home.arpa/oidc-supplier: "true"
       teleportConfig:
         proxy_service:
           # TODO limit access to proxy to only gateways per RFD 123:

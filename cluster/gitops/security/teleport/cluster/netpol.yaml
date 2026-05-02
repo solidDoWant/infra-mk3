@@ -194,3 +194,12 @@ specs:
           - ports:
               - port: tls
                 protocol: TCP
+      # In-cluster OIDC consumers (e.g. Temporal fetching JWKS for JWT
+      # validation). Hits the proxy's TLS-routing port (multiplex mode).
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/oidc-querier: "true"
+        toPorts:
+          - ports:
+              - port: tls
+                protocol: TCP

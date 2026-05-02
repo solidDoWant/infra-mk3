@@ -96,6 +96,15 @@ specs:
           - ports:
               - port: http
                 protocol: TCP
+      # In-cluster OIDC consumers (e.g. Temporal fetching JWKS) bypass the
+      # ingress gateway since these are pure server-side calls.
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/oidc-querier: "true"
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
       # Outposts to access the main server
       - fromEndpoints:
           - matchLabels:

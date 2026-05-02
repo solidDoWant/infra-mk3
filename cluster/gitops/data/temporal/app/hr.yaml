@@ -167,12 +167,15 @@ spec:
 
         authorization:
           jwtKeyProvider:
-            # Both go through the internal gateway. Going direct to Authentik's
-            # in-cluster service would work but Teleport's JWKS can't be reached
-            # in-cluster, and asymmetric routing isn't worth the complexity for
-            # an infrequent cached fetch.
+            # Both URLs reach pods labeled `oidc-supplier` and the worker netpol
+            # allows direct egress to those pods (no ingress-gateway hop):
+            #   - Authentik: in-cluster service URL → authentik-server pods
+            #   - Teleport:  public hostname → teleport proxy LoadBalancer →
+            #     teleport-proxy pods (proxy isn't behind the ingress gateway
+            #     because of TLS routing; resolves to its own LB IP via the
+            #     coredns.io/hostname annotation on the proxy Service)
             keySourceURIs:
-              - https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/temporal/jwks/
+              - http://authentik-server.security.svc.cluster.local/application/o/temporal/jwks/
               - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/.well-known/jwks.json
           authorizer: default
           claimMapper: default
@@ -212,6 +215,11 @@ spec:
 
       worker:
         replicaCount: 2
+        # Worker is the only server service observed actively polling JWKS for
+        # JWT validation. Label opens the netpol path to oidc-supplier pods
+        # (Authentik server, Teleport proxy) for in-cluster JWKS fetches.
+        podLabels:
+          endpoints.netpols.home.arpa/oidc-querier: "true"
         resources:
           requests:
             cpu: 50m

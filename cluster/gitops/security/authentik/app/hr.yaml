@@ -185,6 +185,9 @@ spec:
       replicas: 2
       podLabels:
         endpoints.netpols.home.arpa/external-ingress-enabled: "true"
+        # Pods serving OIDC discovery + JWKS to in-cluster consumers (Temporal etc).
+        # Lets clients skip the ingress gateway round-trip for server-side fetches.
+        endpoints.netpols.home.arpa/oidc-supplier: "true"
       pdb:
         enabled: true
         minAvailable: 1

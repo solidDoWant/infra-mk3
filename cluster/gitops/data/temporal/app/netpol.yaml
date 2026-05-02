@@ -163,8 +163,7 @@ specs:
                 protocol: TCP
       # Internal gateway. History uses this for S3 archival (HistoryArchiver and
       # VisibilityArchiver write workflow histories to Rook Ceph via the gateway).
-      - &gateway_egress
-        toEndpoints:
+      - toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
@@ -277,9 +276,19 @@ specs:
           - ports:
               - port: "7233"
                 protocol: TCP
-      # Worker is the only server service observed actively polling the OIDC
-      # JWKS endpoints (Authentik + Teleport via the internal gateway).
-      - *gateway_egress
+      # JWKS polling for JWT validation. Hits any in-cluster pod labeled as an
+      # OIDC supplier (currently Authentik server on port 80 and the Teleport
+      # proxy on port 3080 — the proxy isn't behind the ingress gateway because
+      # of Teleport's TLS routing).
+      - toEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/oidc-supplier: "true"
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
+              - port: "3080"
+                protocol: TCP
       - *ringpop_egress
     ingress:
       # Ringpop membership ingress only — no service gRPC port.
