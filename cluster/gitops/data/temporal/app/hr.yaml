@@ -210,6 +210,34 @@ spec:
       image:
         repository: temporalio/admin-tools
         tag: 1.31.0
+      # The schema setup Job runs from this image and reuses the persistence config
+      # (including the same TLS cert paths). The chart mounts admintools volumes onto
+      # the schema Job pods, so the certs must be declared here too — otherwise the
+      # job fails with "open /etc/temporal/certs/postgres/serving/ca.crt: no such file".
+      additionalVolumes:
+        - name: postgres-user-cert
+          secret:
+            secretName: temporal-postgres-temporal-user
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        - name: postgres-serving-ca
+          secret:
+            secretName: temporal-postgres-17-serving-cert
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt
+      additionalVolumeMounts:
+        - name: postgres-user-cert
+          mountPath: /etc/temporal/certs/postgres/user
+          readOnly: true
+        - name: postgres-serving-ca
+          mountPath: /etc/temporal/certs/postgres/serving
+          readOnly: true
       resources:
         requests:
           cpu: 50m
