@@ -63,8 +63,9 @@ specs:
               - port: "7235"
                 protocol: TCP
       # Ringpop membership gossip to all sister services. Each service uses a
-      # distinct membership port (6933/6934/6935/6939). Members talk to all
-      # peers on every membership port.
+      # distinct membership port: frontend 6933, history 6934, matching 6935,
+      # internal-frontend 6936, worker 6939. Members talk to all peers on every
+      # membership port.
       - &ringpop_egress
         toEndpoints:
           - &all_temporal_servers
@@ -87,6 +88,8 @@ specs:
               - port: "6934"
                 protocol: TCP
               - port: "6935"
+                protocol: TCP
+              - port: "6936"
                 protocol: TCP
               - port: "6939"
                 protocol: TCP
@@ -226,13 +229,18 @@ specs:
                 protocol: TCP
       - *ringpop_egress
     ingress:
-      # gRPC from Frontend (forwarded workflow ops) and from sister history pods
-      # (cross-shard reads triggered by Ringpop ownership changes).
+      # gRPC from Frontend / Internal Frontend (forwarded workflow ops) and
+      # from sister history pods (cross-shard reads triggered by Ringpop
+      # ownership changes).
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: frontend
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: internal-frontend
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
@@ -276,13 +284,17 @@ specs:
                 protocol: TCP
       - *ringpop_egress
     ingress:
-      # gRPC from Frontend, History, and sister matching pods (cross-partition
-      # forwarding for sticky workflows).
+      # gRPC from Frontend / Internal Frontend, History, and sister matching
+      # pods (cross-partition forwarding for sticky workflows).
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: frontend
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: internal-frontend
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
