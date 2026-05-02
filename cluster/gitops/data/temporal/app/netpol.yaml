@@ -283,6 +283,9 @@ specs:
       - toEndpoints:
           - matchLabels:
               endpoints.netpols.home.arpa/oidc-supplier: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
         toPorts:
           - ports:
               - port: "9000"
