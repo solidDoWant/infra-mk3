@@ -1,0 +1,396 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+# cspell:words admintools archivers Archiver Ringpop ringpop tctl
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: temporal
+specs:
+  # ---------------------------------------------------------------------------
+  # Frontend service. The only service exposing 7233 to UI / admintools / SDK
+  # workers. Forwards workflow ops to History (7234) and queue ops to Matching
+  # (7235).
+  # ---------------------------------------------------------------------------
+  - description: temporal-frontend
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: frontend
+    egress:
+      # DNS resolution
+      - &dns_egress
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Postgres (default + visibility datastores)
+      - &postgres_egress
+        toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: temporal-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Forward workflow operations to History
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: history
+        toPorts:
+          - ports:
+              - port: "7234"
+                protocol: TCP
+      # Forward task-queue ops / worker polls to Matching
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: matching
+        toPorts:
+          - ports:
+              - port: "7235"
+                protocol: TCP
+      # Ringpop membership gossip to all sister services. Each service uses a
+      # distinct membership port (6933/6934/6935/6939). Members talk to all
+      # peers on every membership port.
+      - &ringpop_egress
+        toEndpoints:
+          - &all_temporal_servers
+            matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - frontend
+                  - history
+                  - matching
+                  - worker
+        toPorts:
+          - ports:
+              - port: "6933"
+                protocol: TCP
+              - port: "6934"
+                protocol: TCP
+              - port: "6935"
+                protocol: TCP
+              - port: "6939"
+                protocol: TCP
+    ingress:
+      # External callers: web UI, admintools, namespace-management Jobs.
+      # Worker also calls the Frontend (it acts as an SDK client for system workflows).
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: web
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: admintools
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: worker
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              temporal.home.arpa/role: namespace-manager
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP
+      # Ringpop membership ingress from all peers
+      - fromEndpoints:
+          - *all_temporal_servers
+        toPorts:
+          - ports:
+              - port: "6933"
+                protocol: TCP
+      # Metrics scraping
+      - &metrics_ingress
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
+      # Kubelet readiness probe (Frontend is the only server service with a probe
+      # configured by the chart; it grpc-probes 7233).
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP
+
+  # ---------------------------------------------------------------------------
+  # History service. Owns workflow execution state. The only service that runs
+  # the archivers, so the only one that needs S3 egress.
+  # ---------------------------------------------------------------------------
+  - description: temporal-history
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: history
+    egress:
+      - *dns_egress
+      - *postgres_egress
+      # Add tasks to Matching task queues
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: matching
+        toPorts:
+          - ports:
+              - port: "7235"
+                protocol: TCP
+      # S3 archival via internal-gateway (Rook Ceph object gateway). Only History
+      # runs HistoryArchiver and VisibilityArchiver, so this rule is unique to it.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      - *ringpop_egress
+    ingress:
+      # gRPC from Frontend (forwarded workflow ops) and from sister history pods
+      # (cross-shard reads triggered by Ringpop ownership changes).
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: history
+        toPorts:
+          - ports:
+              - port: "7234"
+                protocol: TCP
+      # Ringpop membership ingress from all peers
+      - fromEndpoints:
+          - *all_temporal_servers
+        toPorts:
+          - ports:
+              - port: "6934"
+                protocol: TCP
+      - *metrics_ingress
+
+  # ---------------------------------------------------------------------------
+  # Matching service. Owns task queue partitions. Reached by Frontend (worker
+  # poll forwarding) and History (RecordTaskStarted callbacks). Talks back to
+  # History to confirm task processing.
+  # ---------------------------------------------------------------------------
+  - description: temporal-matching
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: matching
+    egress:
+      - *dns_egress
+      - *postgres_egress
+      # Talk back to History (e.g. RecordWorkflowTaskStarted)
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: history
+        toPorts:
+          - ports:
+              - port: "7234"
+                protocol: TCP
+      - *ringpop_egress
+    ingress:
+      # gRPC from Frontend, History, and sister matching pods (cross-partition
+      # forwarding for sticky workflows).
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: history
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: matching
+        toPorts:
+          - ports:
+              - port: "7235"
+                protocol: TCP
+      # Ringpop membership ingress from all peers
+      - fromEndpoints:
+          - *all_temporal_servers
+        toPorts:
+          - ports:
+              - port: "6935"
+                protocol: TCP
+      - *metrics_ingress
+
+  # ---------------------------------------------------------------------------
+  # Worker service. No service gRPC port — only Ringpop membership on 6939.
+  # Acts as an SDK client to its own cluster (Frontend) for system workflows
+  # like replication and scheduled-workflow management.
+  # ---------------------------------------------------------------------------
+  - description: temporal-worker
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: worker
+    egress:
+      - *dns_egress
+      - *postgres_egress
+      # Worker calls Frontend as a client for system workflows
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP
+      - *ringpop_egress
+    ingress:
+      # Ringpop membership ingress only — no service gRPC port.
+      - fromEndpoints:
+          - *all_temporal_servers
+        toPorts:
+          - ports:
+              - port: "6939"
+                protocol: TCP
+      - *metrics_ingress
+
+  # ---------------------------------------------------------------------------
+  # Web UI. Talks to Frontend gRPC and Authentik OIDC.
+  # ---------------------------------------------------------------------------
+  - description: temporal-web
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: web
+    egress:
+      - *dns_egress
+      # Frontend gRPC for serving the UI
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP
+      # Authentik OIDC discovery + token exchange via internal-gateway
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # User HTTP traffic from internal-gateway
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Kubelet HTTP readiness probe
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+
+  # ---------------------------------------------------------------------------
+  # Admintools deployment. Connects to Frontend gRPC for tctl operations.
+  # ---------------------------------------------------------------------------
+  - description: temporal-admintools
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: admintools
+    egress:
+      - *dns_egress
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP
+
+  # ---------------------------------------------------------------------------
+  # Schema setup Job. Runs as a Helm pre-install/pre-upgrade hook against
+  # postgres only — uses temporal-sql-tool, never talks to the frontend.
+  # The chart labels these pods with component=database.
+  # ---------------------------------------------------------------------------
+  - description: temporal-schema-job
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        app.kubernetes.io/instance: temporal
+        app.kubernetes.io/component: database
+    egress:
+      - *dns_egress
+      - *postgres_egress
+
+  # ---------------------------------------------------------------------------
+  # Namespace-management Jobs (per-namespace YAMLs in app/namespaces/). Tagged
+  # with temporal.home.arpa/role=namespace-manager so the frontend ingress rule
+  # picks them up without listing each Job by name.
+  # ---------------------------------------------------------------------------
+  - description: temporal-namespace-jobs
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: temporal
+        temporal.home.arpa/role: namespace-manager
+    egress:
+      - *dns_egress
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP

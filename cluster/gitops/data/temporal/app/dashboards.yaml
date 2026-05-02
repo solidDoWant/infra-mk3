@@ -1,0 +1,90 @@
+---
+# Cluster-wide overview: request rates, errors, latency across all server services.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: temporal-server-general
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/temporalio/dashboards/master/server/server-general.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
+---
+# Frontend service: gRPC request handlers, rate limiting, persistence latency.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: temporal-frontend-service
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/frontend-service-specific.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
+---
+# History service: shard ownership, workflow state, task queues, cache hit ratios.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: temporal-history-service
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/history-service-specific.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
+---
+# Matching service: task queue partition activity, worker poll matches.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: temporal-matching-service
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/matching-service-specific.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
+---
+# Worker service: internal system workflows (replication, scheduled task processing).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: temporal-worker-service
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/worker-service-specific.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
+---
+# Visibility (SQL-backed): visibility task processing, list/scan query latency.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: temporal-visibility
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/advanced-visibility-specific.json
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS

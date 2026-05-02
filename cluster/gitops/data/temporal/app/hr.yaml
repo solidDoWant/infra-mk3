@@ -1,0 +1,249 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+# cspell:words admintools dockerize Npgsql
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name temporal
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: temporal
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: temporal-charts
+      version: 1.2.0
+  values:
+    # Temporal 1.30+: shims are no longer needed.
+    shims:
+      dockerize: false
+      elasticsearchTool: false
+
+    # Schema migrations run as Helm pre-install/pre-upgrade hooks so the schema is
+    # always migrated before new server pods roll. Flux helm-controller honors this.
+    schema:
+      useHelmHooks: true
+      backoffLimit: 10
+      ttlSecondsAfterFinished: 86400
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 256Mi
+
+    server:
+      enabled: true
+      image:
+        repository: temporalio/server
+        tag: 1.31.0
+      # Default replicas for every server component (frontend/history/matching/worker).
+      replicaCount: 2
+
+      # Mount the postgres user cert (auth) and serving CA (verify-full) into every
+      # server pod. The same mounts back the persistence.tls.* paths in server.config.
+      additionalVolumes:
+        - name: postgres-user-cert
+          secret:
+            secretName: temporal-postgres-temporal-user
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        - name: postgres-serving-ca
+          secret:
+            secretName: temporal-postgres-17-serving-cert
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt
+      additionalVolumeMounts:
+        - name: postgres-user-cert
+          mountPath: /etc/temporal/certs/postgres/user
+          readOnly: true
+        - name: postgres-serving-ca
+          mountPath: /etc/temporal/certs/postgres/serving
+          readOnly: true
+
+      # S3 archival credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) come from
+      # the OBC-generated Secret. The s3store provider uses the AWS SDK env var chain.
+      additionalEnvSecretName: temporal-archival
+
+      metrics:
+        annotations:
+          enabled: false
+        serviceMonitor:
+          enabled: true
+          interval: 30s
+
+      config:
+        logLevel: info
+
+        persistence:
+          defaultStore: default
+          visibilityStore: visibility
+          # Locked at deploy time. Cannot be changed without wiping temporal_persistence.
+          # Sized for a single-failure-tolerant homelab; ~32 shards per history pod.
+          numHistoryShards: 64
+          datastores:
+            default:
+              sql:
+                # The CNPG Database CRDs in backend/postgres/databases/ create both
+                # databases. Skip the chart's create-database init container, which
+                # would fail with "database already exists". Schema setup/upgrade
+                # still runs (manageSchema defaults to true).
+                createDatabase: false
+                pluginName: postgres12
+                databaseName: temporal_persistence
+                connectAddr: temporal-postgres-17-rw.data.svc.cluster.local:5432
+                connectProtocol: tcp
+                user: temporal
+                # 10 conns/pod for History's hot-path workflow state writes.
+                # Total budget: 8 server pods × 10 = 80 conns to the default datastore.
+                maxConns: 10
+                maxIdleConns: 10
+                maxConnLifetime: 1h
+                tls:
+                  enabled: true
+                  caFile: /etc/temporal/certs/postgres/serving/ca.crt
+                  certFile: /etc/temporal/certs/postgres/user/tls.crt
+                  keyFile: /etc/temporal/certs/postgres/user/tls.key
+                  enableHostVerification: true
+                  serverName: temporal-postgres-17-rw.data.svc.cluster.local
+            visibility:
+              sql:
+                createDatabase: false
+                pluginName: postgres12
+                databaseName: temporal_visibility
+                connectAddr: temporal-postgres-17-rw.data.svc.cluster.local:5432
+                connectProtocol: tcp
+                user: temporal
+                # 5 conns/pod for the cooler visibility workload (Frontend list queries,
+                # History writes after state changes). Total: 8 × 5 = 40 conns.
+                maxConns: 5
+                maxIdleConns: 5
+                maxConnLifetime: 1h
+                tls:
+                  enabled: true
+                  caFile: /etc/temporal/certs/postgres/serving/ca.crt
+                  certFile: /etc/temporal/certs/postgres/user/tls.crt
+                  keyFile: /etc/temporal/certs/postgres/user/tls.key
+                  enableHostVerification: true
+                  serverName: temporal-postgres-17-rw.data.svc.cluster.local
+
+        # Cluster-level archival capability. Per-namespace enable + URI is set by the
+        # namespace-creation Jobs in app/namespaces/.
+        archival:
+          history:
+            state: enabled
+            enableRead: true
+            provider:
+              s3store:
+                region: us-east-1
+                endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+                s3ForcePathStyle: true
+          visibility:
+            state: enabled
+            enableRead: true
+            provider:
+              s3store:
+                region: us-east-1
+                endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+                s3ForcePathStyle: true
+
+        # Namespaces are managed externally via Job manifests in app/namespaces/, not
+        # by the chart's namespace-creation feature.
+        namespaces:
+          create: false
+
+      frontend:
+        replicaCount: 2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            memory: 384Mi
+        podDisruptionBudget:
+          minAvailable: 1
+
+      history:
+        replicaCount: 2
+        resources:
+          requests:
+            cpu: 200m
+            memory: 768Mi
+          limits:
+            memory: 768Mi
+        podDisruptionBudget:
+          minAvailable: 1
+
+      matching:
+        replicaCount: 2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 256Mi
+        podDisruptionBudget:
+          minAvailable: 1
+
+      worker:
+        replicaCount: 2
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            memory: 256Mi
+        podDisruptionBudget:
+          minAvailable: 1
+
+    admintools:
+      enabled: true
+      image:
+        repository: temporalio/admin-tools
+        tag: 1.31.0
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 128Mi
+
+    web:
+      enabled: true
+      replicaCount: 2
+      image:
+        repository: temporalio/ui
+        tag: 2.49.1
+      additionalEnv:
+        - name: TEMPORAL_ADDRESS
+          value: temporal-frontend.data.svc.cluster.local:7233
+        - name: TEMPORAL_AUTH_ENABLED
+          value: "true"
+        - name: TEMPORAL_AUTH_TYPE
+          value: oidc
+        - name: TEMPORAL_AUTH_PROVIDER_URL
+          value: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/temporal/
+        - name: TEMPORAL_AUTH_ISSUER_URL
+          value: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/temporal/
+        - name: TEMPORAL_AUTH_CALLBACK_URL
+          value: https://temporal.${SECRET_PUBLIC_DOMAIN_NAME}/auth/sso/callback
+        - name: TEMPORAL_AUTH_SCOPES
+          value: openid,profile,email
+      additionalEnvSecretName: temporal-ui-oidc
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 128Mi
+      podDisruptionBudget:
+        minAvailable: 1
