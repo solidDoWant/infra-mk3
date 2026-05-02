@@ -153,9 +153,13 @@ reconcile() {
     printf '%s\n' "${to_delete}" | while IFS= read -r ns; do
         [ -z "${ns}" ] && continue
         echo "- deleting temporal namespace: ${ns}"
+        # Counter-intuitive: `--yes` *enables* the interactive confirmation
+        # prompt, so omit it. `</dev/null` is a belt-and-braces guard against
+        # a future CLI version flipping back to a default-on prompt — the
+        # command will see EOF instead of hanging on stdin.
         "${TEMPORAL}" operator namespace delete \
             --namespace "${ns}" \
-            --yes \
+            </dev/null \
             || echo "  failed to delete ${ns}" >&2
     done
 }
