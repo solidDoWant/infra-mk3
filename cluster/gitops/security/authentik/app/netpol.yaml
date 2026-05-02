@@ -103,7 +103,7 @@ specs:
               endpoints.netpols.home.arpa/oidc-querier: "true"
         toPorts:
           - ports:
-              - port: http
+              - port: "9000"
                 protocol: TCP
       # Outposts to access the main server
       - fromEndpoints:
