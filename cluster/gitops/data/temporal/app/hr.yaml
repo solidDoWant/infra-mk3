@@ -28,6 +28,11 @@ spec:
       useHelmHooks: true
       backoffLimit: 10
       ttlSecondsAfterFinished: 86400
+      # The schema job mounts postgres TLS certs (via admintools.additionalVolumes)
+      # but k8s mounts secret files as root:root mode 0440. Without fsGroup, the
+      # admintools image's user 1000 can't read them.
+      securityContext:
+        fsGroup: 1000
       resources:
         requests:
           cpu: 50m
@@ -210,6 +215,10 @@ spec:
       image:
         repository: temporalio/admin-tools
         tag: 1.31.0
+      # Same fsGroup reasoning as schema.securityContext — admintools mounts the
+      # same postgres TLS secrets, and its image runs as user 1000.
+      securityContext:
+        fsGroup: 1000
       # The schema setup Job runs from this image and reuses the persistence config
       # (including the same TLS cert paths). The chart mounts admintools volumes onto
       # the schema Job pods, so the certs must be declared here too — otherwise the
