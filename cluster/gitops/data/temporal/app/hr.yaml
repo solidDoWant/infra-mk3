@@ -84,7 +84,6 @@ spec:
           enabled: false
         serviceMonitor:
           enabled: true
-          interval: 30s
 
       config:
         logLevel: info
@@ -165,6 +164,14 @@ spec:
         # by the chart's namespace-creation feature.
         namespaces:
           create: false
+
+        authorization:
+          jwtKeyProvider:
+            keySourceURIs:
+              - https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/temporal/jwks/
+              - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/.well-known/jwks.json
+          authorizer: default
+          claimMapper: default
 
       frontend:
         replicaCount: 2
@@ -274,7 +281,9 @@ spec:
         - name: TEMPORAL_AUTH_CALLBACK_URL
           value: https://temporal.${SECRET_PUBLIC_DOMAIN_NAME}/auth/sso/callback
         - name: TEMPORAL_AUTH_SCOPES
-          value: openid,profile,email
+          # temporal-permissions: custom scope (defined in the Authentik blueprint)
+          # that injects the `permissions` claim Temporal's authorizer reads.
+          value: openid,profile,email,temporal-permissions
       additionalEnvSecretName: temporal-ui-oidc
       resources:
         requests:

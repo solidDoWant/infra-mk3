@@ -38,6 +38,26 @@ stringData:
           identifiers:
             name: Blueprint library
           required: true
+      # Custom scope mapping. Issues a `permissions` claim (string array) read by
+      # Temporal's default JWT claim mapper (server.config.authorization). Group
+      # membership maps to permission strings:
+      #   Temporal admins → temporal-system:admin
+      #   Temporal users  → temporal-system:read
+      - model: authentik_providers_oauth2.scopemapping
+        id: temporal-permissions-scope
+        identifiers:
+          managed: temporal-permissions
+        attrs:
+          name: Temporal permissions
+          scope_name: temporal-permissions
+          description: Temporal authorization permissions claim
+          expression: |
+            permissions = []
+            if request.user.ak_groups.filter(name="Temporal admins").exists():
+                permissions.append("temporal-system:admin")
+            else if request.user.ak_groups.filter(name="Temporal users").exists():
+                permissions.append("temporal-system:read")
+            return {"permissions": permissions}
       # Application
       - model: authentik_providers_oauth2.oauth2provider
         id: temporal-provider
@@ -77,6 +97,7 @@ stringData:
                 authentik_providers_oauth2.scopemapping,
                 [name, "authentik default OAuth Mapping: OpenID 'profile'"],
               ]
+            - !KeyOf temporal-permissions-scope
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
           issuer_mode: per_provider
