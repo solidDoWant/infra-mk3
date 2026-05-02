@@ -128,6 +128,15 @@ spec:
           visibility:
             state: enabled
 
+      # Dynamic config — rendered into temporal-dynamic-config ConfigMap and
+      # mounted at /etc/temporal/dynamic_config/dynamic_config.yaml. Each key
+      # is a dynamic-config setting; the value is a list of entries with
+      # {value, constraints}.
+      dynamicConfig:
+        frontend.workerHeartbeatsEnabled:
+          - value: true
+            constraints: {}
+
       config:
         logLevel: info
 
