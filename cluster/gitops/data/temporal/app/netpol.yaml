@@ -292,6 +292,16 @@ specs:
           - ports:
               - port: "7235"
                 protocol: TCP
+      # Sister history pods (cross-shard reads after Ringpop ownership changes).
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: history
+        toPorts:
+          - ports:
+              - port: "7234"
+                protocol: TCP
       # Internal gateway. History uses this for S3 archival (HistoryArchiver and
       # VisibilityArchiver write workflow histories to Rook Ceph via the gateway).
       - toEndpoints:
