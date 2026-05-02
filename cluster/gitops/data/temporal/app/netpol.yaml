@@ -142,6 +142,17 @@ specs:
           - ports:
               - port: "6933"
                 protocol: TCP
+      # Worker probes Frontend on the internal-frontend membership port (6936)
+      # as part of cluster-wide ringpop discovery.
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: worker
+        toPorts:
+          - ports:
+              - port: "6936"
+                protocol: TCP
       # Metrics scraping
       - &metrics_ingress
         fromEndpoints:
