@@ -55,7 +55,7 @@ stringData:
             permissions = []
             if request.user.ak_groups.filter(name="Temporal admins").exists():
                 permissions.append("temporal-system:admin")
-            else if request.user.ak_groups.filter(name="Temporal users").exists():
+            elif request.user.ak_groups.filter(name="Temporal users").exists():
                 permissions.append("temporal-system:read")
             return {"permissions": permissions}
       # Application
