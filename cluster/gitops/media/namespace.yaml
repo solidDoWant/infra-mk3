@@ -10,3 +10,5 @@ metadata:
     resource.k8s.io/admin-access: "true"
     # Allows the Kyverno policy to distribute the hatchet-worker-token Secret here.
     hatchet.home.arpa/worker-token: "true"
+    # Deploy the "media" namespace
+    temporal.home.arpa/enabled: "true"
