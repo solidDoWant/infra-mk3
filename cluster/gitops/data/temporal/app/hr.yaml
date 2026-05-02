@@ -267,9 +267,10 @@ spec:
       image:
         repository: temporalio/ui
         tag: 2.49.1
+      # TEMPORAL_ADDRESS is hardcoded by the chart (web-deployment.yaml) using the
+      # release name + namespace + frontend port — including it here causes a
+      # duplicate-env-key error on apply. Don't re-add it.
       additionalEnv:
-        - name: TEMPORAL_ADDRESS
-          value: temporal-frontend.data.svc.cluster.local:7233
         - name: TEMPORAL_AUTH_ENABLED
           value: "true"
         - name: TEMPORAL_AUTH_TYPE
