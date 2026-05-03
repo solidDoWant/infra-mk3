@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportrolev7_v1.json
+apiVersion: resources.teleport.dev/v1
+kind: TeleportRoleV7
+metadata:
+  name: media-processor-bot
+spec:
+  allow:
+    # Allow the bot to issue JWT-SVIDs for any WorkloadIdentity labeled
+    # app=media-processor (the WID resource itself constrains who may receive
+    # the credential, see teleport-workload-identity.yaml).
+    workload_identity_labels:
+      app:
+        - media-processor
+    rules:
+      - resources:
+          - workload_identity
+        verbs:
+          - list
+          - read

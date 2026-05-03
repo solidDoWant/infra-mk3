@@ -1,5 +1,30 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# Teleport bot + role + provision token + workload identity. Targeted at the
+# `security` namespace because the teleport-operator only watches its own
+# namespace's CRDs (its RBAC is a Role, not a ClusterRole).
+# Namespace can be fixed when/if https://github.com/gravitational/teleport/pull/66134 releases
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name media-processor-teleport
+spec:
+  targetNamespace: security
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/media/media-processor/teleport
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: teleport-cluster
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -19,7 +44,8 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
-    - name: hatchet
+    - name: temporal
     - name: intel-resource-drivers-gpu
     - name: radarr
     - name: sonarr
+    - name: media-processor-teleport

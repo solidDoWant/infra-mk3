@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportworkloadidentityv1_v1.json
+# Issued JWT-SVIDs carry permissions=["media:worker"] which Temporal's default
+# JWT claim mapper interprets as the `worker` role on the `media` namespace —
+# enough to poll task queues, complete activities, and register workflow types.
+apiVersion: resources.teleport.dev/v1
+kind: TeleportWorkloadIdentityV1
+metadata:
+  name: media-processor
+  labels:
+    # Selected by the bot's role (workload_identity_labels) and by tbot's
+    # service.selector. Must stay in sync with both.
+    app: media-processor
+spec:
+  spiffe:
+    # Per-pod SPIFFE ID so audit logs identify the issuing pod. Templated by
+    # Teleport at issuance time from kubernetes join attributes.
+    id: /svc/media-processor/{{ join_attrs.kubernetes.pod.name }}
+    jwt:
+      extra_claims:
+        permissions:
+          - media:worker
+  rules:
+    allow:
+      - conditions:
+          - attribute: join_attrs.kubernetes.service_account.namespace
+            eq:
+              value: media
+          - attribute: join_attrs.kubernetes.service_account.name
+            eq:
+              value: media-processor
