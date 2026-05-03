@@ -177,17 +177,12 @@ spec:
               watcher:
                 - path: /var/run/teleport/jwt
                   readOnly: true
-            worker: *jwt_volume_mount
-        # tbot's own scratch space (storage.type: memory in tbot.yaml means
-        # this isn't strictly required, but tbot still writes transient files
-        # under HOME if not provided).
-        tbot-data:
-          type: emptyDir
-          advancedMounts:
-            watcher: &tbot_data_volume_mount
+            worker:
               tbot:
-                - path: /var/lib/teleport/bot
-            worker: *tbot_data_volume_mount
+                - path: /var/run/teleport/jwt
+              worker:
+                - path: /var/run/teleport/jwt
+                  readOnly: true
         tbot-config:
           type: configMap
           name: media-processor-tbot-config
