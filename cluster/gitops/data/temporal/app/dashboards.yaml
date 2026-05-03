@@ -72,7 +72,7 @@ spec:
   url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/worker-service-specific.json
   datasources:
     - datasourceName: VictoriaMetrics
-      inputName: DS_PROMETHEUS
+      inputName: datasource
 ---
 # Visibility (SQL-backed): visibility task processing, list/scan query latency.
 apiVersion: grafana.integreatly.org/v1beta1
