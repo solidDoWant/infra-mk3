@@ -136,6 +136,12 @@ spec:
         frontend.workerHeartbeatsEnabled:
           - value: true
             constraints: {}
+        # Suppress the periodic call to version-info.temporal.io. The frontend
+        # version-checker loop only starts when this is true (see temporal
+        # service/frontend/version_checker.go).
+        frontend.enableServerVersionCheck:
+          - value: false
+            constraints: {}
 
       config:
         logLevel: info
