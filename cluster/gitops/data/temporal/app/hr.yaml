@@ -214,7 +214,8 @@ spec:
             #     coredns.io/hostname annotation on the proxy Service)
             keySourceURIs:
               - http://authentik-server.security.svc.cluster.local/application/o/temporal/jwks/
-              - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/.well-known/jwks.json
+              # Service workers (e.g. media-processor) present these JWTs to the frontend.
+              - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/workload-identity/jwt-jwks.json
           authorizer: default
           claimMapper: default
 

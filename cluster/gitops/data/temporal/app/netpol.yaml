@@ -135,14 +135,27 @@ specs:
               - port: "6939"
                 protocol: TCP
     ingress:
-      # Web UI is the only in-cluster client of the public Frontend now —
-      # everything else (Worker system workflows, admintools, namespace-jobs)
-      # goes through the Internal Frontend so they don't need to present a JWT.
+      # Web UI is the public Frontend's primary in-cluster caller —
+      # internal Temporal services (Worker system workflows, admintools,
+      # namespace-jobs) go through the Internal Frontend so they don't need
+      # to present a JWT.
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: web
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP
+      # Any in-cluster service-worker that authenticates with a JWT (e.g.
+      # media-processor with a Teleport Workload Identity JWT-SVID).
+      - fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/temporal-frontend-client: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
         toPorts:
           - ports:
               - port: "7233"
