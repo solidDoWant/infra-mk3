@@ -27,7 +27,7 @@ spec:
         # on every RPC. tbot rotates the JWT well before expiry, so the worker
         # picks up new tokens without restart.
         apiKey:
-          value: file:///var/run/teleport/jwt/jwt_svid.jwt
+          value: file:///var/run/teleport/jwt/jwt_svid
 
       # Full NFS restricted to the downloads subtree — watcher gets read-only, worker read-write.
       inputVolume:
