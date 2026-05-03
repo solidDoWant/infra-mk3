@@ -1,8 +1,9 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportworkloadidentityv1_v1.json
-# Issued JWT-SVIDs carry permissions=["media:worker"] which Temporal's default
-# JWT claim mapper interprets as the `worker` role on the `media` namespace —
-# enough to poll task queues, complete activities, and register workflow types.
+# Grants the bot write access on the `media` Temporal namespace. Required by
+# both the watcher (StartWorkflowExecution) and the worker (PollTaskQueue,
+# RespondTaskCompleted) — Temporal's default authorizer does not recognize a
+# narrower "worker" tier.
 apiVersion: resources.teleport.dev/v1
 kind: TeleportWorkloadIdentityV1
 metadata:
@@ -19,7 +20,7 @@ spec:
     jwt:
       extra_claims:
         permissions:
-          - media:worker
+          - media:write
   rules:
     allow:
       - conditions:
