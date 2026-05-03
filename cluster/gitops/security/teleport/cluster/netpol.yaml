@@ -173,6 +173,13 @@ specs:
               app.kubernetes.io/name: teleport-resource-applier
               app.kubernetes.io/instance: teleport-resource-applier
               app.kubernetes.io/component: teleport-resource-applier
+          # tbot sidecars in arbitrary application pods (label-based, so each
+          # new tbot consumer doesn't require editing this netpol)
+          - matchLabels:
+              endpoints.netpols.home.arpa/teleport-bot-client: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
           # VMs
           - matchExpressions:
               - key: vm.kubevirt.io/name
