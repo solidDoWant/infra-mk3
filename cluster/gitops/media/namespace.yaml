@@ -8,7 +8,5 @@ metadata:
     # TODO try the new partitioning feature. The docs only mention using multiple physical devices, but it might
     # be possible to partition a single physical device into multiple logical devices.
     resource.k8s.io/admin-access: "true"
-    # Allows the Kyverno policy to distribute the hatchet-worker-token Secret here.
-    hatchet.home.arpa/worker-token: "true"
     # Deploy the "media" namespace
     temporal.home.arpa/enabled: "true"
