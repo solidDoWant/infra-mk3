@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-processor-tbot-config
+data:
+  # Mounted at /etc/tbot/tbot.yaml in the tbot sidecar of every pod that needs
+  # a Temporal JWT (watcher and worker). The sidecar joins the cluster via the
+  # in-cluster kubernetes ServiceAccount token, then continually renews a
+  # JWT-SVID (containing permissions=["media:worker"]) into a shared emptyDir.
+  # The Temporal Go SDK reads the JWT file fresh on every RPC because we set
+  # apiKey to file:///var/run/teleport/jwt/jwt — so renewals propagate without
+  # restarting the worker.
+  tbot.yaml: |
+    version: v2
+    # Public hostname; the proxy Service has a coredns.io/hostname annotation
+    # that resolves this to the in-cluster LoadBalancer IP, so the connection
+    # never leaves the cluster but the TLS SNI / JWT issuer URL match.
+    proxy_server: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+    onboarding:
+      token: media-processor
+      join_method: kubernetes
+    storage:
+      type: memory
+    services:
+      - type: workload-identity-jwt
+        selector:
+          name: media-processor
+        audiences:
+          - temporal.${SECRET_PUBLIC_DOMAIN_NAME}
+        destination:
+          type: directory
+          path: /var/run/teleport/jwt

@@ -27,15 +27,32 @@ specs:
             rules:
               dns:
                 - matchPattern: "*"
-      # Hatchet engine — watcher submits scan jobs via gRPC
-      - &hatchet_engine_egress
+      # Temporal frontend — watcher dispatches workflows via gRPC
+      - &temporal_frontend_egress
         toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: data
-              endpoints.netpols.home.arpa/hatchet-engine: "true"
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
         toPorts:
           - ports:
-              - port: "7070"
+              - port: "7233"
+                protocol: TCP
+      # Teleport proxy — tbot sidecar joins the cluster and renews JWT-SVIDs
+      # over the proxy's TLS-routing port (multiplex). Resolved via the
+      # public hostname which the proxy Service annotates back to its
+      # in-cluster LB IP, so traffic stays in-cluster.
+      - &teleport_proxy_egress
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: security
+              app.kubernetes.io/name: teleport-cluster
+              app.kubernetes.io/instance: teleport-cluster
+              app.kubernetes.io/component: proxy
+        toPorts:
+          - ports:
+              - port: tls
                 protocol: TCP
     ingress:
       # Kubelet health probes — liveness/readiness on watcher health port
@@ -46,13 +63,14 @@ specs:
               - port: "8081"
                 protocol: TCP
       # Victoria Metrics agent — Prometheus metrics scraping
-      - fromEndpoints:
+      - &metrics_scrape_ingress
+        fromEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: "9090"
+              - port: "9091"
                 protocol: TCP
 
   - description: worker
@@ -62,10 +80,11 @@ specs:
         app.kubernetes.io/controller: worker
         app.kubernetes.io/instance: media-processor
     egress:
-      # DNS resolution — required for cluster DNS lookups
       - *dns_resolution
-      # Hatchet engine — worker polls for and completes transcoding jobs via gRPC
-      - *hatchet_engine_egress
+      # Temporal frontend — worker polls task queue and reports completions
+      - *temporal_frontend_egress
+      # Teleport proxy — same purpose as watcher, see above
+      - *teleport_proxy_egress
       # Radarr — worker notifies Radarr to import transcoded movie files
       - toEndpoints:
           - matchLabels:

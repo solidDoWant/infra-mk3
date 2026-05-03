@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -8,18 +9,25 @@ spec:
   chart:
     spec:
       chart: media-processor
-      version: 0.0.4
+      version: 0.0.6
       sourceRef:
         kind: HelmRepository
         namespace: flux-system
         name: soliddowant-charts
   values:
     config:
-      hatchet:
-        token:
-          secretKeyRef:
-            name: hatchet-worker-token
-            key: HATCHET_CLIENT_TOKEN
+      temporal:
+        # In-cluster plaintext gRPC; auth is JWT bearer (apiKey below).
+        address: temporal-frontend.data.svc.cluster.local:7233
+        # Maps to the Temporal namespace auto-created by temporal-namespace-manager
+        # (k8s namespace "media" carries temporal.home.arpa/enabled=true).
+        namespace: media
+        taskQueue: media-processor
+        # file:/// prefix tells the app worker to re-read the JWT from disk
+        # on every RPC. tbot rotates the JWT well before expiry, so the worker
+        # picks up new tokens without restart.
+        apiKey:
+          value: file:///var/run/teleport/jwt/jwt_svid.jwt
 
       # Full NFS restricted to the downloads subtree — watcher gets read-only, worker read-write.
       inputVolume:
@@ -40,7 +48,7 @@ spec:
               remotePath: /mnt/complete
             preserveSource: true
             ignorePatterns: &qbittorrent_ignore
-              - '\.!qB$' # qbittorrent incomplete downloads
+              - "\\.!qB$" # qbittorrent incomplete downloads
           - name: bittorrent-shows
             watchedPath: /media/input/bittorrent/Series
             mediaType: show
@@ -73,7 +81,6 @@ spec:
           enabled: true
 
       worker:
-        media:
         metrics:
           enabled: true
         radarr:
@@ -90,28 +97,124 @@ spec:
               key: API_KEY
 
     resources:
+      # Single ServiceAccount used for the kubernetes join method on tbot in
+      # both controllers — referenced by the TeleportProvisionToken's
+      # kubernetes.allow.service_account: "media:media-processor".
+      serviceAccount:
+        media-processor: {}
+
       controllers:
         watcher:
+          serviceAccount:
+            identifier: media-processor
           pod:
             labels:
-              endpoints.netpols.home.arpa/hatchet-worker: "true"
-          containers:
-            watcher:
-              env:
-                # Engine runs with SERVER_GRPC_INSECURE=true — disable client-side TLS.
-                HATCHET_CLIENT_TLS_STRATEGY: none
+              # Ingress allow into temporal-frontend:7233.
+              endpoints.netpols.home.arpa/temporal-frontend-client: "true"
+              # Egress allow to the teleport-cluster proxy TLS-routing port.
+              endpoints.netpols.home.arpa/teleport-bot-client: "true"
+          # Native sidecar (initContainer with restartPolicy: Always) — k8s
+          # blocks the watcher container until tbot has started, guaranteeing
+          # the JWT exists before the watcher tries to call Temporal.
+          initContainers:
+            tbot: &tbot_container
+              dependsOn: []
+              restartPolicy: Always
+              image:
+                repository: public.ecr.aws/gravitational/tbot-distroless
+                tag: "18.1.4"
+              args:
+                - start
+                - --config
+                - /etc/tbot/tbot.yaml
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  memory: 64Mi
+
         worker:
           replicas: 2
+          serviceAccount:
+            identifier: media-processor
           pod:
             labels:
-              endpoints.netpols.home.arpa/hatchet-worker: "true"
+              endpoints.netpols.home.arpa/temporal-frontend-client: "true"
+              endpoints.netpols.home.arpa/teleport-bot-client: "true"
             resourceClaims:
               - name: gpu
                 resourceClaimTemplateName: media-processor-worker-gpu
+          initContainers:
+            tbot: *tbot_container
           containers:
             worker:
-              env:
-                HATCHET_CLIENT_TLS_STRATEGY: none
               resources:
                 claims:
                   - name: gpu
+
+      defaultPodOptions:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "1"
+
+      persistence:
+        # Shared between tbot and watcher/worker: tbot writes the JWT, the app
+        # reads it on every Temporal RPC.
+        tbot-jwt:
+          type: emptyDir
+          advancedMounts:
+            watcher: &jwt_volume_mount
+              tbot:
+                - path: /var/run/teleport/jwt
+              watcher:
+                - path: /var/run/teleport/jwt
+                  readOnly: true
+            worker: *jwt_volume_mount
+        # tbot's own scratch space (storage.type: memory in tbot.yaml means
+        # this isn't strictly required, but tbot still writes transient files
+        # under HOME if not provided).
+        tbot-data:
+          type: emptyDir
+          advancedMounts:
+            watcher: &tbot_data_volume_mount
+              tbot:
+                - path: /var/lib/teleport/bot
+            worker: *tbot_data_volume_mount
+        tbot-config:
+          type: configMap
+          name: media-processor-tbot-config
+          defaultMode: 0444
+          items:
+            - key: tbot.yaml
+              path: tbot.yaml
+          advancedMounts:
+            watcher: &tbot_config_volume_mount
+              tbot:
+                - path: /etc/tbot
+                  readOnly: true
+            worker: *tbot_config_volume_mount
+        # Cluster intermediate-CA root, distributed to every namespace by the
+        # extract-root-ca-certificate Kyverno ClusterPolicy. tbot needs this
+        # to validate the Teleport proxy's serving cert.
+        tbot-root-ca:
+          type: secret
+          name: root-ca-pub-cert
+          defaultMode: 0444
+          items:
+            - key: ca.pem
+              path: root-ca.pem
+          advancedMounts:
+            watcher: &tbot_root_ca_volume_mount
+              tbot:
+                - path: /etc/ssl/certs/root-ca.pem
+                  subPath: root-ca.pem
+                  readOnly: true
+            worker: *tbot_root_ca_volume_mount
