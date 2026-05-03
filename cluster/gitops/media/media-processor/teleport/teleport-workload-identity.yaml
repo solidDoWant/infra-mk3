@@ -15,7 +15,7 @@ spec:
   spiffe:
     # Per-pod SPIFFE ID so audit logs identify the issuing pod. Templated by
     # Teleport at issuance time from kubernetes join attributes.
-    id: /svc/media-processor/{{ join_attrs.kubernetes.pod.name }}
+    id: /svc/media-processor/{{ join.kubernetes.pod.name }}
     jwt:
       extra_claims:
         permissions:
@@ -23,9 +23,9 @@ spec:
   rules:
     allow:
       - conditions:
-          - attribute: join_attrs.kubernetes.service_account.namespace
+          - attribute: join.kubernetes.service_account.namespace
             eq:
               value: media
-          - attribute: join_attrs.kubernetes.service_account.name
+          - attribute: join.kubernetes.service_account.name
             eq:
               value: media-processor
