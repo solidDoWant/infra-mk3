@@ -252,30 +252,37 @@ Use the root-level `serviceAccount` and `rbac` keys. `serviceAccount: create: tr
 ```yaml
     # Root-level — same indentation as controllers:, persistence:, etc.
     serviceAccount:
-      create: true
+      <service>: {}
     rbac:
       roles:
         <service>:
           type: Role    # Role (namespace-scoped) or ClusterRole (cluster-scoped)
           rules:
             # Scope rules as tightly as possible — prefer resourceNames when applicable
-            - apiGroups: [""]
-              resources: [secrets]
-              resourceNames: [<service>-credentials]   # Limit to specific resource(s)
-              verbs: [get]
-            - apiGroups: [cilium.io]
-              resources: [ciliumnetworkpolicies]
-              verbs: ["*"]
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              resourceNames: 
+                - <service>-credentials   # Limit to specific resource(s)
+              verbs:
+                - get
+            - apiGroups:
+                - cilium.io
+              resources:
+                - ciliumnetworkpolicies
+              verbs:
+                - "*"
       bindings:
         <service>:
           type: RoleBinding    # RoleBinding or ClusterRoleBinding
           roleRef:
             identifier: <service>    # Matches the key under rbac.roles above
           subjects:
-            - identifier: default    # References the serviceAccount created above
+            - identifier: <service>    # References the serviceAccount created above
 ```
 
-Reference implementations: `cluster/gitops/media/fileflows/job-tracker/hr.yaml` (Role), `cluster/gitops/security/teleport/resource-applier/hr.yaml` (ClusterRole + Role).
+Reference implementations: `cluster/gitops/networking/cni-plugins/general-purpose/hr.yaml` (Role), `cluster/gitops/security/teleport/resource-applier/hr.yaml` (ClusterRole + Role).
 
 ## Security context notes
 

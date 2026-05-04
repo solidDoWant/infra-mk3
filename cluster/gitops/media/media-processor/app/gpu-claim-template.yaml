@@ -13,7 +13,7 @@ spec:
           exactly:
             deviceClassName: gpu.intel.com
             # adminAccess avoids consuming the node's single GPU allocation slot,
-            # since the worker is not the only consumer (fileflows also uses it).
+            # since the worker is not the only consumer (media-processor also uses it).
             adminAccess: true
             allocationMode: All
             selectors:
