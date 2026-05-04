@@ -129,8 +129,7 @@ reconcile_search_attributes() {
         if create_output=$("${TEMPORAL}" operator search-attribute create \
             --namespace "${ns}" \
             --name "${sa_name}" \
-            --type "${sa_type}" \
-            --yes 2>&1); then
+            --type "${sa_type}" 2>&1); then
             echo "+ adding search attribute ${ns}/${sa_name} (${sa_type})"
         elif printf '%s' "${create_output}" | grep -qi 'already exists'; then
             :
