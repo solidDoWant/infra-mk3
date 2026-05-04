@@ -5,6 +5,15 @@
 # `temporal.home.arpa/enabled=true`. Connects to Temporal's internal-frontend
 # (port 7236) which bypasses JWT auth, so the manager doesn't need an OIDC
 # token to do CRUD on namespaces.
+#
+# Custom search attributes are declared as annotations on the same k8s
+# namespace, e.g.:
+#   annotations:
+#     temporal.home.arpa/search-attribute.OrderId: Int
+#     temporal.home.arpa/search-attribute.CustomerEmail: Keyword
+# The annotation suffix is the search-attribute name and the value is the
+# Temporal type (Keyword, Text, Int, Datetime, Double, Bool). Adds only —
+# removing the annotation does not drop the attribute.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -52,6 +61,7 @@ spec:
               NAMESPACE_LABEL: temporal.home.arpa/enabled
               POLL_INTERVAL_SECONDS: "300"
               MANAGED_BY_TAG: temporal-namespace-manager
+              SEARCH_ATTRIBUTE_ANNOTATION_PREFIX: temporal.home.arpa/search-attribute.
               TEMPORAL: /img/admin-tools/usr/local/bin/temporal
             resources:
               requests:
