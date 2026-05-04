@@ -66,6 +66,7 @@ spec:
             preserveSource: false
             ignorePatterns: &nzbget_ignore
               - "(^|/)_unpack(/|$)" # nzbget in-progress extraction directories
+              - (?:^|/)[0-9a-zA-Z]{32}\.[^/]+$ # hashed temp names of moved files pending rename. This is less than ideal, but the only realistic workaround
           - name: usenet-shows
             watchedPath: /media/input/usenet/Series
             mediaType: show
