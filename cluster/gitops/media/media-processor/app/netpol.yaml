@@ -86,8 +86,10 @@ specs:
       - *temporal_frontend_egress
       # Teleport proxy — same purpose as watcher, see above
       - *teleport_proxy_egress
-      # Radarr — notifies Radarr to import transcoded movie files
-      - toEndpoints:
+      # Radarr — notifies Radarr to import transcoded movie files (general)
+      # and fetches cover art (transcode).
+      - &radarr_egress
+        toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: radarr
               app.kubernetes.io/controller: radarr
@@ -96,8 +98,10 @@ specs:
           - ports:
               - port: "7878"
                 protocol: TCP
-      # Sonarr — notifies Sonarr to import transcoded show files
-      - toEndpoints:
+      # Sonarr — notifies Sonarr to import transcoded show files (general)
+      # and fetches cover art (transcode).
+      - &sonarr_egress
+        toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: sonarr
               app.kubernetes.io/controller: sonarr
@@ -126,9 +130,8 @@ specs:
               - port: "9090"
                 protocol: TCP
 
-  # Transcode worker — GPU-bound transcode activity only. Doesn't touch
-  # Radarr/Sonarr (those calls live in the import activities, which run on
-  # the general worker).
+  # Transcode worker — GPU-bound transcode activity. Also reaches Radarr and
+  # Sonarr to fetch cover art for embedding into the transcoded files.
   - description: transcode worker
     endpointSelector:
       matchLabels:
@@ -139,6 +142,8 @@ specs:
       - *dns_resolution
       - *temporal_frontend_egress
       - *teleport_proxy_egress
+      - *radarr_egress
+      - *sonarr_egress
     ingress:
       - *worker_kubelet_ingress
       - *worker_metrics_ingress
