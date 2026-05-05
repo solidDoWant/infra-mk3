@@ -180,6 +180,10 @@ spec:
             # The chart names the worker container "main" regardless of the
             # workers.<key>.
             main:
+              securityContext:
+                capabilities:
+                  add:
+                    - PERFMON
               resources:
                 claims:
                   - name: gpu
