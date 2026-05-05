@@ -175,7 +175,17 @@ spec:
               - name: gpu
                 resourceClaimTemplateName: media-processor-transcode-gpu
           initContainers:
-            tbot: *tbot_container
+            tbot:
+              <<: *tbot_container
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                # Needed for the JWT file to be readable by UID 0 in the worker container
+                runAsUser: 0
+                runAsNonRoot: false
           containers:
             # The chart names the worker container "main" regardless of the
             # workers.<key>.
@@ -184,6 +194,11 @@ spec:
                 capabilities:
                   add:
                     - PERFMON
+                # Needed to access performance counters for hardware-accelerated transcoding, which
+                # is required for load-based scheduling to work.
+                # Actual "root" access is limited to PERFMON capabilities.
+                runAsUser: 0
+                runAsNonRoot: false
               resources:
                 claims:
                   - name: gpu
