@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: media-processor
-      version: 0.0.14
+      version: 0.0.15
       sourceRef:
         kind: HelmRepository
         namespace: flux-system
@@ -97,9 +97,22 @@ spec:
               name: sonarr-api-key
               key: API_KEY
 
+    # Split the worker fleet so the GPU-bound transcode activity runs in its
+    # own pod. The general worker handles everything else (workflow
+    # orchestration, file moves, Radarr/Sonarr import). Each entry produces a
+    # separate Deployment with its own task queue subscription.
+    workers:
+      general:
+        activities:
+          - all
+          - "!transcode"
+      transcode:
+        activities:
+          - transcode
+
     resources:
       # Single ServiceAccount used for the kubernetes join method on tbot in
-      # both controllers — referenced by the TeleportProvisionToken's
+      # every controller — referenced by the TeleportProvisionToken's
       # kubernetes.allow.service_account: "media:media-processor".
       serviceAccount:
         media-processor: {}
@@ -141,21 +154,31 @@ spec:
                 limits:
                   memory: 64Mi
 
-        worker:
+        general:
           replicas: 2
           serviceAccount:
             identifier: media-processor
           pod:
-            labels:
+            labels: &worker_pod_labels
               endpoints.netpols.home.arpa/temporal-frontend-client: "true"
               endpoints.netpols.home.arpa/teleport-bot-client: "true"
+          initContainers:
+            tbot: *tbot_container
+
+        transcode:
+          serviceAccount:
+            identifier: media-processor
+          pod:
+            labels: *worker_pod_labels
             resourceClaims:
               - name: gpu
-                resourceClaimTemplateName: media-processor-worker-gpu
+                resourceClaimTemplateName: media-processor-transcode-gpu
           initContainers:
             tbot: *tbot_container
           containers:
-            worker:
+            # The chart names the worker container "main" regardless of the
+            # workers.<key>.
+            main:
               resources:
                 claims:
                   - name: gpu
@@ -172,18 +195,19 @@ spec:
         tbot-jwt:
           type: emptyDir
           advancedMounts:
-            watcher: &jwt_volume_mount
+            watcher:
               tbot:
                 - path: /var/run/teleport/jwt
               watcher:
                 - path: /var/run/teleport/jwt
                   readOnly: true
-            worker:
+            general: &tbot_jwt_worker_mount
               tbot:
                 - path: /var/run/teleport/jwt
-              worker:
+              main:
                 - path: /var/run/teleport/jwt
                   readOnly: true
+            transcode: *tbot_jwt_worker_mount
         tbot-config:
           type: configMap
           name: media-processor-tbot-config
@@ -196,7 +220,8 @@ spec:
               tbot:
                 - path: /etc/tbot
                   readOnly: true
-            worker: *tbot_config_volume_mount
+            general: *tbot_config_volume_mount
+            transcode: *tbot_config_volume_mount
         # Cluster intermediate-CA root, distributed to every namespace by the
         # extract-root-ca-certificate Kyverno ClusterPolicy. tbot needs this
         # to validate the Teleport proxy's serving cert.
@@ -213,4 +238,5 @@ spec:
                 - path: /etc/ssl/certs/root-ca.pem
                   subPath: root-ca.pem
                   readOnly: true
-            worker: *tbot_root_ca_volume_mount
+            general: *tbot_root_ca_volume_mount
+            transcode: *tbot_root_ca_volume_mount

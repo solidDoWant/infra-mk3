@@ -1,10 +1,12 @@
 ---
-# Provides the Intel Arc Pro GPU to the worker pod via DRA.
-# The worker auto-detects the device path; no MEDIA_HARDWARE_DEVICE_PATH env var is needed.
+# Provides the Intel Arc Pro GPU to the transcode worker pod via DRA. The
+# general worker is GPU-less; only the transcode-specialised worker references
+# this template. The worker auto-detects the device path; no
+# MEDIA_HARDWARE_DEVICE_PATH env var is needed.
 apiVersion: resource.k8s.io/v1beta2
 kind: ResourceClaimTemplate
 metadata:
-  name: media-processor-worker-gpu
+  name: media-processor-transcode-gpu
 spec:
   spec:
     devices:
@@ -13,7 +15,8 @@ spec:
           exactly:
             deviceClassName: gpu.intel.com
             # adminAccess avoids consuming the node's single GPU allocation slot,
-            # since the worker is not the only consumer (media-processor also uses it).
+            # since the transcode worker is not the only consumer (fileflows
+            # also uses it).
             adminAccess: true
             allocationMode: All
             selectors:

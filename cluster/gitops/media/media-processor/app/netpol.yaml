@@ -63,8 +63,7 @@ specs:
               - port: "8081"
                 protocol: TCP
       # Victoria Metrics agent — Prometheus metrics scraping
-      - &metrics_scrape_ingress
-        fromEndpoints:
+      - fromEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/metrics-scraper: "true"
@@ -73,11 +72,13 @@ specs:
               - port: "9091"
                 protocol: TCP
 
-  - description: worker
+  # General worker — runs every activity except transcode (workflow
+  # orchestration, file moves, Radarr/Sonarr import).
+  - description: general worker
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: media-processor
-        app.kubernetes.io/controller: worker
+        app.kubernetes.io/controller: general
         app.kubernetes.io/instance: media-processor
     egress:
       - *dns_resolution
@@ -85,7 +86,7 @@ specs:
       - *temporal_frontend_egress
       # Teleport proxy — same purpose as watcher, see above
       - *teleport_proxy_egress
-      # Radarr — worker notifies Radarr to import transcoded movie files
+      # Radarr — notifies Radarr to import transcoded movie files
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: radarr
@@ -95,7 +96,7 @@ specs:
           - ports:
               - port: "7878"
                 protocol: TCP
-      # Sonarr — worker notifies Sonarr to import transcoded show files
+      # Sonarr — notifies Sonarr to import transcoded show files
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: sonarr
@@ -107,14 +108,16 @@ specs:
                 protocol: TCP
     ingress:
       # Kubelet health probes — liveness/readiness on worker health port
-      - fromEntities:
+      - &worker_kubelet_ingress
+        fromEntities:
           - host
         toPorts:
           - ports:
               - port: "8080"
                 protocol: TCP
       # Victoria Metrics agent — Prometheus metrics scraping
-      - fromEndpoints:
+      - &worker_metrics_ingress
+        fromEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/metrics-scraper: "true"
@@ -122,3 +125,20 @@ specs:
           - ports:
               - port: "9090"
                 protocol: TCP
+
+  # Transcode worker — GPU-bound transcode activity only. Doesn't touch
+  # Radarr/Sonarr (those calls live in the import activities, which run on
+  # the general worker).
+  - description: transcode worker
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: media-processor
+        app.kubernetes.io/controller: transcode
+        app.kubernetes.io/instance: media-processor
+    egress:
+      - *dns_resolution
+      - *temporal_frontend_egress
+      - *teleport_proxy_egress
+    ingress:
+      - *worker_kubelet_ingress
+      - *worker_metrics_ingress
