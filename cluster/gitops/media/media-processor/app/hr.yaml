@@ -166,6 +166,7 @@ spec:
             tbot: *tbot_container
 
         transcode:
+          replicas: 2
           serviceAccount:
             identifier: media-processor
           pod:
