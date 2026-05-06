@@ -136,11 +136,25 @@ spec:
               restartPolicy: Always
               image:
                 repository: public.ecr.aws/gravitational/tbot-distroless
-                tag: "18.1.4"
+                tag: 18.7.6
               args:
                 - start
                 - --config
                 - /etc/tbot/tbot.yaml
+                - --diag-addr
+                - :4444
+              ports:
+                - name: tbot-diag
+                  containerPort: 4444
+              probes:
+                liveness: &probe
+                  enabled: true
+                  type: HTTP
+                  port: tbot-diag
+                  path: /livez
+                readiness:
+                  <<: *probe
+                  path: /readyz
               securityContext:
                 readOnlyRootFilesystem: true
                 allowPrivilegeEscalation: false
