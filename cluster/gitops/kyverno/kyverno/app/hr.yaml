@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: kyverno-charts
-      version: 3.3.7
+      version: 3.4.6
   values:
     admissionController: &controller_config
       replicas: 2
@@ -58,11 +58,11 @@ spec:
               resources:
                 - referencegrants
               verbs: *all_common_verbs
-            - # Required by the teleport-cr-mirror-policy ClusterPolicy,
-              # which clones Teleport CRs from any namespace into security
-              # so the operator (which only watches its own namespace) can
-              # reconcile them.
-              apiGroups:
+            # Required by the teleport-cr-mirror-policy ClusterPolicy,
+            # which clones Teleport CRs from any namespace into security
+            # so the operator (which only watches its own namespace) can
+            # reconcile them.
+            - apiGroups:
                 - resources.teleport.dev
               resources:
                 - "*"
