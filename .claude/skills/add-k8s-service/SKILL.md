@@ -198,6 +198,8 @@ defaultPodOptions:
 
 **HA by default**: Services should run with replicas ≥ 2 where the application supports it. Backends (PostgreSQL, Dragonfly) default to 2 instances. RabbitMQ requires 3 replicas for quorum. Availability is a priority in this cluster.
 
+**Do not add `topologySpreadConstraints` per-service** — pod topology spread is configured at the cluster level (kube-scheduler defaults) and applies automatically. Adding per-service TSCs is redundant and creates drift.
+
 **Resource limits**: Always set `resources.limits.memory` equal to `resources.requests.memory`, if a memory request is set. CPU limits should be omitted (unbounded) to allow bursting.
 
 **PodDisruptionBudget**: Required when replicas ≥ 2. For app-template, configure per-controller inline:

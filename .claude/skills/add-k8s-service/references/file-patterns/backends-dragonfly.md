@@ -1,6 +1,6 @@
 # Backend — Dragonfly (Redis-compatible cache)
 
-Uses a custom chart that wraps the Dragonfly operator CRD. Default `instances: 2` provides HA with topology spread across nodes.
+Uses a custom chart that wraps the Dragonfly operator CRD. Default `instances: 2` provides HA.
 
 Dragonfly mTLS requires a namespace issuer — see the **Namespace Issuer** section in `backends-postgres.md` if one doesn't exist for the target namespace yet.
 
@@ -24,7 +24,7 @@ spec:
         name: infra-mk3
   values:
     serviceName: <service>
-    instances: 2         # HA — topology spread across nodes is handled by the chart
+    instances: 2         # HA
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     certificates:
       serving:

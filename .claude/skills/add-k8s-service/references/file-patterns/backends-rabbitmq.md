@@ -167,20 +167,6 @@ spec:
           app.kubernetes.io/component: rabbitmq
           app.kubernetes.io/part-of: rabbitmq
           metrics: "true"   # Needed to distinguish main service from headless service
-    statefulSet:
-      spec:
-        template:
-          spec:
-            containers: []  # Required by spec; meaningless here
-            topologySpreadConstraints:
-              - maxSkew: 1
-                topologyKey: kubernetes.io/hostname
-                whenUnsatisfiable: DoNotSchedule
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: <service>-rabbitmq
-                    app.kubernetes.io/component: rabbitmq
-                    app.kubernetes.io/part-of: rabbitmq
 ```
 
 ## shared/rabbitmq/pdb.yaml
