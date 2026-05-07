@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# Standalone tbot Deployment that produces a `media:read` Temporal JWT for
+# KEDA scalers in this namespace. Teleport CRs deploy into `media` alongside
+# the workload; the teleport-cr-mirror-policy GeneratingPolicy mirrors them
+# into `security` for the operator to reconcile.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name media-temporal-keda-auth
+spec:
+  targetNamespace: media
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/media/media-temporal-keda-auth/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: teleport-cluster
+    - name: teleport-cr-mirror-policy

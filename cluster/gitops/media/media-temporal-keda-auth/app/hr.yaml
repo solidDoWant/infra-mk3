@@ -1,0 +1,169 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# Standalone tbot deployment that issues a Temporal JWT-SVID for the `media`
+# Temporal namespace (permissions=["media:read"]) and writes it to the shared
+# Secret `media-temporal-keda-auth`. KEDA scalers in this namespace consume
+# the secret via TriggerAuthentication to authenticate to the Temporal
+# frontend.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: media-temporal-keda-auth
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      media-temporal-keda-auth:
+        replicas: 2
+        # Both replicas write the same Secret. Available > Consistent: a
+        # rolling restart would briefly leave only one pod running, but the
+        # JWT in the Secret stays valid until the next renewal regardless.
+        strategy: RollingUpdate
+        podDisruptionBudget:
+          minAvailable: 1
+        serviceAccount:
+          identifier: media-temporal-keda-auth
+        pod:
+          labels:
+            # Picked up by the central teleport-cluster netpol, which allows
+            # any pod with this label to reach the proxy on the TLS-routing
+            # port — no per-namespace netpol edit needed when adding new
+            # tbot consumers.
+            endpoints.netpols.home.arpa/teleport-bot-client: "true"
+        containers:
+          tbot:
+            image:
+              repository: public.ecr.aws/gravitational/tbot-distroless
+              tag: 18.7.6
+            args:
+              - start
+              - --config
+              - /etc/tbot/tbot.yaml
+              - --diag-addr
+              - :4444
+            ports:
+              - name: tbot-diag
+                containerPort: 4444
+            probes:
+              liveness: &probe
+                enabled: true
+                type: HTTP
+                port: tbot-diag
+                path: /livez
+              readiness:
+                <<: *probe
+                path: /readyz
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                memory: 64Mi
+
+    defaultPodOptions:
+      # Run pods in their own user namespace — UIDs in the container are
+      # remapped on the host so a container-root escape lands as an
+      # unprivileged host user. Safe here: no NFS mounts and no other
+      # features incompatible with userns remapping.
+      hostUsers: false
+      securityContext:
+        # Distroless tbot image's nonroot user (65532).
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+
+    service:
+      media-temporal-keda-auth:
+        controller: media-temporal-keda-auth
+        ports:
+          tbot-diag:
+            port: 4444
+            primary: true
+
+    serviceMonitor:
+      media-temporal-keda-auth:
+        enabled: true
+        serviceName: media-temporal-keda-auth
+        endpoints:
+          - port: tbot-diag
+
+    persistence:
+      tbot-config:
+        type: configMap
+        name: media-temporal-keda-auth-tbot-config
+        defaultMode: 0440
+        items:
+          - key: tbot.yaml
+            path: tbot.yaml
+        advancedMounts:
+          media-temporal-keda-auth:
+            tbot:
+              - path: /etc/tbot
+                readOnly: true
+      # Cluster intermediate-CA root, distributed to every namespace by the
+      # extract-root-ca-certificate Kyverno ClusterPolicy. tbot needs this to
+      # validate the Teleport proxy's serving cert.
+      tbot-root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0440
+        items:
+          - key: ca.pem
+            path: root-ca.pem
+        advancedMounts:
+          media-temporal-keda-auth:
+            tbot:
+              - path: /etc/ssl/certs/root-ca.pem
+                subPath: root-ca.pem
+                readOnly: true
+
+    serviceAccount:
+      media-temporal-keda-auth: {}
+
+    rbac:
+      roles:
+        media-temporal-keda-auth:
+          type: Role
+          rules:
+            # Tight: only the placeholder Secret created in secret.yaml.
+            # tbot's kubernetes_secret destination calls Get and Update;
+            # patch is included for compatibility with future tbot versions
+            # that may switch to strategic-merge patches.
+            - apiGroups:
+                - ""
+              resources:
+                - secrets
+              resourceNames:
+                - media-temporal-keda-auth
+              verbs:
+                - get
+                - update
+                - patch
+      bindings:
+        media-temporal-keda-auth:
+          type: RoleBinding
+          roleRef:
+            identifier: media-temporal-keda-auth
+          subjects:
+            - identifier: media-temporal-keda-auth

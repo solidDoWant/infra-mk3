@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-temporal-keda-auth-tbot-config
+data:
+  # Mounted at /etc/tbot/tbot.yaml in every tbot pod. Each pod joins the
+  # cluster via its in-cluster ServiceAccount token and continually renews a
+  # JWT-SVID (containing permissions=["media:read"]) into the shared k8s
+  # Secret `media-temporal-keda-auth`. KEDA's TriggerAuthentication then
+  # surfaces the `jwt_svid` key as the Temporal scaler's apiKey — KEDA
+  # re-reads the secret on each polling interval, so renewals propagate
+  # without any restarts.
+  tbot.yaml: |
+    version: v2
+    # Public hostname; the proxy Service has a coredns.io/hostname annotation
+    # that resolves this to the in-cluster LoadBalancer IP, so the connection
+    # never leaves the cluster but the TLS SNI / JWT issuer URL match.
+    proxy_server: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+    onboarding:
+      token: media-temporal-keda-auth
+      join_method: kubernetes
+    storage:
+      type: memory
+    services:
+      - type: workload-identity-jwt
+        selector:
+          name: media-temporal-keda-auth
+        audiences:
+          - temporal.${SECRET_PUBLIC_DOMAIN_NAME}
+        destination:
+          # Both replicas write to the same Secret. Last-write-wins is fine:
+          # the JWTs are equivalent (same WID, same audience), and the
+          # Temporal frontend validates against the JWKS regardless of which
+          # tbot issued the token.
+          type: kubernetes_secret
+          name: media-temporal-keda-auth

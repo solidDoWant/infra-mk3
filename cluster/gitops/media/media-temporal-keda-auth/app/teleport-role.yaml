@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportrolev7_v1.json
+apiVersion: resources.teleport.dev/v1
+kind: TeleportRoleV7
+metadata:
+  name: media-temporal-keda-auth-bot
+spec:
+  allow:
+    # Limit issuance to the read-only WID below — keeps a compromise of this
+    # bot from minting the media-processor `media:write` JWT.
+    workload_identity_labels:
+      app:
+        - media-temporal-keda-auth
+    rules:
+      - resources:
+          - workload_identity
+        verbs:
+          - list
+          - read
