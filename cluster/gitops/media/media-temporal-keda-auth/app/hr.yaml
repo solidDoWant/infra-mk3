@@ -50,6 +50,13 @@ spec:
               - /etc/tbot/tbot.yaml
               - --diag-addr
               - :4444
+            env:
+              # tbot's kubernetes_secret destination reads this to know which
+              # namespace to write the Secret to.
+              POD_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
             ports:
               - name: tbot-diag
                 containerPort: 4444
