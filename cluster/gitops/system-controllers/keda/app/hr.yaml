@@ -78,6 +78,9 @@ spec:
       certManager:
         enabled: true
         generateCA: false
+        # Pinned under the CertificateRequestPolicy maxDuration (1h).
+        duration: 1h
+        renewBefore: 30m
         issuer:
           generate: false
           name: system-controllers-intermediary-ca
@@ -133,12 +136,15 @@ spec:
               labels:
                 severity: critical
 
-  # Strip non-compliant SANs from the chart-rendered Certificate so the
-  # system-controllers namespace issuer can sign it. The issuer permits only
-  # `*.system-controllers.svc` and `*.system-controllers.svc.cluster.local`
-  # via critical nameConstraints; the chart also requests bare-namespace forms
-  # (e.g. `keda-operator.system-controllers`) and metrics-apiserver SANs that
-  # we don't need (metricsServer.enabled=false).
+  # Patch the chart-rendered Certificate to fit the namespace issuer + the
+  # repo's admission-cert pattern:
+  #   * dnsNames: drop bare-namespace forms (violate the issuer's critical
+  #     nameConstraints) and the metrics-apiserver SANs (metricsServer disabled).
+  #   * commonName: removed; cert-manager defaults to the first dnsName, which
+  #     keeps the request inside the namespace issuer's name constraints and
+  #     mirrors the other admission certs in this repo (k8tz).
+  #   * usages: drop `client auth` — only the webhook server cert is in use,
+  #     metricsServer (which would have used client auth) is disabled.
   postRenderers:
     - kustomize:
         patches:
@@ -155,3 +161,9 @@ spec:
                   - keda-operator.system-controllers.svc.cluster.local
                   - keda-admission-webhooks.system-controllers.svc
                   - keda-admission-webhooks.system-controllers.svc.cluster.local
+              - op: remove
+                path: /spec/commonName
+              - op: replace
+                path: /spec/usages
+                value:
+                  - server auth
