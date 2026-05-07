@@ -32,19 +32,9 @@ spec:
       enabled: true
     generateExisting:
       enabled: true
-  variables:
-    # Merge-override only metadata.namespace; everything else (name,
-    # labels, annotations, anything else the source sets) flows through.
-    # generator.Apply strips server-managed fields (uid/resourceVersion/
-    # generation/creationTimestamp/managedFields) on its own. dyn() is
-    # needed on the literal because CEL otherwise can't unify the inner
-    # map's `dyn`-typed value with a bare string.
-    - name: cloned
-      expression: |
-        object + {
-          'metadata': object.metadata + {
-            'namespace': dyn('security'),
-          },
-        }
   generate:
-    - expression: generator.Apply('security', [variables.cloned])
+    # generator.Apply overrides metadata.namespace based on its first
+    # argument and strips server-managed fields, mirroring the legacy
+    # ClusterPolicy clone behaviour. So passing the trigger object through
+    # verbatim is enough.
+    - expression: generator.Apply('security', [object])
