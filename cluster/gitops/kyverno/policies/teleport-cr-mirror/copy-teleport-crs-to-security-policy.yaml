@@ -21,6 +21,10 @@ spec:
         operations:
           - "*"
   matchConditions:
+    # operations: ["*"] above also matches DELETE/CONNECT, where `object` is
+    # null. Short-circuit those before downstream conditions touch `object`.
+    - name: only-create-or-update
+      expression: request.operation in ['CREATE', 'UPDATE']
     - name: not-already-in-security
       expression: object.metadata.namespace != 'security'
   evaluation:
@@ -29,22 +33,18 @@ spec:
     generateExisting:
       enabled: true
   variables:
-    # Reconstruct the resource explicitly to drop server-side fields
-    # (uid, resourceVersion, generation, creationTimestamp, finalizers,
-    # ownerReferences, managedFields, status). Same name as the source —
-    # cross-namespace collisions surface as loud generator failures.
+    # Merge-override only metadata.namespace; everything else (name,
+    # labels, annotations, anything else the source sets) flows through.
+    # generator.Apply strips server-managed fields (uid/resourceVersion/
+    # generation/creationTimestamp/managedFields) on its own. dyn() is
+    # needed on the literal because CEL otherwise can't unify the inner
+    # map's `dyn`-typed value with a bare string.
     - name: cloned
       expression: |
-        {
-          'apiVersion': object.apiVersion,
-          'kind': object.kind,
-          'metadata': {
-            'name': object.metadata.name,
-            'namespace': 'security',
-            'labels': object.metadata.?labels.orValue({}),
-            'annotations': object.metadata.?annotations.orValue({}),
+        object + {
+          'metadata': object.metadata + {
+            'namespace': dyn('security'),
           },
-          'spec': object.spec,
         }
   generate:
     - expression: generator.Apply('security', [variables.cloned])
