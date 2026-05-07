@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/gitrepository_v1.json
+# Pinned to a post-2.19.0 main commit because metricsServer.enabled (PR #819)
+# is not yet in any released chart version. Switch to the kedacore HelmRepository
+# at flux-system/flux/sources/helm/ once the next chart release lands.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: kedacore-charts
+spec:
+  interval: 1h
+  url: https://github.com/kedacore/charts
+  ref:
+    commit: 875168843ebd632082af37f12b46f735dfc2eaa1
+  ignore: |
+    /*
+    !/keda

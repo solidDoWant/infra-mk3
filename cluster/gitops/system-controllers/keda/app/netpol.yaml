@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: keda
+specs:
+  - description: keda-operator
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: keda-operator
+    egress:
+      # Watch and create resources (Jobs, ScaledJobs, etc.)
+      - &to_apiserver
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      - &to_dns_resolver
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+    ingress:
+      # Liveness/readiness probes from kubelet on the host.
+      - &from_healthcheck
+        fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
+      # Victoria Metrics agent scrapes the operator's /metrics endpoint.
+      - &from_monitoring
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+
+  - description: keda-admission-webhooks
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: keda-admission-webhooks
+    egress:
+      # Webhook needs to read referenced resources during validation.
+      - *to_apiserver
+      - *to_dns_resolver
+    ingress:
+      # kube-apiserver calls the validating webhook for ScaledJob/ScaledObject
+      # admission. With failurePolicy=Fail, this path must work.
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "9443"
+                protocol: TCP
+      # Liveness/readiness probes.
+      - *from_healthcheck
+      # Metrics scraping.
+      - *from_monitoring
