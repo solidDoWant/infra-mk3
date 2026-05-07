@@ -1,0 +1,62 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: copy-teleport-crs-to-security-namespace
+spec:
+  # The Teleport operator only watches resources in its own namespace
+  # (security). Process pre-existing CRs on policy install/update so they
+  # are mirrored without requiring a re-apply.
+  generateExisting: true
+  rules:
+    - # Kyverno's generate rules do not accept wildcard kinds, so each
+      # mirrorable Teleport CRD kind shipped by the teleport-operator chart
+      # must be enumerated. apiVersion/kind in the generate block are
+      # templated from the trigger so a single rule covers them all.
+      # TODO: replace with a GeneratingPolicy once Kyverno is on >= v1.18
+      # (chart >= 3.8.0). Its matchConstraints supports resources: ["*"]
+      # within an apiGroup, collapsing this list to one entry.
+      name: copy-teleport-cr-to-security
+      match:
+        any:
+          - resources:
+              kinds:
+                - resources.teleport.dev/v1/TeleportAccessList
+                - resources.teleport.dev/v1/TeleportAppV3
+                - resources.teleport.dev/v1/TeleportAutoupdateConfigV1
+                - resources.teleport.dev/v1/TeleportAutoupdateVersionV1
+                - resources.teleport.dev/v1/TeleportBotV1
+                - resources.teleport.dev/v3/TeleportGithubConnector
+                - resources.teleport.dev/v1/TeleportLoginRule
+                - resources.teleport.dev/v3/TeleportOIDCConnector
+                - resources.teleport.dev/v1/TeleportOktaImportRule
+                - resources.teleport.dev/v1/TeleportOpenSSHEICEServerV2
+                - resources.teleport.dev/v1/TeleportOpenSSHServerV2
+                - resources.teleport.dev/v2/TeleportProvisionToken
+                - resources.teleport.dev/v6/TeleportRole
+                - resources.teleport.dev/v1/TeleportRoleV6
+                - resources.teleport.dev/v1/TeleportRoleV7
+                - resources.teleport.dev/v1/TeleportRoleV8
+                - resources.teleport.dev/v2/TeleportSAMLConnector
+                - resources.teleport.dev/v1/TeleportTrustedClusterV2
+                - resources.teleport.dev/v2/TeleportUser
+                - resources.teleport.dev/v1/TeleportWorkloadIdentityV1
+      preconditions:
+        all:
+          - key: "{{ request.namespace }}"
+            operator: NotEquals
+            value: security
+      generate:
+        apiVersion: "{{ request.object.apiVersion }}"
+        kind: "{{ request.object.kind }}"
+        # Same name as the source so the Teleport-side resource keeps its
+        # original name. Cross-namespace name collisions are rejected by
+        # Kyverno (loud failure) — service-scoped names should make this
+        # rare in practice.
+        name: "{{ request.object.metadata.name }}"
+        namespace: security
+        synchronize: true
+        clone:
+          namespace: "{{ request.namespace }}"
+          name: "{{ request.object.metadata.name }}"

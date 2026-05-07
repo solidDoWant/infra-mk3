@@ -58,6 +58,15 @@ spec:
               resources:
                 - referencegrants
               verbs: *all_common_verbs
+            - # Required by the teleport-cr-mirror-policy ClusterPolicy,
+              # which clones Teleport CRs from any namespace into security
+              # so the operator (which only watches its own namespace) can
+              # reconcile them.
+              apiGroups:
+                - resources.teleport.dev
+              resources:
+                - "*"
+              verbs: *all_common_verbs
       priorityClassName: system-cluster-critical
       topologySpreadConstraints:
         - maxSkew: 1
