@@ -143,6 +143,12 @@ spec:
                 - /etc/tbot/tbot.yaml
                 - --diag-addr
                 - :4444
+              env:
+                # Override tbot's hard-coded default
+                # (/var/run/secrets/kubernetes.io/serviceaccount/token) so the
+                # kubernetes join method reads the audience-scoped projected
+                # token mounted via the sa-token persistence entry.
+                KUBERNETES_TOKEN_PATH: /var/run/secrets/tokens/token
               ports:
                 - name: tbot-diag
                   containerPort: 4444
@@ -274,3 +280,25 @@ spec:
                   readOnly: true
             general: *tbot_root_ca_volume_mount
             transcode: *tbot_root_ca_volume_mount
+        # Audience-scoped, short-lived projected SA token used by tbot's
+        # kubernetes (in_cluster) join method. The kubelet refreshes the file
+        # in place at 80% of TTL; tbot re-reads on every join/renewal. The
+        # narrow audience limits blast radius if the token ever leaks — it can
+        # only be presented to TokenReview calls asserting the Teleport
+        # cluster's audience.
+        sa-token:
+          type: custom
+          volumeSpec:
+            projected:
+              sources:
+                - serviceAccountToken:
+                    path: token
+                    expirationSeconds: 600
+                    audience: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+          advancedMounts:
+            watcher: &sa_token_volume_mount
+              tbot:
+                - path: /var/run/secrets/tokens
+                  readOnly: true
+            general: *sa_token_volume_mount
+            transcode: *sa_token_volume_mount
