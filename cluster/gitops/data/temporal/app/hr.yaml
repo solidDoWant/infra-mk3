@@ -72,6 +72,9 @@ spec:
 
       # Mount the postgres user cert (auth) and serving CA (verify-full) into every
       # server pod. The same mounts back the persistence.tls.* paths in server.config.
+      # The frontend serving cert is NOT mounted here — it's only needed by the
+      # frontend pod, and these chart fields apply to every server pod. The
+      # postRenderer below adds it to temporal-frontend only.
       additionalVolumes:
         - name: postgres-user-cert
           secret:
@@ -219,6 +222,21 @@ spec:
           authorizer: default
           claimMapper: default
 
+        # Server-side TLS on port 7233 only. internode and internal-frontend
+        # remain plaintext: KEDA's Temporal scaler hardcodes TLS and is the
+        # forcing function for this; no other internal caller demanded it.
+        # requireClientAuth=false because authentication is JWT (presented as
+        # a bearer header), not client cert. cert-manager places leaf +
+        # intermediate in tls.crt, so root-CA-trusting clients (mounting
+        # root-ca-pub-cert) can build the chain without distributing
+        # data-intermediary-ca per consumer namespace.
+        tls:
+          frontend:
+            server:
+              certFile: /etc/temporal/certs/frontend/tls.crt
+              keyFile: /etc/temporal/certs/frontend/tls.key
+              requireClientAuth: false
+
       frontend:
         replicaCount: 2
         resources:
@@ -349,7 +367,33 @@ spec:
           # temporal-permissions: custom scope (defined in the Authentik blueprint)
           # that injects the `permissions` claim Temporal's authorizer reads.
           value: openid,profile,email,temporal-permissions
+        # Frontend serves TLS on 7233. Setting TEMPORAL_TLS_CA enables TLS in
+        # the UI's gRPC client; TEMPORAL_TLS_SERVER_NAME pins the SNI / cert
+        # verification to the cert SAN (the chart-generated TEMPORAL_ADDRESS
+        # uses the same hostname, so this is technically redundant, but
+        # explicit guards against future address changes).
+        - name: TEMPORAL_TLS_CA
+          value: /etc/ssl/certs/root-ca.pem
+        - name: TEMPORAL_TLS_SERVER_NAME
+          value: temporal-frontend.data.svc.cluster.local
       additionalEnvSecretName: temporal-ui-oidc
+      additionalVolumes:
+        # Cluster root CA, distributed to every namespace by the
+        # extract-root-ca-certificate Kyverno ClusterPolicy. The frontend's
+        # serving cert chain (leaf + data-intermediary-ca) terminates at this
+        # root, so trusting it alone is sufficient for chain verification.
+        - name: root-ca
+          secret:
+            secretName: root-ca-pub-cert
+            defaultMode: 0440
+            items:
+              - key: ca.pem
+                path: root-ca.pem
+      additionalVolumeMounts:
+        - name: root-ca
+          mountPath: /etc/ssl/certs/root-ca.pem
+          subPath: root-ca.pem
+          readOnly: true
       resources:
         requests:
           cpu: 50m
@@ -358,3 +402,44 @@ spec:
           memory: 128Mi
       podDisruptionBudget:
         minAvailable: 1
+
+  # The chart's server.additionalVolumes/additionalVolumeMounts apply to every
+  # server pod (frontend, internal-frontend, history, matching, worker) — there
+  # is no per-component knob. Doing it via values would mount the frontend
+  # serving cert on four pods that never read it AND roll all five on every
+  # cert rotation (the Secret carries kyverno.home.arpa/reload). Instead, add
+  # the volume + mount only to temporal-frontend via a strategic-merge patch
+  # (additive — kustomize's $patch: delete on nested merge-key lists is buggy
+  # and wipes the whole sibling list).
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: temporal-frontend
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: temporal-frontend
+              spec:
+                template:
+                  spec:
+                    volumes:
+                      - name: frontend-tls
+                        secret:
+                          secretName: temporal-frontend-tls
+                          defaultMode: 0440
+                          items:
+                            - key: tls.crt
+                              path: tls.crt
+                            - key: tls.key
+                              path: tls.key
+                    containers:
+                      - name: temporal-frontend
+                        volumeMounts:
+                          - name: frontend-tls
+                            mountPath: /etc/temporal/certs/frontend
+                            readOnly: true

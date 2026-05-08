@@ -1,0 +1,31 @@
+---
+# Serving cert for the public Temporal frontend (port 7233). The chain
+# (leaf + data-intermediary-ca) is included in tls.crt by cert-manager,
+# so clients only need to trust the cluster root CA — distributed
+# cluster-wide as `root-ca-pub-cert` by Kyverno — to verify.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: temporal-frontend
+spec:
+  dnsNames:
+    - temporal-frontend.data.svc
+    - temporal-frontend.data.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  duration: 4h
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: data-intermediary-ca
+  secretName: temporal-frontend-tls
+  secretTemplate:
+    labels:
+      kyverno.home.arpa/reload: "true"
