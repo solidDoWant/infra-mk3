@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: media-processor
-      version: 0.0.18
+      version: 0.0.20
       sourceRef:
         kind: HelmRepository
         namespace: flux-system
@@ -40,18 +40,14 @@ spec:
               name: media-temporal-keda-auth
               key: jwt_svid
 
-      # Full NFS restricted to the downloads subtree — watcher gets read-only, worker read-write.
-      inputVolume:
-        type: nfs
-        server: ${NFS_ADDRESS}
-        path: ${NFS_MEDIA_PATH}
-        subPath: downloads
-
       watcher:
         watches:
           - name: bittorrent-movies
-            watchedPath: /media/input/bittorrent/Movies
             mediaType: movie
+            input:
+              volumeName: media
+              mountPath: /media/input/bittorrent/Movies
+              subPath: downloads/bittorrent/Movies
             output: &movie_output
               volumeName: media
               mountPath: /media/output/movies
@@ -61,8 +57,11 @@ spec:
             ignorePatterns: &qbittorrent_ignore
               - "\\.!qB$" # qbittorrent incomplete downloads
           - name: bittorrent-shows
-            watchedPath: /media/input/bittorrent/Series
             mediaType: show
+            input:
+              volumeName: media
+              mountPath: /media/input/bittorrent/Series
+              subPath: downloads/bittorrent/Series
             output: &show_output
               volumeName: media
               mountPath: /media/output/shows
@@ -71,16 +70,22 @@ spec:
             preserveSource: true
             ignorePatterns: *qbittorrent_ignore
           - name: usenet-movies
-            watchedPath: /media/input/usenet/Movies
             mediaType: movie
+            input:
+              volumeName: media
+              mountPath: /media/input/usenet/Movies
+              subPath: downloads/usenet/Movies
             output: *movie_output
             preserveSource: false
             ignorePatterns: &nzbget_ignore
               - "(^|/)_unpack(/|$)" # nzbget in-progress extraction directories
               - (?:^|/)[0-9a-zA-Z]{32}\.[^/]+$ # hashed temp names of moved files pending rename. This is less than ideal, but the only realistic workaround
           - name: usenet-shows
-            watchedPath: /media/input/usenet/Series
             mediaType: show
+            input:
+              volumeName: media
+              mountPath: /media/input/usenet/Series
+              subPath: downloads/usenet/Series
             output: *show_output
             preserveSource: false
             ignorePatterns: *nzbget_ignore
