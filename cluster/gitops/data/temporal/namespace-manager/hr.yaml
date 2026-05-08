@@ -63,6 +63,8 @@ spec:
               MANAGED_BY_TAG: temporal-namespace-manager
               SEARCH_ATTRIBUTE_ANNOTATION_PREFIX: temporal.home.arpa/search-attribute.
               TEMPORAL: /img/admin-tools/usr/local/bin/temporal
+              TEMPORAL_TLS: "true"
+              TEMPORAL_TLS_CA: /etc/ssl/certs/root-ca.pem
             resources:
               requests:
                 cpu: 10m
@@ -108,6 +110,19 @@ spec:
           temporal-namespace-manager:
             manager:
               - path: /tmp
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.pem
+            path: root-ca.pem
+        advancedMounts:
+          temporal-namespace-manager:
+            manager:
+              - path: /etc/ssl/certs/root-ca.pem
+                subPath: root-ca.pem
+                readOnly: true
     serviceAccount:
       temporal-namespace-manager: {}
     rbac:

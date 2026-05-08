@@ -2,11 +2,11 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: temporal-frontend
+  name: temporal-internal-frontend
 spec:
   dnsNames:
-    - temporal-frontend.data.svc
-    - temporal-frontend.data.svc.cluster.local
+    - temporal-internal-frontend.data.svc
+    - temporal-internal-frontend.data.svc.cluster.local
   subject:
     countries:
       - US
@@ -21,7 +21,7 @@ spec:
     group: cert-manager.io
     kind: Issuer
     name: data-intermediary-ca
-  secretName: temporal-frontend-tls
+  secretName: temporal-internal-frontend-tls
   secretTemplate:
     labels:
       kyverno.home.arpa/reload: "true"

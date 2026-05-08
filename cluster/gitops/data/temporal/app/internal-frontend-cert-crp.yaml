@@ -2,7 +2,7 @@
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
-  name: data-intermediary-ca-temporal-frontend
+  name: data-intermediary-ca-temporal-internal-frontend
 spec:
   selector:
     issuerRef:
@@ -16,8 +16,8 @@ spec:
     dnsNames:
       required: true
       values:
-        - temporal-frontend.data.svc
-        - temporal-frontend.data.svc.cluster.local
+        - temporal-internal-frontend.data.svc
+        - temporal-internal-frontend.data.svc.cluster.local
     subject:
       countries:
         required: true
