@@ -80,7 +80,7 @@ spec:
         - name: postgres-user-cert
           secret:
             secretName: temporal-postgres-temporal-user
-            defaultMode: 0440
+            defaultMode: 440
             items:
               - key: tls.crt
                 path: tls.crt
@@ -89,17 +89,27 @@ spec:
         - name: postgres-serving-ca
           secret:
             secretName: temporal-postgres-17-serving-cert
-            defaultMode: 0440
+            defaultMode: 440
             items:
               - key: ca.crt
                 path: ca.crt
         - name: root-ca
           secret:
             secretName: root-ca-pub-cert
-            defaultMode: 0444
+            defaultMode: 444
             items:
               - key: ca.pem
                 path: root-ca.pem
+        # ImageVolume (beta in k8s 1.32, on by default in 1.33) mounts the
+        # upstream grpc-health-probe distroless image read-only at /probe so
+        # frontend / internal-frontend exec readiness probes can validate
+        # gRPC + TLS without a custom init image or runtime egress to GH
+        # releases. Only those two services use the binary; mounting it on
+        # every server controller is harmless (~12 MB image, no exec cost).
+        - name: probe-bin
+          image:
+            reference: ghcr.io/grpc-ecosystem/grpc-health-probe:v0.4.49
+            pullPolicy: IfNotPresent
       additionalVolumeMounts:
         - name: postgres-user-cert
           mountPath: /etc/temporal/certs/postgres/user
@@ -110,6 +120,9 @@ spec:
         - name: root-ca
           mountPath: /etc/ssl/certs/root-ca.pem
           subPath: root-ca.pem
+          readOnly: true
+        - name: probe-bin
+          mountPath: /probe
           readOnly: true
 
       # S3 archival credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) come from
@@ -264,6 +277,24 @@ spec:
             memory: 384Mi
         podDisruptionBudget:
           minAvailable: 1
+        # Chart default is a Kubernetes-native gRPC probe on 7233. The
+        # built-in probe doesn't support TLS, so once frontend started
+        # serving TLS the kubelet's plaintext gRPC frame couldn't complete
+        # the TLS handshake and pods stayed NotReady. Drop the chart's grpc
+        # handler (null in Helm merge becomes absent at apply time) and run
+        # the upstream grpc-health-probe binary, mounted via the probe-bin
+        # ImageVolume above, with -tls and the cluster root CA. Probes the
+        # same WorkflowService health check the chart's default did.
+        readinessProbe:
+          grpc: ~
+          exec:
+            command:
+              - /probe/ko-app/grpc-health-probe
+              - -addr=127.0.0.1:7233
+              - -tls
+              - -tls-ca-cert=/etc/ssl/certs/root-ca.pem
+              - -tls-server-name=temporal-frontend.data.svc.cluster.local
+              - -service=temporal.api.workflowservice.v1.WorkflowService
 
       # Internal Frontend: a second gRPC endpoint (port 7236) that bypasses the
       # JWT authorizer. Required when `authorization.authorizer: default` is set,
@@ -282,6 +313,18 @@ spec:
             memory: 256Mi
         podDisruptionBudget:
           minAvailable: 1
+        # Same TLS-vs-gRPC-probe fix as the frontend above — internal-frontend
+        # also serves TLS via tls.frontend.server (line ~246) on port 7236.
+        readinessProbe:
+          grpc: ~
+          exec:
+            command:
+              - /probe/ko-app/grpc-health-probe
+              - -addr=127.0.0.1:7236
+              - -tls
+              - -tls-ca-cert=/etc/ssl/certs/root-ca.pem
+              - -tls-server-name=temporal-internal-frontend.data.svc.cluster.local
+              - -service=temporal.api.workflowservice.v1.WorkflowService
 
       history:
         replicaCount: 2
@@ -343,7 +386,7 @@ spec:
         - name: postgres-user-cert
           secret:
             secretName: temporal-postgres-temporal-user
-            defaultMode: 0440
+            defaultMode: 440
             items:
               - key: tls.crt
                 path: tls.crt
@@ -352,14 +395,14 @@ spec:
         - name: postgres-serving-ca
           secret:
             secretName: temporal-postgres-17-serving-cert
-            defaultMode: 0440
+            defaultMode: 440
             items:
               - key: ca.crt
                 path: ca.crt
         - name: root-ca
           secret:
             secretName: root-ca-pub-cert
-            defaultMode: 0444
+            defaultMode: 444
             items:
               - key: ca.pem
                 path: root-ca.pem
@@ -417,7 +460,7 @@ spec:
         - name: root-ca
           secret:
             secretName: root-ca-pub-cert
-            defaultMode: 0444
+            defaultMode: 444
             items:
               - key: ca.pem
                 path: root-ca.pem
