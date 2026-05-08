@@ -32,6 +32,21 @@ specs:
             rules:
               dns:
                 - matchPattern: "*"
+      # Temporal frontend — the operator's Temporal scaler issues
+      # DescribeTaskQueue gRPC calls to drive ScaledJob scaling decisions.
+      # Authentication is via JWT-SVID surfaced through the operator's
+      # TriggerAuthentication (e.g. media namespace's media-temporal-keda-auth
+      # Secret); the frontend validates the JWT against its JWKS endpoints.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: data
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: frontend
+        toPorts:
+          - ports:
+              - port: "7233"
+                protocol: TCP
     ingress:
       # Liveness/readiness probes from kubelet on the host.
       - &from_healthcheck

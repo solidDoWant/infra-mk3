@@ -29,6 +29,16 @@ spec:
     operator:
       replicaCount: 2
 
+    podLabels:
+      # KEDA's Temporal scaler runs in the operator pod, so the operator is
+      # what dials the Temporal frontend on port 7233 to query task-queue
+      # backlog. The frontend's ingress netpol gates access on this label,
+      # following the same pattern as in-cluster service-workers; lifting
+      # the gate this way keeps the pre-existing namespace-scoped ingress
+      # rule reusable instead of adding a keda-specific exception.
+      keda:
+        endpoints.netpols.home.arpa/temporal-frontend-client: "true"
+
     webhooks:
       replicaCount: 2
       # Fail closed — the cluster prefers the webhook to be available.

@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: media-processor
-      version: 0.0.17
+      version: 0.0.18
       sourceRef:
         kind: HelmRepository
         namespace: flux-system
@@ -28,6 +28,17 @@ spec:
         # picks up new tokens without restart.
         apiKey:
           value: file:///var/run/teleport/jwt/jwt_svid
+        # KEDA's Temporal scaler runs in the keda-operator pod and can't host
+        # a tbot sidecar, so it reads a JWT-SVID from a Secret refreshed by the
+        # standalone media-temporal-keda-auth tbot Deployment (separate
+        # workload identity scoped to media:read, distinct from the workers'
+        # media:write credential). KEDA re-reads the Secret each polling
+        # interval, picking up rotated JWTs without restart.
+        keda:
+          apiKey:
+            secretKeyRef:
+              name: media-temporal-keda-auth
+              key: jwt_svid
 
       # Full NFS restricted to the downloads subtree — watcher gets read-only, worker read-write.
       inputVolume:
@@ -174,8 +185,28 @@ spec:
                 limits:
                   memory: 64Mi
 
+        # KEDA scales each worker from 0 → maxReplicaCount based on Temporal
+        # task-queue backlog; one trigger per resolved activity task queue
+        # (plus a workflow-typed trigger when activities resolve to include
+        # workflow). Pods exit after WORKER_IDLE_EXIT_AFTER (chart default 5m,
+        # or 15m when activities include workflow) so a quiet queue collapses
+        # to zero without leaving idle workers running. maxReplicaCount caps
+        # concurrency at the previous deployment's replicas=2 — for transcode
+        # the cap matters (single Intel Arc GPU); for general it preserves
+        # the prior capacity envelope until we have data to relax it.
         general:
-          replicas: 2
+          type: scaledjob
+          keda:
+            maxReplicaCount: 2
+            # Spawn a new pod when any general activity queue's backlog hits
+            # 50. The worker binary doesn't currently expose Temporal SDK
+            # MaxConcurrent* knobs, so per-pod concurrency stays at the SDK
+            # default (1000) — targetQueueSize is the only ceiling. Setting
+            # it to 50 means one pod is expected to absorb ~50 backlog items
+            # before KEDA spins up a second; the SDK default leaves ample
+            # headroom for that. Revisit if the binary grows a real per-pod
+            # cap or if the 1000-default starts saturating CPU/memory.
+            targetQueueSize: 50
           serviceAccount:
             identifier: media-processor
           pod:
@@ -186,7 +217,18 @@ spec:
             tbot: *tbot_container
 
         transcode:
-          replicas: 2
+          type: scaledjob
+          keda:
+            # Three hosts with A40 Pro GPUs and cluster-level TSCs mean that each pod
+            # should end up on a different node, and get full transcoding performance
+            # without contending with other transcode pods for resource.
+            maxReplicaCount: 3
+            # Strict 1:1 pod-to-transcode behavior: KEDA spawns a fresh pod
+            # for every queued transcode (up to maxReplicaCount). Transcodes usually
+            # take > 50% but < 100% of available accelerator hardware, so this means
+            # that the first three transcode jobs will run as fast as possible, but
+            # jobs 4-6 can run with degraded performance.
+            targetQueueSize: 1
           serviceAccount:
             identifier: media-processor
           pod:
