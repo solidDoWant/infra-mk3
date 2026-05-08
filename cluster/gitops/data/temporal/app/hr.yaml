@@ -80,7 +80,7 @@ spec:
         - name: postgres-user-cert
           secret:
             secretName: temporal-postgres-temporal-user
-            defaultMode: 440
+            defaultMode: 0440
             items:
               - key: tls.crt
                 path: tls.crt
@@ -89,14 +89,14 @@ spec:
         - name: postgres-serving-ca
           secret:
             secretName: temporal-postgres-17-serving-cert
-            defaultMode: 440
+            defaultMode: 0440
             items:
               - key: ca.crt
                 path: ca.crt
         - name: root-ca
           secret:
             secretName: root-ca-pub-cert
-            defaultMode: 444
+            defaultMode: 0444
             items:
               - key: ca.pem
                 path: root-ca.pem
@@ -386,7 +386,7 @@ spec:
         - name: postgres-user-cert
           secret:
             secretName: temporal-postgres-temporal-user
-            defaultMode: 440
+            defaultMode: 0440
             items:
               - key: tls.crt
                 path: tls.crt
@@ -395,14 +395,14 @@ spec:
         - name: postgres-serving-ca
           secret:
             secretName: temporal-postgres-17-serving-cert
-            defaultMode: 440
+            defaultMode: 0440
             items:
               - key: ca.crt
                 path: ca.crt
         - name: root-ca
           secret:
             secretName: root-ca-pub-cert
-            defaultMode: 444
+            defaultMode: 0444
             items:
               - key: ca.pem
                 path: root-ca.pem
@@ -460,7 +460,7 @@ spec:
         - name: root-ca
           secret:
             secretName: root-ca-pub-cert
-            defaultMode: 444
+            defaultMode: 0444
             items:
               - key: ca.pem
                 path: root-ca.pem
