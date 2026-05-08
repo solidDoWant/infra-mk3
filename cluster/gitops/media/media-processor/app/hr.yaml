@@ -51,15 +51,6 @@ spec:
             secretKeyRef:
               name: media-temporal-keda-auth
               key: jwt_svid
-          # KEDA's Temporal scaler hardcodes TLS even when authenticating with
-          # an API key — this block is the load-bearing reason this whole
-          # frontend-TLS rollout exists. Same root CA as the workers above.
-          tls:
-            enabled: true
-            caCert:
-              secretKeyRef:
-                name: root-ca-pub-cert
-                key: ca.pem
 
       watcher:
         watches:

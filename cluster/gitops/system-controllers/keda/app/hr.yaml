@@ -62,6 +62,25 @@ spec:
       webhooks:
         minAvailable: 1
 
+    # KEDA's Temporal scaler ignores its `ca` auth parameter on the API-key
+    # path, so trust has to come from the system pool. subPath preserves the
+    # image's /etc/ssl/certs/ contents.
+    volumes:
+      keda:
+        extraVolumes:
+          - name: cluster-root-ca
+            secret:
+              secretName: root-ca-pub-cert
+              defaultMode: 0444
+              items:
+                - key: ca.pem
+                  path: ca.pem
+        extraVolumeMounts:
+          - name: cluster-root-ca
+            mountPath: /etc/ssl/certs/cluster-root-ca.pem
+            subPath: ca.pem
+            readOnly: true
+
     # CPU limits omitted to allow bursting; memory limits pinned to requests
     # per cluster convention.
     resources:
