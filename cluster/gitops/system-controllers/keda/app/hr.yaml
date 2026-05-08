@@ -65,18 +65,18 @@ spec:
     # CPU limits omitted to allow bursting; memory limits pinned to requests
     # per cluster convention.
     resources:
-      operator:
+      operator: &resources
         requests:
           cpu: 100m
-          memory: 100Mi
+          memory: &memory 256Mi
         limits:
-          memory: 100Mi
+          memory: *memory
       webhooks:
         requests:
           cpu: 100m
-          memory: 100Mi
+          memory: *memory
         limits:
-          memory: 100Mi
+          memory: *memory
 
     # The TLS cert covers the admission webhook (kube-apiserver -> webhook
     # over HTTPS, validates ScaledJob/ScaledObject configs at admission time).
@@ -108,7 +108,8 @@ spec:
             - alert: KEDAOperatorDown
               annotations:
                 summary: "KEDA operator is down"
-                description: "All KEDA operator replicas have been unreachable for >5m. ScaledJobs will not reconcile."
+                description: "All KEDA operator replicas have been unreachable for >5m.
+                  ScaledJobs will not reconcile."
               expr: absent(up{job=~".*keda-operator.*"} == 1)
               for: 5m
               labels:
@@ -116,15 +117,19 @@ spec:
             - alert: KEDAScalerErrors
               annotations:
                 summary: "KEDA scaler {{ $labels.scaler }} is erroring"
-                description: "Scaler {{ $labels.scaler }} on {{ $labels.scaledObject }} (ns {{ $labels.namespace }}) is producing errors. Check operator logs and the trigger configuration."
-              expr: sum by (namespace, scaledObject, scaler) (rate(keda_scaler_detail_errors_total[5m])) > 0
+                description: "Scaler {{ $labels.scaler }} on {{ $labels.scaledObject }} (ns {{
+                  $labels.namespace }}) is producing errors. Check operator logs
+                  and the trigger configuration."
+              expr: sum by (namespace, scaledObject, scaler)
+                (rate(keda_scaler_detail_errors_total[5m])) > 0
               for: 10m
               labels:
                 severity: warning
             - alert: KEDAScaledJobErrors
               annotations:
                 summary: "KEDA ScaledJob {{ $labels.scaledJob }} is erroring"
-                description: "ScaledJob {{ $labels.scaledJob }} in namespace {{ $labels.namespace }} is producing errors when creating jobs."
+                description: "ScaledJob {{ $labels.scaledJob }} in namespace {{
+                  $labels.namespace }} is producing errors when creating jobs."
               expr: sum by (namespace, scaledJob) (rate(keda_scaled_job_errors_total[5m])) > 0
               for: 10m
               labels:
@@ -140,7 +145,9 @@ spec:
             - alert: KEDAWebhookDown
               annotations:
                 summary: "KEDA admission webhook is down"
-                description: "The KEDA admission webhook has been unreachable for >5m. With failurePolicy=Fail, ScaledJob/ScaledObject creation is blocked."
+                description: "The KEDA admission webhook has been unreachable for >5m. With
+                  failurePolicy=Fail, ScaledJob/ScaledObject creation is
+                  blocked."
               expr: absent(up{job=~".*keda-admission-webhooks.*"} == 1)
               for: 5m
               labels:
