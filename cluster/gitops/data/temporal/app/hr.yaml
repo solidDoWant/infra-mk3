@@ -74,8 +74,6 @@ spec:
       # server pod. The same mounts back the persistence.tls.* paths in server.config.
       # Frontend serving certs are not here because they're per-service; the
       # postRenderer below mounts them on frontend + internal-frontend only.
-      # root-ca uses 0444: no fsGroup is set on server pods and the temporal
-      # binary may run as non-root, so 0440 mounts as root:root would be unreadable.
       additionalVolumes:
         - name: postgres-user-cert
           secret:
@@ -93,13 +91,6 @@ spec:
             items:
               - key: ca.crt
                 path: ca.crt
-        - name: root-ca
-          secret:
-            secretName: root-ca-pub-cert
-            defaultMode: 0444
-            items:
-              - key: ca.pem
-                path: root-ca.pem
         # ImageVolume (beta in k8s 1.32, on by default in 1.33) mounts the
         # upstream grpc-health-probe distroless image read-only at /probe so
         # frontend / internal-frontend exec readiness probes can validate
@@ -116,10 +107,6 @@ spec:
           readOnly: true
         - name: postgres-serving-ca
           mountPath: /etc/temporal/certs/postgres/serving
-          readOnly: true
-        - name: root-ca
-          mountPath: /etc/ssl/certs/root-ca.pem
-          subPath: root-ca.pem
           readOnly: true
         - name: probe-bin
           mountPath: /probe
@@ -247,25 +234,22 @@ spec:
           authorizer: default
           claimMapper: default
 
-        # internal-frontend reads tls.frontend.server at startup despite the
-        # docs implying it uses Internode — confirmed empirically. Both
-        # frontend-class services serve TLS; internode (history, matching,
-        # worker, ringpop) stays plaintext. requireClientAuth=false because
-        # authn is JWT bearer, not client cert.
-        #
-        # client.serverName pins SNI to the internal-frontend SAN: ringpop
-        # membership dials use pod IPs, so the default dial-target SNI would
-        # be an IP and fail verification.
+        # tls.frontend covers two listeners on each frontend-class pod:
+        #   - frontend pod: gRPC (7233) and HTTP API (7243) both use it
+        #   - internal-frontend pod: gRPC (7236) does NOT (it uses Internode
+        #     TLS, left unset → plaintext); HTTP API (7246) DOES, because
+        #     http_api_server.go calls GetFrontendServerConfig regardless of
+        #     service kind.
+        # So internal-frontend's gRPC stays plaintext (admintools, namespace-
+        # manager, worker → internal-frontend hop are all plaintext) but the
+        # cert provider still loads the file when its HTTP API listener inits.
+        # requireClientAuth=false because authn is JWT bearer, not client cert.
         tls:
           frontend:
             server:
               certFile: /etc/temporal/certs/frontend/tls.crt
               keyFile: /etc/temporal/certs/frontend/tls.key
               requireClientAuth: false
-            client:
-              serverName: temporal-internal-frontend.data.svc.cluster.local
-              rootCAFiles:
-                - /etc/ssl/certs/root-ca.pem
 
       frontend:
         replicaCount: 2
@@ -313,17 +297,15 @@ spec:
             memory: 256Mi
         podDisruptionBudget:
           minAvailable: 1
-        # Same TLS-vs-gRPC-probe fix as the frontend above — internal-frontend
-        # also serves TLS via tls.frontend.server (line ~246) on port 7236.
+        # gRPC on 7236 stays plaintext (internal-frontend's gRPC uses Internode
+        # TLS, which we leave unset). Same exec shape as frontend for
+        # consistency; -tls flags are dropped because the listener is plaintext.
         readinessProbe:
           grpc: ~
           exec:
             command:
               - /probe/ko-app/grpc-health-probe
               - -addr=127.0.0.1:7236
-              - -tls
-              - -tls-ca-cert=/etc/ssl/certs/root-ca.pem
-              - -tls-server-name=temporal-internal-frontend.data.svc.cluster.local
               - -service=temporal.api.workflowservice.v1.WorkflowService
 
       history:
@@ -368,16 +350,6 @@ spec:
       # same postgres TLS secrets, and its image runs as user 1000.
       securityContext:
         fsGroup: 1000
-      # SERVER_NAME is required: chart sets TEMPORAL_ADDRESS to the bare
-      # service name `temporal-internal-frontend:7236`, which doesn't match
-      # the cert SAN — without an explicit SNI override, verification fails.
-      additionalEnv:
-        - name: TEMPORAL_TLS
-          value: "true"
-        - name: TEMPORAL_TLS_CA
-          value: /etc/ssl/certs/root-ca.pem
-        - name: TEMPORAL_TLS_SERVER_NAME
-          value: temporal-internal-frontend.data.svc.cluster.local
       # The schema setup Job runs from this image and reuses the persistence config
       # (including the same TLS cert paths). The chart mounts admintools volumes onto
       # the schema Job pods, so the certs must be declared here too — otherwise the
@@ -399,23 +371,12 @@ spec:
             items:
               - key: ca.crt
                 path: ca.crt
-        - name: root-ca
-          secret:
-            secretName: root-ca-pub-cert
-            defaultMode: 0444
-            items:
-              - key: ca.pem
-                path: root-ca.pem
       additionalVolumeMounts:
         - name: postgres-user-cert
           mountPath: /etc/temporal/certs/postgres/user
           readOnly: true
         - name: postgres-serving-ca
           mountPath: /etc/temporal/certs/postgres/serving
-          readOnly: true
-        - name: root-ca
-          mountPath: /etc/ssl/certs/root-ca.pem
-          subPath: root-ca.pem
           readOnly: true
       resources:
         requests:
