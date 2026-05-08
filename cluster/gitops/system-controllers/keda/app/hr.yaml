@@ -65,7 +65,7 @@ spec:
     # CPU limits omitted to allow bursting; memory limits pinned to requests
     # per cluster convention.
     resources:
-      operator: &resources
+      operator:
         requests:
           cpu: 100m
           memory: &memory 256Mi
