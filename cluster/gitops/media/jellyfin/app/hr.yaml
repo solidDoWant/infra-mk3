@@ -148,6 +148,22 @@ spec:
           - name: internal-gateway
             namespace: networking
         rules:
+          # Block /metrics from gateway access. Jellyfin's metrics endpoint is
+          # unauthenticated; in-cluster scrapes are still allowed via the netpol.
+          # Rewrite to a path Jellyfin doesn't recognise so it returns a real 404.
+          - matches:
+              - path:
+                  type: Exact
+                  value: /metrics
+            filters:
+              - type: URLRewrite
+                urlRewrite:
+                  path:
+                    type: ReplaceFullPath
+                    replaceFullPath: /metrics-not-exposed-via-gateway
+            backendRefs:
+              - identifier: jellyfin
+                port: *http_port
           - backendRefs:
               - identifier: jellyfin
                 port: *http_port
