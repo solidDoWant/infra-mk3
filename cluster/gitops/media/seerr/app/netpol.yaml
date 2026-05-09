@@ -80,6 +80,8 @@ specs:
           - matchName: image.tmdb.org
           - matchName: api4.thetvdb.com
           - matchName: artworks.thetvdb.com
+          # Mapping file download (TheTVDB→TMDB id mappings hosted in the repo).
+          - matchName: raw.githubusercontent.com
         toPorts:
           - ports:
               - port: "443"
