@@ -153,13 +153,15 @@ Add egress to the network policy:
 
 ---
 
-## home-operations Container Registry
+## Container Registry Preference
 
-Before choosing an upstream image, check `ghcr.io/home-operations/<service-name>` — these community-maintained images typically:
-- Run without root
-- Have stronger security controls (minimal base images, no unnecessary packages)
-- Are maintained in lockstep with upstream releases
+Prefer non-Docker Hub registries (ghcr.io, quay.io, registry.k8s.io, public.ecr.aws) over docker.io. Docker Hub anonymous pulls are rate-limited and add a single point of failure — pulling from GHCR/Quay/etc. avoids both.
 
-Browse at: https://github.com/home-operations/containers
+Selection order:
 
-If a home-operations image is available, prefer it over the official image.
+1. **home-operations** — `ghcr.io/home-operations/<service-name>`. Browse at https://github.com/home-operations/containers. These community-maintained images typically:
+   - Run without root
+   - Have stronger security controls (minimal base images, no unnecessary packages)
+   - Are maintained in lockstep with upstream releases
+2. **Upstream project's own non-Docker-Hub registry** — most projects publish to `ghcr.io/<org>/<name>` or `quay.io/<org>/<name>` (often in addition to Docker Hub). Check the project's README, release notes, or GitHub Packages tab before falling back. The image is usually byte-identical to the Docker Hub one.
+3. **docker.io** — only when no non-Docker-Hub source exists for the image.

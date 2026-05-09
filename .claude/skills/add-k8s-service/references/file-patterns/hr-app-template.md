@@ -29,7 +29,7 @@ spec:
         containers:
           app:
             image:
-              repository: ghcr.io/home-operations/<service>   # Prefer home-operations if available
+              repository: ghcr.io/home-operations/<service>   # Prefer home-operations; else any non-docker.io registry (ghcr.io, quay.io, registry.k8s.io); docker.io only as last resort
               tag: 1.2.3                                       # Always pin to a specific version
             env:
               EXAMPLE_SECRET:

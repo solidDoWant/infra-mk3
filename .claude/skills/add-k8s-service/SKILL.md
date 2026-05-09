@@ -17,7 +17,11 @@ Before asking the user anything, delegate research to a sub-agent to keep the ma
 Research the "<service>" application for deployment to a Kubernetes cluster. Find and report:
 
 1. Helm chart: Search https://kubesearch.dev for "<service>" — note chart name, repository URL, and latest version if found.
-2. Container image: Check whether ghcr.io/home-operations/<name> exists and what the latest tag is. Otherwise note the canonical image and latest tag.
+2. Container image: Prefer non-Docker Hub registries (ghcr.io, quay.io, registry.k8s.io, public.ecr.aws, etc.) over docker.io. Check in this order and report all that exist with their latest tag:
+   a. `ghcr.io/home-operations/<name>` — community-maintained, rootless, hardened.
+   b. The project's own GHCR/Quay/upstream-registry image (check the project's README or release docs — many projects publish to ghcr.io/<org>/<name> or quay.io/<org>/<name> in addition to or instead of Docker Hub).
+   c. Only fall back to `docker.io/<org>/<name>` if no non-Docker-Hub source exists.
+   Note which registry each candidate came from so the implementing agent can pick the best one.
 3. Default port(s) and how the app is configured (env vars, config file, CLI flags).
 4. PostgreSQL support: does it support Postgres? If so, does it support native TLS client certificates? Check in this order:
    a. Does the app accept a full DSN/connection URL (e.g. DATABASE_URL=postgres://...)? If yes, the answer is almost certainly yes — Go (pgx/lib/pq), libpq, Npgsql, JDBC, and most drivers support sslcert/sslkey/sslrootcert as DSN query parameters even if they are not documented as standalone env vars. Verify by checking what driver/library the app uses.
@@ -168,7 +172,12 @@ Write files group by group: flux source (if new), backend KS + resources, then a
 
 **Helm chart version**: Use `app-template` 4.6.2. Pin all images and chart versions to specific version tags (not `latest`). Checksums are ideal but tags are acceptable for readability.
 
-**Container images**: Check for a `ghcr.io/home-operations/<name>` image first. These generally have better security and run rootless.
+**Container images**: Prefer non-Docker Hub registries. Selection order:
+1. `ghcr.io/home-operations/<name>` if it exists — these run rootless and have stronger security controls.
+2. The project's own image on a non-Docker-Hub registry (ghcr.io, quay.io, registry.k8s.io, public.ecr.aws, etc.) — many upstream projects publish here in parallel to Docker Hub. Check the project's release notes / README before defaulting to docker.io.
+3. `docker.io/<org>/<name>` only as a last resort when no non-Docker-Hub source publishes the image.
+
+Docker Hub is rate-limited for anonymous pulls and is a single point of failure; pulling from ghcr.io/quay.io/etc. avoids both. When picking a non-default registry, leave a one-line comment on the `repository:` field noting why (e.g., `# upstream publishes here; docker.io image is identical but rate-limited`).
 
 **Security context** (adapt if the application requires different settings):
 ```yaml
