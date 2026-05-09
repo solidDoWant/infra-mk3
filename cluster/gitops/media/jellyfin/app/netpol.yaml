@@ -90,4 +90,10 @@ specs:
           - matchLabels:
               io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/metrics-scraper: "true"
+          # Seerr — request frontend; uses the Jellyfin API for user import
+          # and library state.
+          - matchLabels:
+              app.kubernetes.io/name: seerr
+              app.kubernetes.io/controller: seerr
+              app.kubernetes.io/instance: seerr
         toPorts: *http_ports

@@ -1,0 +1,196 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      seerr:
+        # Single replica only. Seerr's source has per-instance node-schedule jobs
+        # (server/job/schedule.ts), in-memory DownloadTracker / AvailabilitySync
+        # state, racy image cache writes, and per-process settings.json save lock —
+        # all without distributed coordination. The upstream chart switched to
+        # StatefulSet for this reason. Postgres backend doesn't fix it.
+        strategy: Recreate
+        podDisruptionBudget:
+          minAvailable: 1
+        # TODO uncomment after first deploy
+        # initContainers:
+        #   # Overwrites /app/config/settings.json from the SOPS-encrypted Secret
+        #   # on every pod start. Settings are managed in Git; UI changes are
+        #   # ephemeral by design.
+        #   settings-init:
+        #     image: &image
+        #       repository: ghcr.io/seerr-team/seerr
+        #       tag: v3.0.1@sha256:1b5fc1ea825631d9d165364472663b817a4c58ef6aa1013f58d82c1570d7c866
+        #     command:
+        #       - sh
+        #       - -c
+        #       - |
+        #         set -eu
+        #         cp /etc/seerr/settings-source/settings.json /app/config/settings.json
+        #         chmod 0640 /app/config/settings.json
+        containers:
+          seerr:
+            # image: *image
+            image:
+              repository: ghcr.io/seerr-team/seerr
+              tag: v3.0.1@sha256:1b5fc1ea825631d9d165364472663b817a4c58ef6aa1013f58d82c1570d7c866
+            env:
+              LOG_LEVEL: info
+              PORT: &web_port 5055
+              # Postgres connection — settings.json holds app config; DB creds
+              # come via env so they pick up CNPG-issued user secret rotations.
+              DB_TYPE: postgres
+              DB_HOST: seerr-postgres-17-rw.media.svc.cluster.local
+              DB_PORT: "5432"
+              DB_USER: seerr
+              DB_NAME: seerr
+              DB_PASS:
+                secretKeyRef:
+                  name: seerr-postgres-seerr-user
+                  key: password
+              DB_USE_SSL: "true"
+              DB_SSL_REJECT_UNAUTHORIZED: "true"
+              DB_SSL_CA_FILE: /etc/seerr/certs/root-ca/ca.crt
+              DB_SSL_CERT_FILE: /etc/seerr/certs/postgres/user/tls.crt
+              DB_SSL_KEY_FILE: /etc/seerr/certs/postgres/user/tls.key
+            ports:
+              - name: web
+                containerPort: *web_port
+            probes:
+              readiness: &probe
+                enabled: true
+                type: HTTP
+                path: /api/v1/status
+                port: web
+              liveness: *probe
+              startup:
+                <<: *probe
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: 100m
+                memory: &memory 512Mi
+              limits:
+                memory: *memory
+        defaultContainerOptions:
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # Runtime state Seerr writes to /app/config: image cache, cookies, schema
+      # migration markers, etc. Postgres holds the relational data; this PVC
+      # holds everything else.
+      config:
+        type: persistentVolumeClaim
+        storageClass: ssd-replicated-3x
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        advancedMounts:
+          seerr:
+            seerr:
+              - path: /app/config
+            settings-init:
+              - path: /app/config
+      # SOPS-encrypted source of truth for settings.json. Init container copies
+      # this onto the PVC at startup; main container reads the PVC copy.
+      settings-source:
+        type: secret
+        name: seerr-settings
+        defaultMode: 0440
+        items:
+          - key: settings.json
+            path: settings.json
+        advancedMounts:
+          seerr:
+            settings-init:
+              - path: /etc/seerr/settings-source
+                readOnly: true
+      # Logs are noisy and never need to survive a restart.
+      logs:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 128Mi
+        advancedMounts:
+          seerr:
+            seerr:
+              - path: /app/config/logs
+      tmp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 50Mi
+        advancedMounts:
+          seerr:
+            seerr:
+              - path: /tmp
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          seerr:
+            seerr:
+              - path: /etc/seerr/certs/root-ca
+      seerr-postgres-seerr-user-cert:
+        type: secret
+        name: seerr-postgres-seerr-user
+        defaultMode: 440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          seerr:
+            seerr:
+              - path: /etc/seerr/certs/postgres/user
+    service:
+      seerr:
+        controller: seerr
+        ports:
+          web:
+            port: *web_port
+            primary: true
+    route:
+      seerr:
+        hostnames:
+          - seerr.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: seerr
+                port: *web_port

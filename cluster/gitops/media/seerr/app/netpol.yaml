@@ -1,0 +1,101 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: seerr
+specs:
+  - description: seerr
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: seerr
+        app.kubernetes.io/controller: seerr
+        app.kubernetes.io/instance: seerr
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Backend PostgreSQL database
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: seerr-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Internal gateway, used for OIDC token exchange
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Jellyfin — primary media server backend (user import, library state).
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: jellyfin
+              app.kubernetes.io/controller: jellyfin
+              app.kubernetes.io/instance: jellyfin
+        toPorts:
+          - ports:
+              - port: "8096"
+                protocol: TCP
+      # Sonarr — request fulfillment for TV.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: sonarr
+              app.kubernetes.io/controller: sonarr
+              app.kubernetes.io/instance: sonarr
+        toPorts:
+          - ports:
+              - port: "8989"
+                protocol: TCP
+      # Radarr — request fulfillment for movies.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: radarr
+              app.kubernetes.io/controller: radarr
+              app.kubernetes.io/instance: radarr
+        toPorts:
+          - ports:
+              - port: "7878"
+                protocol: TCP
+      # External metadata providers for the request UI.
+      - toFQDNs:
+          - matchName: api.themoviedb.org
+          - matchName: image.tmdb.org
+          - matchName: api4.thetvdb.com
+          - matchName: artworks.thetvdb.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &web_ports
+          - ports:
+              - port: "5055"
+                protocol: TCP
+      - fromEndpoints:
+          # Internal gateway forwards user traffic
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *web_ports

@@ -99,6 +99,11 @@ specs:
               app.kubernetes.io/name: media-processor
               app.kubernetes.io/controller: transcode
               app.kubernetes.io/instance: media-processor
+          # Seerr — request frontend; queries the API and submits new requests.
+          - matchLabels:
+              app.kubernetes.io/name: seerr
+              app.kubernetes.io/controller: seerr
+              app.kubernetes.io/instance: seerr
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector
