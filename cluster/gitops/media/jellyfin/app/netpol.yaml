@@ -1,0 +1,80 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: jellyfin
+specs:
+  - description: jellyfin
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: jellyfin
+        app.kubernetes.io/controller: jellyfin
+        app.kubernetes.io/instance: jellyfin
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Internal gateway, used for OIDC token exchange against
+      # authentik.${SECRET_PUBLIC_DOMAIN_NAME}, which resolves to the gateway.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Metadata providers and plugin/update repositories.
+      - toFQDNs:
+          # TMDB metadata + posters
+          - matchName: api.themoviedb.org
+          - matchName: image.tmdb.org
+          # TVDB metadata + artwork
+          - matchName: api4.thetvdb.com
+          - matchName: artworks.thetvdb.com
+          # Jellyfin's official plugin and update repository
+          - matchName: repo.jellyfin.org
+          # Third-party plugin manifests (the SSO plugin is hosted here)
+          - matchName: raw.githubusercontent.com
+          # Plugin downloads sometimes redirect to GitHub release assets
+          - matchPattern: "*.github.com"
+          - matchName: github.com
+          - matchName: objects.githubusercontent.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthchecks
+      - fromEntities:
+          - host
+        toPorts: &http_ports
+          - ports:
+              - port: "8096"
+                protocol: TCP
+      - fromEndpoints:
+          # Internal gateway forwards user traffic
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Metrics scraping (Jellyfin serves /metrics on the same port as the
+          # web UI). This requires EnableMetrics=true in network.xml — set via
+          # the admin UI after first boot.
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *http_ports

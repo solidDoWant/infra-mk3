@@ -1,0 +1,155 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: jellyfin
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      jellyfin:
+        # Jellyfin uses SQLite at /config/data/jellyfin.db. SQLite cannot be
+        # safely shared between processes, so this is a single-replica deployment.
+        # The PDB below blocks voluntary eviction so eviction must be manually
+        # triggered.
+        # Even after migrating to postgres, jellyfin will still need to solve the
+        # distributed session metadata caching problem (e.g. via Redis) before
+        # supporting multiple replicas.
+        strategy: Recreate
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          jellyfin:
+            image:
+              repository: ghcr.io/jellyfin/jellyfin
+              tag: 10.11.8
+            env:
+              # Public URL is used by Jellyfin for autodiscovery responses and
+              # for absolute URLs in client redirects (notably OIDC).
+              JELLYFIN_PublishedServerUrl: https://jellyfin.${SECRET_PUBLIC_DOMAIN_NAME}
+            ports:
+              - name: http
+                containerPort: &http_port 8096
+            probes:
+              liveness: &probe
+                enabled: true
+                type: HTTP
+                port: http
+                path: /health
+              readiness: *probe
+              startup:
+                enabled: true
+                type: HTTP
+                port: http
+                path: /health
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: 500m
+                memory: 2Gi
+              limits:
+                memory: 2Gi
+                # GPU is attached via the postRenderer below
+              claims:
+                - name: gpu
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          resourceClaims:
+            - name: gpu
+              resourceClaimTemplateName: jellyfin-gpu
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    persistence:
+      # SQLite metadata, plugin install dir, and other persistent state.
+      # Jellyfin docs require this on local SSD; NFS is unsupported.
+      config:
+        type: persistentVolumeClaim
+        storageClass: ssd-replicated-3x
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          jellyfin:
+            jellyfin:
+              - path: /config
+      # Transcoding scratch. Ephemeral by design - nothing here needs to survive
+      # a restart, and it can grow to many GB during active transcodes.
+      cache:
+        type: emptyDir
+        sizeLimit: 50Gi
+        advancedMounts:
+          jellyfin:
+            jellyfin:
+              - path: /cache
+      # Small in-memory tmp for things that ignore /cache (logs, scratch files).
+      tmp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 100Mi
+        advancedMounts:
+          jellyfin:
+            jellyfin:
+              - path: /tmp
+      # Read-only media library mount.
+      media:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}/library
+        advancedMounts:
+          jellyfin:
+            jellyfin:
+              - path: /media/Movies
+                subPath: Movies
+                readOnly: true
+              - path: /media/Shows
+                subPath: Shows
+                readOnly: true
+    service:
+      jellyfin:
+        controller: jellyfin
+        ports:
+          http:
+            port: *http_port
+            primary: true
+    # Jellyfin's /metrics endpoint must be enabled via the admin UI:
+    # Dashboard -> Networking -> "Enable metrics". Until then the scrape 404s.
+    serviceMonitor:
+      jellyfin:
+        serviceName: jellyfin
+        endpoints:
+          - port: http
+    route:
+      jellyfin:
+        hostnames:
+          - jellyfin.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: jellyfin
+                port: *http_port

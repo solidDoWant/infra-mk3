@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - ./namespace.yaml
   - ./issuers/ks.yaml
+  - ./jellyfin/ks.yaml
   - ./kyoo/ks.yaml
   - ./media-processor/ks.yaml
   - ./media-temporal-keda-auth/ks.yaml
