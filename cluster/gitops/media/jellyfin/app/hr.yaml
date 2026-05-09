@@ -143,6 +143,7 @@ spec:
     route:
       jellyfin:
         hostnames:
+          - media.${SECRET_PUBLIC_DOMAIN_NAME}
           - jellyfin.${SECRET_PUBLIC_DOMAIN_NAME}
         parentRefs:
           - name: internal-gateway
