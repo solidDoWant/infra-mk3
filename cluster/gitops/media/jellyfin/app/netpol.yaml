@@ -45,8 +45,11 @@ specs:
           # TVDB metadata + artwork
           - matchName: api4.thetvdb.com
           - matchName: artworks.thetvdb.com
-          # Jellyfin's official plugin and update repository
+          # OMDb metadata provider
+          - matchName: omdbapi.com
+          # Jellyfin's official plugin and update repository, plus mirror CDN
           - matchName: repo.jellyfin.org
+          - matchPattern: "*.mirror.jellyfin.org"
           # Third-party plugin manifests (the SSO plugin is hosted here)
           - matchName: raw.githubusercontent.com
           # Plugin downloads sometimes redirect to GitHub release assets
