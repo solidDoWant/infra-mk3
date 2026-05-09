@@ -12,7 +12,14 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: kyverno-charts
-      version: 3.8.0
+      # Pinned: 3.6.3+ (Kyverno v1.16.3+) ships the CVE-2026-22039 fix, which
+      # has a regression that breaks namespaced Policy resources containing any
+      # apiCall context entry that uses `service:` instead of `urlPath:` —
+      # path.Clean("") becomes "." and trips the new namespace-segment check.
+      # Affects our Postgres/Dragonfly CA-bundle policies and the Kyoo
+      # MeiliSearch key-rotation policy. Bump back to current once
+      # https://github.com/kyverno/kyverno/pull/16047 is released.
+      version: 3.6.2
   values:
     admissionController: &controller_config
       replicas: 2
