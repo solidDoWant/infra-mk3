@@ -1,0 +1,39 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr-postgres-17
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  dependsOn:
+    - name: seerr-postgres-auth
+  values:
+    clusterName: seerr
+    certificates:
+      serving:
+        issuerRef:
+          name: media-intermediary-ca
+        subject:
+          countries:
+            - US
+          provinces:
+            - ${SECRET_STATE}
+          organizations:
+            - infra-mk3
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: seerr
+              app.kubernetes.io/controller: seerr
+              app.kubernetes.io/instance: seerr
