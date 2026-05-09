@@ -51,17 +51,14 @@ spec:
             env:
               LOG_LEVEL: info
               PORT: &web_port 5055
-              # Postgres connection — settings.json holds app config; DB creds
-              # come via env so they pick up CNPG-issued user secret rotations.
+              # Postgres connection — cluster uses pg_hba `hostssl all all all
+              # cert`, so the client cert IS the credential. No password is
+              # sent or required.
               DB_TYPE: postgres
               DB_HOST: seerr-postgres-17-rw.media.svc.cluster.local
               DB_PORT: "5432"
               DB_USER: seerr
               DB_NAME: seerr
-              DB_PASS:
-                secretKeyRef:
-                  name: seerr-postgres-seerr-user
-                  key: password
               DB_USE_SSL: "true"
               DB_SSL_REJECT_UNAUTHORIZED: "true"
               DB_SSL_CA_FILE: /etc/seerr/certs/root-ca/ca.crt
