@@ -124,10 +124,8 @@ spec:
             jellyfin:
               - path: /media/Movies
                 subPath: Movies
-                readOnly: true
               - path: /media/Shows
                 subPath: Shows
-                readOnly: true
     service:
       jellyfin:
         controller: jellyfin
