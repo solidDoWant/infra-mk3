@@ -57,6 +57,8 @@ specs:
           - matchPattern: "*.mirror.jellyfin.org"
           # Third-party plugin manifests (the SSO plugin is hosted here)
           - matchName: raw.githubusercontent.com
+          # iamparadox plugin repository (additional Jellyfin plugin manifest host)
+          - matchName: www.iamparadox.dev
           # Plugin downloads sometimes redirect to GitHub release assets
           - matchPattern: "*.github.com"
           - matchName: github.com
