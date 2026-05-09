@@ -77,6 +77,12 @@ stringData:
                 authentik_providers_oauth2.scopemapping,
                 [name, "authentik default OAuth Mapping: OpenID 'profile'"],
               ]
+            # Adds a `groups` claim to the token so the SSO plugin can
+            # distinguish admins (configure RoleClaim=groups, AdminRoles=["Jellyfin admin"]).
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [managed, "goauthentik.io/providers/oauth2/scope-openid-groups"],
+              ]
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
           issuer_mode: per_provider
@@ -92,7 +98,7 @@ stringData:
           policy_engine_mode: any
           meta_launch_url: https://jellyfin.${SECRET_PUBLIC_DOMAIN_NAME}
           # icon: # TODO
-      # Groups — reuses the shared media-playback Discord role (also used by Kyoo).
+      # Standard access group — reuses the shared media-playback Discord role (also used by Kyoo).
       - model: authentik_core.group
         id: jellyfin-group
         identifiers:
@@ -104,4 +110,19 @@ stringData:
         identifiers:
           order: 0
           group: !KeyOf jellyfin-group
+          target: !KeyOf jellyfin-application
+      # Admin group — dedicated Discord role. The `groups` scope mapping above
+      # surfaces this membership as a token claim that the SSO plugin uses for
+      # admin role mapping.
+      - model: authentik_core.group
+        id: jellyfin-admin-group
+        identifiers:
+          name: Jellyfin admin
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_JELLYFIN_ADMIN_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 1
+          group: !KeyOf jellyfin-admin-group
           target: !KeyOf jellyfin-application
