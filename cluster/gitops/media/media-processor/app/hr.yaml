@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: media-processor
-      version: 0.0.20
+      version: 0.0.21
       sourceRef:
         kind: HelmRepository
         namespace: flux-system
@@ -310,7 +310,7 @@ spec:
         tbot-config:
           type: configMap
           name: media-processor-tbot-config
-          defaultMode: 0444
+          defaultMode: 444
           items:
             - key: tbot.yaml
               path: tbot.yaml
@@ -327,7 +327,7 @@ spec:
         tbot-root-ca:
           type: secret
           name: root-ca-pub-cert
-          defaultMode: 0444
+          defaultMode: 444
           items:
             - key: ca.pem
               path: root-ca.pem
