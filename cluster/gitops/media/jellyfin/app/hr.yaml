@@ -58,9 +58,9 @@ spec:
             resources:
               requests:
                 cpu: 500m
-                memory: 2Gi
+                memory: &memory 4Gi
               limits:
-                memory: 2Gi
+                memory: *memory
                 # GPU is attached via the postRenderer below
               claims:
                 - name: gpu
