@@ -5,7 +5,8 @@ resources:
   - ./namespace.yaml
   - ./exporters/ks.yaml
   - ./fluent/ks.yaml
-  - ./goldilocks/ks.yaml
+  # Disabled due to this bug that the stupid stale bot closed: https://github.com/FairwindsOps/goldilocks/issues/749
+  # - ./goldilocks/ks.yaml
   - ./grafana/ks.yaml
   - ./issuers/ks.yaml
   - ./prometheus/ks.yaml
