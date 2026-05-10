@@ -37,6 +37,17 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+      # Seerr — the Jellyfin Enhanced plugin calls Seerr's API from the
+      # Jellyfin server side to submit/track requests on behalf of users.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: seerr
+              app.kubernetes.io/controller: seerr
+              app.kubernetes.io/instance: seerr
+        toPorts:
+          - ports:
+              - port: "5055"
+                protocol: TCP
       # Metadata providers and plugin/update repositories.
       - toFQDNs:
           # TMDB metadata + posters

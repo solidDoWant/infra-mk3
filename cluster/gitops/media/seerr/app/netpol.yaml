@@ -103,4 +103,10 @@ specs:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Jellyfin Enhanced plugin — submits requests to Seerr's API on
+          # behalf of users browsing in the Jellyfin web UI.
+          - matchLabels:
+              app.kubernetes.io/name: jellyfin
+              app.kubernetes.io/controller: jellyfin
+              app.kubernetes.io/instance: jellyfin
         toPorts: *web_ports
