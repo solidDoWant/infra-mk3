@@ -53,6 +53,18 @@ spec:
             # cert-manager ca injector will handle updating the webhook
             # Kyverno will reload the actual deployment
             duration: 4h
+    defaultRules:
+      rules:
+        # Disabled - the upstream rule's `histogram_quantile(0.01, ...)` design
+        # is incompatible with intentional short-lived cert rotation. Talos's
+        # NodeApply controller mints 10-minute admin certs (hardcoded in
+        # NewTemporaryClientFromPKI, see siderolabs/talos pkg/kubernetes/kubernetes.go),
+        # which permanently keep the 1st percentile of cert lifetimes below
+        # the 7d/24h thresholds. KubeletClient/ServerCertificateExpiration
+        # cover the genuine "cert about to expire and not get renewed" case
+        # via per-cert TTL gauges and remain enabled.
+        KubeClientCertificateExpiration:
+          create: false
     defaultDashboards:
       grafanaOperator: &grafana_operator
         enabled: true
