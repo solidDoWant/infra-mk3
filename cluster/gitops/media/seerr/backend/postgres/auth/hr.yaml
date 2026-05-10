@@ -28,4 +28,7 @@ spec:
     users:
       seerr:
         username: seerr
-        disableReloading: true
+        # Seerr won't reload the TLS cert without a restart, so set a long TTL and
+        # force a rotation via kyverno when it approaches expiration.
+        disableReloading: false
+        duration: 8h
