@@ -72,6 +72,18 @@ specs:
                 protocol: TCP
               - port: "8080"
                 protocol: TCP
+      # Jellyfin — Connect notification on import completion triggers a
+      # library refresh so newly-imported episodes appear without waiting
+      # for the next periodic scan.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: jellyfin
+              app.kubernetes.io/controller: jellyfin
+              app.kubernetes.io/instance: jellyfin
+        toPorts:
+          - ports:
+              - port: "8096"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:

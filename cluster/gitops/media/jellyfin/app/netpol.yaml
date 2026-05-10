@@ -128,4 +128,14 @@ specs:
               app.kubernetes.io/name: seerr
               app.kubernetes.io/controller: seerr
               app.kubernetes.io/instance: seerr
+          # Sonarr / Radarr — Connect notifications on import completion
+          # trigger a Jellyfin library refresh.
+          - matchLabels:
+              app.kubernetes.io/name: sonarr
+              app.kubernetes.io/controller: sonarr
+              app.kubernetes.io/instance: sonarr
+          - matchLabels:
+              app.kubernetes.io/name: radarr
+              app.kubernetes.io/controller: radarr
+              app.kubernetes.io/instance: radarr
         toPorts: *http_ports
