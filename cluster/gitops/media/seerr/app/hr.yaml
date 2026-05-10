@@ -26,28 +26,52 @@ spec:
         strategy: Recreate
         podDisruptionBudget:
           minAvailable: 1
-        # TODO uncomment after first deploy
-        # initContainers:
-        #   # Overwrites /app/config/settings.json from the SOPS-encrypted Secret
-        #   # on every pod start. Settings are managed in Git; UI changes are
-        #   # ephemeral by design.
-        #   settings-init:
-        #     image: &image
-        #       repository: ghcr.io/seerr-team/seerr
-        #       tag: v3.0.1@sha256:1b5fc1ea825631d9d165364472663b817a4c58ef6aa1013f58d82c1570d7c866
-        #     command:
-        #       - sh
-        #       - -c
-        #       - |
-        #         set -eu
-        #         cp /etc/seerr/settings-source/settings.json /app/config/settings.json
-        #         chmod 0640 /app/config/settings.json
-        containers:
-          seerr:
-            # image: *image
-            image:
+        initContainers:
+          # Overwrites /app/config/settings.json from the source Secret on every
+          # pod start. Settings are managed in Git; UI changes are ephemeral by
+          # design. Two substitution layers feed the final file:
+          #   - Flux postBuild substitutes ${SECRET_*} from cluster-secrets when
+          #     the source Secret is applied (see seerr-settings.yaml).
+          #   - This init container substitutes __<NAME>__ markers using env
+          #     vars sourced from in-cluster Secrets, avoiding the need to
+          #     duplicate *arr API keys into cluster-secrets.
+          settings-init:
+            image: &image
               repository: ghcr.io/seerr-team/seerr
               tag: v3.0.1@sha256:1b5fc1ea825631d9d165364472663b817a4c58ef6aa1013f58d82c1570d7c866
+            env:
+              RADARR_API_KEY:
+                secretKeyRef:
+                  name: radarr-api-key
+                  key: API_KEY
+              SONARR_API_KEY:
+                secretKeyRef:
+                  name: sonarr-api-key
+                  key: API_KEY
+            command:
+              - sh
+              - -c
+              # The settings.json source contains literal ${RADARR_API_KEY} and
+              # ${SONARR_API_KEY} placeholders that need to reach sed verbatim.
+              # Two layers of escaping:
+              #   - Flux postBuild: $$ → $ (so $${...} survives substitution as
+              #     ${...} in the rendered manifest).
+              #   - Shell double-quotes: \$ → $ (so the sed pattern receives a
+              #     literal ${...} instead of expanding the env var).
+              # Replacement side: $$VAR (no braces) passes through Flux untouched,
+              # then shell expands $VAR to the env var value.
+              - |
+                set -eu
+                sed \
+                  -e "s|\$${RADARR_API_KEY}|$$RADARR_API_KEY|g" \
+                  -e "s|\$${SONARR_API_KEY}|$$SONARR_API_KEY|g" \
+                  -e "s|\$${SECRET_PUBLIC_DOMAIN_NAME}|${SECRET_PUBLIC_DOMAIN_NAME}|g" \
+                  /etc/seerr/settings-source/settings.json \
+                  > /app/config/settings.json
+                chmod 0640 /app/config/settings.json
+        containers:
+          seerr:
+            image: *image
             env:
               LOG_LEVEL: info
               PORT: &web_port 5055
@@ -163,7 +187,7 @@ spec:
       seerr-postgres-seerr-user-cert:
         type: secret
         name: seerr-postgres-seerr-user
-        defaultMode: 440
+        defaultMode: 0440
         items:
           - key: tls.crt
             path: tls.crt
