@@ -246,6 +246,12 @@ spec:
             # that the first three transcode jobs will run as fast as possible, but
             # jobs 4-6 can run with degraded performance.
             targetQueueSize: 1
+            # Keep only the last 3 finished Jobs around for debug; ttl below
+            # bounds how long any individual finished Job lingers.
+            successfulJobsHistoryLimit: 3
+            failedJobsHistoryLimit: 3
+          job:
+            ttlSecondsAfterFinished: 900
           serviceAccount:
             identifier: media-processor
           pod:
@@ -265,7 +271,7 @@ spec:
                     labelSelector:
                       matchLabels:
                         app.kubernetes.io/name: media-processor
-                        app.kubernetes.io/component: transcode
+                        app.kubernetes.io/controller: transcode
           initContainers:
             tbot:
               <<: *tbot_container
