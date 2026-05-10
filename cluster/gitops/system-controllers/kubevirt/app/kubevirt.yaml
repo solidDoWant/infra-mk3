@@ -5,6 +5,21 @@ kind: KubeVirt
 metadata:
   name: kubevirt
 spec:
+  # KubeVirt's default server cert lifetime is 24h, which permanently trips
+  # the kube-apiserver KubeClientCertificateExpiration alert (warning <7d,
+  # critical <1d) via the histogram_quantile(0.01, ...) on
+  # apiserver_client_certificate_expiration_seconds_bucket. virt-handler's
+  # short-lived certs dominate the low buckets across every node.
+  # Keep server certs >7d at all times so the 1st percentile stays above
+  # the warning threshold. See kubevirt/kubevirt#13548 and #16349.
+  certificateRotateStrategy:
+    selfSigned:
+      ca:
+        duration: 720h        # 30d (default 168h)
+        renewBefore: 168h     # renew 7d before expiry
+      server:
+        duration: 240h        # 10d (default 24h)
+        renewBefore: 48h      # cert always lives 192h-240h, > 168h alert threshold
   configuration:
     developerConfiguration:
       featureGates:
