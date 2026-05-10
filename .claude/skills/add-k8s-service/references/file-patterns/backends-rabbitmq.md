@@ -4,7 +4,7 @@
 
 RabbitMQ clusters require dedicated certificate infrastructure: a self-signed client CA (for mTLS auth), and a serving cert issued by the namespace intermediary CA. All connections use mTLS with x509 client authentication (no password auth).
 
-RabbitMQ is complex — look at `cluster/gitops/media/kyoo/external-services/shared/rabbitmq/` as the reference implementation.
+RabbitMQ is complex — look at `cluster/gitops/media/kyoo/external-services/shared/rabbitmq/` at commit `697d1c1da080b529a3598217f49ab157d43f56f3` the reference implementation.
 
 ## shared/rabbitmq/auth/ — Certificate infrastructure (create once per cluster)
 
@@ -303,4 +303,4 @@ spec:
 
 ## Optional topology resources (Exchange, Queue, Binding)
 
-If the application requires specific exchanges, queues, or bindings, create them as topology operator CRDs. Use `type: quorum` for queues to survive node failures. See `cluster/gitops/media/kyoo/external-services/shared/rabbitmq/` for examples.
+If the application requires specific exchanges, queues, or bindings, create them as topology operator CRDs. Use `type: quorum` for queues to survive node failures. See `cluster/gitops/media/kyoo/external-services/shared/rabbitmq/` at commit `697d1c1da080b529a3598217f49ab157d43f56f3` for examples.

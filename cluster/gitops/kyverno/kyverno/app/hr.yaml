@@ -16,9 +16,8 @@ spec:
       # has a regression that breaks namespaced Policy resources containing any
       # apiCall context entry that uses `service:` instead of `urlPath:` —
       # path.Clean("") becomes "." and trips the new namespace-segment check.
-      # Affects our Postgres/Dragonfly CA-bundle policies and the Kyoo
-      # MeiliSearch key-rotation policy. Bump back to current once
-      # https://github.com/kyverno/kyverno/pull/16047 is released.
+      # Affects our Postgres/Dragonfly CA-bundle policies. Bump back to
+      # current once # https://github.com/kyverno/kyverno/pull/16047 is released.
       version: 3.6.2
   values:
     admissionController: &controller_config

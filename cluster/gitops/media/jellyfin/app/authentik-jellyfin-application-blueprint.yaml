@@ -92,7 +92,7 @@ stringData:
           policy_engine_mode: any
           meta_launch_url: https://jellyfin.${SECRET_PUBLIC_DOMAIN_NAME}
           # icon: # TODO
-      # Standard access group — reuses the shared media-playback Discord role (also used by Kyoo).
+      # Standard access group — reuses the shared media-playback Discord role.
       - model: authentik_core.group
         id: jellyfin-group
         identifiers:
