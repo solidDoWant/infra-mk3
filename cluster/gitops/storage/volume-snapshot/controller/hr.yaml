@@ -17,6 +17,7 @@ spec:
       version: 4.0.0
   values:
     controller:
+      revisionHistoryLimit: 1
       args:
         leaderElection: true
         leaderElectionNamespace: "$(NAMESPACE)"

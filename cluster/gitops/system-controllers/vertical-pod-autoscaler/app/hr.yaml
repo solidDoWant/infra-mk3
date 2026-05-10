@@ -16,6 +16,7 @@ spec:
   values:
     fullnameOverride: vertical-pod-autoscaler
     recommender:
+      revisionHistoryLimit: 1
       image:
         tag: 1.3.0
       podLabels:

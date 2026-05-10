@@ -466,6 +466,7 @@ spec:
       forceDeployDatasource: true
     kube-state-metrics:
       fullnameOverride: kube-state-metrics
+      revisionHistoryLimit: 1
       # Needed for VPA.
       # This is probably an _awful_ idea - will need to watch churn rate and cardinality.
       # This can be decreased significantly, and I'll need to do so if performance tanks
@@ -515,6 +516,7 @@ spec:
           discoveryRole: service
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
+      revisionHistoryLimit: 1
       vmScrape:
         spec:
           endpoints:

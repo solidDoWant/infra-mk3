@@ -23,6 +23,7 @@ spec:
   values:
     admissionController: &controller_config
       replicas: 2
+      revisionHistoryLimit: 1
       # TODO tune this, setting because kyverno is choking
       resources:
         requests:
