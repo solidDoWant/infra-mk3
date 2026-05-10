@@ -236,9 +236,9 @@ spec:
         transcode:
           type: scaledjob
           keda:
-            # Three hosts with A40 Pro GPUs and cluster-level TSCs mean that each pod
-            # should end up on a different node, and get full transcoding performance
-            # without contending with other transcode pods for resource.
+            # Three hosts with A40 Pro GPUs and the per-node anti-affinity below
+            # mean each pod ends up on a different node, getting full transcoding
+            # performance without contending with other transcode pods for resource.
             maxReplicaCount: 3
             # Strict 1:1 pod-to-transcode behavior: KEDA spawns a fresh pod
             # for every queued transcode (up to maxReplicaCount). Transcodes usually
@@ -253,6 +253,19 @@ spec:
             resourceClaims:
               - name: gpu
                 resourceClaimTemplateName: media-processor-transcode-gpu
+            # The cluster-level PodTopologySpread default in talconfig.yaml only
+            # auto-derives a labelSelector from Service / RC / ReplicaSet /
+            # StatefulSet owners — Jobs (and therefore KEDA ScaledJob pods) are
+            # not in that list, so the scheduler attaches no constraint to these
+            # pods. Pin one-per-node explicitly via anti-affinity instead.
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  - topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: media-processor
+                        app.kubernetes.io/component: transcode
           initContainers:
             tbot:
               <<: *tbot_container
