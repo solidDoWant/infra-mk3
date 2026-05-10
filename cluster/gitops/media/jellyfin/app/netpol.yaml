@@ -48,6 +48,27 @@ specs:
           - ports:
               - port: "5055"
                 protocol: TCP
+      # Sonarr — Jellyfin Enhanced plugin queries the Sonarr API for download
+      # status / queue inspection.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: sonarr
+              app.kubernetes.io/controller: sonarr
+              app.kubernetes.io/instance: sonarr
+        toPorts:
+          - ports:
+              - port: "8989"
+                protocol: TCP
+      # Radarr — same plugin queries Radarr's API for movie download status.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: radarr
+              app.kubernetes.io/controller: radarr
+              app.kubernetes.io/instance: radarr
+        toPorts:
+          - ports:
+              - port: "7878"
+                protocol: TCP
       # Metadata providers and plugin/update repositories.
       - toFQDNs:
           # TMDB metadata + posters

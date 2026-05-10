@@ -104,6 +104,12 @@ specs:
               app.kubernetes.io/name: seerr
               app.kubernetes.io/controller: seerr
               app.kubernetes.io/instance: seerr
+          # Jellyfin Enhanced plugin — queries the Radarr API for download
+          # queue / status displayed inside the Jellyfin web UI.
+          - matchLabels:
+              app.kubernetes.io/name: jellyfin
+              app.kubernetes.io/controller: jellyfin
+              app.kubernetes.io/instance: jellyfin
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector
