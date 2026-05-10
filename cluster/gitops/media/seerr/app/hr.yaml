@@ -65,7 +65,6 @@ spec:
                 sed \
                   -e "s|\$${RADARR_API_KEY}|$$RADARR_API_KEY|g" \
                   -e "s|\$${SONARR_API_KEY}|$$SONARR_API_KEY|g" \
-                  -e "s|\$${SECRET_PUBLIC_DOMAIN_NAME}|${SECRET_PUBLIC_DOMAIN_NAME}|g" \
                   /etc/seerr/settings-source/settings.json \
                   > /app/config/settings.json
                 chmod 0640 /app/config/settings.json
