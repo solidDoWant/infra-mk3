@@ -1,0 +1,56 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: set-workload-revision-history-limit
+spec:
+  rules:
+    - name: set-deployment-revision-history-limit
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+      mutate:
+        mutateExistingOnPolicyUpdate: true
+        targets:
+          - apiVersion: apps/v1
+            kind: Deployment
+            namespace: "{{ request.namespace }}"
+            name: "{{ request.object.metadata.name }}"
+        patchStrategicMerge:
+          spec:
+            +(revisionHistoryLimit): 3
+    - name: set-statefulset-revision-history-limit
+      match:
+        any:
+          - resources:
+              kinds:
+                - StatefulSet
+      mutate:
+        mutateExistingOnPolicyUpdate: true
+        targets:
+          - apiVersion: apps/v1
+            kind: StatefulSet
+            namespace: "{{ request.namespace }}"
+            name: "{{ request.object.metadata.name }}"
+        patchStrategicMerge:
+          spec:
+            +(revisionHistoryLimit): 3
+    - name: set-daemonset-revision-history-limit
+      match:
+        any:
+          - resources:
+              kinds:
+                - DaemonSet
+      mutate:
+        mutateExistingOnPolicyUpdate: true
+        targets:
+          - apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: "{{ request.namespace }}"
+            name: "{{ request.object.metadata.name }}"
+        patchStrategicMerge:
+          spec:
+            +(revisionHistoryLimit): 3
