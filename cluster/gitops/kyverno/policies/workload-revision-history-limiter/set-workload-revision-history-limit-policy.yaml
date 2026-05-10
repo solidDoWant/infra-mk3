@@ -21,7 +21,7 @@ spec:
             name: "{{ request.object.metadata.name }}"
         patchStrategicMerge:
           spec:
-            +(revisionHistoryLimit): 3
+            revisionHistoryLimit: 3
     - name: set-statefulset-revision-history-limit
       match:
         any:
@@ -37,7 +37,7 @@ spec:
             name: "{{ request.object.metadata.name }}"
         patchStrategicMerge:
           spec:
-            +(revisionHistoryLimit): 3
+            revisionHistoryLimit: 3
     - name: set-daemonset-revision-history-limit
       match:
         any:
@@ -53,4 +53,4 @@ spec:
             name: "{{ request.object.metadata.name }}"
         patchStrategicMerge:
           spec:
-            +(revisionHistoryLimit): 3
+            revisionHistoryLimit: 3
