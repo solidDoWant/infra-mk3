@@ -12,6 +12,15 @@ spec:
           - resources:
               kinds:
                 - Deployment
+      # Skip when any non-Kyverno field manager owns spec.revisionHistoryLimit,
+      # so we don't fight operators / charts that template the field. Allows
+      # mutation when only Kyverno's background-controller owns it, or when no
+      # manager claims it (e.g. brand-new resources on CREATE).
+      preconditions:
+        all:
+          - key: '{{ request.object.metadata.managedFields[?fieldsV1."f:spec"."f:revisionHistoryLimit" != null && manager != ''background-controller''] | length(@) }}'
+            operator: Equals
+            value: 0
       mutate:
         mutateExistingOnPolicyUpdate: true
         targets:
@@ -21,13 +30,18 @@ spec:
             name: "{{ request.object.metadata.name }}"
         patchStrategicMerge:
           spec:
-            revisionHistoryLimit: 3
+            revisionHistoryLimit: 1
     - name: set-statefulset-revision-history-limit
       match:
         any:
           - resources:
               kinds:
                 - StatefulSet
+      preconditions:
+        all:
+          - key: '{{ request.object.metadata.managedFields[?fieldsV1."f:spec"."f:revisionHistoryLimit" != null && manager != ''background-controller''] | length(@) }}'
+            operator: Equals
+            value: 0
       mutate:
         mutateExistingOnPolicyUpdate: true
         targets:
@@ -37,13 +51,18 @@ spec:
             name: "{{ request.object.metadata.name }}"
         patchStrategicMerge:
           spec:
-            revisionHistoryLimit: 3
+            revisionHistoryLimit: 1
     - name: set-daemonset-revision-history-limit
       match:
         any:
           - resources:
               kinds:
                 - DaemonSet
+      preconditions:
+        all:
+          - key: '{{ request.object.metadata.managedFields[?fieldsV1."f:spec"."f:revisionHistoryLimit" != null && manager != ''background-controller''] | length(@) }}'
+            operator: Equals
+            value: 0
       mutate:
         mutateExistingOnPolicyUpdate: true
         targets:
@@ -53,4 +72,4 @@ spec:
             name: "{{ request.object.metadata.name }}"
         patchStrategicMerge:
           spec:
-            revisionHistoryLimit: 3
+            revisionHistoryLimit: 1
