@@ -67,6 +67,15 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+  - description: ceph-csi-controller-manager
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/instance: rook-ceph
+        app.kubernetes.io/name: ceph-csi
+    egress:
+      # Access to k8s API for CR and lease management
+      - *to_k8s_api_server
+
   # One-off jobs that the operator creates
   - description: operator jobs
     endpointSelector:
