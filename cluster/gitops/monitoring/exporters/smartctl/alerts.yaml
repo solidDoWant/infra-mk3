@@ -77,7 +77,7 @@ spec:
         # 70-85°C, so falling back to 60°C will fire spurious warnings). Catch
         # the underlying sidecar failure directly.
         - alert: SmartCTLNVMeThresholdsTextfileStale
-          expr: time() - node_textfile_mtime_seconds{file="smartctl_nvme_thresholds.prom"} > 1800
+          expr: time() - node_textfile_mtime_seconds{file="/textfile/smartctl_nvme_thresholds.prom"} > 1800
           for: 10m
           labels:
             severity: warning
