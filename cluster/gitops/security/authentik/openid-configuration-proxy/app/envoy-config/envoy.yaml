@@ -40,6 +40,22 @@ static_resources:
                           route:
                             cluster: authentik_upstream
                             host_rewrite_literal: authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+                          # Authentik builds the URLs in the discovery doc from
+                          # the request's perceived scheme. We're talking to it
+                          # over plain HTTP, so without this header it returns
+                          # http:// URLs — which then fail to match the Lua
+                          # rewrite pattern (and would also be wrong for the
+                          # keys we deliberately keep pointing at the public
+                          # gateway). Authentik trusts the pod CIDR
+                          # (AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.32.0.0/16
+                          # in authentik/app/hr.yaml) so this header is honored.
+                          # OVERWRITE so a client can't forge http:// URLs by
+                          # sending its own X-Forwarded-Proto.
+                          request_headers_to_add:
+                            - header:
+                                key: X-Forwarded-Proto
+                                value: https
+                              append_action: OVERWRITE_IF_EXISTS_OR_ADD
                           typed_per_filter_config:
                             envoy.filters.http.lua:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
