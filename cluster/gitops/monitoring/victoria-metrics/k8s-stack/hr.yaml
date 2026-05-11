@@ -552,6 +552,9 @@ spec:
             name: smartctl-thresholds-script
             defaultMode: 0755
       sidecars:
+        # Needed until https://github.com/smartmontools/smartmontools/issues/583 is both fixed and
+        # used by smartctl-exporter. Exports NVMe drive warning and critical temperature thresholds
+        # for use in alerting rules.
         - name: smartctl-thresholds
           # Reuses the smartctl-exporter image because it already bundles
           # smartmontools. Pin matches the app version in
@@ -569,6 +572,18 @@ spec:
             - name: smartctl-thresholds-script
               mountPath: /script
               readOnly: true
+          # Detect a stuck loop (e.g. kernel ioctl wedge across all drives)
+          # and restart. mtime check uses 10 min = 2x the script's sleep
+          # interval, so a single slow iteration won't false-alarm.
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - find /textfile/smartctl_nvme_thresholds.prom -mmin -10 | grep -q .
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 3
           resources:
             requests:
               cpu: 5m

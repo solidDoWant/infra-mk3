@@ -20,7 +20,10 @@ write_metrics() {
   for dev in /dev/nvme[0-9] /dev/nvme[0-9][0-9]; do
     [ -e "$dev" ] || continue
     name=$(basename "$dev")
-    smartctl -x "$dev" 2>/dev/null | awk -v d="$name" '
+    # Cap each smartctl call at 30s so a misbehaving drive can't stall the
+    # whole loop. Safe under `set -e` because exit code 124 (timeout fired)
+    # is consumed by the pipe — awk's exit code becomes the pipeline's.
+    timeout 30 smartctl -x "$dev" 2>/dev/null | awk -v d="$name" '
       /^Warning  Comp\. Temp\. Threshold:/ {
         printf "smartctl_nvme_warning_temp_celsius{device=\"%s\"} %s\n", d, $5
       }
