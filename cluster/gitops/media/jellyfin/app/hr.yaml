@@ -37,6 +37,9 @@ spec:
               # Public URL is used by Jellyfin for autodiscovery responses and
               # for absolute URLs in client redirects (notably OIDC).
               JELLYFIN_PublishedServerUrl: https://jellyfin.${SECRET_PUBLIC_DOMAIN_NAME}
+              # First path keeps trust in public CAs (TMDB, plugin repos);
+              # second adds the cluster root for openid-configuration-proxy.
+              SSL_CERT_DIR: /etc/ssl/certs:/etc/jellyfin/extra-certs
             ports:
               - name: http
                 containerPort: &http_port 8096
@@ -72,9 +75,6 @@ spec:
                   - ALL
         pod:
           labels:
-            # Required to be admitted by the openid-configuration-proxy and
-            # authentik-server ingress netpols when the SSO plugin fetches
-            # the discovery doc / token / JWKS in-cluster.
             endpoints.netpols.home.arpa/oidc-querier: "true"
           resourceClaims:
             - name: gpu
@@ -90,6 +90,15 @@ spec:
               - name: ndots
                 value: "1"
     persistence:
+      # Distributed to every namespace by certificates/issuers/trust-distribution.
+      extra-certs:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        advancedMounts:
+          jellyfin:
+            jellyfin:
+              - path: /etc/jellyfin/extra-certs
       # SQLite metadata, plugin install dir, and other persistent state.
       # Jellyfin docs require this on local SSD; NFS is unsupported.
       config:
