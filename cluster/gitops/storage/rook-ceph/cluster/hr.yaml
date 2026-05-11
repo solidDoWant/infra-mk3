@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: rook-ceph-charts
-      version: v1.16.4
+      version: v1.16.9
   values:
     operatorNamespace: storage
     clusterName: *app_name
@@ -83,6 +83,7 @@ spec:
         #    `ceph dashboard sso setup saml2 https://rook.${SECRET_PUBLIC_DOMAIN_NAME} https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/api/v3/providers/saml/3/metadata/?download
         # 3. Enable SSO:
         #    `ceph dashboard sso enable saml2`
+        # TODO Istio now supports BackendTLSPolicy in a newer version, so implement this after upgrading Istio.
         ssl: false
         # TODO prom deployment
         # prometheusEndpoint:
@@ -105,8 +106,6 @@ spec:
                         - "true"
           # TODO pod affinity to schedule different components on the same nodes
           # podAffinity:
-          # TODO TSC per component to force them to separate nodes
-          # topologySpreadConstraints:
       # TODO measure actual usage and set this
       # resources:
       storage:
