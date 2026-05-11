@@ -558,7 +558,7 @@ spec:
           # ../../exporters/smartctl/hr.yaml.
           image: quay.io/prometheuscommunity/smartctl-exporter:v0.14.0
           command:
-            - /script/write.sh
+            - /script/write-smartctl-thresholds.sh
           securityContext:
             # Needed for raw NVMe ioctl access via /dev/nvmeN.
             privileged: true
