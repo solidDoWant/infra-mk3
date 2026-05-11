@@ -523,6 +523,57 @@ spec:
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
       revisionHistoryLimit: 1
+      # NVMe drives report WCTEMP/CCTEMP via Identify Controller (NVMe spec
+      # bytes 266-269), which smartmontools prints in `-x` text output but does
+      # not currently serialize to JSON. smartctl-exporter only reads JSON, so
+      # the thresholds are unreachable through it. This sidecar parses the
+      # text output and publishes the values via node-exporter's textfile
+      # collector so they can be joined against smartctl_device_temperature
+      # in alerting expressions. See ../../exporters/smartctl/hr.yaml for the
+      # main exporter.
+      extraArgs:
+        - --collector.textfile.directory=/textfile
+      sidecarVolumeMount:
+        # Auto-creates an in-memory emptyDir volume named "textfile" and mounts
+        # it readOnly on node-exporter; the sidecar writes to it below.
+        - name: textfile
+          mountPath: /textfile
+          readOnly: false
+      sidecarHostVolumeMounts:
+        # /dev for smartctl to access NVMe character devices. Mounted only on
+        # sidecars by the chart, not on node-exporter itself.
+        - name: dev
+          mountPath: /dev
+          hostPath: /dev
+          readOnly: false
+      extraVolumes:
+        - name: smartctl-thresholds-script
+          configMap:
+            name: smartctl-thresholds-script
+            defaultMode: 0755
+      sidecars:
+        - name: smartctl-thresholds
+          # Reuses the smartctl-exporter image because it already bundles
+          # smartmontools. Pin matches the app version in
+          # ../../exporters/smartctl/hr.yaml.
+          image: quay.io/prometheuscommunity/smartctl-exporter:v0.14.0
+          command:
+            - /script/write.sh
+          securityContext:
+            # Needed for raw NVMe ioctl access via /dev/nvmeN.
+            privileged: true
+            runAsUser: 0
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: smartctl-thresholds-script
+              mountPath: /script
+              readOnly: true
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              memory: 32Mi
       vmScrape:
         spec:
           endpoints:

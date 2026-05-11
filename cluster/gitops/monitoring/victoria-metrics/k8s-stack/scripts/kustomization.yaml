@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: smartctl-thresholds-script
+    files:
+      - ./write-smartctl-thresholds.sh
+    options:
+      # The name is referenced verbatim from hr.yaml (prometheus-node-exporter
+      # sidecar mount), so the kustomize hash suffix must be off. Content
+      # changes are picked up by the Kyverno workload-reloader via the
+      # reload label below.
+      disableNameSuffixHash: true
+      labels:
+        # Flux must not interpret `${...}` inside the shell script as Flux
+        # variable substitutions.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+        # cluster/gitops/kyverno/policies/workload-reloader/ rolls the
+        # node-exporter DaemonSet when this ConfigMap changes.
+        kyverno.home.arpa/reload: "true"
