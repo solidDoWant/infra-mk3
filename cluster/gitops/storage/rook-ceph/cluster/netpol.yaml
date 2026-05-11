@@ -5,10 +5,10 @@ kind: CiliumNetworkPolicy
 metadata:
   name: rook-ceph-cluster
 specs:
-  - description: csi-cephfsplugin-provisioner
-    endpointSelector: &csi_cephfsplugin_provisioner_selector
+  - description: storage.cephfs.csi.ceph.com-ctrlplugin
+    endpointSelector: &cephfs_ctrlplugin_selector
       matchLabels:
-        app: csi-cephfsplugin-provisioner
+        app: storage.cephfs.csi.ceph.com-ctrlplugin
     egress:
       # DNS resolution
       - &to_dns_resolver
@@ -81,10 +81,10 @@ specs:
                 protocol: TCP
               - port: "6801"
                 protocol: TCP
-  - description: csi-rbdplugin-provisioner
-    endpointSelector: &csi_rbdplugin_provisioner_selector
+  - description: storage.rbd.csi.ceph.com-ctrlplugin
+    endpointSelector: &rbd_ctrlplugin_selector
       matchLabels:
-        app: csi-rbdplugin-provisioner
+        app: storage.rbd.csi.ceph.com-ctrlplugin
     egress:
       - *to_dns_resolver
       - *to_k8s_api_server
@@ -115,20 +115,21 @@ specs:
       - *to_osds
     ingress:
       - fromEndpoints:
-          - *csi_cephfsplugin_provisioner_selector
           - *managers_selector
+          - *cephfs_ctrlplugin_selector
           - &rook_ceph_tools_selector
             matchLabels:
               app: rook-ceph-tools
-          - &csi_cephfsplugin_selector
-            matchLabels:
-              app: csi-cephfsplugin
-        toPorts:
+        toPorts: &mds_ports
           - ports:
               - port: "6800"
                 protocol: TCP
               - port: "6801"
                 protocol: TCP
+      # CSI nodeplugins are hostNetwork-only in 1.18+ (no nodePlugin.hostNetwork field)
+      - fromEntities: &csi_node_entities
+          - remote-node
+        toPorts: *mds_ports
   - description: rook-ceph-mgr
     endpointSelector: *managers_selector
     egress:
@@ -172,24 +173,22 @@ specs:
           - *managers_selector
           - *osd_selector
           - *mds_selector
-          - *csi_cephfsplugin_provisioner_selector
-          - *csi_rbdplugin_provisioner_selector
-          - *csi_cephfsplugin_selector
           - *rgw_selector
+          - *cephfs_ctrlplugin_selector
+          - *rbd_ctrlplugin_selector
           - &operator_selector
             matchLabels:
               app: rook-ceph-operator
-          - &csi_rbdplugin_selector
-            matchLabels:
-              app: csi-rbdplugin
           - *rook_ceph_tools_selector
           - &rook_ceph_crashcollector_selector
             matchLabels:
               app: rook-ceph-crashcollector
-        toPorts:
+        toPorts: &mgr_ports
           - ports:
               - port: "6800"
                 protocol: TCP
+      - fromEntities: *csi_node_entities
+        toPorts: *mgr_ports
       # Dashboard
       - fromEndpoints:
           - &gateway_selector
@@ -221,19 +220,19 @@ specs:
           - *mds_selector
           - *rgw_selector
           - *operator_selector
-          - *csi_rbdplugin_selector
-          - *csi_cephfsplugin_selector
-          - *csi_rbdplugin_provisioner_selector
-          - *csi_cephfsplugin_provisioner_selector
+          - *cephfs_ctrlplugin_selector
+          - *rbd_ctrlplugin_selector
           - *rook_ceph_exporter_selector
           - *rook_ceph_tools_selector
           - *rook_ceph_crashcollector_selector
-        toPorts:
+        toPorts: &mon_ports
           - ports:
               - port: "3300"
                 protocol: TCP
               - port: "6789"
                 protocol: TCP
+      - fromEntities: *csi_node_entities
+        toPorts: *mon_ports
   - description: rook-ceph-osd
     endpointSelector: *osd_selector
     egress:
@@ -249,13 +248,18 @@ specs:
           - *managers_selector
           - *osd_selector
           - *rgw_selector
-          - *csi_rbdplugin_selector
           - *mds_selector
-          - *csi_cephfsplugin_selector
-          - *csi_cephfsplugin_provisioner_selector
-          - *csi_rbdplugin_provisioner_selector
+          - *cephfs_ctrlplugin_selector
+          - *rbd_ctrlplugin_selector
           - *operator_selector
           - *rook_ceph_tools_selector
+      - fromEntities: *csi_node_entities
+        toPorts:
+          - ports:
+              - port: "6800"
+                protocol: TCP
+              - port: "6801"
+                protocol: TCP
   - description: rook-ceph-rgw
     endpointSelector: *rgw_selector
     egress:
@@ -276,23 +280,6 @@ specs:
     egress:
       - *to_monitors
       - *to_managers
-  - description: csi-cephfsplugin
-    endpointSelector: *csi_cephfsplugin_selector
-    egress:
-      - *to_k8s_api_server
-      - *to_dns_resolver
-      - *to_monitors
-      - *to_managers
-      - *to_osds
-      - *to_mds
-  - description: csi-rbdplugin
-    endpointSelector: *csi_rbdplugin_selector
-    egress:
-      - *to_k8s_api_server
-      - *to_dns_resolver
-      - *to_monitors
-      - *to_managers
-      - *to_osds
   - description: rook-ceph-tools
     endpointSelector: *rook_ceph_tools_selector
     egress:
@@ -300,15 +287,3 @@ specs:
       - *to_managers
       - *to_osds
       - *to_mds
-  - description: storage.rbd.csi.ceph.com-ctrlplugin
-    endpointSelector:
-      matchLabels:
-        app: storage.rbd.csi.ceph.com-ctrlplugin
-    egress:
-      - *to_k8s_api_server
-  - description: storage.cephfs.csi.ceph.com-ctrlplugin
-    endpointSelector:
-      matchLabels:
-        app: storage.cephfs.csi.ceph.com-ctrlplugin
-    egress:
-      - *to_k8s_api_server

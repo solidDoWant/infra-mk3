@@ -26,7 +26,6 @@ spec:
     priorityClassName: system-cluster-critical
     obcAllowAdditionalConfigFields: maxObjects,maxSize,bucketMaxObjects,bucketMaxSize,bucketPolicy,bucketLifecycle,bucketOwner
     csi:
-      enableCSIHostNetwork: false
       # TODO figure out whether I should encrypt volumes (tradeoffs)
       # enableCSIEncryption: true
       enableLiveness: true
