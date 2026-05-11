@@ -56,6 +56,14 @@ static_resources:
                                 key: X-Forwarded-Proto
                                 value: https
                               append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                          # Force the upstream response to be uncompressed so
+                          # the Lua filter can pattern-match the JSON body.
+                          # Authentik honors Accept-Encoding: gzip and returns
+                          # a gzipped body — Lua sees binary and silently
+                          # no-ops the rewrite. The discovery doc is ~1.5 KB
+                          # so dropping compression costs nothing.
+                          request_headers_to_remove:
+                            - accept-encoding
                           typed_per_filter_config:
                             envoy.filters.http.lua:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
@@ -86,10 +94,11 @@ static_resources:
                       source_codes:
                         rewrite_discovery:
                           inline_string: |
+                            -- The route is scoped to GET on the discovery
+                            -- URL, so Authentik always returns the discovery
+                            -- JSON here. If gsub finds no match it's a no-op,
+                            -- so unexpected error bodies pass through cleanly.
                             function envoy_on_response(rh)
-                              if (rh:headers():get(":status") or "") ~= "200" then return end
-                              local ct = rh:headers():get("content-type") or ""
-                              if not ct:find("application/json", 1, true) then return end
                               local body = rh:body():getBytes(0, rh:body():length())
                               local pub = "https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}"
                               local int = "http://authentik-server.security.svc.cluster.local"
