@@ -26,16 +26,17 @@ specs:
             rules:
               dns:
                 - matchPattern: "*"
-      # Internal gateway, used for OIDC token exchange against
-      # authentik.${SECRET_PUBLIC_DOMAIN_NAME}, which resolves to the gateway.
+      # openid-configuration-proxy: serves the rewritten OIDC discovery doc
+      # so the SSO plugin's token/JWKS/userinfo URLs resolve to in-cluster
+      # endpoints. HTTPS on 8443; some OIDC clients refuse plain HTTP.
       - toEndpoints:
           - matchLabels:
-              io.kubernetes.pod.namespace: networking
-              app.kubernetes.io/name: ingress-gateways
-              gateway.networking.k8s.io/gateway-name: internal-gateway
+              io.kubernetes.pod.namespace: security
+              app.kubernetes.io/name: openid-configuration-proxy
+              app.kubernetes.io/instance: openid-configuration-proxy
         toPorts:
           - ports:
-              - port: "443"
+              - port: "8443"
                 protocol: TCP
       # Seerr — the Jellyfin Enhanced plugin calls Seerr's API from the
       # Jellyfin server side to submit/track requests on behalf of users.

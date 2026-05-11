@@ -71,6 +71,11 @@ spec:
                 drop:
                   - ALL
         pod:
+          labels:
+            # Required to be admitted by the openid-configuration-proxy and
+            # authentik-server ingress netpols when the SSO plugin fetches
+            # the discovery doc / token / JWKS in-cluster.
+            endpoints.netpols.home.arpa/oidc-querier: "true"
           resourceClaims:
             - name: gpu
               resourceClaimTemplateName: jellyfin-gpu
