@@ -26,3 +26,11 @@ spec:
           targetLabel: instance
     prometheusRules:
       enabled: true
+      rules:
+        # Replaced by the per-drive trip-based alert in alerts.yaml, which
+        # joins against smartctl_nvme_warning_temp_celsius from the
+        # node-exporter sidecar in ../../victoria-metrics/k8s-stack/.
+        # The chart's default fires at a fixed 60°C with `for: 1m`, which is
+        # noisy and well below most NVMe drives' manufacturer-defined WCTEMP.
+        smartCTLDDeviceTemperature:
+          enabled: false
