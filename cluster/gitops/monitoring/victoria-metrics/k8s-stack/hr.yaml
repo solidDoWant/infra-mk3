@@ -563,6 +563,7 @@ spec:
             # Needed for raw NVMe ioctl access via /dev/nvmeN.
             privileged: true
             runAsUser: 0
+            runAsNonRoot: false
             readOnlyRootFilesystem: true
           volumeMounts:
             - name: smartctl-thresholds-script
