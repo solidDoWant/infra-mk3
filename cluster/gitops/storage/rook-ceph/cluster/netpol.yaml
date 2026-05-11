@@ -300,3 +300,15 @@ specs:
       - *to_managers
       - *to_osds
       - *to_mds
+  - description: storage.rbd.csi.ceph.com-ctrlplugin
+    endpointSelector:
+      matchLabels:
+        app: storage.rbd.csi.ceph.com-ctrlplugin
+    egress:
+      - *to_k8s_api_server
+  - description: storage.cephfs.csi.ceph.com-ctrlplugin
+    endpointSelector:
+      matchLabels:
+        app: storage.cephfs.csi.ceph.com-ctrlplugin
+    egress:
+      - *to_k8s_api_server
