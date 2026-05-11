@@ -41,9 +41,14 @@ spec:
             sum by (instance, device) (smartctl_device_temperature{temperature_type="current"}) * 0 + 60
 
         - alert: SmartCTLDriveTemperatureWarning
+          # group_left is omitted intentionally — MetricsQL parses `group_left (`
+          # as the start of an optional label list and fails on the `-`. The
+          # effective-threshold recording rule is already unique per (instance,
+          # device), so one-to-one matching works and the result keeps all of
+          # smartctl_device_temperature's labels.
           expr: |
             smartctl_device_temperature{temperature_type="current"}
-              > on(instance, device) group_left
+              > on(instance, device)
               (smartctl_effective_warning_temp_celsius - 5)
           for: 5m
           labels:
@@ -56,9 +61,10 @@ spec:
               begin thermal throttling soon if temperature continues rising.
 
         - alert: SmartCTLDriveTemperatureCritical
+          # See note above re: group_left.
           expr: |
             smartctl_device_temperature{temperature_type="current"}
-              > on(instance, device) group_left
+              > on(instance, device)
               (smartctl_effective_critical_temp_celsius - 2)
           for: 2m
           labels:
