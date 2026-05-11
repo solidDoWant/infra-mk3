@@ -28,6 +28,7 @@ spec:
 
     operator:
       replicaCount: 2
+      revisionHistoryLimit: 1
 
     podLabels:
       # KEDA's Temporal scaler runs in the operator pod, so the operator is
@@ -41,6 +42,7 @@ spec:
 
     webhooks:
       replicaCount: 2
+      revisionHistoryLimit: 1
       # Fail closed — the cluster prefers the webhook to be available.
       failurePolicy: Fail
 

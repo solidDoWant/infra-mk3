@@ -17,6 +17,7 @@ spec:
     minAvailable: 1
   priorityClassName: system-cluster-critical
   replicaCount: 2
+  revisionHistoryLimitCount: 1
   podMetadata:
     labels:
       app.kubernetes.io/part-of: victoria-logs

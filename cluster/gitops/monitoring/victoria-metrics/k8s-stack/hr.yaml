@@ -128,6 +128,7 @@ spec:
                 mountPath: /etc/ssl/certs/ca.crt
                 subPath: ca.crt
         vmselect:
+          revisionHistoryLimitCount: 1
           resources:
             requests:
               memory: 8Gi
@@ -184,6 +185,7 @@ spec:
               mountPath: /etc/ssl/certs/ca.crt
               subPath: ca.crt
         vminsert:
+          revisionHistoryLimitCount: 1
           resources:
             requests:
               memory: 1Gi
@@ -225,6 +227,7 @@ spec:
           extraArgs:
             maxLabelsPerTimeseries: "150"
         vmstorage:
+          revisionHistoryLimitCount: 1
           resources:
             requests:
               memory: 4Gi
@@ -301,6 +304,7 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
+        revisionHistoryLimitCount: 1
         useStrictSecurity: true
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
@@ -350,6 +354,7 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
+        revisionHistoryLimitCount: 1
         useStrictSecurity: true
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
@@ -396,6 +401,7 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
+        revisionHistoryLimitCount: 1
         useStrictSecurity: true
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
