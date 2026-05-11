@@ -38,6 +38,19 @@ specs:
           - ports:
               - port: "8443"
                 protocol: TCP
+      # The rewritten discovery doc points token / JWKS / userinfo /
+      # introspect / revoke at authentik-server directly, so the SSO plugin
+      # connects there for everything except the discovery fetch itself.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: security
+              app.kubernetes.io/name: authentik
+              app.kubernetes.io/instance: authentik
+              app.kubernetes.io/component: server
+        toPorts:
+          - ports:
+              - port: "9000"
+                protocol: TCP
       # Seerr — the Jellyfin Enhanced plugin calls Seerr's API from the
       # Jellyfin server side to submit/track requests on behalf of users.
       - toEndpoints:
