@@ -1,0 +1,96 @@
+admin:
+  # Bound to loopback only — never reachable from outside the pod.
+  # Used for local debugging via `kubectl exec`.
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 9901
+static_resources:
+  listeners:
+    - name: http
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: openid_configuration_proxy
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: authentik
+                      domains:
+                        - "*"
+                      routes:
+                        # Discovery doc: GET .../.well-known/openid-configuration.
+                        # The Lua filter rewrites the JSON body in the
+                        # response; routing is otherwise the same as the
+                        # passthrough route below.
+                        - name: discovery
+                          match:
+                            safe_regex:
+                              regex: "^/application/o/[^/]+/\\.well-known/openid-configuration/?$"
+                            headers:
+                              - name: ":method"
+                                string_match:
+                                  exact: GET
+                          route:
+                            cluster: authentik_upstream
+                            host_rewrite_literal: authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+                          typed_per_filter_config:
+                            envoy.filters.http.lua:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+                              name: rewrite_discovery
+                        # Everything else: opaque pass-through. No Lua filter
+                        # attached → no body buffering, no rewriting.
+                        - name: passthrough
+                          match:
+                            prefix: "/"
+                          route:
+                            cluster: authentik_upstream
+                            host_rewrite_literal: authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+                http_filters:
+                  - name: envoy.filters.http.lua
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+                      # No default_source_code: the filter is a no-op on any
+                      # route that doesn't opt in via LuaPerRoute.
+                      source_codes:
+                        rewrite_discovery:
+                          inline_string: |
+                            function envoy_on_response(rh)
+                              if (rh:headers():get(":status") or "") ~= "200" then return end
+                              local ct = rh:headers():get("content-type") or ""
+                              if not ct:find("application/json", 1, true) then return end
+                              local body = rh:body():getBytes(0, rh:body():length())
+                              local pub = "https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}"
+                              local int = "http://authentik-server.security.svc.cluster.local:9000"
+                              local function pesc(s) return (s:gsub("(%W)", "%%%1")) end
+                              for _, k in ipairs({
+                                "token_endpoint", "jwks_uri", "userinfo_endpoint",
+                                "revocation_endpoint", "introspection_endpoint",
+                              }) do
+                                body = body:gsub('("' .. k .. '"%s*:%s*")' .. pesc(pub), "%1" .. int)
+                              end
+                              rh:body():setBytes(body)
+                              rh:headers():remove("content-length")
+                            end
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: authentik_upstream
+      connect_timeout: 5s
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: authentik_upstream
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: authentik-server.security.svc.cluster.local
+                      port_value: 9000
