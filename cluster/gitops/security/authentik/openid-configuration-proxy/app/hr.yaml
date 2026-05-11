@@ -1,14 +1,19 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
-# Tiny Envoy proxy that fronts Authentik to work around Authentik's lack of
-# per-listener issuer override: in-cluster server-side OIDC clients want to
-# validate tokens with iss=https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/... but
-# fetch the heavy endpoints (token / userinfo / JWKS / introspect / revoke)
-# in-cluster without going through the public gateway. This proxy
-# transparent-passes everything to authentik-server.security.svc.cluster.local
-# and only rewrites GET .../.well-known/openid-configuration responses to point
-# those five endpoints at the in-cluster URL while keeping issuer,
-# authorization_endpoint, and end_session_endpoint pointed at the public URL.
+# Tiny Envoy proxy that serves a rewritten OIDC discovery doc. Authentik has
+# no per-listener issuer override, so in-cluster server-side OIDC clients
+# (e.g. the Jellyfin SSO plugin) need a discovery doc whose iss claim still
+# resolves to https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/... but whose
+# token / userinfo / JWKS / introspection / revocation endpoints point at the
+# in-cluster authentik-server Service so those calls don't hairpin through
+# the public gateway.
+#
+# Scope is intentionally narrow: this proxy ONLY answers
+# GET /application/o/<provider>/.well-known/openid-configuration. Any other
+# path returns 404. Clients are expected to call
+# authentik-server.security.svc.cluster.local directly for the rewritten
+# endpoints (they already do today — see the oidc-querier / oidc-supplier
+# label pattern in docs/labels and annotations.md).
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

@@ -44,14 +44,23 @@ static_resources:
                             envoy.filters.http.lua:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
                               name: rewrite_discovery
-                        # Everything else: opaque pass-through. No Lua filter
-                        # attached → no body buffering, no rewriting.
-                        - name: passthrough
+                        # Catch-all: this proxy only exists to rewrite the
+                        # OIDC discovery doc. Any other path is operator
+                        # error — surface a clear 404 instead of silently
+                        # proxying to Authentik (which would also work but
+                        # masks misconfiguration and bypasses the Host
+                        # rewrite story we documented).
+                        - name: not-found
                           match:
                             prefix: "/"
-                          route:
-                            cluster: authentik_upstream
-                            host_rewrite_literal: authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+                          direct_response:
+                            status: 404
+                            body:
+                              inline_string: |
+                                openid-configuration-proxy: this proxy only serves
+                                GET /application/o/<provider>/.well-known/openid-configuration.
+                                For all other Authentik endpoints, call
+                                authentik-server.security.svc.cluster.local directly.
                 http_filters:
                   - name: envoy.filters.http.lua
                     typed_config:
@@ -67,7 +76,7 @@ static_resources:
                               if not ct:find("application/json", 1, true) then return end
                               local body = rh:body():getBytes(0, rh:body():length())
                               local pub = "https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}"
-                              local int = "http://authentik-server.security.svc.cluster.local:9000"
+                              local int = "http://authentik-server.security.svc.cluster.local"
                               local function pesc(s) return (s:gsub("(%W)", "%%%1")) end
                               for _, k in ipairs({
                                 "token_endpoint", "jwks_uri", "userinfo_endpoint",
@@ -93,4 +102,8 @@ static_resources:
                   address:
                     socket_address:
                       address: authentik-server.security.svc.cluster.local
-                      port_value: 9000
+                      # Service port, not container port. The Authentik Service
+                      # maps 80 → containerPort 9000. The CiliumNetworkPolicy
+                      # still authorizes port 9000 because it evaluates against
+                      # the destination pod port after Cilium service xlation.
+                      port_value: 80
