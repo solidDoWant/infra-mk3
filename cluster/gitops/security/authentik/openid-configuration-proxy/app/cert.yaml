@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openid-configuration-proxy-serving-cert
+spec:
+  commonName: openid-configuration-proxy.security.svc.cluster.local
+  dnsNames:
+    - openid-configuration-proxy.security.svc.cluster.local
+    - openid-configuration-proxy.security.svc
+  subject:
+    countries:
+      - US
+    organizations:
+      - infra-mk3
+    provinces:
+      - ${SECRET_STATE}
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: security-intermediary-ca
+  secretName: openid-configuration-proxy-serving-cert
+  secretTemplate:
+    labels:
+      # Bounce the proxy pods automatically when the cert rotates so Envoy
+      # picks up the new keypair (Envoy reads cert files at startup; SDS
+      # would be the alternative).
+      kyverno.home.arpa/reload: "true"

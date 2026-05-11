@@ -13,7 +13,7 @@ static_resources:
           address: 0.0.0.0
           port_value: 8080
       filter_chains:
-        - filters:
+        - filters: &http_filters
             - name: envoy.filters.network.http_connection_manager
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -115,6 +115,27 @@ static_resources:
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+    # HTTPS variant. Same filter chain as the HTTP listener (reused via the
+    # `&http_filters` anchor above) so the route table, Lua rewrite, and
+    # upstream cluster are identical. The only addition is a TLS transport
+    # socket terminating with the namespace-issued serving cert.
+    - name: https
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8443
+      filter_chains:
+        - filters: *http_filters
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                tls_certificates:
+                  - certificate_chain:
+                      filename: /etc/openid-configuration-proxy/certs/serving/tls.crt
+                    private_key:
+                      filename: /etc/openid-configuration-proxy/certs/serving/tls.key
   clusters:
     - name: authentik_upstream
       connect_timeout: 5s

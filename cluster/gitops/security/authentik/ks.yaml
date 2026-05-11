@@ -147,3 +147,5 @@ spec:
   wait: true
   dependsOn:
     - name: authentik-app
+    - name: security-namespace-issuer
+    - name: approver-policy

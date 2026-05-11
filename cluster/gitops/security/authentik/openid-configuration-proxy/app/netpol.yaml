@@ -52,10 +52,14 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+              - port: "8443"
+                protocol: TCP
       # Kubelet TCP probes.
       - fromEntities:
           - host
         toPorts:
           - ports:
               - port: "8080"
+                protocol: TCP
+              - port: "8443"
                 protocol: TCP
