@@ -1,0 +1,43 @@
+---
+# Approve the openid-configuration-proxy serving certificate specifically.
+# cert-manager's approver-policy denies every CertificateRequest by default —
+# each Certificate needs its own CRP scoped to exactly its CN / dnsNames /
+# subject so unrelated services can't request certs against the namespace
+# issuer. Mirrors the pattern in teleport/cluster/proxy-cert-crp.yaml.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: security-intermediary-ca-openid-configuration-proxy-serving-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: security-intermediary-ca
+    namespace:
+      matchNames:
+        - security
+  allowed:
+    commonName:
+      required: true
+      value: openid-configuration-proxy.security.svc.cluster.local
+    dnsNames:
+      required: true
+      values:
+        - openid-configuration-proxy.security.svc.cluster.local
+        - openid-configuration-proxy.security.svc
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
