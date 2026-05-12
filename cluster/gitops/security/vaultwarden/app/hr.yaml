@@ -19,11 +19,12 @@ spec:
     controllers:
       vaultwarden:
         replicas: 2
+        strategy: RollingUpdate
         containers:
           app:
             image:
               repository: vaultwarden/server
-              tag: 1.33.11-alpine
+              tag: 1.33.2-alpine
             env:
               # General config
               DOMAIN: https://vaultwarden.${SECRET_PUBLIC_DOMAIN_NAME}
