@@ -8,9 +8,4 @@ spec:
   externalIPs:
     - 10.34.254.1
   ports:
-    - name: https-443
-      port: 443
-      targetPort: 6443
-    - name: https-6443
-      port: 6443
-      targetPort: 6443
+    - port: 6443
