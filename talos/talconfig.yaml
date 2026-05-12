@@ -264,7 +264,7 @@ patches:
           cpuManagerPolicy: static
         extraArgs:
           # Feature enablement
-          feature-gates: DynamicResourceAllocation=true,DRAAdminAccess=true,UserNamespacesPodSecurityStandards=true,ImageVolume=true
+          feature-gates: DRAAdminAccess=true,UserNamespacesPodSecurityStandards=true,ImageVolume=true,EnvFiles=true
         nodeIP:
           validSubnets:
             - 10.3.1.0/16
@@ -321,7 +321,7 @@ patches:
         extraArgs:
           bind-address: 0.0.0.0
           # Feature enablement
-          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true
+          feature-gates: kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true
   # Configure the scheduler
   - |-
     cluster:
@@ -359,7 +359,7 @@ patches:
           # service cluster IP
           enable-aggregator-routing: "true"
           # Feature enablement
-          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:UserNamespacesPodSecurityStandards=true,kube:ImageVolume=true
+          feature-gates: kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:UserNamespacesPodSecurityStandards=true,kube:ImageVolume=true,kube:MutatingAdmissionPolicy=true,kube:EnvFiles=true
           # Resource enablement
           # Enable everything but alpha and legacy features
           runtime-config: "api/all=true,api/legacy=false"
@@ -381,7 +381,7 @@ patches:
                     defaultingType: List
         extraArgs:
           # Feature enablement
-          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true
+          feature-gates: kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true
   # Ship logs to each node's agent
   - |-
     machine:
