@@ -3,10 +3,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kubernetes-api-server
-  annotations:
-    io.cilium/lb-ipam-ips: 10.34.254.1
 spec:
-  type: LoadBalancer
+  type: ClusterIP
+  externalIPs:
+    - 10.34.254.1
   ports:
     - name: https-443
       port: 443
