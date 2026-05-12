@@ -175,12 +175,10 @@ ipam:
 ipv4NativeRoutingCIDR: 10.32.0.0/16 # Pod IP space can be natively routed due to the autoDirectNodeRoutes config
 k8s:
   requireIPv4PodCIDR: true
-# Talk with KubePrism rather than the `kubernetes` service. This service is not
-# reachable until Cilium comes up, because Cilium acts as a kube-proxy
-# replacement.
-k8sServiceHost: 127.0.0.1
-# This is configured in the Talos config file
-k8sServicePort: 7443
+  apiServerURLs: >
+    https://10.3.1.1:6443
+    https://10.3.1.2:6443
+    https://10.3.1.3:6443
 kubeProxyReplacement: true
 loadBalancer:
   # Use XDP if supported. Unfortunately, between:
