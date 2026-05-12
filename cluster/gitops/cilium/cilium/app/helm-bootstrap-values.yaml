@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/cilium/cilium/refs/tags/v1.17.15/install/kubernetes/cilium/values.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cilium/cilium/refs/tags/v1.18.9/install/kubernetes/cilium/values.schema.json
 annotateK8sNode: true
 autoDirectNodeRoutes: true # Without this, requests will go through the firewall/router and have higher latency + cost
 bandwidthManager:
@@ -100,6 +100,10 @@ hubble:
   #     method: certmanager
   ui:
     enabled: true
+    replicas: 2
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
     rollOutPods: true
     ingress:
       enabled: false
@@ -112,6 +116,7 @@ hubble:
     # This can be tuned down once enough have been collected to generate netpols
     fileMaxSizeMb: 1024
     fileMaxBackups: 10
+    fileCompress: true
     dynamic:
       enabled: true
       config:
@@ -154,12 +159,6 @@ hubble:
           #     - l4.UDP.destination_port
           #     - l4.SCTP.source_port
           #     - l4.SCTP.destination_port
-extraConfig:
-  # There is not yet an option for this under the hubble config tree
-  # This will be available via `hubble.export.fileCompress` upon next release.
-  # This is also not functional in 17.1 with dynamic export enabled, but is
-  # has been added to the 1.17 branch for next release.
-  hubble-export-file-compress: "true"
 ipMasqAgent:
   enabled: false # TODO enable after bpf is re-enabled
   # enabled: true
@@ -230,7 +229,4 @@ securityContext:
 socketLB:
   enabled: true
   hostNamespaceOnly: true # Required for kata-containers
-  # Temporarily disable until my fix PR is merged:
-  # https://github.com/cilium/cilium/pull/35703
-  # This is still enabled even though commented out
-  # terminatePodConnections: true
+  terminatePodConnections: true
