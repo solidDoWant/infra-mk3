@@ -520,6 +520,8 @@ ip-space:
           description: VPN gateway
         10.34.0.6/32:
           description: VPN port forward destination
+        10.34.254.1/32:
+          description: Load balanced Cilium API server address
       10.35.0.0/16:
         description: kube-vip IPs
         vlan: 300
