@@ -3,6 +3,8 @@ apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
   name: kubernetes-api-server
+  labels:
+    kubernetes.io/service-name: kubernetes-api-server
 addressType: IPv4
 endpoints:
   - addresses:
