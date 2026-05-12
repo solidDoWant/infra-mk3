@@ -1,6 +1,6 @@
 ---
 clusterName: infra-mk3
-endpoint: https://10.3.254.1:6443
+endpoint: https://10.34.254.1:6443
 nodes:
   - &talos-k8s-mixed
     hostname: talos-k8s-mixed-01
@@ -51,6 +51,8 @@ nodes:
         addresses:
           - 10.3.1.1/16
           - 10.3.2.1/32
+        # Non-LB VIP address managed by Talos instead of Cilium. Leaving this for now
+        # in case swapping to Cilium-backed service doesn't work.
         vip:
           ip: 10.3.254.1
         routes:
@@ -165,8 +167,10 @@ kubernetesVersion: v1.33.4
 allowSchedulingOnMasters: true
 allowSchedulingOnControlPlanes: true
 additionalApiServerCertSans: &sans
-  - 127.0.0.1 # KubePrism
-  # TODO add kube-vip address
+  - 10.3.254.1 # Talos VIP address
+# Specifying this as the endpoint above adds the address automatically
+#  - 10.34.254.1 # Cilium service external IP
+# TODO add kube-vip address
 additionalMachineCertSans: *sans
 # Don't deploy a CNI by default
 cniConfig:
@@ -216,13 +220,12 @@ patches:
             - os:admin
           allowedKubernetesNamespaces:
             - system-controllers
-  # Enable KubePrism
+  # Disable KubePrism which relies on the discovery service that Sidero forces through their SaaS
   - |-
     machine:
       features:
         kubePrism:
-          enabled: true
-          port: 7443  # 6443 (API server default) + 1000
+          enabled: false
   # Configure DNS resolution
   - |-
     machine:
@@ -336,16 +339,12 @@ patches:
     cluster:
       coreDNS:
         disabled: true
-  # Enable only local etcd-based discovery
+  # Disable discovery service completely
+  # Sidero rug pulled in-cluster discovery, see https://github.com/siderolabs/talos/issues/9980
   - |-
     cluster:
       discovery:
-        enabled: true
-        registries:
-          kubernetes:
-            disabled: false
-          service:
-            disabled: true
+        enabled: false
   # Enable workload scheduling on the control plane nodes
   - |-
     cluster:
@@ -360,13 +359,7 @@ patches:
           # service cluster IP
           enable-aggregator-routing: "true"
           # Feature enablement
-          # TODO remove AuthorizeNodeWithSelectors=false after Cilium adds load-balanced, HA
-          # kube-apiserver support (close: https://github.com/cilium/cilium/issues/29323).
-          # Sidero Labs pulled the rug out from under customers and just suddenly stopped
-          # Talos etcd-backed "Cluster Discovery" support, which is required for kubeprism.
-          # Disabling this flag allows kubeprism to continue to work.
-          # See https://github.com/siderolabs/talos/issues/9980
-          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:AuthorizeNodeWithSelectors=false,kube:UserNamespacesPodSecurityStandards=true,kube:ImageVolume=true
+          feature-gates: kube:DynamicResourceAllocation=true,kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:UserNamespacesPodSecurityStandards=true,kube:ImageVolume=true
           # Resource enablement
           # Enable everything but alpha and legacy features
           runtime-config: "api/all=true,api/legacy=false"
