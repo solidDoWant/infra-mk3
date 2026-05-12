@@ -105,8 +105,9 @@ hubble:
   #     method: certmanager
   ui:
     enabled: true
-    replicas: 2
-    podDisruptionBudget: *pdb
+    # Blocked by https://github.com/istio/istio/issues/55839
+    # replicas: 2
+    # podDisruptionBudget: *pdb
     rollOutPods: true
     ingress:
       enabled: false
