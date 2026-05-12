@@ -5,7 +5,7 @@ resource "kubectl_manifest" "gpu_claim_template" {
   ignore_fields     = ["status"]
 
   yaml_body = yamlencode({
-    apiVersion = "resource.k8s.io/v1beta2"
+    apiVersion = "resource.k8s.io/v1"
     kind       = "ResourceClaimTemplate"
     metadata = {
       name      = "${local.name}-gpu"
