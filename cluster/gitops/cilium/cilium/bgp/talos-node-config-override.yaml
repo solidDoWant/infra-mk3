@@ -1,5 +1,5 @@
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumBGPNodeConfigOverride
 metadata:
   name: talos-k8s-mixed-01
@@ -12,7 +12,7 @@ spec:
         - name: router-02
           localAddress: *local_ip
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumBGPNodeConfigOverride
 metadata:
   name: talos-k8s-mixed-02
@@ -25,7 +25,7 @@ spec:
         - name: router-02
           localAddress: *local_ip
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumBGPNodeConfigOverride
 metadata:
   name: talos-k8s-mixed-03

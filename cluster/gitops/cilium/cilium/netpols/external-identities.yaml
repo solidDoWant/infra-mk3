@@ -1,5 +1,5 @@
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: intranet
@@ -7,7 +7,7 @@ spec:
   externalCIDRs:
     - 10.0.0.0/8
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: routers
@@ -16,7 +16,7 @@ spec:
     - 10.3.0.1/32 # router-01
     - 10.3.0.2/32 # router-02
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: upstream-dns-resolvers
@@ -24,7 +24,7 @@ spec:
   externalCIDRs:
     - 10.3.0.254/32 # router virtual IP
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: external-nodes-1
@@ -38,7 +38,7 @@ spec:
     - 10.3.0.2/32 # router-02
     - 10.4.0.128/32 # ubuntu-development-01
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: storage-hosts
@@ -46,7 +46,7 @@ spec:
   externalCIDRs:
     - 10.2.3.1/32 # ubuntu-storage-host-01
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: unifi-aps
@@ -54,7 +54,7 @@ spec:
   externalCIDRs:
     - 10.1.0.160/31 # ap-01, ap-02
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: proxmox-nodes
@@ -62,7 +62,7 @@ spec:
   externalCIDRs:
     - 10.2.2.1/32 # proxmox-vm-host-01
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: vpn-endpoints-1
@@ -10332,7 +10332,7 @@ spec:
     - 193.56.252.139/32
     - 193.56.252.147/32
 ---
-apiVersion: cilium.io/v2alpha1
+apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
   name: vpn-endpoints-2
