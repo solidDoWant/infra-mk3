@@ -352,6 +352,8 @@ resource "kubectl_manifest" "deployment" {
 
 # Prevent evictions from disrupting the workspace
 resource "kubernetes_pod_disruption_budget_v1" "main" {
+  count = data.coder_workspace.me.start_count
+
   metadata {
     name        = local.name
     namespace   = local.namespace
