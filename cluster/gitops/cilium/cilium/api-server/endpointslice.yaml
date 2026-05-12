@@ -1,0 +1,15 @@
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes-api-server
+addressType: IPv4
+endpoints:
+  - addresses:
+      - 10.3.1.1
+      - 10.3.1.2
+      - 10.3.1.3
+ports:
+  - name: https
+    port: 6443
+    protocol: TCP
