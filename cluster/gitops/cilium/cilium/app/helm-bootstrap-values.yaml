@@ -86,6 +86,11 @@ hubble:
       - tcp:labelsContext=source_ip,source_pod,source_workload,source_namespace,destination_ip,destination_pod,destination_workload,destination_namespace,traffic_direction
   relay:
     enabled: true
+    replicas: 2
+    podDisruptionBudget: &pdb
+      enabled: true
+      minAvailable: 1
+      maxUnavailable: null
     rollOutPods: true
     prometheus:
       enabled: true
@@ -101,9 +106,7 @@ hubble:
   ui:
     enabled: true
     replicas: 2
-    podDisruptionBudget:
-      enabled: true
-      minAvailable: 1
+    podDisruptionBudget: *pdb
     rollOutPods: true
     ingress:
       enabled: false
