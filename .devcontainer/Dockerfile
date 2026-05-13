@@ -43,10 +43,10 @@ COPY --from=hairyhenderson/gomplate:stable /gomplate /usr/local/bin/gomplate
 COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6 /usr/local/bin/dive /usr/local/bin/dive
 
 # talosctl
-COPY --from=ghcr.io/siderolabs/talosctl:v1.11.1 /talosctl /usr/local/bin/talosctl
+COPY --from=ghcr.io/siderolabs/talosctl:v1.12.7 /talosctl /usr/local/bin/talosctl
 
 # talhelper
-COPY --from=ghcr.io/budimanjojo/talhelper:v3.0.35 /bin/talhelper /usr/local/bin/talhelper
+COPY --from=ghcr.io/budimanjojo/talhelper:v3.1.8 /bin/talhelper /usr/local/bin/talhelper
 
 # helmfile
 COPY --from=ghcr.io/helmfile/helmfile:v1.0.0-rc.7 /usr/local/bin/helmfile /usr/local/bin/helmfile

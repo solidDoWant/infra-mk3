@@ -70,13 +70,13 @@ nodes:
         routes:
           - network: 169.254.7.127/32
           - network: 169.254.116.108/32
-    nodeLabels:
+    nodeLabels: &node_labels
       cilium.home.arpa/node.bgp-enabled: "true"
       root-ceph.flux.home.arpa/node.cluster-enabled: "true"
       katacontainers.io/kata-runtime: "true"
       # Topology labels should contain the label name in the value to ensure
       # that the value itself is unique
-      topology.rook.io/chassis: chassis-{{ .MachineConfig.MachineNetwork.NetworkHostname }}
+      topology.rook.io/chassis: chassis-talos-k8s-mixed-01
       zfs.home.arpa/node.local-storage-enabled: "true"
       cni-plugins.home.arpa/node.general-purpose-plugins-enabled: "true"
     nodeAnnotations:
@@ -125,6 +125,9 @@ nodes:
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-02
     ipAddress: 10.3.1.2
+    nodeLabels:
+      <<: *node_labels
+      topology.rook.io/chassis: chassis-talos-k8s-mixed-02
     networkInterfaces:
       - *1g_1
       - *1g_2
@@ -145,6 +148,9 @@ nodes:
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-03
     ipAddress: 10.3.1.3
+    nodeLabels:
+      <<: *node_labels
+      topology.rook.io/chassis: chassis-talos-k8s-mixed-03
     networkInterfaces:
       - *1g_1
       - *1g_2
@@ -162,14 +168,13 @@ nodes:
           - *bond
           - ip=10.3.1.3::10.3.0.254:255.255.0.0:talos-k8s-mixed-03:bond0:off:10.3.0.254::10.3.0.254
           - *halt_if_installed
-talosVersion: v1.11.1
+talosVersion: v1.12.7
 kubernetesVersion: v1.34.7
 allowSchedulingOnMasters: true
 allowSchedulingOnControlPlanes: true
 additionalApiServerCertSans: &sans
   - 10.3.254.1 # Talos VIP address
-# Specifying this as the endpoint above adds the address automatically
-#  - 10.34.254.1 # Cilium service external IP
+  - 10.34.254.1 # Cilium service external IP
 # TODO add kube-vip address
 additionalMachineCertSans: *sans
 # Don't deploy a CNI by default
@@ -180,11 +185,6 @@ clusterPodNets:
 clusterSvcNets:
   - 10.33.0.0/16
 patches:
-  # Don't include the kernel args for non-ISO boot. Otherwise the image is
-  # invalidated and secure boot won't load it.
-  - |-
-    - op: remove
-      path: /machine/install/extraKernelArgs
   # Use NTP server running on the gateway
   - |-
     machine:
@@ -345,10 +345,6 @@ patches:
     cluster:
       discovery:
         enabled: false
-  # Enable workload scheduling on the control plane nodes
-  - |-
-    cluster:
-      allowSchedulingOnControlPlanes: true
   # API server configuration
   - |-
     cluster:
