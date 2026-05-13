@@ -15,7 +15,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: istio-charts
-      version: 1.27.9
+      version: 1.28.6
   driftDetection:
     ignore:
       - paths:
@@ -31,7 +31,6 @@ spec:
       autoscaleMin: 2
       env:
         ENABLE_CA_SERVER: "false"
-        PILOT_ENABLE_ALPHA_GATEWAY_API: "true"
       deploymentLabels:
         patches.flux.home.arpa/deployment.ignore-replicas: "true"
       # Try to schedule on nodes that already have istio services running
