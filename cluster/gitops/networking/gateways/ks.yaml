@@ -38,6 +38,14 @@ spec:
     kind: GitRepository
     name: infra-mk3
   wait: true
+  # Skip health-checking AuthorizationPolicy: Istio writes
+  # status.observedGeneration as a string (CRD declares it as IntOrString),
+  # which trips Flux's default int64 accessor. Issue tracked in
+  # https://github.com/istio/istio/issues/39605
+  healthCheckExprs:
+    - apiVersion: security.istio.io/v1
+      kind: AuthorizationPolicy
+      current: "true"
   dependsOn:
     - name: gateway-classes
     - name: istio-csr
