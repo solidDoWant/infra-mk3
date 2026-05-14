@@ -61,6 +61,12 @@ spec:
       enabled: true
       serviceMonitor:
         enabled: true
+        metricRelabelings:
+          # `pool` is gocraft/work's worker pool ID — 12 random bytes regenerated
+          # on every jobservice startup — so it churns ~unboundedly across restarts
+          # (e.g. harbor_task_concurrency had ~5k stale pool values in 24h).
+          - regex: pool
+            action: labeldrop
     portal:
       replicas: 2
       revisionHistoryLimit: 1
