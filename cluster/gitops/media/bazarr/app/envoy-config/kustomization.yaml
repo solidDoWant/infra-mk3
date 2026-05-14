@@ -5,6 +5,8 @@ configMapGenerator:
   - name: bazarr-envoy-pg-config
     files:
       - envoy.yaml=./postgres.yaml
+      - postgres-client-cert-sds.yaml=./postgres-client-cert-sds.yaml
+      - postgres-validation-context-sds.yaml=./postgres-validation-context-sds.yaml
     options:
       labels:
         kyverno.home.arpa/reload: "true"

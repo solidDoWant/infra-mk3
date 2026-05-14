@@ -1,4 +1,9 @@
 ---
+# Proxies Bazarr's plaintext psycopg2 connection (127.0.0.1:5432) to the
+# postgres cluster with mTLS via Envoy's postgres_proxy filter. Uses
+# file-based SDS for the client cert and validation context so cert rotations
+# are hot-reloaded without a pod restart (cert files live in projected k8s
+# Secrets — inotify on the mount directory picks up the atomic ..data swap).
 admin:
   address:
     socket_address:
@@ -35,14 +40,22 @@ static_resources:
               tls_params:
                 tls_minimum_protocol_version: TLSv1_3
                 tls_maximum_protocol_version: TLSv1_3
-              tls_certificates:
-                - certificate_chain:
-                    filename: /etc/envoy/secrets/postgres/tls.crt
-                  private_key:
-                    filename: /etc/envoy/secrets/postgres/tls.key
-              validation_context:
-                trusted_ca:
-                  filename: /etc/envoy/secrets/root-ca/ca.crt
+              tls_certificate_sds_secret_configs:
+                - name: postgres_client_cert
+                  sds_config:
+                    resource_api_version: V3
+                    path_config_source:
+                      path: /etc/envoy/postgres-client-cert-sds.yaml
+                      watched_directory:
+                        path: /etc/envoy/secrets/postgres
+              validation_context_sds_secret_config:
+                name: postgres_serving_cert
+                sds_config:
+                  resource_api_version: V3
+                  path_config_source:
+                    path: /etc/envoy/postgres-validation-context-sds.yaml
+                    watched_directory:
+                      path: /etc/envoy/secrets/root-ca
             auto_host_sni: true
             auto_sni_san_validation: true
       close_connections_on_host_health_failure: true

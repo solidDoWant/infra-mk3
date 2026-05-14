@@ -28,3 +28,6 @@ spec:
     users:
       bazarr:
         username: bazarr
+        # Envoy uses file-based SDS with watched_directory on the cert mount,
+        # so cert rotations are hot-reloaded — no pod restart needed.
+        disableReloading: true
