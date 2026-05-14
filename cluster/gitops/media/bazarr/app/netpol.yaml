@@ -56,6 +56,14 @@ specs:
           - ports:
               - port: "7878"
                 protocol: TCP
+      # Subtitle providers and related resources
+      - toFQDNs:
+          # Update lists
+          - matchName: raw.githubusercontent.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
       # Subtitle provider egress is added iteratively as providers are
       # enabled in the Bazarr UI. Bazarr supports 30+ providers; only
       # whitelist the ones in active use.
