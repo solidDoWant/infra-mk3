@@ -52,7 +52,7 @@ COPY --from=ghcr.io/budimanjojo/talhelper:v3.1.8 /bin/talhelper /usr/local/bin/t
 COPY --from=ghcr.io/helmfile/helmfile:v1.0.0-rc.7 /usr/local/bin/helmfile /usr/local/bin/helmfile
 
 # kubectl
-COPY --from=registry.k8s.io/kubectl:v1.35.5 /bin/kubectl /usr/local/bin/kubectl
+COPY --from=registry.k8s.io/kubectl:v1.36.1 /bin/kubectl /usr/local/bin/kubectl
 
 # flux
 COPY --from=ghcr.io/fluxcd/flux-cli:v2.6.4 /usr/local/bin/flux /usr/local/bin/flux
