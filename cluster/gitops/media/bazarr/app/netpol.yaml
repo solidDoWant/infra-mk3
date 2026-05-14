@@ -1,0 +1,105 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: bazarr
+specs:
+  - description: bazarr
+    endpointSelector: &bazarr_selector
+      matchLabels:
+        app.kubernetes.io/name: bazarr
+        app.kubernetes.io/controller: bazarr
+        app.kubernetes.io/instance: bazarr
+    egress:
+      # DNS resolution (Envoy resolves the postgres service via DNS)
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Envoy sidecar → backend PostgreSQL (TLS terminated on Envoy)
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: bazarr-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Sonarr API — used to discover TV episodes that need subtitles and
+      # receive on-import notifications.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: sonarr
+              app.kubernetes.io/controller: sonarr
+              app.kubernetes.io/instance: sonarr
+        toPorts:
+          - ports:
+              - port: "8989"
+                protocol: TCP
+      # Radarr API — same role as Sonarr but for movies.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: radarr
+              app.kubernetes.io/controller: radarr
+              app.kubernetes.io/instance: radarr
+        toPorts:
+          - ports:
+              - port: "7878"
+                protocol: TCP
+      # Subtitle provider egress is added iteratively as providers are
+      # enabled in the Bazarr UI. Bazarr supports 30+ providers; only
+      # whitelist the ones in active use.
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &webservice_ports
+          - ports:
+              - port: "6767"
+                protocol: TCP
+      - fromEndpoints:
+          # Exportarr for metrics scraping
+          - &exportarr_selector
+            matchLabels:
+              app.kubernetes.io/name: bazarr
+              app.kubernetes.io/controller: exportarr
+              app.kubernetes.io/instance: bazarr
+          # Gateway to webservice
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *webservice_ports
+  - description: exportarr
+    endpointSelector: *exportarr_selector
+    egress:
+      # DNS resolution
+      - *dns_resolution
+      # To Bazarr webservice to scrape metrics
+      - toEndpoints:
+          - <<: *bazarr_selector
+        toPorts: *webservice_ports
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &metrics_ports
+          - ports:
+              - port: "80"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *metrics_ports

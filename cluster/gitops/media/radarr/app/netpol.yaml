@@ -122,6 +122,12 @@ specs:
               app.kubernetes.io/name: jellyfin
               app.kubernetes.io/controller: jellyfin
               app.kubernetes.io/instance: jellyfin
+          # Bazarr — queries the Radarr API to discover movies that need
+          # subtitles and receives on-import notifications.
+          - matchLabels:
+              app.kubernetes.io/name: bazarr
+              app.kubernetes.io/controller: bazarr
+              app.kubernetes.io/instance: bazarr
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector

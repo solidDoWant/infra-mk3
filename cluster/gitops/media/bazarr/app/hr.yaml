@@ -1,0 +1,258 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: bazarr
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      bazarr:
+        defaultContainerOptions:
+          image:
+            repository: ghcr.io/home-operations/bazarr
+            tag: 1.5.6@sha256:79fc37491f55c7e24427bcd669bce3df2d7415ca432a47ce9d53cc5988af8411
+          securityContext: &container_security_context
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        initContainers:
+          # # Overwrites /config/config/config.yaml from the source Secret on
+          # # every pod start. Bazarr config is managed in Git; UI changes are
+          # # ephemeral by design (same model as seerr). The API key is set
+          # # here via yq so the source Secret doesn't need to carry a
+          # # placeholder, and exportarr can read the same key via envFrom.
+          # init-config:
+          #   image:
+          #     repository: docker.io/mikefarah/yq
+          #     tag: 4.53.2@sha256:0cb4a78491b6e62ee8a9bf4fbeacbd15b5013d19bc420591b05383a696315e60
+          #   envFrom:
+          #     - secret: bazarr-config
+          #   command:
+          #     - sh
+          #     - -c
+          #     - |
+          #       set -eu
+          #       mkdir -p /config/config
+          #       yq '.auth.apikey = strenv(API_KEY)' /etc/bazarr/config-source/config.yaml > /config/config/config.yaml
+          #       chmod 0640 /config/config/config.yaml
+          # Native sidecar: terminates Bazarr's plaintext psycopg2 connection
+          # on 127.0.0.1:5432 and proxies to the postgres cluster with mTLS.
+          # Bazarr's psycopg2 connection is built from discrete kwargs that
+          # don't forward libpq SSL params (see bazarr/app/database.py),
+          # so the only TLS path is via this sidecar.
+          envoy:
+            restartPolicy: Always
+            # contrib image is required for the postgres_proxy filter
+            image:
+              repository: envoyproxy/envoy
+              tag: contrib-v1.35.3
+            ports:
+              - name: envoy-admin
+                containerPort: 8000
+            securityContext:
+              <<: *container_security_context
+              runAsNonRoot: true
+            resources:
+              requests:
+                cpu: 25m
+                memory: &memory 64Mi
+              limits:
+                memory: *memory
+        containers:
+          bazarr:
+            env:
+              # Bazarr's POSTGRES_* env vars take precedence over config.yaml
+              # and are read directly at connection-construction time.
+              POSTGRES_ENABLED: "true"
+              POSTGRES_HOST: 127.0.0.1
+              POSTGRES_PORT: "5432"
+              POSTGRES_DATABASE: bazarr
+              POSTGRES_USERNAME: bazarr
+              # The DB enforces client-cert auth at pg_hba; this value is
+              # sent during the auth handshake but never validated. A dummy
+              # is fine — Envoy does not inspect the password either.
+              POSTGRES_PASSWORD: not-used-cert-auth-via-envoy
+            ports:
+              - name: web
+                containerPort: &web_port 6767
+            probes:
+              readiness: &probe
+                enabled: true
+                type: HTTP
+                path: /
+                port: *web_port
+              liveness: *probe
+            resources:
+              requests:
+                cpu: 100m
+                memory: &memory 512Mi
+              limits:
+                memory: *memory
+      # exportarr:
+      #   replicas: 2
+      #   strategy: RollingUpdate
+      #   podDisruptionBudget:
+      #     minAvailable: 1
+      #   containers:
+      #     exportarr:
+      #       image:
+      #         repository: ghcr.io/onedr0p/exportarr
+      #         tag: v2.3.0
+      #       args:
+      #         - bazarr
+      #       env:
+      #         PORT: &metrics_port 80
+      #         URL: http://bazarr.media.svc.cluster.local:6767
+      #         ENABLE_ADDITIONAL_METRICS: true
+      #       envFrom:
+      #         - secret: bazarr-config
+      #       ports:
+      #         - name: web
+      #           containerPort: *metrics_port
+      #       probes:
+      #         readiness: &exportarr_probe
+      #           enabled: true
+      #           type: HTTP
+      #         liveness: *exportarr_probe
+      #       securityContext: *container_security_context
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # home-operations/bazarr drops to USER nobody:nogroup (65534) in its
+        # Dockerfile; match so the PVC and certs are accessible.
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # Bazarr's runtime state lives in Postgres; config.yaml is rewritten
+      # from the bazarr-config Secret on every boot. Everything else under
+      # /config (logs, cache, provider sessions) be regenerated, so a
+      # tmpfs emptyDir is sufficient.
+      config:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 256Mi
+        advancedMounts:
+          bazarr:
+            init-config:
+              - path: /config
+            bazarr:
+              - path: /config
+      tmp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 50Mi
+        advancedMounts:
+          bazarr:
+            bazarr:
+              - path: /tmp
+      # SOPS-encrypted source of truth for config.yaml. Init container copies
+      # this onto the PVC at startup; main container reads the PVC copy.
+      config-source:
+        type: secret
+        name: bazarr-config
+        defaultMode: 0440
+        items:
+          - key: config.yaml
+            path: config.yaml
+        advancedMounts:
+          bazarr:
+            init-config:
+              - path: /etc/bazarr/config-source
+                readOnly: true
+      # Bazarr writes subtitle files alongside videos, so RW is required.
+      media:
+        type: nfs
+        server: ${NFS_ADDRESS}
+        path: ${NFS_MEDIA_PATH}
+        advancedMounts:
+          bazarr:
+            bazarr:
+              - path: /mnt/library/Movies
+                subPath: library/Movies
+              - path: /mnt/library/Shows
+                subPath: library/Shows
+      # Envoy reads its config and certs at startup from these mounts.
+      envoy-config:
+        type: configMap
+        name: bazarr-envoy-pg-config
+        defaultMode: 0440
+        advancedMounts:
+          bazarr:
+            envoy:
+              - path: /etc/envoy
+      bazarr-postgres-bazarr-user-cert:
+        type: secret
+        name: bazarr-postgres-bazarr-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          bazarr:
+            envoy:
+              - path: /etc/envoy/secrets/postgres
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          bazarr:
+            envoy:
+              - path: /etc/envoy/secrets/root-ca
+    service:
+      bazarr:
+        controller: bazarr
+        ports:
+          web:
+            port: *web_port
+            primary: true
+      metrics:
+        controller: exportarr
+        ports:
+          metrics:
+            port: *metrics_port
+            primary: true
+    route:
+      bazarr:
+        hostnames:
+          - bazarr.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: bazarr
+                port: *web_port
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io
