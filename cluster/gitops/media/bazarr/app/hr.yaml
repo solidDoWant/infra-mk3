@@ -81,10 +81,8 @@ spec:
               POSTGRES_PORT: "5432"
               POSTGRES_DATABASE: bazarr
               POSTGRES_USERNAME: bazarr
-              # The DB enforces client-cert auth at pg_hba; this value is
-              # sent during the auth handshake but never validated. A dummy
-              # is fine — Envoy does not inspect the password either.
               POSTGRES_PASSWORD: not-used-cert-auth-via-envoy
+              NO_UPDATE: true
             ports:
               - name: web
                 containerPort: &web_port 6767
