@@ -1,4 +1,9 @@
-# Reusable Envoy config for Dragonfly/Redis mTLS proxying
+# Reusable Envoy config for Dragonfly/Redis mTLS proxying.
+#
+# Uses file-based SDS so cert-manager rotations are hot-reloaded without a
+# pod restart. The watched_directory entries inotify the mount directories;
+# when k8s atomically swaps the ..data symlink on a Secret update, Envoy
+# picks up the new cert content.
 #
 # Copy this to app/envoy-config/redis.yaml (or redis-only.yaml) and update:
 #   - <service>-dragonfly.<namespace>.svc.cluster.local  → actual dragonfly service hostname
@@ -15,6 +20,14 @@ admin:
     socket_address:
       address: 127.0.0.1
       port_value: 8000
+
+# SDS requires node.id and node.cluster to be set (it sends them in the
+# discovery request, even for file-based path_config_source). Values are
+# arbitrary labels used only in stats/logs.
+# UPDATE: set id to envoy-<service>-redis-proxy and cluster to <namespace>.
+node:
+  id: envoy-<service>-redis-proxy
+  cluster: <namespace>
 
 static_resources:
   clusters:
@@ -54,14 +67,22 @@ static_resources:
                 # Ed25519 is not enabled by default (not FIPS-compliant)
                 - rsa_pss_rsae_sha512
                 - ed25519
-            tls_certificates:
-              - certificate_chain:
-                  filename: /etc/envoy/secrets/redis/tls.crt
-                private_key:
-                  filename: /etc/envoy/secrets/redis/tls.key
-            validation_context:
-              trusted_ca:
-                filename: /etc/envoy/secrets/redis/ca.crt
+            tls_certificate_sds_secret_configs:
+              - name: redis_client_cert
+                sds_config:
+                  resource_api_version: V3
+                  path_config_source:
+                    path: /etc/envoy/redis-client-cert-sds.yaml
+                    watched_directory:
+                      path: /etc/envoy/secrets/redis
+            validation_context_sds_secret_config:
+              name: redis_serving_cert
+              sds_config:
+                resource_api_version: V3
+                path_config_source:
+                  path: /etc/envoy/redis-validation-context-sds.yaml
+                  watched_directory:
+                    path: /etc/envoy/secrets/root-ca
           auto_host_sni: true
           auto_sni_san_validation: true
           # Dragonfly does not support TLS session resumption — resumed sessions fail to

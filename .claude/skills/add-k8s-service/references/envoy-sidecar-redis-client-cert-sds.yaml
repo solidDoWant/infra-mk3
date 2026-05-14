@@ -1,0 +1,14 @@
+# File-based SDS resource for the dragonfly client cert.
+#
+# Copy this to app/envoy-config/redis-client-cert-sds.yaml. Envoy hot-reloads
+# the cert when the contents of /etc/envoy/secrets/redis change (via
+# watched_directory in envoy.yaml), so cert-manager rotations don't require
+# a pod restart.
+resources:
+  - "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
+    name: redis_client_cert
+    tls_certificate:
+      certificate_chain:
+        filename: /etc/envoy/secrets/redis/tls.crt
+      private_key:
+        filename: /etc/envoy/secrets/redis/tls.key

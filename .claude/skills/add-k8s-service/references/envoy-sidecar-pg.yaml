@@ -1,16 +1,30 @@
-# Reusable Envoy config for PostgreSQL mTLS proxying
+# Reusable Envoy config for PostgreSQL mTLS proxying.
 #
-# Copy this to app/envoy-config/pg.yaml (or pg-only.yaml) and update:
-#   - <service>-postgres-17-rw.<namespace>.svc.cluster.local  → actual postgres hostname
+# Uses file-based SDS so cert-manager rotations are hot-reloaded without a
+# pod restart. The watched_directory entries inotify the mount directories;
+# when k8s atomically swaps the ..data symlink on a Secret update, Envoy
+# picks up the new cert content.
 #
-# Reference: cluster/gitops/development/harbor/app/envoy-config/pg-only.yaml
-# Note: Must use envoyproxy/envoy:contrib-vX.Y.Z — the postgres_proxy filter is contrib-only.
+# Copy this to app/envoy-config/postgres.yaml (or similar) and update:
+#   - <service>-postgres-17-rw.<namespace>.svc.cluster.local → actual hostname
+#
+# Reference implementation: cluster/gitops/media/bazarr/app/envoy-config/
+# Note: Must use envoyproxy/envoy:contrib-vX.Y.Z — the postgres_proxy filter
+# is contrib-only.
 
 admin:
   address:
     socket_address:
       address: 127.0.0.1
       port_value: 8000
+
+# SDS requires node.id and node.cluster to be set (it sends them in the
+# discovery request, even for file-based path_config_source). Values are
+# arbitrary labels used only in stats/logs.
+# UPDATE: set id to envoy-<service>-postgres-proxy and cluster to <namespace>.
+node:
+  id: envoy-<service>-postgres-proxy
+  cluster: <namespace>
 
 static_resources:
   clusters:
@@ -43,14 +57,22 @@ static_resources:
               tls_params:
                 tls_minimum_protocol_version: TLSv1_3
                 tls_maximum_protocol_version: TLSv1_3
-              tls_certificates:
-                - certificate_chain:
-                    filename: /etc/envoy/secrets/postgres/tls.crt
-                  private_key:
-                    filename: /etc/envoy/secrets/postgres/tls.key
-              validation_context:
-                trusted_ca:
-                  filename: /etc/envoy/secrets/postgres/ca.crt
+              tls_certificate_sds_secret_configs:
+                - name: postgres_client_cert
+                  sds_config:
+                    resource_api_version: V3
+                    path_config_source:
+                      path: /etc/envoy/postgres-client-cert-sds.yaml
+                      watched_directory:
+                        path: /etc/envoy/secrets/postgres
+              validation_context_sds_secret_config:
+                name: postgres_serving_cert
+                sds_config:
+                  resource_api_version: V3
+                  path_config_source:
+                    path: /etc/envoy/postgres-validation-context-sds.yaml
+                    watched_directory:
+                      path: /etc/envoy/secrets/root-ca
             auto_host_sni: true
             auto_sni_san_validation: true
       close_connections_on_host_health_failure: true
