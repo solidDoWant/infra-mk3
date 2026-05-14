@@ -29,27 +29,27 @@ spec:
               drop:
                 - ALL
         initContainers:
-          # Overwrites /config/config/config.yaml from the source Secret on
-          # every pod start. Bazarr config is managed in Git; UI changes are
-          # ephemeral by design (same model as seerr). The API key is set
-          # here via yq so the source Secret doesn't need to carry a
-          # placeholder, and exportarr can read the same key via envFrom.
           init-config:
             image:
               repository: docker.io/mikefarah/yq
               tag: 4.53.2@sha256:0cb4a78491b6e62ee8a9bf4fbeacbd15b5013d19bc420591b05383a696315e60
             envFrom:
               - secret: bazarr-api-key
+            env:
+              RADARR_API_KEY:
+                secretKeyRef:
+                  name: radarr-api-key
+                  key: API_KEY
+              SONARR_API_KEY:
+                secretKeyRef:
+                  name: sonarr-api-key
+                  key: API_KEY
+              # Flux substitution is disabled on the script ConfigMap, so
+              # the domain comes in via this env var instead.
+              PUBLIC_DOMAIN_NAME: ${SECRET_PUBLIC_DOMAIN_NAME}
             command:
               - sh
-              - -c
-              - |
-                set -eu
-                mkdir -p /config/config
-                # general.ip is forced to 0.0.0.0 to work around a socket
-                # binding bug when IPv6 is disabled at the kernel level.
-                yq '.auth.apikey = strenv(API_KEY) | .general.ip = "0.0.0.0"' /etc/bazarr/config-source/config.yaml > /config/config/config.yaml
-                chmod 0640 /config/config/config.yaml
+              - /etc/init/init-config.sh
           # Native sidecar: terminates Bazarr's plaintext psycopg2 connection
           # on 127.0.0.1:5432 and proxies to the postgres cluster with mTLS.
           # Bazarr's psycopg2 connection is built from discrete kwargs that
@@ -163,8 +163,6 @@ spec:
           bazarr:
             bazarr:
               - path: /tmp
-      # SOPS-encrypted source of truth for config.yaml. Init container copies
-      # this onto the PVC at startup; main container reads the PVC copy.
       config-source:
         type: secret
         name: bazarr-config
@@ -176,6 +174,15 @@ spec:
           bazarr:
             init-config:
               - path: /etc/bazarr/config-source
+                readOnly: true
+      init-scripts:
+        type: configMap
+        name: bazarr-init-scripts
+        defaultMode: 0444
+        advancedMounts:
+          bazarr:
+            init-config:
+              - path: /etc/init
                 readOnly: true
       # Bazarr writes subtitle files alongside videos, so RW is required.
       media:
@@ -189,7 +196,6 @@ spec:
                 subPath: library/Movies
               - path: /mnt/library/Shows
                 subPath: library/Shows
-      # Envoy reads its config and certs at startup from these mounts.
       envoy-config:
         type: configMap
         name: bazarr-envoy-pg-config

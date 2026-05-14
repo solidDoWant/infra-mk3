@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: bazarr-init-scripts
+    files:
+      - init-config.sh=./init-config.sh
+    options:
+      labels:
+        kyverno.home.arpa/reload: "true"
+      annotations:
+        # Don't run Flux postBuild substitution on this ConfigMap. The script
+        # contains shell variables like ${VAR} that would otherwise collide
+        # with Flux's ${...} syntax. Substituting values come in via the
+        # init container's env block (where they ARE Flux-substituted).
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+      disableNameSuffixHash: true
