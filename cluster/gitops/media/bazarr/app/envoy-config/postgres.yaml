@@ -10,6 +10,10 @@ admin:
       address: 127.0.0.1
       port_value: 8000
 
+node:
+  id: envoy-bazarr-postgres-proxy
+  cluster: media
+
 static_resources:
   clusters:
     - name: postgres_cluster
