@@ -199,6 +199,9 @@ nodePort:
   enabled: true
   addresses:
     - 10.3.1.0/24
+# Send ICMP unreachable messages back to the sender when a packet is dropped, instead of silently dropping it.
+# Source pod must be able to receive ICMP messages for this to work, so it is not enabled by default.
+policyDenyResponse: icmp
 prometheus:
   enabled: true
 operator:
