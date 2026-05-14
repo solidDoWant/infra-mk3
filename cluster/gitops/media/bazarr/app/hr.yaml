@@ -82,7 +82,6 @@ spec:
               POSTGRES_DATABASE: bazarr
               POSTGRES_USERNAME: bazarr
               POSTGRES_PASSWORD: not-used-cert-auth-via-envoy
-              NO_UPDATE: true
             ports:
               - name: web
                 containerPort: &web_port 6767
