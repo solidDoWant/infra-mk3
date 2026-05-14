@@ -60,8 +60,7 @@ specs:
       - toFQDNs:
           # Update lists
           - matchName: raw.githubusercontent.com
-          # Anidb API for anime metadata (used to match episodes to the correct subtitles)
-          - matchName: api.anidb.net
+          - matchName: feed.animetosho.org
         toPorts:
           - ports:
               - port: "443"
