@@ -1,0 +1,19 @@
+---
+# Exclusive claim on a single Arc Pro GPU. OpenArc loads the ASR model into
+# VRAM and serves continuously, so it owns the slot — unlike media-processor
+# and fileflows which use adminAccess to ride along on the same device.
+# The Intel resource driver places the pod on a node with a matching GPU.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: openarc-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.intel.com
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro'

@@ -1,0 +1,72 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: openarc
+specs:
+  # Runtime server pod — no internet egress. Everything it needs (the
+  # model files) is on the PVC by the time it starts; HuggingFace access
+  # is delegated to the model-download Job below.
+  - description: openarc
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: openarc
+        app.kubernetes.io/controller: openarc
+        app.kubernetes.io/instance: openarc
+    egress:
+      # DNS — Python imports and FastAPI internals occasionally do hostname
+      # lookups even when no outbound traffic is configured. Keeping DNS
+      # open avoids startup stalls; matchPattern is unrestricted so any
+      # accidental remote calls would still be visible in flow logs.
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+    ingress:
+      # Kubelet for healthchecks
+      - fromEntities:
+          - host
+        toPorts: &web_ports
+          - ports:
+              - port: "8000"
+                protocol: TCP
+      # Bazarr — the only consumer. ASR transcription requests for subtitle
+      # generation flow over this path.
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: bazarr
+              app.kubernetes.io/controller: bazarr
+              app.kubernetes.io/instance: bazarr
+        toPorts: *web_ports
+
+  # Model-download/setup Job — only this controller is permitted to reach
+  # HuggingFace. The runtime openarc pod above explicitly cannot.
+  - description: openarc model-download
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: openarc
+        app.kubernetes.io/controller: model-download
+        app.kubernetes.io/instance: openarc
+    egress:
+      - *dns_resolution
+      # HuggingFace API + LFS CDN. Covers huggingface.co and the various
+      # cdn-lfs-*.huggingface.co regional endpoints where model weights
+      # are actually served from.
+      - toFQDNs:
+          - matchPattern: "huggingface.co"
+          - matchPattern: "*.huggingface.co"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP

@@ -56,6 +56,17 @@ specs:
           - ports:
               - port: "7878"
                 protocol: TCP
+      # OpenArc — local OpenAI-compatible Whisper ASR endpoint used by the
+      # bazarr Whisper provider for subtitle generation from audio tracks.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: openarc
+              app.kubernetes.io/controller: openarc
+              app.kubernetes.io/instance: openarc
+        toPorts:
+          - ports:
+              - port: "8000"
+                protocol: TCP
       # Subtitle providers and related resources
       - toFQDNs:
           # Update lists

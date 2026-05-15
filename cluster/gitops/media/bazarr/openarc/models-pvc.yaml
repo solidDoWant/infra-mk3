@@ -1,0 +1,15 @@
+---
+# OpenVINO IR model files live here. Created by Flux ahead of the HelmRelease
+# so the model-download Job (Helm pre-install/pre-upgrade hook) and the
+# openarc Deployment can both mount it.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openarc-models
+spec:
+  storageClassName: ssd-replicated-3x
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

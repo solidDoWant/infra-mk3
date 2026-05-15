@@ -1,0 +1,236 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: openarc
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      openarc:
+        # Single replica — the Arc Pro GPU is claimed exclusively, so HA
+        # via a second replica isn't possible on a single-GPU host.
+        replicas: 1
+        # Force the old pod to die before the new one starts, so the GPU
+        # device is released cleanly between revisions.
+        strategy: Recreate
+        defaultContainerOptions:
+          image: &openarc_image
+            repository: ghcr.io/searchsavior/openarc
+            tag: 2.0.4
+          securityContext: &container_security_context
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        containers:
+          openarc:
+            env:
+              OPENARC_API_KEY:
+                secretKeyRef:
+                  name: openarc-api-key
+                  key: OPENARC_API_KEY
+              # The upstream start-openarc.sh entrypoint reads this and calls
+              # `openarc load <name>` after the server is up. The model has
+              # already been registered in /app/openarc_config.json by the
+              # model-download Helm hook, so the autoload finds it.
+              OPENARC_AUTOLOAD_MODEL: qwen3-asr
+            ports:
+              - name: web
+                containerPort: &web_port 8000
+            probes:
+              # TCP probe — OpenArc exposes FastAPI but the unauthenticated
+              # routes aren't documented; TCP keeps the probe simple and
+              # avoids leaking the API key into probe definitions.
+              readiness: &probe
+                enabled: true
+                type: TCP
+                port: *web_port
+              liveness: *probe
+            resources:
+              requests:
+                cpu: 500m
+                memory: &openarc_memory 2Gi
+              limits:
+                memory: *openarc_memory
+              claims:
+                - name: gpu
+        pod:
+          resourceClaims:
+            - name: gpu
+              resourceClaimTemplateName: openarc-gpu
+      # One-shot setup workload. Runs as a Helm pre-install/pre-upgrade
+      # hook so model files and the openarc config registration are
+      # both in place before the openarc Deployment starts. Combines
+      # model download + `openarc add` registration into a single Job:
+      # registration is once-per-chart-version, not once-per-pod-start.
+      model-download:
+        type: job
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook-weight: "0"
+          helm.sh/hook-delete-policy: before-hook-creation
+        job:
+          backoffLimit: 3
+          # Clean up the completed Job pod so it releases the RWO PVCs
+          # promptly for the openarc Deployment.
+          ttlSecondsAfterFinished: 60
+        defaultContainerOptions:
+          image: *openarc_image
+          securityContext: *container_security_context
+        initContainers:
+          # Pre-create an empty openarc_config.json inside the config PVC.
+          # Without this, the subPath mount on the main container would
+          # create the path as a *directory* (kubelet auto-creates missing
+          # subPaths as dirs), and `openarc add` would then fail to write.
+          init-touch:
+            command:
+              - touch
+              - /config/openarc_config.json
+        containers:
+          download:
+            command:
+              - /etc/init/setup-model.sh
+            env:
+              # huggingface-cli writes a cache here; the container root FS
+              # is read-only so this must point at a writable volume.
+              HF_HOME: /tmp/hf_cache
+            resources:
+              requests:
+                cpu: 100m
+                memory: &download_memory 512Mi
+              limits:
+                memory: *download_memory
+    defaultPodOptions:
+      securityContext:
+        # The openarc base image (Ubuntu 24.04) has no USER directive and
+        # defaults to root. We run unprivileged anyway — runtime writes
+        # only land on volume mounts (openarc-config, persist, tmp, models),
+        # all of which are chowned to fsGroup 1000.
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    configMaps:
+      config:
+        data:
+          # VERIFY the HF_REPO — Qwen3-ASR doesn't have a single canonical
+          # OpenVINO IR publisher; the community Echo9Zulu org is a likely
+          # source but the user should confirm the actual repo name (or
+          # convert the upstream weights themselves) before first reconcile.
+          setup-model.sh: |
+            #!/bin/sh
+            set -eu
+
+            MODEL_DIR=/models/qwen3-asr
+            HF_REPO=Echo9Zulu/Qwen3-ASR-OpenVINO
+
+            # Phase 1: download OpenVINO IR model files if not already present.
+            if ls "$MODEL_DIR"/*.xml >/dev/null 2>&1; then
+              echo "Model already present at $MODEL_DIR, skipping download"
+            else
+              mkdir -p "$MODEL_DIR"
+              huggingface-cli download "$HF_REPO" --local-dir "$MODEL_DIR"
+            fi
+
+            # Phase 2: regenerate /app/openarc_config.json from scratch.
+            # `openarc add` only updates a single model entry — it doesn't
+            # rewrite the whole file — so on upgrade between openarc
+            # versions, stale top-level fields or removed per-model fields
+            # could linger. Truncating first guarantees the file matches
+            # the schema of the openarc version that just wrote it.
+            : > /app/openarc_config.json
+
+            openarc add \
+              --model-name=qwen3-asr \
+              --model-path="$MODEL_DIR" \
+              --engine=ovgenai \
+              --model-type=qwen3_asr \
+              --device=GPU
+    persistence:
+      # OpenVINO IR model files. Raw PVC manifest in models-pvc.yaml.
+      models:
+        type: persistentVolumeClaim
+        existingClaim: openarc-models
+        advancedMounts:
+          openarc:
+            openarc:
+              - path: /models
+                readOnly: true
+          model-download:
+            download:
+              - path: /models
+      # Holds the openarc_config.json registration written by the Job and
+      # read by the Deployment. Raw PVC in config-pvc.yaml. Job's init-touch
+      # creates the file via a regular mount at /config; Job's download
+      # container and the openarc container subPath-mount that same file
+      # at /app/openarc_config.json (the hardcoded path the openarc CLI
+      # writes to and the server reads from).
+      openarc-config:
+        type: persistentVolumeClaim
+        existingClaim: openarc-config
+        advancedMounts:
+          openarc:
+            openarc:
+              - path: /app/openarc_config.json
+                subPath: openarc_config.json
+                readOnly: true
+          model-download:
+            init-touch:
+              - path: /config
+            download:
+              - path: /app/openarc_config.json
+                subPath: openarc_config.json
+      # Runtime state directory (benchmark SQLite, etc.). Ephemeral —
+      # OpenArc expects /persist to exist; without this mount, the
+      # readOnlyRootFilesystem would block any write here.
+      persist:
+        type: emptyDir
+        advancedMounts:
+          openarc:
+            openarc:
+              - path: /persist
+      # Setup script for the model-download Job.
+      config-source:
+        type: configMap
+        identifier: config
+        defaultMode: 0444
+        advancedMounts:
+          model-download:
+            download:
+              - path: /etc/init/setup-model.sh
+                subPath: setup-model.sh
+                readOnly: true
+      # HF cache scratch space. huggingface-cli writes here before
+      # atomically renaming into /models — needs to be on the same
+      # filesystem or large enough to hold the full model temporarily.
+      tmp:
+        type: emptyDir
+        sizeLimit: 8Gi
+        advancedMounts:
+          model-download:
+            download:
+              - path: /tmp
+    service:
+      openarc:
+        controller: openarc
+        ports:
+          web:
+            port: *web_port
+            primary: true
