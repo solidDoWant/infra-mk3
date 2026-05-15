@@ -128,7 +128,7 @@ spec:
           - name: ndots
             value: "1"
     configMaps:
-      config:
+      scripts:
         data:
           # VERIFY the HF_REPO — Qwen3-ASR doesn't have a single canonical
           # OpenVINO IR publisher; the community Echo9Zulu org is a likely
@@ -209,7 +209,7 @@ spec:
       # Setup script for the model-download Job.
       config-source:
         type: configMap
-        identifier: config
+        identifier: scripts
         defaultMode: 0444
         advancedMounts:
           model-download:
