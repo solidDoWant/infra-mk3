@@ -235,12 +235,12 @@ spec:
           web:
             port: *web_port
             primary: true
-      # metrics:
-      #   controller: exportarr
-      #   ports:
-      #     metrics:
-      #       port: *metrics_port
-      #       primary: true
+      metrics:
+        controller: exportarr
+        ports:
+          metrics:
+            port: *metrics_port
+            primary: true
     route:
       bazarr:
         hostnames:
