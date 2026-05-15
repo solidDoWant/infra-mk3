@@ -15,8 +15,7 @@ spec:
           exactly:
             deviceClassName: gpu.intel.com
             # adminAccess avoids consuming the node's single GPU allocation slot,
-            # since the transcode worker is not the only consumer (fileflows
-            # also uses it).
+            # since the transcode worker is not the only consumer.
             adminAccess: true
             allocationMode: All
             selectors:
