@@ -100,33 +100,33 @@ spec:
                 memory: &memory 512Mi
               limits:
                 memory: *memory
-      # exportarr:
-      #   replicas: 2
-      #   strategy: RollingUpdate
-      #   podDisruptionBudget:
-      #     minAvailable: 1
-      #   containers:
-      #     exportarr:
-      #       image:
-      #         repository: ghcr.io/onedr0p/exportarr
-      #         tag: v2.3.0
-      #       args:
-      #         - bazarr
-      #       env:
-      #         PORT: &metrics_port 80
-      #         URL: http://bazarr.media.svc.cluster.local:6767
-      #         ENABLE_ADDITIONAL_METRICS: true
-      #       envFrom:
-      #         - secret: bazarr-config
-      #       ports:
-      #         - name: web
-      #           containerPort: *metrics_port
-      #       probes:
-      #         readiness: &exportarr_probe
-      #           enabled: true
-      #           type: HTTP
-      #         liveness: *exportarr_probe
-      #       securityContext: *container_security_context
+      exportarr:
+        replicas: 2
+        strategy: RollingUpdate
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          exportarr:
+            image:
+              repository: ghcr.io/onedr0p/exportarr
+              tag: v2.3.0
+            args:
+              - bazarr
+            env:
+              PORT: &metrics_port 80
+              URL: http://bazarr.media.svc.cluster.local:6767
+              ENABLE_ADDITIONAL_METRICS: true
+            envFrom:
+              - secret: bazarr-api-key
+            ports:
+              - name: web
+                containerPort: *metrics_port
+            probes:
+              readiness: &exportarr_probe
+                enabled: true
+                type: HTTP
+              liveness: *exportarr_probe
+            securityContext: *container_security_context
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
