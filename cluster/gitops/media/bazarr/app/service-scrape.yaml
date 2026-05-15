@@ -1,21 +1,21 @@
-# ---
-# apiVersion: operator.victoriametrics.com/v1beta1
-# kind: VMServiceScrape
-# metadata:
-#   name: bazarr-metrics
-#   labels:
-#     app.kubernetes.io/part-of: bazarr
-#     app.kubernetes.io/component: monitoring
-# spec:
-#   selector:
-#     matchLabels:
-#       app.kubernetes.io/name: bazarr
-#       app.kubernetes.io/service: bazarr-metrics
-#       app.kubernetes.io/instance: bazarr
-#   endpoints:
-#     - port: metrics
-#       interval: 1m
-#   jobLabel: bazarr-metrics
-#   # Exports are HA, and will always contain the same data.
-#   # Only scrape one of them to prevent duplicate metrics.
-#   discoveryRole: service
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: bazarr-metrics
+  labels:
+    app.kubernetes.io/part-of: bazarr
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bazarr
+      app.kubernetes.io/service: bazarr-metrics
+      app.kubernetes.io/instance: bazarr
+  endpoints:
+    - port: metrics
+      interval: 1m
+  jobLabel: bazarr-metrics
+  # Exports are HA, and will always contain the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service
