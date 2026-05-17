@@ -51,9 +51,20 @@
         };
 
         # Single-model openarc_config.json. Schema matches what
-        # `openarc add` writes (see src/cli/groups/add.py in OpenArc).
+        # `openarc add` writes (see src/cli/groups/add.py) plus the
+        # server/created_by/version fields that `openarc serve start`
+        # writes via save_server_config — bundling them here means the
+        # patched save_config sees no diff at startup and skips the
+        # write, letting the config live on the read-only image volume.
+        # Keep host/port in sync with start-openarc.sh.
         mkAsrConfig = { modelName, modelType, engine, device, hfRepo }:
           pkgs.writeText "openarc_config.json" (builtins.toJSON {
+            server = {
+              host = "0.0.0.0";
+              port = 8000;
+            };
+            created_by = "openarc-cli";
+            version = "1.0";
             models.${modelName} = {
               model_name = modelName;
               model_path = "${mountRoot}/${modelType}/${hfRepo}";
@@ -123,10 +134,17 @@
           };
         };
 
-        # Reuse the attr key as both image tag and openarc model_name so
-        # the HelmRelease's OPENARC_AUTOLOAD_MODEL = image tag.
+        # Bump when the seed openarc_config.json schema changes — node
+        # snapshotters key the unpacked image-volume rootfs by digest, so
+        # rebuilding under the same tag won't replace the cached content.
+        # Keeping it in the tag (separate from modelName) is the simplest
+        # cache-busting knob.
+        asrConfigRev = "2";
+
+        # Tag carries asrConfigRev; modelName (and so
+        # OPENARC_AUTOLOAD_MODEL) stays clean.
         toImage = name: m: mkAsrImage (m // {
-          tag = name;
+          tag = "${name}-c${asrConfigRev}";
           modelName = name;
           device = "GPU";
         });

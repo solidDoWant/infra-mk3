@@ -1,5 +1,5 @@
---- a/pyproject.toml	2026-05-17 02:10:56.974413615 +0000
-+++ b/pyproject.toml	2026-05-17 02:11:11.255181478 +0000
+--- a/pyproject.toml	2026-05-17 07:35:52.819708139 +0000
++++ b/pyproject.toml	2026-05-17 07:36:08.609925823 +0000
 @@ -42,8 +42,8 @@
  requires = ["setuptools>=68", "wheel"]
  build-backend = "setuptools.build_meta"
@@ -11,8 +11,8 @@
  
  [project.scripts]
  openarc = "src.cli:cli"
---- a/src/cli/modules/server_config.py	2026-05-17 02:02:24.555418897 +0000
-+++ b/src/cli/modules/server_config.py	2026-05-17 02:03:07.311854941 +0000
+--- a/src/cli/modules/server_config.py	2026-05-17 07:35:03.297527897 +0000
++++ b/src/cli/modules/server_config.py	2026-05-17 07:35:35.446660643 +0000
 @@ -4,24 +4,31 @@
  This module handles all configuration file operations without any CLI/presentation logic.
  """
@@ -51,7 +51,31 @@
          self.config_file = Path(config_file)
      
      def load_config(self) -> Dict[str, Any]:
-@@ -108,16 +115,28 @@
+@@ -43,11 +50,21 @@
+     
+     def save_config(self, config: Dict[str, Any]) -> None:
+         """
+-        Save configuration to JSON config file.
+-        
++        Save configuration to JSON config file. No-op if the on-disk
++        contents already match `config` — lets the config live on a
++        read-only filesystem when nothing actually needs persisting.
++
+         Args:
+             config: Configuration dictionary to save.
+         """
++        if self.config_file.exists():
++            try:
++                with open(self.config_file, "r") as f:
++                    existing = json.load(f)
++                if existing == config:
++                    return
++            except (json.JSONDecodeError, OSError):
++                pass
+         with open(self.config_file, "w") as f:
+             json.dump(config, f, indent=2)
+     
+@@ -108,16 +125,28 @@
      def get_model_config(self, model_name: str) -> Optional[Dict[str, Any]]:
          """
          Get model configuration by name.
@@ -84,8 +108,8 @@
      
      def get_all_models(self) -> Dict[str, Dict[str, Any]]:
          """
---- a/src/server/main.py	2026-05-17 02:02:24.558418897 +0000
-+++ b/src/server/main.py	2026-05-17 02:03:15.465853975 +0000
+--- a/src/server/main.py	2026-05-17 07:35:52.821708139 +0000
++++ b/src/server/main.py	2026-05-17 08:49:34.616406778 +0000
 @@ -80,17 +80,28 @@
      models = os.getenv("OPENARC_STARTUP_MODELS", "").strip()
      if models:
@@ -117,3 +141,45 @@
                  try:
                      await _registry.register_load(ModelLoadConfig(**model_config))
                      logger.info(f"Startup: loaded '{name}'")
+@@ -657,11 +668,15 @@
+         normalized_model_type = ModelType(selected_model_type)
+ 
+         if normalized_model_type == ModelType.QWEN3_ASR:
+-            if not openarc_asr:
+-                raise ValueError("openarc_asr required for Qwen3 ASR models")
+-            cfg = OpenArcASRConfig.model_validate(json.loads(openarc_asr))
+-            if not cfg.qwen3_asr:
+-                raise ValueError("openarc_asr.qwen3_asr required for Qwen3 ASR models")
++            # Standard OpenAI Whisper clients (e.g. bazarr) don't send
++            # the openarc_asr form field; fall back to all-defaults so
++            # the qwen3_asr endpoint stays callable with the vanilla
++            # /v1/audio/transcriptions contract. Any subset of fields
++            # the client does send still takes effect.
++            payload = json.loads(openarc_asr) if openarc_asr else {}
++            if not payload.get("qwen3_asr"):
++                payload["qwen3_asr"] = {}
++            cfg = OpenArcASRConfig.model_validate(payload)
+             gen_config = cfg.qwen3_asr.model_copy(update={"audio_base64": audio_base64})
+             result = await _workers.transcribe_qwen3_asr(model, gen_config)
+         else:
+--- a/src/cli/modules/launch_server.py	2026-05-17 07:19:36.058331562 +0000
++++ b/src/cli/modules/launch_server.py	2026-05-17 07:35:43.411709254 +0000
+@@ -1,9 +1,16 @@
++import os
+ import uvicorn
+ import logging
+ from pathlib import Path
+ 
+-# Configure logging
+-log_file = Path(__file__).parent.parent.parent.parent / "openarc.log"
++# Configure logging. OPENARC_LOG_FILE overrides the destination —
++# setting it to /dev/stdout sends all uvicorn output to the container's
++# stdout (preferred for log collectors) instead of a file that nobody
++# tails anyway.
++log_file = Path(os.environ.get(
++    "OPENARC_LOG_FILE",
++    str(Path(__file__).parent.parent.parent.parent / "openarc.log"),
++))
+ 
+ # Create a custom logging configuration for uvicorn
+ LOG_CONFIG = {

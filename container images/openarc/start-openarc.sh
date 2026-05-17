@@ -1,9 +1,11 @@
 #!/bin/sh
 # Honors the OPENARC_AUTOLOAD_MODEL env-var contract: serve start can't
 # block on model load, so we launch it, wait for /v1/models, then load.
+# Keep host/port matching what's baked into the asr-models config so
+# save_server_config's diff check short-circuits.
 set -eu
 
-openarc serve start --host 0.0.0.0 --port 8000 ${OPENARC_API_KEY:+--use-api-key} &
+openarc serve start --host 0.0.0.0 --port 8000 &
 SERVER_PID=$!
 
 if [ -n "${OPENARC_AUTOLOAD_MODEL:-}" ]; then

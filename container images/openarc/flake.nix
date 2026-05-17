@@ -52,10 +52,12 @@
             pyproject-build-systems.overlays.default
             pyprojectOverlay
             (final: prev: {
-              # OpenArc reads/writes its config at
-              # Path(__file__).parent.parent.parent.parent / "openarc_config.json",
-              # which resolves to <venv>/site-packages — read-only here. Symlink
-              # that path to the /app/config PVC mount instead of patching source.
+              # openarc_config.json is hardcoded under <venv>/site-packages
+              # (read-only here). Symlink to /app/config; superseded by
+              # OPENARC_CONFIG_FILE for the server path but kept for CLI
+              # commands that still call ServerConfig() with no override.
+              # The hardcoded log path is handled by openarc-config-path.patch
+              # which makes it OPENARC_LOG_FILE-overridable.
               openarc = prev.openarc.overrideAttrs (old: {
                 postInstall = (old.postInstall or "") + ''
                   ln -s /app/config/openarc_config.json \
@@ -157,6 +159,37 @@
             pkgs.coreutils
             pkgs.curl
           ] ++ gpuRuntime;
+          # Workarounds for containerd 2.2's path-escape check, which
+          # rejects /nix/store-targeted absolute symlinks during the
+          # user-file lookup that runs before container start.
+          # https://github.com/containerd/containerd/pull/13383
+          extraCommands = ''
+            # 1. Replace the /etc absolute symlink (streamLayeredImage's
+            # single-input-per-/etc shortcut) with a real dir holding
+            # stub nss files. /etc/{OpenCL,ssl} we'd lose are routed
+            # via env vars below.
+            rm -f etc
+            mkdir etc
+            printf 'root:x:0:0:root:/root:/sbin/nologin\nopenarc:x:1000:1000:openarc:/app:/sbin/nologin\nnobody:x:65534:65534:nobody:/var/empty:/sbin/nologin\n' > etc/passwd
+            printf 'root:x:0:\nopenarc:x:1000:\nnobody:x:65534:\n' > etc/group
+
+            # 2. Rewrite every remaining absolute symlink (mostly /bin/*,
+            # /lib/*, /sbin/*, /share/* targeting /nix/store/...) to a
+            # relative path. The targets are present in the image at
+            # /nix/store/..., so relative paths resolve correctly without
+            # any component looking absolute to containerd's check.
+            find . -type l | while IFS= read -r link; do
+              tgt=$(readlink "$link")
+              case "$tgt" in
+                /*)
+                  img_dir="/$(dirname "''${link#./}")"
+                  rel=$(realpath -m --relative-to="$img_dir" "$tgt")
+                  rm "$link"
+                  ln -s "$rel" "$link"
+                  ;;
+              esac
+            done
+          '';
           config = {
             Entrypoint = [ "/bin/start-openarc" ];
             User = "1000:1000";
@@ -165,6 +198,10 @@
             Env = [
               "PATH=${venv}/bin:${pkgs.curl}/bin:${pkgs.coreutils}/bin:/bin:/usr/bin"
               "LD_LIBRARY_PATH=${lib.makeLibraryPath gpuRuntime}"
+              # Bypass /etc lookup — extraCommands above replaced /etc
+              # with a stub real dir, so these would otherwise be missing.
+              "OCL_ICD_VENDORS=${pkgs.intel-compute-runtime}/etc/OpenCL/vendors"
+              "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
             ];
           };
         };

@@ -25,7 +25,7 @@ spec:
           openarc:
             image:
               repository: ghcr.io/soliddowant/openarc
-              tag: 2.0.4
+              tag: 2.0.4-r8
               pullPolicy: Always
             securityContext:
               readOnlyRootFilesystem: true
@@ -41,26 +41,52 @@ spec:
               # Tells our patched openarc to read its config from the image
               # volume mount instead of the venv-relative default.
               OPENARC_CONFIG_FILE: /model/openarc_config.json
+              # Don't log to a file and just log to stdout
+              OPENARC_LOG_FILE: /dev/null
               # Must match the modelName baked into the asr-models image's
-              # openarc_config.json (= image tag by convention; see
-              # container images/openarc-asr-models/flake.nix).
-              OPENARC_AUTOLOAD_MODEL: &model_tag qwen3-asr-0_6b-int8-asym
+              # openarc_config.json — load fails silently if it doesn't.
+              OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
+              # Place the numba cache on a temporary, writable volume
+              NUMBA_CACHE_DIR: /tmp/numba-cache
             ports:
               - name: web
                 containerPort: &web_port 8000
             probes:
-              # TCP probe — keeps the API key out of probe config and avoids
-              # depending on undocumented unauthenticated routes.
-              # TODO use openarc status command instead
-              readiness: &probe
+              # Liveness is a TCP check — only kills the pod if the server
+              # process actually died.
+              liveness:
                 enabled: true
                 type: TCP
                 port: *web_port
-              liveness: *probe
+              # Readiness asserts the autoload model is still loaded by
+              # asking /openarc/status. A runtime unload (OOM on the GPU,
+              # driver fault) silently leaves the server up but unable
+              # to transcribe, so we want the pod out of the Service
+              # until it recovers. failureThreshold * periodSeconds
+              # covers the ~60-90s cold-load of qwen3.
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  # Nix-built image has no grep/jq, so use bash's =~ to
+                  # confirm the autoload model is in openai_model_names.
+                  # $$ escapes envsubst at Flux postBuild — the rendered
+                  # manifest gets a single $ that bash expands at runtime.
+                  exec:
+                    command:
+                      - bash
+                      - -c
+                      - >-
+                        resp=$$(curl -sf -H "Authorization: Bearer $${OPENARC_API_KEY}"
+                        http://localhost:8000/openarc/status);
+                        [[ "$${resp}" =~ \"openai_model_names\":\[[^]]*\"$${OPENARC_AUTOLOAD_MODEL}\" ]]
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 18
             resources:
               requests:
                 cpu: 500m
-                memory: &openarc_memory 2Gi
+                memory: &openarc_memory 6Gi
               limits:
                 memory: *openarc_memory
               claims:
@@ -87,13 +113,19 @@ spec:
         type: image
         image:
           repository: ghcr.io/soliddowant/openarc-asr
-          tag: *model_tag
-        pullPolicy: IfNotPresent
+          # Format: <modelName>-c<schemaRev>. Bump the -c suffix when
+          # rebuilding under an otherwise identical tag, since image
+          # volumes keep the snapshotter rootfs keyed by digest and
+          # don't honor a content-only refresh.
+          tag: qwen3-asr-0_6b-int8-asym-c2
         advancedMounts:
           openarc:
             openarc:
+              # subPath strips the image's own /model/ prefix so the pod's
+              # /model/ matches the absolute paths baked into the config.
               - path: /model
                 readOnly: true
+                subPath: model
       # OpenArc writes benchmark SQLite under /persist; without this mount
       # the readOnlyRootFilesystem would block it.
       persist:
@@ -102,6 +134,14 @@ spec:
           openarc:
             openarc:
               - path: /persist
+      # torch/dill probes for a writable temp dir at import time; missing
+      # /tmp crashes the process before openarc serve start runs.
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          openarc:
+            openarc:
+              - path: /tmp
     service:
       openarc:
         controller: openarc
