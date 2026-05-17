@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openarc-api-key
+type: Opaque
+stringData:
+  OPENARC_API_KEY: ENC[AES256_GCM,data:Eh6R3w642ysUNCmUvVjQ3lLRFH22pjscRPY5jdw9eBchXn398jQkPQz0/a8c2E1ZcjgwrrBhnmv7TJFqFz81/w==,iv:N5UqoLFLxkvFHphnuq7IqWkRJAgaPrQFT/OF6G/wolA=,tag:9xETPSYt26FvkIZdLq1hCw==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBtelVPZkpMTUNLM1VtbkdS
+        TGZESTRleURjQ1lnUFdubis0NkNDc3BaRG53ClVoZjRGMXErcXRRdnZ5cDAvT1hG
+        NTBIbjMveENNdlB1UEVLNFdLYjdOelkKLS0tIGpyVndGcFpWRnVlT3pSa1FrS1FU
+        ZytQSXU4OEhMV1FSak9tS2d6aHU0L2cKEN3Yx4drPnlrsF5mLtn9Z3rDF05htkBZ
+        O+cuPbdFKXwy/mlikTpUhZmXKSkePy1zZnQDOkCC7Oe0zw95USAllw==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRMDR6dm5YMjdkMGErcWV3
+        cWVxOE11eG5WVHcwS2I0TDhQMGFpWVF5MHkwCjlCUlpVRCtNOFJpSEZsajJGeVN3
+        Z2hWVUtEOWhoQXJ3MzRrNEc0SnUrZEEKLS0tIGRESWwrQ3dQZlF4QXcrZjdZd1ZJ
+        NUZVMy92VmNiUXVKcjdPQWxYQlM5QTAKhmFUjBJSXMHx4YFZrt0EESXyTH4UihkB
+        YuSLH0ytWPonL8JLLugfAvmANh8NvrderUow8LO6aR10iIX5/taXiw==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2026-05-17T05:00:59Z"
+  mac: ENC[AES256_GCM,data:Dqpm51Vu6zJT3OP0onFK/8ICSxkS6Qv9mCm6BbJboa2Gny/ETNMVMNNB8s8iaRnxzyKmSJGAH78n2s1t/Yo2+WhF9NMGxir6iYss80PPIb18ESYtdnWSRI+VECFOqxsI6q1gvNXyr2o6Ylmj4UM+LMAQ/bELyBFRcLrW5GUq0zs=,iv:3y0qEIgH5DqCBlUrOzIy2aIm3/eptBk3rXn6GRqxrHM=,tag:m8UGpToKCu4mATK+UQdx0w==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0
