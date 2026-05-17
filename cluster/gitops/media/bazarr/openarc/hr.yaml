@@ -26,6 +26,7 @@ spec:
             image:
               repository: ghcr.io/soliddowant/openarc
               tag: 2.0.4
+              pullPolicy: Always
             securityContext:
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
