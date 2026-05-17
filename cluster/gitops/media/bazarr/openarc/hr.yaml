@@ -52,26 +52,12 @@ spec:
               - name: web
                 containerPort: &web_port 8000
             probes:
-              # Liveness is a TCP check — only kills the pod if the server
-              # process actually died.
+              # Verify that the model is loaded. When a bad request is sent, openarc will
+              # silently unload the model, causing all future requests to fail until restart.
               liveness:
-                enabled: true
-                type: TCP
-                port: *web_port
-              # Readiness asserts the autoload model is still loaded by
-              # asking /openarc/status. A runtime unload (OOM on the GPU,
-              # driver fault) silently leaves the server up but unable
-              # to transcribe, so we want the pod out of the Service
-              # until it recovers. failureThreshold * periodSeconds
-              # covers the ~60-90s cold-load of qwen3.
-              readiness:
                 enabled: true
                 custom: true
                 spec:
-                  # Nix-built image has no grep/jq, so use bash's =~ to
-                  # confirm the autoload model is in openai_model_names.
-                  # $$ escapes envsubst at Flux postBuild — the rendered
-                  # manifest gets a single $ that bash expands at runtime.
                   exec:
                     command:
                       - bash
@@ -82,7 +68,7 @@ spec:
                         [[ "$${resp}" =~ \"openai_model_names\":\[[^]]*\"$${OPENARC_AUTOLOAD_MODEL}\" ]]
                   periodSeconds: 10
                   timeoutSeconds: 5
-                  failureThreshold: 18
+                  failureThreshold: 1
             resources:
               requests:
                 cpu: 500m
