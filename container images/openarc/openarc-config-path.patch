@@ -1,0 +1,119 @@
+--- a/pyproject.toml	2026-05-17 02:10:56.974413615 +0000
++++ b/pyproject.toml	2026-05-17 02:11:11.255181478 +0000
+@@ -42,8 +42,8 @@
+ requires = ["setuptools>=68", "wheel"]
+ build-backend = "setuptools.build_meta"
+ 
+-[tool.setuptools]
+-packages = ["src"]
++[tool.setuptools.packages.find]
++include = ["src", "src.*"]
+ 
+ [project.scripts]
+ openarc = "src.cli:cli"
+--- a/src/cli/modules/server_config.py	2026-05-17 02:02:24.555418897 +0000
++++ b/src/cli/modules/server_config.py	2026-05-17 02:03:07.311854941 +0000
+@@ -4,24 +4,31 @@
+ This module handles all configuration file operations without any CLI/presentation logic.
+ """
+ import json
++import os
+ from pathlib import Path
+ from typing import Optional, Dict, Any, List
+ 
+ 
+ class ServerConfig:
+     """Manages OpenArc server and model configurations."""
+-    
++
+     def __init__(self, config_file: Optional[Path] = None):
+         """
+         Initialize ServerConfig with a config file path.
+-        
++
+         Args:
+-            config_file: Path to the config file. If None, defaults to openarc_config.json in project root.
++            config_file: Path to the config file. If None, uses the
++                OPENARC_CONFIG_FILE env var when set, otherwise defaults
++                to openarc_config.json in project root.
+         """
+         if config_file is None:
+-            project_root = Path(__file__).parent.parent.parent.parent
+-            config_file = project_root / "openarc_config.json"
+-        
++            env_path = os.environ.get("OPENARC_CONFIG_FILE")
++            if env_path:
++                config_file = Path(env_path)
++            else:
++                project_root = Path(__file__).parent.parent.parent.parent
++                config_file = project_root / "openarc_config.json"
++
+         self.config_file = Path(config_file)
+     
+     def load_config(self) -> Dict[str, Any]:
+@@ -108,16 +115,28 @@
+     def get_model_config(self, model_name: str) -> Optional[Dict[str, Any]]:
+         """
+         Get model configuration by name.
+-        
++
+         Args:
+             model_name: Name of the model.
+-            
++
+         Returns:
+-            Model configuration dict, or None if not found.
++            Model configuration dict, or None if not found. A relative
++            model_path is resolved against the config file's directory
++            so configs can be shipped alongside their model files.
+         """
+         config = self.load_config()
+         models = config.get("models", {})
+-        return models.get(model_name)
++        raw = models.get(model_name)
++        return self._resolve_model_paths(raw) if raw is not None else None
++
++    def _resolve_model_paths(self, model_config: Dict[str, Any]) -> Dict[str, Any]:
++        """Return a copy of model_config with a relative model_path made
++        absolute by joining it onto the config file's directory."""
++        resolved = dict(model_config)
++        path = resolved.get("model_path")
++        if path and not Path(path).is_absolute():
++            resolved["model_path"] = str((self.config_file.parent / path).resolve())
++        return resolved
+     
+     def get_all_models(self) -> Dict[str, Dict[str, Any]]:
+         """
+--- a/src/server/main.py	2026-05-17 02:02:24.558418897 +0000
++++ b/src/server/main.py	2026-05-17 02:03:15.465853975 +0000
+@@ -80,17 +80,28 @@
+     models = os.getenv("OPENARC_STARTUP_MODELS", "").strip()
+     if models:
+         from pathlib import Path
+-        config_file = Path(__file__).parent.parent.parent / "openarc_config.json"
++        env_config = os.environ.get("OPENARC_CONFIG_FILE")
++        config_file = (
++            Path(env_config) if env_config
++            else Path(__file__).parent.parent.parent / "openarc_config.json"
++        )
+         if config_file.exists():
+             with open(config_file) as f:
+                 config = json.load(f)
+-            
++
+             for name in models.split(","):
+                 name = name.strip()
+                 model_config = config.get("models", {}).get(name)
+                 if not model_config:
+                     logger.warning(f"Startup: model '{name}' not in config, skipping")
+                     continue
++                # Resolve relative model_path against the config file's dir.
++                mp = model_config.get("model_path")
++                if mp and not Path(mp).is_absolute():
++                    model_config = dict(
++                        model_config,
++                        model_path=str((config_file.parent / mp).resolve()),
++                    )
+                 try:
+                     await _registry.register_load(ModelLoadConfig(**model_config))
+                     logger.info(f"Startup: loaded '{name}'")

@@ -52,7 +52,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name openarc
+  name: &app_name bazarr-openarc
 spec:
   targetNamespace: media
   commonMetadata:
