@@ -157,17 +157,18 @@ spec:
                   periodSeconds: 2
                   failureThreshold: 30
                   timeoutSeconds: 3
-              readiness: &bridge_probe
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /status
-                    port: *asr_port
-                  # 3s tolerates GIL contention from openarc compile on a
-                  # shared core; steady-state /status returns in <10ms.
-                  timeoutSeconds: 3
-              liveness: *bridge_probe
+              # Disabled until https://github.com/McCloudS/bazarr-openai-whisperbridge/issues/1 is fixed
+              # readiness: &bridge_probe
+              #   enabled: true
+              #   custom: true
+              #   spec:
+              #     httpGet:
+              #       path: /status
+              #       port: *asr_port
+              #     # 3s tolerates GIL contention from openarc compile on a
+              #     # shared core; steady-state /status returns in <10ms.
+              #     timeoutSeconds: 3
+              # liveness: *bridge_probe
             resources:
               requests:
                 cpu: 50m
