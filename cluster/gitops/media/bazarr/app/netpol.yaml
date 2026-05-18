@@ -58,6 +58,8 @@ specs:
                 protocol: TCP
       # OpenArc — local OpenAI-compatible Whisper ASR endpoint used by the
       # bazarr Whisper provider for subtitle generation from audio tracks.
+      # Port 9000 is the in-pod whisperbridge sidecar that adapts the
+      # whisper-asr-webservice API Bazarr speaks to OpenArc's OpenAI API.
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: bazarr-openarc
@@ -65,7 +67,7 @@ specs:
               app.kubernetes.io/instance: bazarr-openarc
         toPorts:
           - ports:
-              - port: "8000"
+              - port: "9000"
                 protocol: TCP
       # Subtitle providers and related resources
       - toFQDNs:

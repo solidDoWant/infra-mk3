@@ -14,16 +14,21 @@ specs:
     ingress:
       - fromEntities:
           - host
-        toPorts: &web_ports
+        toPorts:
           - ports:
               - port: "8000"
+                protocol: TCP
+              - port: "9000"
                 protocol: TCP
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: bazarr
               app.kubernetes.io/controller: bazarr
               app.kubernetes.io/instance: bazarr
-        toPorts: *web_ports
+        toPorts:
+          - ports:
+              - port: "9000"
+                protocol: TCP
   - description: setup
     endpointSelector:
       matchLabels:
