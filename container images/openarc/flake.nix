@@ -49,6 +49,16 @@
             # import on torch version; optimum-intel 1.26.x targets the
             # split package. Drop this once upstream relocks.
             ./optimum-2x.patch
+            # Adds SRT/VTT support to POST /v1/audio/transcriptions
+            # (qwen3_asr only). Upstream's else-branch returns the
+            # transcript as a JSON-quoted string for any non-json
+            # response_format — bazarr's whisper provider (via the
+            # bazarr-openai-whisperbridge sidecar) requests output=srt
+            # and rejects the body as "not valid for this file" because
+            # there are no cues. The patch surfaces per-chunk timings
+            # from the qwen3_asr worker as metrics["segments"] and adds
+            # srt/vtt/text branches that emit PlainTextResponse.
+            ./openarc-srt-output.patch
           ];
         };
 
