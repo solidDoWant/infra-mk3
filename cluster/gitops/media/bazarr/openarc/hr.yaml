@@ -108,13 +108,12 @@ spec:
                         [[ "$${resp}" == *"\"model_name\":\"$${OPENARC_AUTOLOAD_MODEL}\""* &&
                           "$${resp}" == *"\"status\":\"loaded\""* ]]
                   initialDelaySeconds: 15
-                  periodSeconds: 10
+                  # 5s period × 3 failures = up to 15s to react to a silent
+                  # unload (bad transcription requests can unload the model
+                  # without crashing the server).
+                  periodSeconds: 5
                   timeoutSeconds: 5
-                  # Catch silent unloads on the next probe — bad
-                  # transcription requests can unload the model without
-                  # crashing the server, and the only way back is a
-                  # restart.
-                  failureThreshold: 1
+                  failureThreshold: 3
             resources:
               requests:
                 cpu: 500m
@@ -144,11 +143,30 @@ spec:
               - name: asr
                 containerPort: &asr_port 9000
             probes:
+              # Python cold start (importing openai, fastapi, uvicorn,
+              # ffmpeg-python) takes several seconds before uvicorn binds
+              # the listener. Suppress liveness/readiness during that
+              # window so a slow-but-healthy boot doesn't trigger a kill.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /status
+                    port: *asr_port
+                  periodSeconds: 2
+                  failureThreshold: 30
+                  timeoutSeconds: 3
               readiness: &bridge_probe
                 enabled: true
-                type: HTTP
-                path: /status
-                port: *asr_port
+                custom: true
+                spec:
+                  httpGet:
+                    path: /status
+                    port: *asr_port
+                  # 3s tolerates GIL contention from openarc compile on a
+                  # shared core; steady-state /status returns in <10ms.
+                  timeoutSeconds: 3
               liveness: *bridge_probe
             resources:
               requests:
