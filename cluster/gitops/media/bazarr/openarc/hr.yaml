@@ -6,6 +6,10 @@ metadata:
   name: bazarr-openarc
 spec:
   interval: 5m
+  # First-time install downloads ~2 GB from HF and compiles three
+  # OpenVINO models - easily 6–8 min. Upgrades with a warm cache are
+  # much faster, but the same timeout applies.
+  timeout: 20m
   chart:
     spec:
       chart: app-template
@@ -17,43 +21,84 @@ spec:
       version: 4.6.2
   values:
     controllers:
-      openarc:
-        replicas: 1
-        # Release the GPU device cleanly between revisions.
-        strategy: Recreate
+      # Cache-population hook. Helm waits for this Job to succeed before
+      # rolling the Deployment, so the runtime pod always boots into a
+      # warm cache and avoids the high-memory cold-compile path. This cuts
+      # the peak memory usage (and therefore limit) of the main deployment
+      # from 6 Gi to 2 Gi.
+      setup:
+        type: job
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook-weight: "-5"
+          helm.sh/hook-delete-policy: before-hook-creation
+        job:
+          backoffLimit: 1
+          ttlSecondsAfterFinished: 500
+        defaultContainerOptions:
+          env: &common_env_vars
+            OPENARC_API_KEY:
+              secretKeyRef:
+                name: openarc-api-key
+                key: OPENARC_API_KEY
+            OPENARC_CONFIG_FILE: /cache/openarc_config.json
+            OPENARC_OV_CACHE_DIR: /cache/ov-cache
+            OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
+            OPENARC_LOG_FILE: /dev/null
+            NUMBA_CACHE_DIR: /tmp/numba-cache
         containers:
           openarc:
-            image:
+            image: &image
               repository: ghcr.io/soliddowant/openarc
-              tag: 2.0.4-r8
+              tag: 2.0.4-r12
               pullPolicy: Always
-            securityContext:
+            command:
+              - /bin/setup-cache
+            securityContext: &container_security_context
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
               capabilities:
                 drop:
                   - ALL
             env:
-              OPENARC_API_KEY:
-                secretKeyRef:
-                  name: openarc-api-key
-                  key: OPENARC_API_KEY
-              # Tells our patched openarc to read its config from the image
-              # volume mount instead of the venv-relative default.
-              OPENARC_CONFIG_FILE: /model/openarc_config.json
-              # Don't log to a file and just log to stdout
-              OPENARC_LOG_FILE: /dev/null
-              # Must match the modelName baked into the asr-models image's
-              # openarc_config.json — load fails silently if it doesn't.
-              OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
-              # Place the numba cache on a temporary, writable volume
-              NUMBA_CACHE_DIR: /tmp/numba-cache
+              <<: *common_env_vars
+              MODEL_TYPE: qwen3_asr
+              HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
+              MODEL_PATH: /cache/qwen3_asr/$(HF_REPO)
+              # huggingface-cli writes to HF_HOME; the default
+              # ~/.cache path is unwritable under readOnlyRootFilesystem.
+              HF_HOME: /tmp/hf-home
+            resources:
+              requests:
+                cpu: 500m
+                # Cold-compile path: full graph optimization + GPU upload.
+                # Empirically peaks ~2.7 Gi; 6 Gi gives headroom.
+                memory: &openarc_setup_memory 6Gi
+              limits:
+                memory: *openarc_setup_memory
+              claims:
+                - name: gpu
+        pod:
+          # A single failure is unlikely to succeed on another attempt
+          restartPolicy: Never
+      openarc:
+        replicas: 1
+        # Release the GPU device cleanly between revisions.
+        strategy: Recreate
+        containers:
+          openarc:
+            image: *image
+            securityContext: *container_security_context
+            env: *common_env_vars
             ports:
               - name: web
                 containerPort: &web_port 8000
             probes:
-              # Verify that the model is loaded. When a bad request is sent, openarc will
-              # silently unload the model, causing all future requests to fail until restart.
+              # /openarc/status lists the model with status="loaded" only
+              # after a successful compile. The openai_model_names field
+              # registers names regardless of load state, so it can't be
+              # used to detect a failed compile or a silent unload (which
+              # happens on certain bad requests).
               liveness:
                 enabled: true
                 custom: true
@@ -65,53 +110,46 @@ spec:
                       - >-
                         resp=$$(curl -sf -H "Authorization: Bearer $${OPENARC_API_KEY}"
                         http://localhost:8000/openarc/status);
-                        [[ "$${resp}" =~ \"openai_model_names\":\[[^]]*\"$${OPENARC_AUTOLOAD_MODEL}\" ]]
+                        [[ "$${resp}" == *"\"model_name\":\"$${OPENARC_AUTOLOAD_MODEL}\""* &&
+                          "$${resp}" == *"\"status\":\"loaded\""* ]]
+                  initialDelaySeconds: 15
                   periodSeconds: 10
                   timeoutSeconds: 5
+                  # Catch silent unloads on the next probe — bad
+                  # transcription requests can unload the model without
+                  # crashing the server, and the only way back is a
+                  # restart.
                   failureThreshold: 1
             resources:
               requests:
                 cpu: 500m
-                memory: &openarc_memory 6Gi
+                memory: &openarc_memory 2Gi
               limits:
                 memory: *openarc_memory
               claims:
                 - name: gpu
-        pod:
-          resourceClaims:
-            - name: gpu
-              resourceClaimTemplateName: openarc-gpu
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
-        # fsGroup needed so UID 1000 can write to the persist emptyDir; the
-        # image volume is read-only and its baked-in files are world-readable.
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
       dnsConfig:
         options:
           - name: ndots
             value: "1"
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: openarc-gpu
     persistence:
-      model:
-        type: image
-        image:
-          repository: ghcr.io/soliddowant/openarc-asr
-          # Format: <modelName>-c<schemaRev>. Bump the -c suffix when
-          # rebuilding under an otherwise identical tag, since image
-          # volumes keep the snapshotter rootfs keyed by digest and
-          # don't honor a content-only refresh.
-          tag: qwen3-asr-0_6b-int8-asym-c2
-        advancedMounts:
-          openarc:
-            openarc:
-              # subPath strips the image's own /model/ prefix so the pod's
-              # /model/ matches the absolute paths baked into the config.
-              - path: /model
-                readOnly: true
-                subPath: model
+      # RWX so the pre-upgrade setup Job and the still-Running runtime
+      # Deployment can both mount during an upgrade.
+      cache:
+        type: persistentVolumeClaim
+        existingClaim: openarc-cache
+        globalMounts:
+          - path: /cache
       # OpenArc writes benchmark SQLite under /persist; without this mount
       # the readOnlyRootFilesystem would block it.
       persist:
@@ -120,14 +158,10 @@ spec:
           openarc:
             openarc:
               - path: /persist
-      # torch/dill probes for a writable temp dir at import time; missing
-      # /tmp crashes the process before openarc serve start runs.
       tmp:
         type: emptyDir
-        advancedMounts:
-          openarc:
-            openarc:
-              - path: /tmp
+        globalMounts:
+          - path: /tmp
     service:
       openarc:
         controller: openarc

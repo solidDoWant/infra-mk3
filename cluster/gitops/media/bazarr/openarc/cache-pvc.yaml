@@ -1,0 +1,15 @@
+---
+# Standalone (not chart-managed) so deleting the HelmRelease doesn't
+# take the cache with it. RWX so a pre-upgrade Job can mount alongside
+# the still-Running runtime pod.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openarc-cache
+spec:
+  storageClassName: ssd-replicated-filesystem
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi

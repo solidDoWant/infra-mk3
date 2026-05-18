@@ -162,6 +162,22 @@
              gen_config = cfg.qwen3_asr.model_copy(update={"audio_base64": audio_base64})
              result = await _workers.transcribe_qwen3_asr(model, gen_config)
          else:
+--- a/src/engine/openvino/qwen3_asr/qwen3_asr.py	2026-05-17 07:35:52.819708139 +0000
++++ b/src/engine/openvino/qwen3_asr/qwen3_asr.py	2026-05-18 12:00:00.000000000 +0000
+@@ -204,7 +204,13 @@
+         self.runtime_cfg = Qwen3ASRHelpers.hf_config(self.ov_dir / "config.json")
+         self.chunk_size = self.runtime_cfg["enc_n_window"] * 2
+         self.mel_filters = Qwen3ASRHelpers.compute_mel_filters()
+         self.core = ov.Core()
++        # When OPENARC_OV_CACHE_DIR is set, route OpenVINO's model cache
++        # there so compile_model() can skip graph optimization on a warm
++        # hit — the load-time peak is dominated by that pass.
++        cache_dir = os.environ.get("OPENARC_OV_CACHE_DIR")
++        if cache_dir:
++            self.core.set_property({"CACHE_DIR": cache_dir})
+         self.t_model_load = 0.0
+         self.enc_model = None
+         self.emb_model = None
 --- a/src/cli/modules/launch_server.py	2026-05-17 07:19:36.058331562 +0000
 +++ b/src/cli/modules/launch_server.py	2026-05-17 07:35:43.411709254 +0000
 @@ -1,9 +1,16 @@

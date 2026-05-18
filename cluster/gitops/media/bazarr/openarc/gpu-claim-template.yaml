@@ -1,6 +1,9 @@
 ---
 # Exclusive claim — openarc holds VRAM continuously, unlike
 # media-processor/fileflows which use adminAccess to ride along.
+# Two consumers (runtime Deployment + pre-upgrade setup Job) each
+# allocate their own claim; the cluster has 3 Arc Pro nodes so both
+# can be exclusive without contention.
 apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:

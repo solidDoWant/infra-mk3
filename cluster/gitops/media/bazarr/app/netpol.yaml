@@ -60,9 +60,9 @@ specs:
       # bazarr Whisper provider for subtitle generation from audio tracks.
       - toEndpoints:
           - matchLabels:
-              app.kubernetes.io/name: openarc
+              app.kubernetes.io/name: bazarr-openarc
               app.kubernetes.io/controller: openarc
-              app.kubernetes.io/instance: openarc
+              app.kubernetes.io/instance: bazarr-openarc
         toPorts:
           - ports:
               - port: "8000"

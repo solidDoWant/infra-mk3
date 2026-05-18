@@ -134,7 +134,7 @@
         });
 
         scripts = pkgs.runCommand "openarc-scripts" { } ''
-          install -Dm755 ${./setup-model.sh}   $out/bin/setup-model
+          install -Dm755 ${./setup-cache.sh}   $out/bin/setup-cache
           install -Dm755 ${./start-openarc.sh} $out/bin/start-openarc
         '';
 

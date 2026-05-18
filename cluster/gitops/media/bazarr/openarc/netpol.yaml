@@ -5,17 +5,32 @@ kind: CiliumNetworkPolicy
 metadata:
   name: openarc
 specs:
-  # Model + config ship inside a k8s image volume; the runtime pod has no
-  # outbound traffic except DNS.
   - description: openarc
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: openarc
+        app.kubernetes.io/name: bazarr-openarc
         app.kubernetes.io/controller: openarc
-        app.kubernetes.io/instance: openarc
+        app.kubernetes.io/instance: bazarr-openarc
+    ingress:
+      - fromEntities:
+          - host
+        toPorts: &web_ports
+          - ports:
+              - port: "8000"
+                protocol: TCP
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: bazarr
+              app.kubernetes.io/controller: bazarr
+              app.kubernetes.io/instance: bazarr
+        toPorts: *web_ports
+  - description: setup
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: bazarr-openarc
+        app.kubernetes.io/controller: setup
+        app.kubernetes.io/instance: bazarr-openarc
     egress:
-      # FastAPI internals occasionally do hostname lookups even with no
-      # configured outbound traffic; deny would stall startup.
       - toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: networking
@@ -27,19 +42,12 @@ specs:
               - port: "53"
                 protocol: TCP
             rules:
-              dns:
-                - matchPattern: "*"
-    ingress:
-      - fromEntities:
-          - host
-        toPorts: &web_ports
+              dns: &fqdns
+                - matchPattern: huggingface.co
+                - matchPattern: "**.huggingface.co"
+                - matchPattern: "**.hf.co"
+      - toFQDNs: *fqdns
+        toPorts:
           - ports:
-              - port: "8000"
+              - port: "443"
                 protocol: TCP
-      # Bazarr is currently the only consumer.
-      - fromEndpoints:
-          - matchLabels:
-              app.kubernetes.io/name: bazarr
-              app.kubernetes.io/controller: bazarr
-              app.kubernetes.io/instance: bazarr
-        toPorts: *web_ports
