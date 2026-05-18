@@ -6,7 +6,6 @@
 # memory peak.
 set -euo pipefail
 
-: "${OPENARC_API_KEY:?required}"
 : "${OPENARC_CONFIG_FILE:?required}"
 : "${OPENARC_OV_CACHE_DIR:?required}"
 : "${OPENARC_AUTOLOAD_MODEL:?required}"
@@ -53,8 +52,7 @@ SERVER_PID=$!
 trap 'kill ${SERVER_PID} 2>/dev/null || true' EXIT
 
 for i in $(seq 1 60); do
-  if curl -sf -H "Authorization: Bearer ${OPENARC_API_KEY}" \
-       http://localhost:8000/v1/models >/dev/null 2>&1; then
+  if curl -sf http://localhost:8000/v1/models >/dev/null 2>&1; then
     echo "Server ready after ${i}s; loading ${OPENARC_AUTOLOAD_MODEL}"
     openarc load "${OPENARC_AUTOLOAD_MODEL}"
     # `openarc load` returns 0 even on compile failure (it just POSTs and
@@ -63,8 +61,7 @@ for i in $(seq 1 60); do
     # is the only signal that distinguishes registered-but-failed from
     # actually-usable. Only one model is ever loaded so substring checks
     # on the response are enough — no JSON parsing needed.
-    resp=$(curl -sf -H "Authorization: Bearer ${OPENARC_API_KEY}" \
-                http://localhost:8000/openarc/status)
+    resp=$(curl -sf http://localhost:8000/openarc/status)
     if [[ "${resp}" == *"\"model_name\":\"${OPENARC_AUTOLOAD_MODEL}\""* \
        && "${resp}" == *"\"status\":\"loaded\""* ]]; then
       echo "Model loaded; OV cache populated at ${OPENARC_OV_CACHE_DIR}"

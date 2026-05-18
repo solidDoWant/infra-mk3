@@ -27,8 +27,7 @@ SERVER_PID=$!
 
 if [ -n "${OPENARC_AUTOLOAD_MODEL:-}" ]; then
   for i in $(seq 1 60); do
-    if curl -sf -H "Authorization: Bearer ${OPENARC_API_KEY:-}" \
-         http://localhost:8000/v1/models >/dev/null 2>&1; then
+    if curl -sf  http://localhost:8000/v1/models >/dev/null 2>&1; then
       echo "Server ready after $i seconds; loading $OPENARC_AUTOLOAD_MODEL"
       openarc load "$OPENARC_AUTOLOAD_MODEL" \
         || echo "WARN: failed to auto-load $OPENARC_AUTOLOAD_MODEL"
