@@ -32,14 +32,24 @@
           src = pkgs.fetchFromGitHub {
             owner = "SearchSavior";
             repo = "OpenArc";
-            rev = "v2.0.4";
-            hash = "sha256-9TNWbOePpIAmZIYe7OlnDJwVI4GNPi9KROpHEH0uLY8=";
+            rev = "8856d1d9c2b8a04c1a03143ed0c633a9ebf40987";
+            hash = "sha256-TiP+xSlkjvTmIACaDbAyA8rHwuS/yxpkZZFQy75dZQY=";
           };
-          # Adds OPENARC_CONFIG_FILE env override and resolves relative
-          # model_path values against the config file's directory, so a
-          # single image volume containing both the config and the model
-          # files can be mounted at any path in the pod.
-          patches = [ ./openarc-config-path.patch ];
+          patches = [
+            # Adds OPENARC_CONFIG_FILE env override and resolves relative
+            # model_path values against the config file's directory, so a
+            # single image volume containing both the config and the model
+            # files can be mounted at any path in the pod.
+            ./openarc-config-path.patch
+            # Bumps optimum 1.27.0 -> 2.0.0 and adds optimum-onnx (the new
+            # split-out package). Upstream bumped torch to 2.11 but kept
+            # optimum 1.x in uv.lock, whose bundled onnx exporter imports
+            # torch.onnx.symbolic_opset14._attention_scale — a private
+            # symbol removed in torch 2.9+. optimum-onnx 0.0.3 guards that
+            # import on torch version; optimum-intel 1.26.x targets the
+            # split package. Drop this once upstream relocks.
+            ./optimum-2x.patch
+          ];
         };
 
         python = pkgs.python312;

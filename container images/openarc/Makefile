@@ -1,11 +1,13 @@
-OPENARC_VERSION = v2.0.4
+# Tracks the upstream commit pinned in flake.nix (currently main HEAD).
+# Update both together; the short SHA is what shows up in the image tag.
+OPENARC_VERSION = main-8856d1d9
 # Bump when the build logic changes (extraCommands, env, deps) — distinct
 # from OPENARC_VERSION so consumers can pick up packaging fixes without
 # waiting on upstream.
-IMAGE_REVISION = 12
+IMAGE_REVISION = 3
 
 NEW_IMAGE = ghcr.io/soliddowant/openarc
-NEW_IMAGE_FULL = $(NEW_IMAGE):$(OPENARC_VERSION:v%=%)-r$(IMAGE_REVISION)
+NEW_IMAGE_FULL = $(NEW_IMAGE):$(OPENARC_VERSION)-r$(IMAGE_REVISION)
 
 .PHONY: all
 all: image

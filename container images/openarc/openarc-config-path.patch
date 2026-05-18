@@ -1,6 +1,6 @@
---- a/pyproject.toml	2026-05-17 07:35:52.819708139 +0000
-+++ b/pyproject.toml	2026-05-17 07:36:08.609925823 +0000
-@@ -42,8 +42,8 @@
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -43,8 +43,8 @@
  requires = ["setuptools>=68", "wheel"]
  build-backend = "setuptools.build_meta"
  
@@ -11,8 +11,8 @@
  
  [project.scripts]
  openarc = "src.cli:cli"
---- a/src/cli/modules/server_config.py	2026-05-17 07:35:03.297527897 +0000
-+++ b/src/cli/modules/server_config.py	2026-05-17 07:35:35.446660643 +0000
+--- a/src/cli/modules/server_config.py
++++ b/src/cli/modules/server_config.py
 @@ -4,24 +4,31 @@
  This module handles all configuration file operations without any CLI/presentation logic.
  """
@@ -108,12 +108,12 @@
      
      def get_all_models(self) -> Dict[str, Dict[str, Any]]:
          """
---- a/src/server/main.py	2026-05-17 07:35:52.821708139 +0000
-+++ b/src/server/main.py	2026-05-17 08:49:34.616406778 +0000
-@@ -80,17 +80,28 @@
-     models = os.getenv("OPENARC_STARTUP_MODELS", "").strip()
+--- a/src/server/main.py
++++ b/src/server/main.py
+@@ -54,7 +54,11 @@
      if models:
          from pathlib import Path
+ 
 -        config_file = Path(__file__).parent.parent.parent / "openarc_config.json"
 +        env_config = os.environ.get("OPENARC_CONFIG_FILE")
 +        config_file = (
@@ -123,11 +123,7 @@
          if config_file.exists():
              with open(config_file) as f:
                  config = json.load(f)
--            
-+
-             for name in models.split(","):
-                 name = name.strip()
-                 model_config = config.get("models", {}).get(name)
+@@ -65,6 +69,13 @@
                  if not model_config:
                      logger.warning(f"Startup: model '{name}' not in config, skipping")
                      continue
@@ -141,7 +137,9 @@
                  try:
                      await _registry.register_load(ModelLoadConfig(**model_config))
                      logger.info(f"Startup: loaded '{name}'")
-@@ -657,11 +668,15 @@
+--- a/src/server/routes/openai.py
++++ b/src/server/routes/openai.py
+@@ -510,11 +510,15 @@
          normalized_model_type = ModelType(selected_model_type)
  
          if normalized_model_type == ModelType.QWEN3_ASR:
@@ -162,10 +160,9 @@
              gen_config = cfg.qwen3_asr.model_copy(update={"audio_base64": audio_base64})
              result = await _workers.transcribe_qwen3_asr(model, gen_config)
          else:
---- a/src/engine/openvino/qwen3_asr/qwen3_asr.py	2026-05-17 07:35:52.819708139 +0000
-+++ b/src/engine/openvino/qwen3_asr/qwen3_asr.py	2026-05-18 12:00:00.000000000 +0000
-@@ -204,7 +204,13 @@
-         self.runtime_cfg = Qwen3ASRHelpers.hf_config(self.ov_dir / "config.json")
+--- a/src/engine/openvino/qwen3_asr/qwen3_asr.py
++++ b/src/engine/openvino/qwen3_asr/qwen3_asr.py
+@@ -205,6 +205,12 @@
          self.chunk_size = self.runtime_cfg["enc_n_window"] * 2
          self.mel_filters = Qwen3ASRHelpers.compute_mel_filters()
          self.core = ov.Core()
@@ -178,8 +175,8 @@
          self.t_model_load = 0.0
          self.enc_model = None
          self.emb_model = None
---- a/src/cli/modules/launch_server.py	2026-05-17 07:19:36.058331562 +0000
-+++ b/src/cli/modules/launch_server.py	2026-05-17 07:35:43.411709254 +0000
+--- a/src/cli/modules/launch_server.py
++++ b/src/cli/modules/launch_server.py
 @@ -1,9 +1,16 @@
 +import os
  import uvicorn

@@ -37,10 +37,6 @@ spec:
           ttlSecondsAfterFinished: 500
         defaultContainerOptions:
           env: &common_env_vars
-            OPENARC_API_KEY:
-              secretKeyRef:
-                name: openarc-api-key
-                key: OPENARC_API_KEY
             OPENARC_CONFIG_FILE: /cache/openarc_config.json
             OPENARC_OV_CACHE_DIR: /cache/ov-cache
             OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
@@ -50,7 +46,7 @@ spec:
           openarc:
             image: &image
               repository: ghcr.io/soliddowant/openarc
-              tag: 2.0.4-r12
+              tag: main-8856d1d9-r3
               pullPolicy: Always
             command:
               - /bin/setup-cache
@@ -108,8 +104,7 @@ spec:
                       - bash
                       - -c
                       - >-
-                        resp=$$(curl -sf -H "Authorization: Bearer $${OPENARC_API_KEY}"
-                        http://localhost:8000/openarc/status);
+                        resp=$$(curl -sf http://localhost:8000/openarc/status);
                         [[ "$${resp}" == *"\"model_name\":\"$${OPENARC_AUTOLOAD_MODEL}\""* &&
                           "$${resp}" == *"\"status\":\"loaded\""* ]]
                   initialDelaySeconds: 15
