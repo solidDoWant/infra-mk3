@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: bazarr-openarc
+  name: openarc-asr
 spec:
   interval: 5m
   # First-time install downloads ~2 GB from HF and compiles three
@@ -39,7 +39,7 @@ spec:
           env: &common_env_vars
             OPENARC_CONFIG_FILE: /cache/openarc_config.json
             OPENARC_OV_CACHE_DIR: /cache/ov-cache
-            OPENARC_AUTOLOAD_MODEL: &model_name qwen3-asr-0_6b-int8-asym
+            OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
             OPENARC_LOG_FILE: /dev/null
             NUMBA_CACHE_DIR: /tmp/numba-cache
         containers:
@@ -122,62 +122,6 @@ spec:
                 memory: *openarc_memory
               claims:
                 - name: gpu
-          # Bazarr's "Whisper" provider only speaks the whisper-asr-webservice
-          # API (POST /asr, /detect-language) — not OpenAI's transcription
-          # API. This sidecar terminates that API and forwards to OpenArc on
-          # the loopback. See https://github.com/McCloudS/bazarr-openai-whisperbridge
-          bridge:
-            image:
-              repository: docker.io/mccloud/bazarr-openai-whisperbridge
-              tag: 0.3@sha256:49a16a35eea57a1a64f23d4909bd5f619521e81c4c52e5bcc692355f2f199a4e
-            securityContext: *container_security_context
-            env:
-              # openai SDK reads these from the environment.
-              OPENAI_BASE_URL: http://localhost:8000/v1
-              # OpenArc has API-key auth disabled (OPENARC_API_KEY_REQUIRED
-              # unset), but the openai SDK refuses to construct a client
-              # without a key, so any non-empty string suffices.
-              OPENAI_API_KEY: unused
-              WHISPER_MODEL: *model_name
-            ports:
-              - name: asr
-                containerPort: &asr_port 9000
-            probes:
-              # Python cold start (importing openai, fastapi, uvicorn,
-              # ffmpeg-python) takes several seconds before uvicorn binds
-              # the listener. Suppress liveness/readiness during that
-              # window so a slow-but-healthy boot doesn't trigger a kill.
-              startup:
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /status
-                    port: *asr_port
-                  periodSeconds: 2
-                  failureThreshold: 30
-                  timeoutSeconds: 3
-              # Disabled until https://github.com/McCloudS/bazarr-openai-whisperbridge/issues/1 is fixed
-              # readiness: &bridge_probe
-              #   enabled: true
-              #   custom: true
-              #   spec:
-              #     httpGet:
-              #       path: /status
-              #       port: *asr_port
-              #     # 3s tolerates GIL contention from openarc compile on a
-              #     # shared core; steady-state /status returns in <10ms.
-              #     timeoutSeconds: 3
-              # liveness: *bridge_probe
-            resources:
-              requests:
-                cpu: 50m
-                # ffmpeg reads the entire PCM payload into memory before
-                # transcoding to opus; a feature-length audio track is
-                # ~115 MB at 16 kHz mono s16le.
-                memory: &bridge_memory 256Mi
-              limits:
-                memory: *bridge_memory
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
@@ -191,7 +135,7 @@ spec:
             value: "1"
       resourceClaims:
         - name: gpu
-          resourceClaimTemplateName: openarc-gpu
+          resourceClaimTemplateName: openarc-asr-gpu
     persistence:
       # RWX so the pre-upgrade setup Job and the still-Running runtime
       # Deployment can both mount during an upgrade.
@@ -218,12 +162,4 @@ spec:
         ports:
           web:
             port: *web_port
-            primary: true
-      # whisper-asr-webservice-compatible front door for Bazarr's "Whisper"
-      # provider. Backed by the in-pod bridge sidecar, not OpenArc directly.
-      asr:
-        controller: openarc
-        ports:
-          asr:
-            port: *asr_port
             primary: true

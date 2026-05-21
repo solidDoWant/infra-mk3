@@ -62,12 +62,12 @@ specs:
       # whisper-asr-webservice API Bazarr speaks to OpenArc's OpenAI API.
       - toEndpoints:
           - matchLabels:
-              app.kubernetes.io/name: bazarr-openarc
+              app.kubernetes.io/name: openarc-asr
               app.kubernetes.io/controller: openarc
-              app.kubernetes.io/instance: bazarr-openarc
+              app.kubernetes.io/instance: openarc-asr
         toPorts:
           - ports:
-              - port: "9000"
+              - port: "8000"
                 protocol: TCP
       # Subtitle providers and related resources
       - toFQDNs:

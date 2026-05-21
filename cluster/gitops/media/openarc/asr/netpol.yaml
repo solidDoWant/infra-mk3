@@ -3,22 +3,20 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: openarc
+  name: openarc-asr
 specs:
   - description: openarc
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: bazarr-openarc
+        app.kubernetes.io/name: openarc-asr
         app.kubernetes.io/controller: openarc
-        app.kubernetes.io/instance: bazarr-openarc
+        app.kubernetes.io/instance: openarc-asr
     ingress:
       - fromEntities:
           - host
         toPorts:
           - ports:
               - port: "8000"
-                protocol: TCP
-              - port: "9000"
                 protocol: TCP
       - fromEndpoints:
           - matchLabels:
@@ -27,14 +25,14 @@ specs:
               app.kubernetes.io/instance: bazarr
         toPorts:
           - ports:
-              - port: "9000"
+              - port: "8000"
                 protocol: TCP
   - description: setup
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: bazarr-openarc
+        app.kubernetes.io/name: openarc-asr
         app.kubernetes.io/controller: setup
-        app.kubernetes.io/instance: bazarr-openarc
+        app.kubernetes.io/instance: openarc-asr
     egress:
       - toEndpoints:
           - matchLabels:
