@@ -77,7 +77,7 @@ spec:
         pod:
           # A single failure is unlikely to succeed on another attempt
           restartPolicy: Never
-      openarc:
+      openarc-asr:
         replicas: 1
         # Release the GPU device cleanly between revisions.
         strategy: Recreate
@@ -149,7 +149,7 @@ spec:
       persist:
         type: emptyDir
         advancedMounts:
-          openarc:
+          openarc-asr:
             openarc:
               - path: /persist
       tmp:
@@ -157,8 +157,8 @@ spec:
         globalMounts:
           - path: /tmp
     service:
-      openarc:
-        controller: openarc
+      openarc-asr:
+        controller: openarc-asr
         ports:
           web:
             port: *web_port
