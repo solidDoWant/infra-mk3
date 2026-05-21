@@ -84,15 +84,27 @@ spec:
               POSTGRES_DATABASE: bazarr
               POSTGRES_USERNAME: bazarr
               POSTGRES_PASSWORD: not-used-cert-auth-via-envoy
+              # Sourced for the probes' X-API-KEY header (kubelet's
+              # httpGet.httpHeaders values are literal, so probes must
+              # exec into the container to read the secret).
+              BAZARR_API_KEY:
+                secretKeyRef:
+                  name: bazarr-api-key
+                  key: API_KEY
             ports:
               - name: web
                 containerPort: &web_port 6767
             probes:
               readiness: &probe
                 enabled: true
-                type: HTTP
-                path: /
-                port: *web_port
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -c
+                      - 'curl --fail -sS -o /dev/null -H "X-API-KEY: $$BAZARR_API_KEY" http://127.0.0.1:6767/api/system/status'
+                  timeoutSeconds: 5
               liveness: *probe
             resources:
               requests:
