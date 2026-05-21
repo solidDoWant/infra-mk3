@@ -141,7 +141,7 @@ spec:
       # Deployment can both mount during an upgrade.
       cache:
         type: persistentVolumeClaim
-        existingClaim: openarc-cache
+        existingClaim: openarc-asr-cache
         globalMounts:
           - path: /cache
       # OpenArc writes benchmark SQLite under /persist; without this mount
