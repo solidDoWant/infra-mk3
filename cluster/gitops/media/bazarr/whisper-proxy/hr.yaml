@@ -23,7 +23,7 @@ spec:
           app:
             image:
               repository: ghcr.io/soliddowant/bazarr-whisper-proxy
-              tag: 0.0.1
+              tag: 0.0.5
             env:
               # Upstream ASR — OpenAI-compatible /v1/audio/transcriptions on openarc-asr.
               OPENARC_BASE_URL: http://openarc-asr.media.svc.cluster.local:8000
@@ -49,14 +49,11 @@ spec:
                   periodSeconds: 30
                   timeoutSeconds: 5
               readiness:
-                # /status returns 503 + Retry-After while OpenArc's model is
-                # loading, 200 once it's "loaded". Holds the pod out of the
-                # Service endpoints during OpenArc cold-starts.
                 enabled: true
                 custom: true
                 spec:
                   httpGet:
-                    path: /status
+                    path: /healthz
                     port: *container_port
                   timeoutSeconds: 5
               startup:
@@ -78,7 +75,7 @@ spec:
                   - ALL
             resources:
               requests:
-                memory: &mem 2Gi
+                memory: &mem 3Gi
               limits:
                 memory: *mem
     defaultPodOptions:
@@ -93,12 +90,12 @@ spec:
         options:
           - name: ndots
             value: "1"
-    # persistence:
-    #   # Python writes __pycache__, numba cache, and any torch scratch under /tmp.
-    #   tmp:
-    #     type: emptyDir
-    #     globalMounts:
-    #       - path: /tmp
+    persistence:
+      # Server reads multipart data files into /tmp.
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
     service:
       bazarr-whisper-proxy:
         controller: bazarr-whisper-proxy
