@@ -9,7 +9,7 @@ specs:
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: openarc-asr
-        app.kubernetes.io/controller: openarc
+        app.kubernetes.io/controller: openarc-asr
         app.kubernetes.io/instance: openarc-asr
     ingress:
       - fromEntities:
