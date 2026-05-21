@@ -1,0 +1,108 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: bazarr-whisper-proxy
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      bazarr-whisper-proxy:
+        replicas: 1
+        containers:
+          app:
+            image:
+              repository: ghcr.io/soliddowant/bazarr-whisper-proxy
+              tag: 0.0.1
+            env:
+              # Upstream ASR — OpenAI-compatible /v1/audio/transcriptions on openarc-asr.
+              OPENARC_BASE_URL: http://openarc-asr.media.svc.cluster.local:8000
+              # Must match openarc-asr's OPENARC_AUTOLOAD_MODEL (see openarc/asr/hr.yaml).
+              OPENARC_MODEL: qwen3-asr-0_6b-int8-asym
+              LOG_FORMAT: json
+              # Flush stdout immediately so logs aren't held until shutdown.
+              PYTHONUNBUFFERED: "1"
+            ports:
+              - name: web
+                # App binds 0.0.0.0:9000 (hardcoded in whisper_proxy.__main__).
+                containerPort: &container_port 9000
+            probes:
+              liveness:
+                # /healthz is a cheap local check — don't restart the pod just
+                # because OpenArc is reloading its model.
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *container_port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness:
+                # /status returns 503 + Retry-After while OpenArc's model is
+                # loading, 200 once it's "loaded". Holds the pod out of the
+                # Service endpoints during OpenArc cold-starts.
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /status
+                    port: *container_port
+                  timeoutSeconds: 5
+              startup:
+                # First-time OpenArc model load is 6–8 min (see openarc/asr/hr.yaml
+                # timeout). 60 * 10s = 10 min before the pod is killed.
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /status
+                    port: *container_port
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                memory: &mem 2Gi
+              limits:
+                memory: *mem
+    defaultPodOptions:
+      securityContext:
+        # The image sets no User; force non-root at the pod level.
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    # persistence:
+    #   # Python writes __pycache__, numba cache, and any torch scratch under /tmp.
+    #   tmp:
+    #     type: emptyDir
+    #     globalMounts:
+    #       - path: /tmp
+    service:
+      bazarr-whisper-proxy:
+        controller: bazarr-whisper-proxy
+        ports:
+          web:
+            port: *container_port
+            primary: true
