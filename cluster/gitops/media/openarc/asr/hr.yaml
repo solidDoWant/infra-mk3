@@ -103,8 +103,19 @@ spec:
                     command:
                       - bash
                       - -c
+                      # curl --max-time stays below kubelet timeoutSeconds so
+                      # curl returns rc=28 before kubelet SIGKILLs the exec,
+                      # letting us tell timeouts apart from real errors. A
+                      # busy server mid-transcription can stall /openarc/status
+                      # well past the period without the model being unloaded,
+                      # so timeouts are treated as probe success. A successful
+                      # response that reports the model is not loaded — or any
+                      # other curl failure (HTTP error, connection refused) —
+                      # still fails the probe.
                       - >-
-                        resp=$$(curl -sf http://localhost:8000/openarc/status);
+                        resp=$$(curl -sf --max-time 4 http://localhost:8000/openarc/status);
+                        rc=$$?;
+                        [[ $$rc -eq 28 ]] && exit 0;
                         [[ "$${resp}" == *"\"model_name\":\"$${OPENARC_AUTOLOAD_MODEL}\""* &&
                           "$${resp}" == *"\"status\":\"loaded\""* ]]
                   initialDelaySeconds: 15
