@@ -32,7 +32,7 @@ spec:
               LOG_FORMAT: json
               # Flush stdout immediately so logs aren't held until shutdown.
               PYTHONUNBUFFERED: "1"
-              MAX_AUDIO_BYTES: "134217728" # 128 MiB
+              MAX_AUDIO_BYTES: "536870912" # 512 MiB
             ports:
               - name: web
                 # App binds 0.0.0.0:9000 (hardcoded in whisper_proxy.__main__).
