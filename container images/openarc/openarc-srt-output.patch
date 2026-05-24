@@ -10,7 +10,7 @@ index 3f6178f..a1a4eee 100644
          agg = {
              "feature_sec": 0.0,
              "encoder_sec": 0.0,
-@@ -398,6 +399,16 @@ class OVQwen3ASR:
+@@ -398,5 +399,15 @@ class OVQwen3ASR:
              langs.append(lang)
              if text:
                  texts.append(text)
@@ -24,9 +24,8 @@ index 3f6178f..a1a4eee 100644
 +                    "end": float(chunk_offset_sec) + float(chunk_sec),
 +                    "text": text,
 +                })
-             agg["feature_sec"] += chunk_metrics["feature_sec"]
-             agg["encoder_sec"] += chunk_metrics["encoder_sec"]
-             agg["prefill_sec"] += chunk_metrics["prefill_sec"]
+             for k in agg:
+                 agg[k] += chunk_metrics[k]
 @@ -428,6 +439,7 @@ class OVQwen3ASR:
          metrics["rtf"] = end_to_end_rtf
          if merged_language:

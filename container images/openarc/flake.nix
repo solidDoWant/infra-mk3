@@ -57,6 +57,23 @@
             # transcribe requests serialized end-to-end and the health
             # probes timed out mid-job. Drop once upstream fixes it.
             ./openarc-asr-thread-offload.patch
+            # Qwen3 ASR inference perf bundle. Caches the mel filter +
+            # hann window torch tensors and the tokenizer state on the
+            # OVQwen3ASR instance instead of rebuilding/reloading them
+            # per chunk; promotes the encoder/decoder/embedding models
+            # to persistent InferRequest objects with reusable input
+            # buffers; and splits audio_chunks into _prepare_chunk +
+            # _generate_chunk so the next chunk's encoder can run in a
+            # worker thread while the current chunk is still in
+            # prefill+decode. Depends on openarc-asr-thread-offload.
+            ./openarc-qwen3-asr-perf.patch
+            # Qwen3 ASR perf telemetry: GPU sysman snapshots via the
+            # repo's gpu_metrics pybind11 module (no-op when absent or
+            # on a non-GPU device), decode-loop sub-timers (emb/infer/
+            # post) folded into collect_metrics, and per-chunk + per-
+            # request perf log lines with normalize/split breakdown.
+            # Incremental on top of openarc-qwen3-asr-perf.patch.
+            ./openarc-qwen3-asr-telemetry.patch
             # Adds SRT/VTT support to POST /v1/audio/transcriptions
             # (qwen3_asr only). Upstream's else-branch returns the
             # transcript as a JSON-quoted string for any non-json
@@ -161,6 +178,27 @@
           ]);
         });
 
+        # gpu_metrics is an out-of-tree pybind11 extension shipped at
+        # gpu-metrics/ in the OpenArc repo, but the root pyproject.toml
+        # doesn't reference it (no workspace member, no path source), so
+        # uv2nix never sees it. Build it as its own derivation here and
+        # hand it to the image via PYTHONPATH. setup.py hardcodes
+        # /usr/include for the Level Zero headers, which doesn't exist
+        # in the Nix builder — substitute to pkgs.level-zero's prefix.
+        gpuMetrics = python.pkgs.buildPythonPackage {
+          pname = "gpu-metrics";
+          version = "0.1.0";
+          pyproject = true;
+          src = "${openarcSrc}/gpu-metrics";
+          build-system = with python.pkgs; [ setuptools pybind11 ];
+          buildInputs = [ pkgs.level-zero ];
+          postPatch = ''
+            substituteInPlace setup.py \
+              --replace-fail '"/usr/include"' '"${lib.getDev pkgs.level-zero}/include"'
+          '';
+          doCheck = false;
+        };
+
         scripts = pkgs.runCommand "openarc-scripts" { } ''
           install -Dm755 ${./setup-cache.sh}   $out/bin/setup-cache
           install -Dm755 ${./start-openarc.sh} $out/bin/start-openarc
@@ -172,6 +210,12 @@
         # which optimum-intel pulls in transitively.
         gpuRuntime = [
           pkgs.intel-compute-runtime
+          # Level Zero GPU backend driver (libze_intel_gpu.so.1) — lives
+          # in the `drivers` output, not the default `out`. Required by
+          # the gpu_metrics module so libze_loader.so can discover the
+          # Intel L0 driver at zeInit time. The loader searches
+          # LD_LIBRARY_PATH for libze_*.so.1 files.
+          pkgs.intel-compute-runtime.drivers
           pkgs.level-zero
           pkgs.libsndfile.out
         ];
@@ -181,6 +225,7 @@
           tag = "latest";
           contents = [
             venv
+            gpuMetrics
             scripts
             pkgs.cacert
             pkgs.bashInteractive
@@ -226,6 +271,10 @@
             Env = [
               "PATH=${venv}/bin:${pkgs.curl}/bin:${pkgs.coreutils}/bin:/bin:/usr/bin"
               "LD_LIBRARY_PATH=${lib.makeLibraryPath gpuRuntime}"
+              # uv2nix venv's python only walks its own site-packages.
+              # gpu_metrics lives in a separate derivation, so make it
+              # discoverable by appending its site-packages to PYTHONPATH.
+              "PYTHONPATH=${gpuMetrics}/${python.sitePackages}"
               # Bypass /etc lookup — extraCommands above replaced /etc
               # with a stub real dir, so these would otherwise be missing.
               "OCL_ICD_VENDORS=${pkgs.intel-compute-runtime}/etc/OpenCL/vendors"

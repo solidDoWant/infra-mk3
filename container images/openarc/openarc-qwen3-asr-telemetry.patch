@@ -1,0 +1,343 @@
+diff --git a/src/engine/openvino/qwen3_asr/qwen3_asr.py b/src/engine/openvino/qwen3_asr/qwen3_asr.py
+index 04af303..b65f82b 100644
+--- a/src/engine/openvino/qwen3_asr/qwen3_asr.py
++++ b/src/engine/openvino/qwen3_asr/qwen3_asr.py
+@@ -44,6 +44,120 @@ logger = logging.getLogger(__name__)
+ logger.setLevel(logging.INFO)
+ 
+ 
++# --- GPU metrics integration (Level Zero Sysman via the repo's gpu_metrics
++# pybind11 module). Falls back to a no-op if the module isn't installed or
++# the runtime device isn't a GPU. Counters used:
++#   - engines[].active_time / engines[].timestamp (microseconds, monotonic)
++#       → busy fraction over a window
++#   - power[].energy / power[].timestamp (microJoules / microseconds, monotonic)
++#       → average watts over a window
++#   - memory[].used / total (bytes, snapshot)
++#   - clocks_mhz[] (snapshot)
++#   - temperature[] (snapshot, Celsius)
++#
++# Level Zero engine type enum (ZES_ENGINE_GROUP_*):
++#   0 = ALL, 1 = COMPUTE_ALL, 2 = MEDIA_ALL, 3 = COPY_ALL, 4 = RENDER_ALL,
++#   5 = 3D_RENDER_ALL, plus _SINGLE variants per engine instance.
++_GPU_METRICS_PROBED = False
++_gpu_metrics_mod = None
++
++
++def _get_gpu_metrics_mod():
++    global _GPU_METRICS_PROBED, _gpu_metrics_mod
++    if not _GPU_METRICS_PROBED:
++        _GPU_METRICS_PROBED = True
++        try:
++            import gpu_metrics as _mod  # type: ignore[import-not-found]
++            _gpu_metrics_mod = _mod
++        except Exception as exc:
++            logger.info(f"gpu_metrics module unavailable, GPU load logging disabled: {exc}")
++            _gpu_metrics_mod = None
++    return _gpu_metrics_mod
++
++
++def _gpu_snapshot() -> Optional[dict]:
++    mod = _get_gpu_metrics_mod()
++    if mod is None:
++        return None
++    try:
++        data = mod.get_gpu_metrics()
++        return data if data else None
++    except Exception as exc:
++        logger.debug(f"gpu_metrics snapshot failed: {exc}")
++        return None
++
++
++def _pick_compute_engine(engines: list) -> Optional[dict]:
++    """Pick the most representative engine for compute work: prefer
++    COMPUTE_ALL (type=1), then ALL (type=0), then the first available."""
++    if not engines:
++        return None
++    for e in engines:
++        if e.get("type") == 1:
++            return e
++    for e in engines:
++        if e.get("type") == 0:
++            return e
++    return engines[0]
++
++
++def _format_gpu_delta(before: Optional[dict], after: Optional[dict]) -> str:
++    """Format per-device GPU usage from two snapshots. Returns "" if no
++    usable delta can be computed."""
++    if not before or not after:
++        return ""
++    parts: list[str] = []
++    for dev_id in sorted(after.keys()):
++        if dev_id not in before:
++            continue
++        b, a = before[dev_id], after[dev_id]
++        bits: list[str] = []
++
++        # Compute busy % from engine activeTime / timestamp delta.
++        eb = _pick_compute_engine(b.get("engines") or [])
++        ea = _pick_compute_engine(a.get("engines") or [])
++        if eb and ea:
++            dt = ea.get("timestamp", 0) - eb.get("timestamp", 0)
++            da = ea.get("active_time", 0) - eb.get("active_time", 0)
++            if dt > 0:
++                bits.append(f"busy={100.0 * da / dt:.0f}%")
++
++        # Average watts from energy counter delta. energy is microJoules,
++        # timestamp is microseconds → microJ/microS = Watts.
++        pb = (b.get("power") or [None])[0]
++        pa = (a.get("power") or [None])[0]
++        if pb and pa:
++            dt = pa.get("timestamp", 0) - pb.get("timestamp", 0)
++            de = pa.get("energy", 0) - pb.get("energy", 0)
++            if dt > 0:
++                bits.append(f"pwr={de / dt:.1f}W")
++
++        # VRAM used (snapshot at end-of-window).
++        mems = a.get("memory") or []
++        if mems and isinstance(mems[0], dict):
++            used = mems[0].get("used", 0)
++            total = mems[0].get("total", 0)
++            if total > 0:
++                bits.append(f"vram={used / (1024 ** 3):.2f}/{total / (1024 ** 3):.2f}GB")
++
++        clocks = a.get("clocks_mhz") or []
++        if clocks:
++            bits.append(f"clk={int(clocks[0])}MHz")
++
++        temps = a.get("temperature") or []
++        if temps:
++            bits.append(f"temp={int(temps[0])}C")
++
++        if bits:
++            name = a.get("name") or f"GPU{dev_id}"
++            parts.append(f"{name}[{' '.join(bits)}]")
++    return " ".join(parts)
++
++
++def _is_gpu_device(device: Optional[str]) -> bool:
++    return bool(device) and "GPU" in str(device).upper()
++
++
+ SAMPLE_RATE = 16000
+ NUM_MEL_BINS = 128
+ HOP_LENGTH = 160
+@@ -273,6 +387,9 @@ class OVQwen3ASR:
+         prompt_tokens: int,
+         generated_tokens: int,
+         encoder_tokens: int,
++        decode_emb_sec: float = 0.0,
++        decode_infer_sec: float = 0.0,
++        decode_post_sec: float = 0.0,
+     ) -> dict:
+         prefill_tok_s = (prompt_tokens / prefill_sec) if prefill_sec > 0 else 0.0
+         decode_tok_s = (generated_tokens / decode_sec) if decode_sec > 0 else 0.0
+@@ -283,6 +400,11 @@ class OVQwen3ASR:
+             "prefill_tok_s": prefill_tok_s,
+             "decode_sec": decode_sec,
+             "decode_tok_s": decode_tok_s,
++            # Sub-timings of the decode loop. decode_sec is the wall time of
++            # the whole loop; the three components below should sum to ~it.
++            "decode_emb_sec": decode_emb_sec,
++            "decode_infer_sec": decode_infer_sec,
++            "decode_post_sec": decode_post_sec,
+             "detok_sec": detok_sec,
+             "prompt_tokens": prompt_tokens,
+             "generated_tokens": generated_tokens,
+@@ -290,6 +412,7 @@ class OVQwen3ASR:
+         }
+ 
+     def audio_chunks(self, chunk_audio: np.ndarray, max_tokens: int):
++        gpu_before = _gpu_snapshot() if _is_gpu_device(self.load_config.device) else None
+         t_feature_start = time.perf_counter()
+         mel = Qwen3ASRHelpers.compute_mel_spectrogram(
+             chunk_audio, self._mel_filters_t, self._hann_window
+@@ -330,22 +453,36 @@ class OVQwen3ASR:
+         token = int(np.argmax(logits[0, 0]))
+         generated = [token]
+ 
++        # Break the decode loop into three sub-timers so we can see whether
++        # per-token cost is dominated by the embedding lookup, the decoder
++        # infer, or host-side overhead (tensor wrap, set_input, argmax).
+         t_decode_start = time.perf_counter()
++        t_emb_total = 0.0
++        t_infer_total = 0.0
+         for step in range(max_tokens - 1):
+             if token in EOS_TOKEN_IDS:
+                 break
+             pos = prompt_len + step
++
++            t_a = time.perf_counter()
+             embed = self._embed_tokens([token]).astype(np.float32)
+-            pos_id = np.array([[pos]], dtype=np.int64)
++            t_b = time.perf_counter()
++            t_emb_total += t_b - t_a
+ 
++            pos_id = np.array([[pos]], dtype=np.int64)
+             self.dec_request.set_input_tensor(0, ov.Tensor(embed))
+             self.dec_request.set_input_tensor(1, ov.Tensor(pos_id))
++
++            t_c = time.perf_counter()
+             self.dec_request.infer()
+-            logits = self.dec_request.get_output_tensor(0).data
++            t_d = time.perf_counter()
++            t_infer_total += t_d - t_c
+ 
++            logits = self.dec_request.get_output_tensor(0).data
+             token = int(np.argmax(logits[0, 0]))
+             generated.append(token)
+         t_decode = time.perf_counter() - t_decode_start
++        t_post_total = t_decode - t_emb_total - t_infer_total
+ 
+         while generated and generated[-1] in EOS_TOKEN_IDS:
+             generated.pop()
+@@ -365,16 +502,42 @@ class OVQwen3ASR:
+             prompt_tokens=prompt_len,
+             generated_tokens=len(generated),
+             encoder_tokens=expected_tokens,
++            decode_emb_sec=t_emb_total,
++            decode_infer_sec=t_infer_total,
++            decode_post_sec=t_post_total,
++        )
++
++        gpu_after = _gpu_snapshot() if gpu_before is not None else None
++        gpu_str = _format_gpu_delta(gpu_before, gpu_after)
++
++        gen_count = len(generated)
++        avg_step_ms = (t_decode / gen_count * 1000.0) if gen_count > 0 else 0.0
++        logger.info(
++            f"[{self.load_config.model_name}] chunk perf "
++            f"feat={t_feature*1000:.1f}ms "
++            f"enc={t_encoder*1000:.1f}ms({expected_tokens}tok) "
++            f"prefill={t_prefill*1000:.1f}ms({prompt_len}tok,{metrics['prefill_tok_s']:.0f}tok/s) "
++            f"decode={t_decode*1000:.1f}ms({gen_count}tok,{metrics['decode_tok_s']:.1f}tok/s,"
++            f"avg={avg_step_ms:.2f}ms/tok "
++            f"|emb={t_emb_total*1000:.1f} infer={t_infer_total*1000:.1f} post={t_post_total*1000:.1f}) "
++            f"detok={t_detok*1000:.1f}ms"
++            + (f" {gpu_str}" if gpu_str else "")
+         )
+         return raw, metrics
+ 
+     async def transcribe(self, gen_config: OV_Qwen3ASRGenConfig) -> AsyncIterator[Union[Dict[str, Any], str]]:
+         t_transcribe_start = time.perf_counter()
++        is_gpu = _is_gpu_device(self.load_config.device)
++        gpu_req_before = _gpu_snapshot() if is_gpu else None
+         audio_input = gen_config.audio_base64
+         assert audio_input, "audio_base64 is required"
+         if not audio_input.startswith("data:audio"):
+             audio_input = f"data:audio/wav;base64,{audio_input}"
++
++        t_norm_start = time.perf_counter()
+         audio_array = (await asyncio.to_thread(normalize_audios, audio_input))[0]
++        t_normalize = time.perf_counter() - t_norm_start
++
+         language: Optional[str] = None
+         if gen_config.language:
+             language = normalize_language_name(gen_config.language)
+@@ -387,6 +550,7 @@ class OVQwen3ASR:
+             return
+ 
+         max_chunk_sec = min(float(gen_config.max_chunk_sec), float(MAX_ASR_INPUT_SECONDS))
++        t_split_start = time.perf_counter()
+         chunk_items = await asyncio.to_thread(
+             split_audio_into_chunks,
+             wav=audio_array,
+@@ -395,7 +559,12 @@ class OVQwen3ASR:
+             search_expand_sec=gen_config.search_expand_sec,
+             min_window_ms=gen_config.min_window_ms,
+         )
+-        logger.info(f"[{self.load_config.model_name}] Running {len(chunk_items)} chunk(s)")
++        t_split = time.perf_counter() - t_split_start
++        logger.info(
++            f"[{self.load_config.model_name}] Running {len(chunk_items)} chunk(s) "
++            f"(audio={audio_seconds:.2f}s, normalize={t_normalize*1000:.1f}ms, "
++            f"split={t_split*1000:.1f}ms)"
++        )
+ 
+         langs = []
+         texts = []
+@@ -404,6 +573,9 @@ class OVQwen3ASR:
+             "encoder_sec": 0.0,
+             "prefill_sec": 0.0,
+             "decode_sec": 0.0,
++            "decode_emb_sec": 0.0,
++            "decode_infer_sec": 0.0,
++            "decode_post_sec": 0.0,
+             "detok_sec": 0.0,
+             "prompt_tokens": 0,
+             "generated_tokens": 0,
+@@ -423,14 +595,8 @@ class OVQwen3ASR:
+             langs.append(lang)
+             if text:
+                 texts.append(text)
+-            agg["feature_sec"] += chunk_metrics["feature_sec"]
+-            agg["encoder_sec"] += chunk_metrics["encoder_sec"]
+-            agg["prefill_sec"] += chunk_metrics["prefill_sec"]
+-            agg["decode_sec"] += chunk_metrics["decode_sec"]
+-            agg["detok_sec"] += chunk_metrics["detok_sec"]
+-            agg["prompt_tokens"] += chunk_metrics["prompt_tokens"]
+-            agg["generated_tokens"] += chunk_metrics["generated_tokens"]
+-            agg["encoder_tokens"] += chunk_metrics["encoder_tokens"]
++            for k in agg:
++                agg[k] += chunk_metrics[k]
+ 
+         text = "".join(texts).strip()
+         merged_language = merge_languages(langs)
+@@ -446,14 +612,56 @@ class OVQwen3ASR:
+             prompt_tokens=agg["prompt_tokens"],
+             generated_tokens=agg["generated_tokens"],
+             encoder_tokens=agg["encoder_tokens"],
++            decode_emb_sec=agg["decode_emb_sec"],
++            decode_infer_sec=agg["decode_infer_sec"],
++            decode_post_sec=agg["decode_post_sec"],
+         )
+         metrics["audio_duration_sec"] = audio_seconds
+         metrics["model_load_sec"] = self.t_model_load
+         metrics["end_to_end_sec"] = t_total
+         metrics["rtf"] = end_to_end_rtf
++        metrics["normalize_sec"] = t_normalize
++        metrics["split_sec"] = t_split
+         if merged_language:
+             metrics["language"] = merged_language
+ 
++        gpu_req_after = _gpu_snapshot() if gpu_req_before is not None else None
++        gpu_req_str = _format_gpu_delta(gpu_req_before, gpu_req_after)
++
++        # End-of-request summary. Numbers are aggregated across all chunks.
++        # "model_active" = the OV-bound phases (encoder + prefill + decode);
++        # the gap between (model_active + feature + detok + normalize + split)
++        # and end_to_end_sec is async/python/queue overhead. If
++        # decode_infer dominates and decode_post is small, the per-token
++        # decoder kernel is the bottleneck. If decode_post is large, host-side
++        # overhead (tensor wrap / argmax / GIL) is in the mix. The GPU bits
++        # show averaged engine busy / power over the entire request; if busy %
++        # is low while decode_infer is high, the GPU is mostly waiting on
++        # host↔device round-trips, not compute.
++        model_active = agg["encoder_sec"] + agg["prefill_sec"] + agg["decode_sec"]
++        overhead = max(0.0, t_total - (
++            model_active + agg["feature_sec"] + agg["detok_sec"]
++            + t_normalize + t_split
++        ))
++        gen_tok = agg["generated_tokens"]
++        logger.info(
++            f"[{self.load_config.model_name}] request perf "
++            f"audio={audio_seconds:.2f}s e2e={t_total*1000:.0f}ms rtf={end_to_end_rtf:.3f} "
++            f"chunks={len(chunk_items)} "
++            f"| feat={agg['feature_sec']*1000:.0f}ms "
++            f"enc={agg['encoder_sec']*1000:.0f}ms({agg['encoder_tokens']}tok) "
++            f"prefill={agg['prefill_sec']*1000:.0f}ms({agg['prompt_tokens']}tok) "
++            f"decode={agg['decode_sec']*1000:.0f}ms({gen_tok}tok,"
++            f"{metrics['decode_tok_s']:.1f}tok/s) "
++            f"[emb={agg['decode_emb_sec']*1000:.0f} "
++            f"infer={agg['decode_infer_sec']*1000:.0f} "
++            f"post={agg['decode_post_sec']*1000:.0f}] "
++            f"detok={agg['detok_sec']*1000:.0f}ms "
++            f"| norm={t_normalize*1000:.0f}ms split={t_split*1000:.0f}ms "
++            f"other={overhead*1000:.0f}ms"
++            + (f" | {gpu_req_str}" if gpu_req_str else "")
++        )
++
+         yield metrics
+         yield text
+ 
