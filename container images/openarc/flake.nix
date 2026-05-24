@@ -49,6 +49,14 @@
             # import on torch version; optimum-intel 1.26.x targets the
             # split package. Drop this once upstream relocks.
             ./optimum-2x.patch
+            # Runs the per-chunk Qwen3 ASR work (mel + encoder + decode)
+            # on a thread executor instead of inline on the event loop.
+            # Upstream declared audio_chunks() as `async def` but the body
+            # is pure CPU-bound OpenVINO calls with no awaits, so each
+            # chunk blocked the loop for its full runtime — concurrent
+            # transcribe requests serialized end-to-end and the health
+            # probes timed out mid-job. Drop once upstream fixes it.
+            ./openarc-asr-thread-offload.patch
             # Adds SRT/VTT support to POST /v1/audio/transcriptions
             # (qwen3_asr only). Upstream's else-branch returns the
             # transcript as a JSON-quoted string for any non-json
