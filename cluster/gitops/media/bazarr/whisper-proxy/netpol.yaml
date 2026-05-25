@@ -12,7 +12,7 @@ specs:
         app.kubernetes.io/controller: bazarr-whisper-proxy
         app.kubernetes.io/instance: bazarr-whisper-proxy
     egress:
-      # DNS resolution — only to look up openarc-subtitles's service FQDN.
+      # DNS resolution
       - toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: networking
@@ -26,6 +26,7 @@ specs:
             rules:
               dns:
                 - matchPattern: openarc-subtitles.media.svc.cluster.local
+                - matchPattern: lingarr.media.svc.cluster.local
       # OpenArc — OpenAI-compatible ASR. The proxy POSTs WAV-wrapped audio
       # to /v1/audio/transcriptions and reads /openarc/status for readiness.
       - toEndpoints:
@@ -36,6 +37,16 @@ specs:
         toPorts:
           - ports:
               - port: "8000"
+                protocol: TCP
+      # Lingarr translation backend
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: lingarr
+              app.kubernetes.io/controller: lingarr
+              app.kubernetes.io/instance: lingarr
+        toPorts:
+          - ports:
+              - port: "9876"
                 protocol: TCP
     ingress:
       # Kubelet for liveness/readiness/startup probes.

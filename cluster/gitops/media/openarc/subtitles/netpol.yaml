@@ -20,11 +20,18 @@ specs:
                 protocol: TCP
       # bazarr-whisper-proxy proxies Bazarr's whisper-asr-webservice requests
       # to OpenArc's OpenAI-compatible /v1/audio/transcriptions endpoint.
+      # Lingarr POSTs subtitle lines to OpenArc's OpenAI-compatible
+      # /v1/chat/completions endpoint for local-LLM translation
+      # (SERVICE_TYPE=localai in lingarr/app/hr.yaml).
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: bazarr-whisper-proxy
               app.kubernetes.io/controller: bazarr-whisper-proxy
               app.kubernetes.io/instance: bazarr-whisper-proxy
+          - matchLabels:
+              app.kubernetes.io/name: lingarr
+              app.kubernetes.io/controller: lingarr
+              app.kubernetes.io/instance: lingarr
         toPorts:
           - ports:
               - port: "8000"

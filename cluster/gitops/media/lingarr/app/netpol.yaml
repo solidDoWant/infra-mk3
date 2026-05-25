@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: lingarr
+specs:
+  - description: lingarr
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: lingarr
+        app.kubernetes.io/controller: lingarr
+        app.kubernetes.io/instance: lingarr
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Envoy sidecar → backend PostgreSQL (TLS terminated on Envoy).
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: lingarr-postgres-17
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # OpenArc — Lingarr POSTs to OpenArc's OpenAI-compatible /v1/chat/
+      # completions endpoint to translate subtitle lines via the local LLM.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: openarc-subtitles
+              app.kubernetes.io/controller: openarc-subtitles
+              app.kubernetes.io/instance: openarc-subtitles
+        toPorts:
+          - ports:
+              - port: "8000"
+                protocol: TCP
+    ingress:
+      # Kubelet for liveness/readiness/startup probes.
+      - fromEntities:
+          - host
+        toPorts: &web_port
+          - ports:
+              - port: "9876"
+                protocol: TCP
+      - fromEndpoints:
+          # Gateway → web UI (lingarr.${SECRET_PUBLIC_DOMAIN_NAME}).
+          # bazarr-whisper-proxy also reaches Lingarr via the gateway
+          # (LINGARR_BASE_URL points at the public hostname), so its
+          # traffic arrives here from the same gateway selector.
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          # Bazarr's translator integration uses the in-cluster URL
+          # (config.translator.lingarr_url = http://lingarr:9876).
+          - matchLabels:
+              app.kubernetes.io/name: bazarr
+              app.kubernetes.io/controller: bazarr
+              app.kubernetes.io/instance: bazarr
+          # bazarr-whisper-proxy POSTs to /api/Translate/content for
+          # task=translate (whisper_proxy.lingarr.LingarrClient).
+          - matchLabels:
+              app.kubernetes.io/name: bazarr-whisper-proxy
+              app.kubernetes.io/controller: bazarr-whisper-proxy
+              app.kubernetes.io/instance: bazarr-whisper-proxy
+        toPorts: *web_port
