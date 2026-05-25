@@ -87,14 +87,13 @@ spec:
               HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
               MODEL_TYPE: qwen3_asr
               ENGINE: openvino
-            resources: &register_resources
-              requests:
+            resources:
+              requests: &register_asr_requests
                 cpu: 500m
-                # Pure download path: HF client + at most one xet shard
-                # buffered. 1 Gi is comfortable.
-                memory: &register_memory 1Gi
-              limits:
-                memory: *register_memory
+                # Largest shard in the ASR repo is ~0.6 GiB; xet client
+                # buffers one shard at a time, plus python/HF overhead.
+                memory: 1Gi
+              limits: *register_asr_requests
           register-chat:
             command:
               - /bin/register-model
@@ -104,7 +103,15 @@ spec:
               HF_REPO: Echo9Zulu/Qwen3-4B-Instruct-2507-int4_asym-awq-ov
               MODEL_TYPE: llm
               ENGINE: ovgenai
-            resources: *register_resources
+            resources:
+              requests: &register_chat_requests
+                cpu: 500m
+                # The LLM's openvino_model.bin is ~2.7 GiB and xet
+                # downloads it as one shard, so the client briefly holds
+                # the whole shard in memory. 1 Gi OOMKills mid-download
+                # (observed 2026-05-25); 4 Gi covers buffer + verify.
+                memory: 4Gi
+              limits: *register_chat_requests
         containers:
           # Starts the openarc server once, loads every name in
           # OPENARC_AUTOLOAD_MODEL, verifies status="loaded" for each,
