@@ -1,0 +1,16 @@
+---
+# Used for subtitle alignment
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: whisper-proxy-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.intel.com
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].family == 'Iris Xe'

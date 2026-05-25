@@ -18,12 +18,11 @@ spec:
   values:
     controllers:
       bazarr-whisper-proxy:
-        replicas: 1
         containers:
           app:
             image:
               repository: ghcr.io/soliddowant/bazarr-whisper-proxy
-              tag: 0.0.7
+              tag: 0.0.10
             env:
               # Upstream ASR — OpenAI-compatible /v1/audio/transcriptions on openarc-asr.
               OPENARC_BASE_URL: http://openarc-asr.media.svc.cluster.local:8000
@@ -76,9 +75,9 @@ spec:
                   - ALL
             resources:
               requests:
-                memory: &mem 3.5Gi
-              limits:
-                memory: *mem
+                memory: 4Gi
+              claims:
+                - name: gpu
     defaultPodOptions:
       securityContext:
         # The image sets no User; force non-root at the pod level.
@@ -87,6 +86,9 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: openarc-asr-gpu
       dnsConfig:
         options:
           - name: ndots

@@ -109,9 +109,7 @@ spec:
             resources:
               requests:
                 cpu: 100m
-                memory: &memory 1.5Gi
-              limits:
-                memory: *memory
+                memory: 1Gi
       exportarr:
         replicas: 2
         strategy: RollingUpdate

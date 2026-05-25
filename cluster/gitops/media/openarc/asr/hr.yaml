@@ -38,7 +38,6 @@ spec:
         defaultContainerOptions:
           env: &common_env_vars
             OPENARC_CONFIG_FILE: /cache/openarc_config.json
-            OPENARC_OV_CACHE_DIR: /cache/ov-cache
             OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
             OPENARC_LOG_FILE: /dev/null
             NUMBA_CACHE_DIR: /tmp/numba-cache
@@ -46,7 +45,7 @@ spec:
           openarc:
             image: &image
               repository: ghcr.io/soliddowant/openarc
-              tag: main-8856d1d9-r5
+              tag: main-7de77a45-r1
               pullPolicy: Always
             command:
               - /bin/setup-cache
@@ -60,10 +59,11 @@ spec:
               <<: *common_env_vars
               MODEL_TYPE: qwen3_asr
               HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
-              MODEL_PATH: /cache/qwen3_asr/$(HF_REPO)
+              MODEL_PATH: /cache/$(MODEL_TYPE)/$(OPENARC_AUTOLOAD_MODEL)/$(HF_REPO)/model
               # huggingface-cli writes to HF_HOME; the default
               # ~/.cache path is unwritable under readOnlyRootFilesystem.
               HF_HOME: /tmp/hf-home
+              OPENARC_OV_CACHE_DIR: /cache/$(MODEL_TYPE)/$(OPENARC_AUTOLOAD_MODEL)/$(HF_REPO)/cache
             resources:
               requests:
                 cpu: 500m
@@ -128,9 +128,7 @@ spec:
             resources:
               requests:
                 cpu: 500m
-                memory: &openarc_memory 3Gi
-              limits:
-                memory: *openarc_memory
+                memory: 2Gi
               claims:
                 - name: gpu
     defaultPodOptions:
