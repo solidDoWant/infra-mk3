@@ -6,10 +6,10 @@ metadata:
   name: openarc-asr
 spec:
   interval: 5m
-  # First-time install downloads ~5 GB from HF and compiles three
-  # OpenVINO models per registered entry — easily 10–15 min for the
-  # 4B LLM cold compile. Upgrades with a warm cache are much faster,
-  # but the same timeout applies.
+  # First-time install downloads ~5 GB from HF and compiles the OpenVINO
+  # graphs for each registered model — easily 10–15 min for the 4B LLM
+  # cold compile. Upgrades with a warm cache are much faster, but the
+  # same timeout applies.
   timeout: 30m
   chart:
     spec:
@@ -22,11 +22,13 @@ spec:
       version: 4.6.2
   values:
     controllers:
-      # Cache-population hook. Helm waits for this Job to succeed before
-      # rolling the Deployment, so the runtime pod always boots into a
-      # warm cache and avoids the high-memory cold-compile path. This
-      # cuts the peak memory usage (and therefore limit) of the main
-      # deployment well below the cold-compile peak.
+      # Pre-upgrade hook. Two init containers each download one model
+      # and register it via `openarc add`; the main warm container then
+      # starts the server once, loads every model named in
+      # OPENARC_AUTOLOAD_MODEL, and exits when each reports
+      # status="loaded". Helm waits for this Job before rolling the
+      # Deployment, so the runtime pod always boots into a warm OV
+      # cache and avoids the high-memory cold-compile path.
       setup:
         type: job
         annotations:
@@ -37,47 +39,76 @@ spec:
           backoffLimit: 1
           ttlSecondsAfterFinished: 500
         defaultContainerOptions:
+          image: &image
+            repository: ghcr.io/soliddowant/openarc
+            tag: main-7de77a45-r3
+            pullPolicy: Always
+          securityContext: &container_security_context
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           env: &common_env_vars
-            # Helm loses map key ordering, which screws up env var substitution
-            # Use `AAA_` as a prefix to ensure that these vars come first and can be used for substitution in the rest of the env block.
+            # Helm loses map key ordering, which screws up env var substitution.
+            # Use `AAA_` as a prefix to ensure that these vars come first and
+            # can be used for substitution in the rest of the env block.
             AAA_CACHE_DIR: /cache
             OPENARC_CONFIG_FILE: $(AAA_CACHE_DIR)/openarc_config.json
             # Space-separated list of model names to auto-load on
             # startup. Each must be registered in OPENARC_CONFIG_FILE
-            # (handled by the pre-upgrade setup Job). start-openarc.sh
+            # (handled by the register-* init containers). start-openarc.sh
             # word-splits this into positional args for `openarc load`.
-            OPENARC_AUTOLOAD_MODEL: >-
+            OPENARC_AUTOLOAD_MODEL: &autoload_models >-
               qwen3-asr-0_6b-int8-asym
               qwen3-4b-instruct-int4-awq
             OPENARC_LOG_FILE: /dev/null
             NUMBA_CACHE_DIR: /tmp/numba-cache
-        containers:
-          openarc:
-            image: &image
-              repository: ghcr.io/soliddowant/openarc
-              tag: main-7de77a45-r2
-              pullPolicy: Always
+        initContainers:
+          # Per-model: download from HF + `openarc add`. No GPU access
+          # needed (compile happens later in the warm container).
+          # openarc-config.json accumulates across containers because
+          # save_model_config merges by model_name.
+          register-asr:
             command:
-              - /bin/setup-cache
-            securityContext: &container_security_context
-              readOnlyRootFilesystem: true
-              allowPrivilegeEscalation: false
-              capabilities:
-                drop:
-                  - ALL
+              - /bin/register-model
             env:
               <<: *common_env_vars
-              OPENARC_CACHE_DIR: $(AAA_CACHE_DIR)
-              # huggingface-cli writes to HF_HOME; the default
-              # ~/.cache path is unwritable under readOnlyRootFilesystem.
-              HF_HOME: /tmp/hf-home
-              # Multi-line, pipe-separated: name|hf_repo|model_type|engine
-              # per row. setup-cache.sh iterates this list, downloads
-              # each repo into a per-model cache subtree, runs
-              # `openarc add`, then warms the OV cache for each.
-              OPENARC_MODELS_SPEC: |-
-                qwen3-asr-0_6b-int8-asym|Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO|qwen3_asr|openvino
-                qwen3-4b-instruct-int4-awq|Echo9Zulu/Qwen3-4B-Instruct-2507-int4_asym-awq-ov|llm|ovgenai
+              <<: &register_env_extra
+                OPENARC_CACHE_DIR: $(AAA_CACHE_DIR)
+                # huggingface-cli writes to HF_HOME; the default
+                # ~/.cache path is unwritable under readOnlyRootFilesystem.
+                HF_HOME: /tmp/hf-home
+              MODEL_NAME: qwen3-asr-0_6b-int8-asym
+              HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
+              MODEL_TYPE: qwen3_asr
+              ENGINE: openvino
+            resources: &register_resources
+              requests:
+                cpu: 500m
+                # Pure download path: HF client + at most one xet shard
+                # buffered. 1 Gi is comfortable.
+                memory: &register_memory 1Gi
+              limits:
+                memory: *register_memory
+          register-chat:
+            command:
+              - /bin/register-model
+            env:
+              <<: *common_env_vars
+              <<: *register_env_extra
+              MODEL_NAME: qwen3-4b-instruct-int4-awq
+              HF_REPO: Echo9Zulu/Qwen3-4B-Instruct-2507-int4_asym-awq-ov
+              MODEL_TYPE: llm
+              ENGINE: ovgenai
+            resources: *register_resources
+        containers:
+          # Starts the openarc server once, loads every name in
+          # OPENARC_AUTOLOAD_MODEL, verifies status="loaded" for each,
+          # and exits.
+          warm:
+            command:
+              - /bin/warm-cache
             resources:
               requests:
                 cpu: 500m
@@ -85,13 +116,13 @@ spec:
                 # 4B int4 LLM dominates the peak (graph optimization +
                 # GPU upload of ~2.5 GiB of int4 weights). 10 Gi gives
                 # headroom over the observed ~6–7 GiB peak.
-                memory: &openarc_setup_memory 10Gi
+                memory: &warm_memory 10Gi
               limits:
-                memory: *openarc_setup_memory
+                memory: *warm_memory
               claims:
                 - name: gpu
         pod:
-          # A single failure is unlikely to succeed on another attempt
+          # A single failure is unlikely to succeed on another attempt.
           restartPolicy: Never
       openarc-asr:
         replicas: 1
@@ -118,15 +149,17 @@ spec:
                 spec:
                   exec:
                     command:
-                      # check-models-loaded queries /openarc/status,
-                      # treats curl --max-time (rc=28) as success so a
-                      # busy server mid-inference isn't killed, and
-                      # exits 1 if any named model is missing or not in
-                      # status="loaded" — catching silent unloads
-                      # (certain bad transcription requests unload the
-                      # model without crashing the server). Word-split
-                      # OPENARC_AUTOLOAD_MODEL into positional args.
-                      - bash
+                      # check-models-loaded (Python) queries
+                      # /openarc/status, treats request timeouts as
+                      # success so a busy server mid-inference isn't
+                      # killed, and exits 1 if any named model is missing
+                      # or not in status="loaded" — catching silent
+                      # unloads (certain bad transcription requests
+                      # unload the model without crashing the server).
+                      # Word-split OPENARC_AUTOLOAD_MODEL into positional
+                      # args; sh handles the split since the binary is
+                      # invoked via shell.
+                      - sh
                       - -c
                       - exec /bin/check-models-loaded $${OPENARC_AUTOLOAD_MODEL}
                   initialDelaySeconds: 15

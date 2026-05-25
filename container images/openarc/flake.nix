@@ -211,9 +211,18 @@
         };
 
         scripts = pkgs.runCommand "openarc-scripts" { } ''
-          install -Dm755 ${./setup-cache.sh}         $out/bin/setup-cache
-          install -Dm755 ${./start-openarc.sh}       $out/bin/start-openarc
-          install -Dm755 ${./check-models-loaded.sh} $out/bin/check-models-loaded
+          install -Dm755 ${./register-model.sh} $out/bin/register-model
+          install -Dm755 ${./warm-cache.sh}     $out/bin/warm-cache
+          install -Dm755 ${./start-openarc.sh}  $out/bin/start-openarc
+          # The kernel resolves shebangs without consulting container PATH,
+          # so `#!/usr/bin/env python3` can't find the venv interpreter at
+          # exec time. Rewrite to the absolute venv path at build time so
+          # the script is directly executable via `command:` in the pod
+          # spec (kubelet exec()s the file rather than running it through
+          # a shell).
+          substitute ${./check-models-loaded.py} $out/bin/check-models-loaded \
+            --replace-fail '#!/usr/bin/env python3' '#!${venv}/bin/python3'
+          chmod +x $out/bin/check-models-loaded
         '';
 
         # OpenVINO's GPU plugin dlopens libze_loader / libze_intel_gpu at
