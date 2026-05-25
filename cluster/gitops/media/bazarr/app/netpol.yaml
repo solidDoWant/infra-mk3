@@ -72,7 +72,7 @@ specs:
                 protocol: TCP
       # Lingarr — Bazarr's built-in Lingarr translator integration POSTs
       # to /api/Translate/... at config.translator.lingarr_url (set to
-      # http://lingarr:9876 in config.yaml). Uses the in-cluster URL,
+      # http://lingarr:8080 in config.yaml). Uses the in-cluster URL,
       # not the gateway, so the egress goes direct to the lingarr pod.
       - toEndpoints:
           - matchLabels:
@@ -81,7 +81,7 @@ specs:
               app.kubernetes.io/instance: lingarr
         toPorts:
           - ports:
-              - port: "9876"
+              - port: "8080"
                 protocol: TCP
       # Subtitle providers and related resources
       - toFQDNs:

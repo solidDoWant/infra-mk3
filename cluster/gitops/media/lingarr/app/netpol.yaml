@@ -51,7 +51,7 @@ specs:
           - host
         toPorts: &web_port
           - ports:
-              - port: "9876"
+              - port: "8080"
                 protocol: TCP
       - fromEndpoints:
           # Gateway → web UI (lingarr.${SECRET_PUBLIC_DOMAIN_NAME}).
@@ -63,7 +63,7 @@ specs:
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
           # Bazarr's translator integration uses the in-cluster URL
-          # (config.translator.lingarr_url = http://lingarr:9876).
+          # (config.translator.lingarr_url = http://lingarr:8080).
           - matchLabels:
               app.kubernetes.io/name: bazarr
               app.kubernetes.io/controller: bazarr

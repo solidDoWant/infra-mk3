@@ -46,7 +46,7 @@ specs:
               app.kubernetes.io/instance: lingarr
         toPorts:
           - ports:
-              - port: "9876"
+              - port: "8080"
                 protocol: TCP
     ingress:
       # Kubelet for liveness/readiness/startup probes.

@@ -65,7 +65,7 @@ spec:
               TELEMETRY_ENABLED: "false"
             ports:
               - name: web
-                containerPort: &web_port 9876
+                containerPort: &web_port 8080
             probes:
               readiness: &probe
                 enabled: true

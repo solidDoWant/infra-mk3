@@ -28,6 +28,17 @@ spec:
               OPENARC_BASE_URL: http://openarc-subtitles.media.svc.cluster.local:8000
               # Must match openarc-subtitles's OPENARC_AUTOLOAD_MODEL (see openarc/subtitles/hr.yaml).
               OPENARC_MODEL: qwen3-asr-0_6b-int8-asym
+              # Lingarr translation backend (task=translate). Uses the public
+              # gateway hostname instead of the in-cluster service URL so all
+              # Lingarr API access goes through a single TLS-terminating
+              # ingress. Routes through the internal-gateway only — the
+              # hostname is internal-DNS-only and not reachable from outside
+              # the home network.
+              LINGARR_BASE_URL: https://lingarr.media.svc.cluster.local:8080
+              LINGARR_API_KEY:
+                secretKeyRef:
+                  name: bazarr-whisper-proxy-lingarr
+                  key: API_KEY
               LOG_FORMAT: json
               # Flush stdout immediately so logs aren't held until shutdown.
               PYTHONUNBUFFERED: "1"
