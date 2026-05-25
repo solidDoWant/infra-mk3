@@ -211,8 +211,9 @@
         };
 
         scripts = pkgs.runCommand "openarc-scripts" { } ''
-          install -Dm755 ${./setup-cache.sh}   $out/bin/setup-cache
-          install -Dm755 ${./start-openarc.sh} $out/bin/start-openarc
+          install -Dm755 ${./setup-cache.sh}         $out/bin/setup-cache
+          install -Dm755 ${./start-openarc.sh}       $out/bin/start-openarc
+          install -Dm755 ${./check-models-loaded.sh} $out/bin/check-models-loaded
         '';
 
         # OpenVINO's GPU plugin dlopens libze_loader / libze_intel_gpu at

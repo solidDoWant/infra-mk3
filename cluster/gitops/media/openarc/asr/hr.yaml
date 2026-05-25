@@ -6,10 +6,11 @@ metadata:
   name: openarc-asr
 spec:
   interval: 5m
-  # First-time install downloads ~2 GB from HF and compiles three
-  # OpenVINO models - easily 6–8 min. Upgrades with a warm cache are
-  # much faster, but the same timeout applies.
-  timeout: 20m
+  # First-time install downloads ~5 GB from HF and compiles three
+  # OpenVINO models per registered entry — easily 10–15 min for the
+  # 4B LLM cold compile. Upgrades with a warm cache are much faster,
+  # but the same timeout applies.
+  timeout: 30m
   chart:
     spec:
       chart: app-template
@@ -23,9 +24,9 @@ spec:
     controllers:
       # Cache-population hook. Helm waits for this Job to succeed before
       # rolling the Deployment, so the runtime pod always boots into a
-      # warm cache and avoids the high-memory cold-compile path. This cuts
-      # the peak memory usage (and therefore limit) of the main deployment
-      # from 6 Gi to 2 Gi.
+      # warm cache and avoids the high-memory cold-compile path. This
+      # cuts the peak memory usage (and therefore limit) of the main
+      # deployment well below the cold-compile peak.
       setup:
         type: job
         annotations:
@@ -40,16 +41,21 @@ spec:
             # Helm loses map key ordering, which screws up env var substitution
             # Use `AAA_` as a prefix to ensure that these vars come first and can be used for substitution in the rest of the env block.
             AAA_CACHE_DIR: /cache
-            AAA_OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
             OPENARC_CONFIG_FILE: $(AAA_CACHE_DIR)/openarc_config.json
-            OPENARC_AUTOLOAD_MODEL: $(AAA_OPENARC_AUTOLOAD_MODEL)
+            # Space-separated list of model names to auto-load on
+            # startup. Each must be registered in OPENARC_CONFIG_FILE
+            # (handled by the pre-upgrade setup Job). start-openarc.sh
+            # word-splits this into positional args for `openarc load`.
+            OPENARC_AUTOLOAD_MODEL: >-
+              qwen3-asr-0_6b-int8-asym
+              qwen3-4b-instruct-int4-awq
             OPENARC_LOG_FILE: /dev/null
             NUMBA_CACHE_DIR: /tmp/numba-cache
         containers:
           openarc:
             image: &image
               repository: ghcr.io/soliddowant/openarc
-              tag: main-7de77a45-r1
+              tag: main-7de77a45-r2
               pullPolicy: Always
             command:
               - /bin/setup-cache
@@ -61,21 +67,25 @@ spec:
                   - ALL
             env:
               <<: *common_env_vars
-              AAA_MODEL_TYPE: qwen3_asr
-              AAA_HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
-              MODEL_TYPE: $(AAA_MODEL_TYPE)
-              HF_REPO: $(AAA_HF_REPO)
-              MODEL_PATH: $(AAA_CACHE_DIR)/$(AAA_MODEL_TYPE)/$(AAA_OPENARC_AUTOLOAD_MODEL)/$(AAA_HF_REPO)/model
+              OPENARC_CACHE_DIR: $(AAA_CACHE_DIR)
               # huggingface-cli writes to HF_HOME; the default
               # ~/.cache path is unwritable under readOnlyRootFilesystem.
               HF_HOME: /tmp/hf-home
-              OPENARC_OV_CACHE_DIR: $(AAA_CACHE_DIR)/$(AAA_MODEL_TYPE)/$(AAA_OPENARC_AUTOLOAD_MODEL)/$(AAA_HF_REPO)/cache
+              # Multi-line, pipe-separated: name|hf_repo|model_type|engine
+              # per row. setup-cache.sh iterates this list, downloads
+              # each repo into a per-model cache subtree, runs
+              # `openarc add`, then warms the OV cache for each.
+              OPENARC_MODELS_SPEC: |-
+                qwen3-asr-0_6b-int8-asym|Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO|qwen3_asr|openvino
+                qwen3-4b-instruct-int4-awq|Echo9Zulu/Qwen3-4B-Instruct-2507-int4_asym-awq-ov|llm|ovgenai
             resources:
               requests:
                 cpu: 500m
-                # Cold-compile path: full graph optimization + GPU upload.
-                # Empirically peaks ~2.7 Gi; 6 Gi gives headroom.
-                memory: &openarc_setup_memory 6Gi
+                # Cold-compile path runs each model sequentially. The
+                # 4B int4 LLM dominates the peak (graph optimization +
+                # GPU upload of ~2.5 GiB of int4 weights). 10 Gi gives
+                # headroom over the observed ~6–7 GiB peak.
+                memory: &openarc_setup_memory 10Gi
               limits:
                 memory: *openarc_setup_memory
               claims:
@@ -96,34 +106,29 @@ spec:
               - name: web
                 containerPort: &web_port 8000
             probes:
-              # /openarc/status lists the model with status="loaded" only
-              # after a successful compile. The openai_model_names field
+              # /openarc/status lists each registered model with its
+              # individual status. status="loaded" appears only after a
+              # successful compile. The openai_model_names field
               # registers names regardless of load state, so it can't be
-              # used to detect a failed compile or a silent unload (which
-              # happens on certain bad requests).
+              # used to detect a failed compile or a silent unload
+              # (which happens on certain bad requests).
               liveness:
                 enabled: true
                 custom: true
                 spec:
                   exec:
                     command:
+                      # check-models-loaded queries /openarc/status,
+                      # treats curl --max-time (rc=28) as success so a
+                      # busy server mid-inference isn't killed, and
+                      # exits 1 if any named model is missing or not in
+                      # status="loaded" — catching silent unloads
+                      # (certain bad transcription requests unload the
+                      # model without crashing the server). Word-split
+                      # OPENARC_AUTOLOAD_MODEL into positional args.
                       - bash
                       - -c
-                      # curl --max-time stays below kubelet timeoutSeconds so
-                      # curl returns rc=28 before kubelet SIGKILLs the exec,
-                      # letting us tell timeouts apart from real errors. A
-                      # busy server mid-transcription can stall /openarc/status
-                      # well past the period without the model being unloaded,
-                      # so timeouts are treated as probe success. A successful
-                      # response that reports the model is not loaded — or any
-                      # other curl failure (HTTP error, connection refused) —
-                      # still fails the probe.
-                      - >-
-                        resp=$$(curl -sf --max-time 4 http://localhost:8000/openarc/status);
-                        rc=$$?;
-                        [[ $$rc -eq 28 ]] && exit 0;
-                        [[ "$${resp}" == *"\"model_name\":\"$${OPENARC_AUTOLOAD_MODEL}\""* &&
-                          "$${resp}" == *"\"status\":\"loaded\""* ]]
+                      - exec /bin/check-models-loaded $${OPENARC_AUTOLOAD_MODEL}
                   initialDelaySeconds: 15
                   # 5s period × 3 failures = up to 15s to react to a silent
                   # unload (bad transcription requests can unload the model
@@ -134,7 +139,11 @@ spec:
             resources:
               requests:
                 cpu: 500m
-                memory: 2Gi
+                # Warm-cache runtime: weights resident in CPU/GPU memory.
+                # Qwen3 4B int4 (~2.5 GiB) dominates over Qwen3-ASR
+                # 0.6B int8 (~0.6 GiB); plus OV runtime, Python, and
+                # KV cache headroom for the LLM. 6 Gi covers both.
+                memory: 6Gi
               claims:
                 - name: gpu
     defaultPodOptions:

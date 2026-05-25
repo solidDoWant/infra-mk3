@@ -12,4 +12,8 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 5Gi
+      # Holds raw HF model files + OV compile caches for every model
+      # registered in openarc-asr's openarc_config.json. Currently:
+      # Qwen3-ASR-0.6B int8 (~0.7 GiB) + Qwen3-4B-Instruct int4 awq
+      # (~2.7 GiB) + their OV caches.
+      storage: 10Gi

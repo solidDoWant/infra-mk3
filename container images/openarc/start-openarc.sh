@@ -4,6 +4,10 @@
 # Keep host/port matching what's baked into the asr-models config so
 # save_server_config's diff check short-circuits.
 #
+# OPENARC_AUTOLOAD_MODEL is treated as a whitespace-separated list so
+# the runtime can pre-load multiple models registered in the config
+# (e.g. an ASR model and an LLM in the same server).
+#
 # As PID 1, sh does not forward signals to backgrounded children, so without
 # an explicit trap SIGTERM from the runtime would never reach the server
 # and shutdown would stall until the kill-grace deadline.
@@ -29,8 +33,11 @@ if [ -n "${OPENARC_AUTOLOAD_MODEL:-}" ]; then
   for i in $(seq 1 60); do
     if curl -sf  http://localhost:8000/v1/models >/dev/null 2>&1; then
       echo "Server ready after $i seconds; loading $OPENARC_AUTOLOAD_MODEL"
-      openarc load "$OPENARC_AUTOLOAD_MODEL" \
-        || echo "WARN: failed to auto-load $OPENARC_AUTOLOAD_MODEL"
+      # Unquoted on purpose: word-split into positional args so the
+      # `openarc load` command's variadic positional accepts each name.
+      # shellcheck disable=SC2086
+      openarc load $OPENARC_AUTOLOAD_MODEL \
+        || echo "WARN: failed to auto-load one or more of: $OPENARC_AUTOLOAD_MODEL"
       break
     fi
     sleep 1
