@@ -37,8 +37,12 @@ spec:
           ttlSecondsAfterFinished: 500
         defaultContainerOptions:
           env: &common_env_vars
-            OPENARC_CONFIG_FILE: /cache/openarc_config.json
-            OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
+            # Helm loses map key ordering, which screws up env var substitution
+            # Use `AAA_` as a prefix to ensure that these vars come first and can be used for substitution in the rest of the env block.
+            AAA_CACHE_DIR: /cache
+            AAA_OPENARC_AUTOLOAD_MODEL: qwen3-asr-0_6b-int8-asym
+            OPENARC_CONFIG_FILE: $(AAA_CACHE_DIR)/openarc_config.json
+            OPENARC_AUTOLOAD_MODEL: $(AAA_OPENARC_AUTOLOAD_MODEL)
             OPENARC_LOG_FILE: /dev/null
             NUMBA_CACHE_DIR: /tmp/numba-cache
         containers:
@@ -57,13 +61,15 @@ spec:
                   - ALL
             env:
               <<: *common_env_vars
-              MODEL_TYPE: qwen3_asr
-              HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
-              MODEL_PATH: /cache/$(MODEL_TYPE)/$(OPENARC_AUTOLOAD_MODEL)/$(HF_REPO)/model
+              AAA_MODEL_TYPE: qwen3_asr
+              AAA_HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
+              MODEL_TYPE: $(AAA_MODEL_TYPE)
+              HF_REPO: $(AAA_HF_REPO)
+              MODEL_PATH: $(AAA_CACHE_DIR)/$(AAA_MODEL_TYPE)/$(AAA_OPENARC_AUTOLOAD_MODEL)/$(AAA_HF_REPO)/model
               # huggingface-cli writes to HF_HOME; the default
               # ~/.cache path is unwritable under readOnlyRootFilesystem.
               HF_HOME: /tmp/hf-home
-              OPENARC_OV_CACHE_DIR: /cache/$(MODEL_TYPE)/$(OPENARC_AUTOLOAD_MODEL)/$(HF_REPO)/cache
+              OPENARC_OV_CACHE_DIR: $(AAA_CACHE_DIR)/$(AAA_MODEL_TYPE)/$(AAA_OPENARC_AUTOLOAD_MODEL)/$(AAA_HF_REPO)/cache
             resources:
               requests:
                 cpu: 500m
