@@ -55,11 +55,20 @@ spec:
             # can be used for substitution in the rest of the env block.
             AAA_CACHE_DIR: /cache
             OPENARC_CONFIG_FILE: $(AAA_CACHE_DIR)/openarc_config.json
+            # Used by register-model.sh to build per-model paths under
+            # the shared cache PVC. Set here (not just on init containers)
+            # so init+warm+runtime all share one env anchor without a
+            # duplicate-merge-key, which kustomize-controller rejects.
+            OPENARC_CACHE_DIR: $(AAA_CACHE_DIR)
+            # huggingface-cli writes to HF_HOME; the default ~/.cache
+            # path is unwritable under readOnlyRootFilesystem. Harmless
+            # on the runtime container since HF isn't touched there.
+            HF_HOME: /tmp/hf-home
             # Space-separated list of model names to auto-load on
             # startup. Each must be registered in OPENARC_CONFIG_FILE
             # (handled by the register-* init containers). start-openarc.sh
             # word-splits this into positional args for `openarc load`.
-            OPENARC_AUTOLOAD_MODEL: &autoload_models >-
+            OPENARC_AUTOLOAD_MODEL: >-
               qwen3-asr-0_6b-int8-asym
               qwen3-4b-instruct-int4-awq
             OPENARC_LOG_FILE: /dev/null
@@ -74,11 +83,6 @@ spec:
               - /bin/register-model
             env:
               <<: *common_env_vars
-              <<: &register_env_extra
-                OPENARC_CACHE_DIR: $(AAA_CACHE_DIR)
-                # huggingface-cli writes to HF_HOME; the default
-                # ~/.cache path is unwritable under readOnlyRootFilesystem.
-                HF_HOME: /tmp/hf-home
               MODEL_NAME: qwen3-asr-0_6b-int8-asym
               HF_REPO: Echo9Zulu/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
               MODEL_TYPE: qwen3_asr
@@ -96,7 +100,6 @@ spec:
               - /bin/register-model
             env:
               <<: *common_env_vars
-              <<: *register_env_extra
               MODEL_NAME: qwen3-4b-instruct-int4-awq
               HF_REPO: Echo9Zulu/Qwen3-4B-Instruct-2507-int4_asym-awq-ov
               MODEL_TYPE: llm
