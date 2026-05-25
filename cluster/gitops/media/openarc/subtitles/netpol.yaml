@@ -3,14 +3,14 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: openarc-asr
+  name: openarc-subtitles
 specs:
   - description: openarc
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: openarc-asr
-        app.kubernetes.io/controller: openarc-asr
-        app.kubernetes.io/instance: openarc-asr
+        app.kubernetes.io/name: openarc-subtitles
+        app.kubernetes.io/controller: openarc-subtitles
+        app.kubernetes.io/instance: openarc-subtitles
     ingress:
       - fromEntities:
           - host
@@ -32,9 +32,9 @@ specs:
   - description: setup
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: openarc-asr
+        app.kubernetes.io/name: openarc-subtitles
         app.kubernetes.io/controller: setup
-        app.kubernetes.io/instance: openarc-asr
+        app.kubernetes.io/instance: openarc-subtitles
     egress:
       - toEndpoints:
           - matchLabels:

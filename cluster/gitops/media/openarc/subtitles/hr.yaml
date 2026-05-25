@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: openarc-asr
+  name: openarc-subtitles
 spec:
   interval: 5m
   # First-time install downloads ~5 GB from HF and compiles the OpenVINO
@@ -127,7 +127,7 @@ spec:
         pod:
           # A single failure is unlikely to succeed on another attempt.
           restartPolicy: Never
-      openarc-asr:
+      openarc-subtitles:
         replicas: 1
         # Release the GPU device cleanly between revisions.
         strategy: Recreate
@@ -195,13 +195,13 @@ spec:
             value: "1"
       resourceClaims:
         - name: gpu
-          resourceClaimTemplateName: openarc-asr-gpu
+          resourceClaimTemplateName: openarc-subtitles-gpu
     persistence:
       # RWX so the pre-upgrade setup Job and the still-Running runtime
       # Deployment can both mount during an upgrade.
       cache:
         type: persistentVolumeClaim
-        existingClaim: openarc-asr-cache
+        existingClaim: openarc-subtitles-cache
         globalMounts:
           - path: /cache
       # OpenArc writes benchmark SQLite under /persist; without this mount
@@ -209,7 +209,7 @@ spec:
       persist:
         type: emptyDir
         advancedMounts:
-          openarc-asr:
+          openarc-subtitles:
             openarc:
               - path: /persist
       tmp:
@@ -217,8 +217,8 @@ spec:
         globalMounts:
           - path: /tmp
     service:
-      openarc-asr:
-        controller: openarc-asr
+      openarc-subtitles:
+        controller: openarc-subtitles
         ports:
           web:
             port: *web_port

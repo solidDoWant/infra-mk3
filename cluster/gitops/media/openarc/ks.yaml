@@ -4,14 +4,14 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name openarc-asr
+  name: &app_name openarc-subtitles
 spec:
   targetNamespace: media
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/media/openarc/asr
+  path: /cluster/gitops/media/openarc/subtitles
   prune: true
   sourceRef:
     kind: GitRepository

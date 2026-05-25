@@ -60,7 +60,7 @@ specs:
       # speaks to OpenArc's OpenAI-compatible /v1/audio/transcriptions API,
       # and handles forced alignment to recover cue timing. Bazarr's
       # WhisperAI provider POSTs /asr and /detect-language here; the proxy
-      # is the only thing in bazarr's data path that talks to openarc-asr.
+      # is the only thing in bazarr's data path that talks to openarc-subtitles.
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: bazarr-whisper-proxy

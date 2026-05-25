@@ -24,9 +24,9 @@ spec:
               repository: ghcr.io/soliddowant/bazarr-whisper-proxy
               tag: 0.0.10
             env:
-              # Upstream ASR — OpenAI-compatible /v1/audio/transcriptions on openarc-asr.
-              OPENARC_BASE_URL: http://openarc-asr.media.svc.cluster.local:8000
-              # Must match openarc-asr's OPENARC_AUTOLOAD_MODEL (see openarc/asr/hr.yaml).
+              # Upstream ASR — OpenAI-compatible /v1/audio/transcriptions on openarc-subtitles.
+              OPENARC_BASE_URL: http://openarc-subtitles.media.svc.cluster.local:8000
+              # Must match openarc-subtitles's OPENARC_AUTOLOAD_MODEL (see openarc/subtitles/hr.yaml).
               OPENARC_MODEL: qwen3-asr-0_6b-int8-asym
               LOG_FORMAT: json
               # Flush stdout immediately so logs aren't held until shutdown.
@@ -57,7 +57,7 @@ spec:
                     port: *container_port
                   timeoutSeconds: 5
               startup:
-                # First-time OpenArc model load is 6–8 min (see openarc/asr/hr.yaml
+                # First-time OpenArc model load is 6–8 min (see openarc/subtitles/hr.yaml
                 # timeout). 60 * 10s = 10 min before the pod is killed.
                 enabled: true
                 custom: true
