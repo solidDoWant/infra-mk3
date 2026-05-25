@@ -88,7 +88,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       resourceClaims:
         - name: gpu
-          resourceClaimTemplateName: openarc-asr-gpu
+          resourceClaimTemplateName: whisper-proxy-gpu
       dnsConfig:
         options:
           - name: ndots
