@@ -32,58 +32,69 @@
           src = pkgs.fetchFromGitHub {
             owner = "SearchSavior";
             repo = "OpenArc";
-            rev = "8856d1d9c2b8a04c1a03143ed0c633a9ebf40987";
-            hash = "sha256-TiP+xSlkjvTmIACaDbAyA8rHwuS/yxpkZZFQy75dZQY=";
+            rev = "7de77a45378232b371f1e91a80b82038d042ad9b";
+            hash = "sha256-8KB2KLAg07ZncfdKnsAsUVQQEajUV/IGYPeZbodaDEM=";
           };
+          # Each entry is the .diff of an open upstream PR, fetched
+          # straight from GitHub. When a PR is updated, the hash
+          # changes — set `hash = lib.fakeHash;` to discover the new
+          # value, then paste it back. Drop the entry once the PR
+          # merges and the rev pin advances past it.
           patches = [
-            # Adds OPENARC_CONFIG_FILE env override and resolves relative
-            # model_path values against the config file's directory, so a
-            # single image volume containing both the config and the model
-            # files can be mounted at any path in the pod.
-            ./openarc-config-path.patch
-            # Bumps optimum 1.27.0 -> 2.0.0 and adds optimum-onnx (the new
-            # split-out package). Upstream bumped torch to 2.11 but kept
-            # optimum 1.x in uv.lock, whose bundled onnx exporter imports
-            # torch.onnx.symbolic_opset14._attention_scale — a private
-            # symbol removed in torch 2.9+. optimum-onnx 0.0.3 guards that
-            # import on torch version; optimum-intel 1.26.x targets the
-            # split package. Drop this once upstream relocks.
-            ./optimum-2x.patch
-            # Runs the per-chunk Qwen3 ASR work (mel + encoder + decode)
-            # on a thread executor instead of inline on the event loop.
-            # Upstream declared audio_chunks() as `async def` but the body
-            # is pure CPU-bound OpenVINO calls with no awaits, so each
-            # chunk blocked the loop for its full runtime — concurrent
-            # transcribe requests serialized end-to-end and the health
-            # probes timed out mid-job. Drop once upstream fixes it.
-            ./openarc-asr-thread-offload.patch
-            # Qwen3 ASR inference perf bundle. Caches the mel filter +
-            # hann window torch tensors and the tokenizer state on the
-            # OVQwen3ASR instance instead of rebuilding/reloading them
-            # per chunk; promotes the encoder/decoder/embedding models
-            # to persistent InferRequest objects with reusable input
-            # buffers; and splits audio_chunks into _prepare_chunk +
-            # _generate_chunk so the next chunk's encoder can run in a
-            # worker thread while the current chunk is still in
-            # prefill+decode. Depends on openarc-asr-thread-offload.
-            ./openarc-qwen3-asr-perf.patch
-            # Qwen3 ASR perf telemetry: GPU sysman snapshots via the
-            # repo's gpu_metrics pybind11 module (no-op when absent or
-            # on a non-GPU device), decode-loop sub-timers (emb/infer/
-            # post) folded into collect_metrics, and per-chunk + per-
-            # request perf log lines with normalize/split breakdown.
-            # Incremental on top of openarc-qwen3-asr-perf.patch.
-            ./openarc-qwen3-asr-telemetry.patch
-            # Adds SRT/VTT support to POST /v1/audio/transcriptions
-            # (qwen3_asr only). Upstream's else-branch returns the
-            # transcript as a JSON-quoted string for any non-json
-            # response_format — bazarr's whisper provider (via the
-            # bazarr-openai-whisperbridge sidecar) requests output=srt
-            # and rejects the body as "not valid for this file" because
-            # there are no cues. The patch surfaces per-chunk timings
-            # from the qwen3_asr worker as metrics["segments"] and adds
-            # srt/vtt/text branches that emit PlainTextResponse.
-            ./openarc-srt-output.patch
+            # Fix wheel builds not containing any src/ files (uses
+            # [tool.setuptools.packages.find] so subpackages are picked
+            # up). Required — uv2nix builds the venv from a wheel.
+            (pkgs.fetchpatch {
+              name = "pr-113-wheel-build.patch";
+              url = "https://github.com/SearchSavior/OpenArc/pull/113.diff";
+              hash = "sha256-WG9qV43N6yWehSN5+DQATEbXAqG++4iN48g/Mcr0kaA=";
+            })
+            # Qwen3 ASR perf: cache mel filter + hann window torch
+            # tensors and tokenizer state on the instance, and pass
+            # them through compute_mel_spectrogram / decode_tokens_cached
+            # so they aren't rebuilt per chunk.
+            (pkgs.fetchpatch {
+              name = "pr-128-qwen3-asr-perf.patch";
+              url = "https://github.com/SearchSavior/OpenArc/pull/128.diff";
+              hash = "sha256-ERJan6BDZ8FpFbkvt8b4cpszd/diJpv0FLBY1/ZvfJ4=";
+            })
+            # Enable OpenVINO model caching: adds cache_dir +
+            # runtime_config fields to ModelLoadConfig and threads
+            # them through every engine's ov.Core.set_property call.
+            (pkgs.fetchpatch {
+              name = "pr-118-ov-caching.patch";
+              url = "https://github.com/SearchSavior/OpenArc/pull/118.diff";
+              hash = "sha256-L3ANf11m0wqb+i14wfZMpQkNH93pS9Na8l+U0Z7en2E=";
+            })
+            # Add Qwen3-ASR segments to verbose_json / diarized_json
+            # responses; refactors transcribe() to return a tuple and
+            # propagates segments through worker_registry.
+            (pkgs.fetchpatch {
+              name = "pr-130-qwen3-asr-segments.patch";
+              url = "https://github.com/SearchSavior/OpenArc/pull/130.diff";
+              hash = "sha256-WRQbL5gkoTofWUU+yIajqnoYuJpe5unY1CVaafDDiBw=";
+            })
+            # Fix `openarc serve start` failing due to optimum/torch
+            # version mismatch — full uv.lock regen with optimum 2.x
+            # and optimum-onnx (the new split-out package).
+            (pkgs.fetchpatch {
+              name = "pr-120-uv-lock.patch";
+              url = "https://github.com/SearchSavior/OpenArc/pull/120.diff";
+              hash = "sha256-EG/05QepcIreBNQE9Gm5nkIFtdYfTzwuy7+v57ZP5X8=";
+            })
+            # Honor the OpenAI-standard `language` form field on the
+            # transcription endpoint for Qwen3-ASR models so clients
+            # can pin the recognition language without sending the
+            # vendor-specific openarc_asr payload. PR #130 also creates
+            # src/tests/test_qwen3_asr_unit.py, and the test suite
+            # isn't run during the image build, so drop this PR's copy
+            # to avoid the new-file collision.
+            (pkgs.fetchpatch {
+              name = "pr-131-asr-language-key.patch";
+              url = "https://github.com/SearchSavior/OpenArc/pull/131.diff";
+              excludes = [ "src/tests/test_qwen3_asr_unit.py" ];
+              hash = "sha256-Fzlxo1mEvKNiF/WuJSMhzuzRXsXHZB7Q1EY+UYOfHWk=";
+            })
           ];
         };
 

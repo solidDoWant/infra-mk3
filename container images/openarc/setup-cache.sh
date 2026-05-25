@@ -41,7 +41,8 @@ openarc add \
   --model-path="${MODEL_PATH}" \
   --engine="${ENGINE}" \
   --model-type="${MODEL_TYPE}" \
-  --device="${DEVICE}"
+  --device="${DEVICE}" \
+  --cache-dir="${OPENARC_OV_CACHE_DIR}"
 
 # OpenVINO would auto-create the cache dir, but doing it here surfaces
 # permission errors before the long compile starts rather than after.
