@@ -129,6 +129,17 @@ spec:
                 base_url: http://radarr.media.svc.cluster.local:7878
                 api_key: !env RADARR_API_KEY
 
+                # Make configarr authoritative: any quality profile or custom
+                # format that exists in radarr but isn't managed by this config
+                # (or by an included template) gets deleted on each run.
+                # First run will be aggressive — deletes radarr default
+                # profiles like Any/SD/DVD/Bluray/WEB-DL/HD-1080p/Ultra-HD
+                # plus any CFs not referenced by a kept profile.
+                delete_unmanaged_quality_profiles:
+                  enabled: true
+                delete_unmanaged_custom_formats:
+                  enabled: true
+
                 # Recyclarr include-templates create the canonical "UHD Bluray
                 # + WEB" and "HD Bluray + WEB" profiles as alternates AND
                 # import the full custom-format library that we re-score below
@@ -166,6 +177,12 @@ spec:
                     score_set: default
                     min_format_score: 0
                     quality_sort: top
+                    # Any CF score on this profile that's not defined in our
+                    # custom_formats blocks below gets reset to 0. Keeps the
+                    # profile's scoring exactly as configured here, so manual
+                    # tweaks in the radarr UI don't persist.
+                    reset_unmatched_scores:
+                      enabled: true
                     upgrade:
                       allowed: true
                       until_quality: Remux-2160p
