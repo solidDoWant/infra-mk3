@@ -43,6 +43,8 @@ spec:
                 secretKeyRef:
                   name: radarr-api-key
                   key: API_KEY
+              # Exit with non-zero code when something fails to apply
+              STOP_ON_ERROR: true
             securityContext:
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
