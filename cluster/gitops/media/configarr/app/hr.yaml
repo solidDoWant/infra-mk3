@@ -24,7 +24,7 @@ spec:
       job:
         type: job
         annotations:
-          helm.sh/hook: post-install,post-upgrade
+          helm.sh/hook: post-install,post-upgrade,post-rollback
           # before-hook-creation: deletes the previous Job before recreating
           #   (Jobs are immutable, so without this the upgrade would fail).
           # hook-succeeded: cleans up the Job after success so kubectl is tidy.
