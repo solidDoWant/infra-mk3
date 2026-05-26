@@ -129,14 +129,23 @@ spec:
                 base_url: http://radarr.media.svc.cluster.local:7878
                 api_key: !env RADARR_API_KEY
 
-                # Recyclarr templates create the canonical "UHD Bluray + WEB"
-                # and "HD Bluray + WEB" profiles as alternates AND import the
-                # full custom-format library that we re-score below against
-                # our Any Quality profile. The two extra profiles cost nothing
-                # to keep around and may be useful as one-off picks.
+                # Recyclarr include-templates create the canonical "UHD Bluray
+                # + WEB" and "HD Bluray + WEB" profiles as alternates AND
+                # import the full custom-format library that we re-score below
+                # against our Any Quality profile. The two extra profiles cost
+                # nothing to keep around and may be useful as one-off picks.
+                #
+                # Note: configarr resolves RECYCLARR-source templates against
+                # the recyclarr/config-templates `includes/` tree (prefixed
+                # names like radarr-quality-profile-*), not the top-level
+                # `templates/` directory. The top-level `uhd-bluray-web` /
+                # `hd-bluray-web` template names are not findable from here.
                 include:
-                  - template: uhd-bluray-web
-                  - template: hd-bluray-web
+                  - template: radarr-quality-definition-movie
+                  - template: radarr-quality-profile-uhd-bluray-web
+                  - template: radarr-custom-formats-uhd-bluray-web
+                  - template: radarr-quality-profile-hd-bluray-web
+                  - template: radarr-custom-formats-hd-bluray-web
 
                 # Single catch-all profile. language: Any so non-English
                 # releases are eligible as a fallback, but the inline
