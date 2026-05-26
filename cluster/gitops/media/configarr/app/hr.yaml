@@ -90,7 +90,7 @@ spec:
       # configarr reads. subPath keeps it from masking the rest of /app/config.
       config:
         type: configMap
-        name: configarr-config
+        identifier: config
         globalMounts:
           - path: /app/config/config.yml
             subPath: config.yml
