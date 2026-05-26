@@ -32,8 +32,8 @@
           src = pkgs.fetchFromGitHub {
             owner = "SearchSavior";
             repo = "OpenArc";
-            rev = "7de77a45378232b371f1e91a80b82038d042ad9b";
-            hash = "sha256-8KB2KLAg07ZncfdKnsAsUVQQEajUV/IGYPeZbodaDEM=";
+            rev = "e3618c0719c59d05d904e315d453e403cf757e03";
+            hash = "sha256-N932tjSjqxUfMeeRk7c6+gI6YXxA7et37Xfm7do/wZg=";
           };
           # Each entry is the .diff of an open upstream PR, fetched
           # straight from GitHub. When a PR is updated, the hash
@@ -49,22 +49,13 @@
               url = "https://github.com/SearchSavior/OpenArc/pull/113.diff";
               hash = "sha256-WG9qV43N6yWehSN5+DQATEbXAqG++4iN48g/Mcr0kaA=";
             })
-            # Qwen3 ASR perf: cache mel filter + hann window torch
-            # tensors and tokenizer state on the instance, and pass
-            # them through compute_mel_spectrogram / decode_tokens_cached
-            # so they aren't rebuilt per chunk.
-            (pkgs.fetchpatch {
-              name = "pr-128-qwen3-asr-perf.patch";
-              url = "https://github.com/SearchSavior/OpenArc/pull/128.diff";
-              hash = "sha256-ERJan6BDZ8FpFbkvt8b4cpszd/diJpv0FLBY1/ZvfJ4=";
-            })
             # Enable OpenVINO model caching: adds cache_dir +
             # runtime_config fields to ModelLoadConfig and threads
             # them through every engine's ov.Core.set_property call.
             (pkgs.fetchpatch {
               name = "pr-118-ov-caching.patch";
               url = "https://github.com/SearchSavior/OpenArc/pull/118.diff";
-              hash = "sha256-L3ANf11m0wqb+i14wfZMpQkNH93pS9Na8l+U0Z7en2E=";
+              hash = "sha256-wA720DAjkGOjvQt5Lzi+Mmwxf/iIU4ZaRDhZopTM86A=";
             })
             # Add Qwen3-ASR segments to verbose_json / diarized_json
             # responses; refactors transcribe() to return a tuple and
@@ -72,7 +63,7 @@
             (pkgs.fetchpatch {
               name = "pr-130-qwen3-asr-segments.patch";
               url = "https://github.com/SearchSavior/OpenArc/pull/130.diff";
-              hash = "sha256-WRQbL5gkoTofWUU+yIajqnoYuJpe5unY1CVaafDDiBw=";
+              hash = "sha256-S3NPr4E3E45nal7VkT32/Zn5tpQsnonUF+oKetS7Ah4=";
             })
             # Fix `openarc serve start` failing due to optimum/torch
             # version mismatch — full uv.lock regen with optimum 2.x
@@ -81,19 +72,6 @@
               name = "pr-120-uv-lock.patch";
               url = "https://github.com/SearchSavior/OpenArc/pull/120.diff";
               hash = "sha256-EG/05QepcIreBNQE9Gm5nkIFtdYfTzwuy7+v57ZP5X8=";
-            })
-            # Honor the OpenAI-standard `language` form field on the
-            # transcription endpoint for Qwen3-ASR models so clients
-            # can pin the recognition language without sending the
-            # vendor-specific openarc_asr payload. PR #130 also creates
-            # src/tests/test_qwen3_asr_unit.py, and the test suite
-            # isn't run during the image build, so drop this PR's copy
-            # to avoid the new-file collision.
-            (pkgs.fetchpatch {
-              name = "pr-131-asr-language-key.patch";
-              url = "https://github.com/SearchSavior/OpenArc/pull/131.diff";
-              excludes = [ "src/tests/test_qwen3_asr_unit.py" ];
-              hash = "sha256-Fzlxo1mEvKNiF/WuJSMhzuzRXsXHZB7Q1EY+UYOfHWk=";
             })
           ];
         };
