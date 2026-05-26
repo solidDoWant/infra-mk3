@@ -128,6 +128,11 @@ specs:
               app.kubernetes.io/name: bazarr
               app.kubernetes.io/controller: bazarr
               app.kubernetes.io/instance: bazarr
+          # Configarr — applies TRaSH custom formats / quality profiles via
+          # the Radarr API on each weekly cron run + on every config edit.
+          - matchLabels:
+              app.kubernetes.io/name: configarr
+              app.kubernetes.io/instance: configarr
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector

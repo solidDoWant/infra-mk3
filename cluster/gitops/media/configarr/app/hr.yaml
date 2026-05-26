@@ -1,0 +1,351 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: configarr
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      # Post-install/upgrade Job. Fires whenever the HelmRelease upgrades,
+      # which happens automatically when this file (incl. the inline ConfigMap
+      # below) changes. Effect: config.yml edits apply on the next Flux reconcile
+      # instead of waiting for the weekly cron run.
+      job:
+        type: job
+        annotations:
+          helm.sh/hook: post-install,post-upgrade
+          # before-hook-creation: deletes the previous Job before recreating
+          #   (Jobs are immutable, so without this the upgrade would fail).
+          # hook-succeeded: cleans up the Job after success so kubectl is tidy.
+          # Failed Jobs are left in place for debugging.
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+        job:
+          backoffLimit: 1
+          ttlSecondsAfterFinished: 600
+        containers:
+          configarr: &configarr_container
+            image:
+              repository: ghcr.io/raydak-labs/configarr
+              tag: v1.28.0
+            env:
+              RADARR_API_KEY:
+                secretKeyRef:
+                  name: radarr-api-key
+                  key: API_KEY
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+      # Weekly run picks up upstream TRaSH-Guides changes. Local config.yml
+      # edits are picked up by the post-upgrade Job above, not this.
+      cron:
+        type: cronjob
+        cronjob:
+          schedule: "0 3 * * 0" # Sun 03:00
+          concurrencyPolicy: Forbid
+          successfulJobsHistory: 1
+          failedJobsHistory: 3
+          backoffLimit: 1
+          ttlSecondsAfterFinished: 600
+        containers:
+          configarr: *configarr_container
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # Shared cache for cloned TRaSH-Guides repo. configarr `git pull`s an
+      # existing repo rather than re-cloning, so persisting this across runs
+      # saves a clone every weekly cron + every config-change Job invocation.
+      # Both controllers share this PVC; they never run concurrently (Job and
+      # CronJob lifecycles don't overlap), so RWO is fine.
+      repos:
+        type: persistentVolumeClaim
+        storageClass: ssd-replicated-3x
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        globalMounts:
+          - path: /app/repos
+      # Mount the inline configMap (below) as the single config file
+      # configarr reads. subPath keeps it from masking the rest of /app/config.
+      config:
+        type: configMap
+        name: configarr-config
+        globalMounts:
+          - path: /app/config/config.yml
+            subPath: config.yml
+    configMaps:
+      config:
+        data:
+          # Editing this file triggers a HelmRelease upgrade on the next Flux
+          # reconcile, which fires the post-upgrade Job and applies changes
+          # immediately. See https://configarr.de/ for full syntax.
+          config.yml: |
+            # Inline custom format definitions (top-level — applies across all
+            # *arr instances). configarr creates these in radarr/sonarr by
+            # name and lets us reference them by trash_id (any unique slug
+            # works for inline CFs).
+            customFormatDefinitions:
+              # Matches releases tagged as containing English audio by
+              # radarr's parser. LanguageSpecification.value=1 is the radarr
+              # language enum entry for "English". Paired with the +100000
+              # score in custom_formats below so that English releases
+              # dominate; with the profile set to language: Any, non-English
+              # releases are still eligible as fallback when no English
+              # release exists.
+              - trash_id: prefer-english-audio
+                name: "Language: English Audio"
+                includeCustomFormatWhenRenaming: false
+                specifications:
+                  - name: English
+                    implementation: LanguageSpecification
+                    negate: false
+                    required: true
+                    fields:
+                      value: 1
+
+            radarr:
+              radarr:
+                base_url: http://radarr.media.svc.cluster.local:7878
+                api_key: !env RADARR_API_KEY
+
+                # Recyclarr templates create the canonical "UHD Bluray + WEB"
+                # and "HD Bluray + WEB" profiles as alternates AND import the
+                # full custom-format library that we re-score below against
+                # our Any Quality profile. The two extra profiles cost nothing
+                # to keep around and may be useful as one-off picks.
+                include:
+                  - template: uhd-bluray-web
+                  - template: hd-bluray-web
+
+                # Single catch-all profile. language: Any so non-English
+                # releases are eligible as a fallback, but the inline
+                # "Language: English Audio" CF scored at +100000 below makes
+                # English the always-preferred pick when one is available.
+                # No manual per-movie intervention needed.
+                #
+                # qualities: all of them enabled, Remux-2160p down to CAM,
+                # sorted top-down by preference (radarr grabs best available
+                # and falls back to lower tiers when nothing higher exists).
+                # min_format_score: 0 — releases with no negative CF scores
+                # are always eligible; heavily-negative releases (Scene,
+                # Obfuscated, x265 re-encodes, etc.) are filtered out via
+                # TRaSH default scores and never reach the queue.
+                quality_profiles:
+                  - name: Any Quality
+                    language: Any
+                    score_set: default
+                    min_format_score: 0
+                    quality_sort: top
+                    upgrade:
+                      allowed: true
+                      until_quality: Remux-2160p
+                      until_score: 10000
+                    qualities:
+                      - name: Remux-2160p
+                      - name: Bluray-2160p
+                      - name: WEB 2160p
+                        qualities:
+                          - WEBDL-2160p
+                          - WEBRip-2160p
+                      - name: HDTV-2160p
+                      - name: Remux-1080p
+                      - name: Bluray-1080p
+                      - name: WEB 1080p
+                        qualities:
+                          - WEBDL-1080p
+                          - WEBRip-1080p
+                      - name: HDTV-1080p
+                      - name: Bluray-720p
+                      - name: WEB 720p
+                        qualities:
+                          - WEBDL-720p
+                          - WEBRip-720p
+                      - name: HDTV-720p
+                      - name: Bluray-576p
+                      - name: Bluray-480p
+                      - name: DVD
+                      - name: SDTV
+                      - name: REGIONAL
+                      - name: WORKPRINT
+                      - name: TELESYNC
+                      - name: TELECINE
+                      - name: CAM
+                      # BR-DISK (full Blu-ray disc structures / .iso / BDMV /
+                      # VIDEO_TS) and Raw-HD (raw broadcast .ts streams) are
+                      # intentionally omitted — these are container formats,
+                      # not finished media files. The BR-DISK custom format
+                      # scored negatively below provides a second layer of
+                      # defense against disc-format releases sneaking in via
+                      # mis-tagged quality.
+
+                # All scoring blocks below target the Any Quality profile.
+                # Most use TRaSH default scores (via score_set: default on
+                # the profile) — no explicit score: integers — so upstream
+                # curation stays current with TRaSH guide updates. The
+                # English-audio block is the lone exception with an
+                # explicit score chosen to dominate everything else.
+                custom_formats:
+                  # English audio preference. +100000 is enough to outscore
+                  # the sum of every other CF (HQ groups, HDR, Atmos, etc.
+                  # all add up to a few thousand at most), so any release
+                  # tagged as English ranks above any non-English release.
+                  - trash_ids:
+                      - prefer-english-audio
+                    assign_scores_to:
+                      - name: Any Quality
+                        score: 100000
+
+                  # HDR — prefer when available. Single unified HDR custom
+                  # format covers HDR10 / HDR10+ / HLG / PQ in one.
+                  - trash_ids:
+                      - 493b6d1dbec3c3364c59d7607f7e3405 # HDR
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Block Dolby Vision releases that don't have an HDR10
+                  # fallback layer (DV-only streams won't play on non-DV
+                  # hardware). Standard DV with HDR10 fallback passes fine.
+                  - trash_ids:
+                      - 923b6abef9b17f937fab56cfcf89e1f1 # DV (w/o HDR fallback)
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Remasters / special editions — boost when available.
+                  - trash_ids:
+                      - 570bc9ebecd92723d2d21500f4be314c # Remaster
+                      - eca37840c13c6ef2dd0262b141a5482f # 4K Remaster
+                      - e0c07d59beb37348e975a930d5e50319 # Criterion Collection
+                      - 9d27d9d2181838f76dee150882bdc58c # Masters of Cinema
+                      - db9b4c4b53d312a3ca5f1378f6440fc9 # Vinegar Syndrome
+                      - 957d0f44b592285f26449575e8b1167e # Special Edition
+                      - eecf3a857724171f968a66cb5719e152 # IMAX
+                      - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Audio codecs — prefer higher-end when available. TRaSH
+                  # default ranks Atmos/TrueHD > DTS-HD MA > FLAC > DTS-HD
+                  # HRA > DD+ > DTS > AAC > DD. Downstream media-processor
+                  # handles channel layout (5.1→2.0 downmix etc.) so we
+                  # don't filter by channel count.
+                  - trash_ids:
+                      - 496f355514737f7d83bf7aa4d24f8169 # TrueHD Atmos
+                      - 2f22d89048b01681dde8afe203bf2e95 # DTS X
+                      - 417804f7f2c4308c1f4c5d380d4c4475 # ATMOS (undefined)
+                      - 1af239278386be2919e1bcee0bde047e # DD+ ATMOS
+                      - 3cafb66171b47f226146a0770576870f # TrueHD
+                      - dcf3ec6938fa32445f590a4da84256cd # DTS-HD MA
+                      - a570d4a0e56a2874b64e5bfa55202a1b # FLAC
+                      - e7c2fcae07cbada050a0af3357491d7b # PCM
+                      - 8e109e50e0a0b83a5098b056e13bf6db # DTS-HD HRA
+                      - 185f1dd7264c4562b9022d963ac37424 # DD+
+                      - f9f847ac70a0af62ea4a08280b859636 # DTS-ES
+                      - 1c1a4c5e823891c75bc50380a6866f73 # DTS
+                      - 240770601cc226190c367ef59aba7463 # AAC
+                      - c2998bd0d90ed5621d8df281e839436e # DD
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # HQ release groups — TRaSH-curated tier list of known-good
+                  # encoder groups. Tier 01 (e.g. FraMeSToR) scores highest.
+                  - trash_ids:
+                      - 4d74ac4c4db0b64bff6ce0cffef99bf0 # UHD Bluray Tier 01
+                      - a58f517a70193f8e578056642178419d # UHD Bluray Tier 02
+                      - e71939fae578037e7aed3ee219bbe7c1 # UHD Bluray Tier 03
+                      - ed27ebfef2f323e964fb1f61391bcb35 # HD Bluray Tier 01
+                      - c20c8647f2746a1f4c4262b0fbbeeeae # HD Bluray Tier 02
+                      - 5608c71bcebba0a5e666223bae8c9227 # HD Bluray Tier 03
+                      - c20f169ef63c5f40c2def54abaf4438e # WEB Tier 01
+                      - 403816d65392c79236dcb6dd591aeda4 # WEB Tier 02
+                      - af94e0fe497124d1f9ce732069ec8c3b # WEB Tier 03
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Streaming services — prefer known-good services with
+                  # consistent bitrates. AMZN/ATVP/DSNP/MAX/etc.
+                  - trash_ids:
+                      - b3b3a6ac74ecbd56bcdbefa4799fb9df # AMZN
+                      - 40e9380490e748672c2522eaaeb692f7 # ATVP
+                      - 84272245b2988854bfb76a16e60baea5 # DSNP
+                      - 509e5f41146e278f9eab1ddaceb34515 # HBO
+                      - 5763d1b0ce84aff3b21038eea8e9b8ad # HMAX
+                      - 526d445d4c16214309f0fd2b3be18a89 # Hulu
+                      - e0ec9672be6cac914ffad34a6b077209 # iT
+                      - 6a061313d22e51e0f25b7cd4dc065233 # MAX
+                      - 170b1d363bd8516fbf3a3eb05d4faff6 # NF
+                      - c9fd353f8f5f1baf56dc601c4cb29920 # PCOK
+                      - e36a0ba1bc902b26ee40818a1d59b8bd # PMTP
+                      - c2863d2a50c9acad1fb50e53ece60817 # STAN
+                      - cc5e51a9e85a6296ceefe097a77f12f4 # BCORE
+                      - 16622a6911d1ab5d5b8b713d5b0036d4 # CRiT
+                      - 2a6039655313bf5dab1e43523b62c374 # MA
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Repack / Proper — prefer the fixed re-release over the
+                  # original buggy one.
+                  - trash_ids:
+                      - e7718d7a3ce595f289bfee26adc178f5 # Repack/Proper
+                      - ae43b294509409a6a13919dedd4764c4 # Repack2
+                      - 5caaaa1c08c1742aa4342d8c4cc463f2 # Repack3
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Unwanted release attributes — deprioritized via TRaSH
+                  # default scores (heavily negative). With min_format_score
+                  # at 0 these effectively block matching releases. Includes:
+                  #   - x265 (HD): re-encoded h.265 from h.264 source — lower
+                  #     quality than native h.265 in remuxes/blurays. Native
+                  #     HEVC in Remux-2160p / Bluray-2160p is unaffected.
+                  #   - AV1: low compatibility with most playback hardware.
+                  #   - BR-DISK / 3D / Upscaled / Generated Dynamic HDR: not
+                  #     what we want even as fallback.
+                  - trash_ids:
+                      - ed38b889b31be83fda192888e2286d83 # BR-DISK
+                      - e6886871085226c3da1830830146846c # Generated Dynamic HDR
+                      - 90a6f9a284dff5103f6346090e6280c8 # LQ
+                      - e204b80c87be9497a8a6eaff48f72905 # LQ (Release Title)
+                      - dc98083864ea246d05a42df0d05f81cc # x265 (HD)
+                      - b8cd450cbfa689c0259a01d9e29ba3d6 # 3D
+                      - bfd8eb01832d646a0a89c4deb46f8564 # Upscaled
+                      - 0a3f082873eb454bde444150b70253cc # Extras
+                      - 712d74cd88bceb883ee32f773656b1f5 # Sing-Along Versions
+                      - cae4ca30163749b891686f95532519bd # AV1
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Bad release flags — deprioritize via TRaSH defaults.
+                  # Per user pref these are *not* hard-blocked; min_format_score
+                  # of 0 means they still won't be picked while better options
+                  # exist, but the door is left open if explicit opt-in is
+                  # needed (e.g. lowering min_format_score on a specific movie).
+                  - trash_ids:
+                      - b6832f586342ef70d9c128d40c07b872 # Bad Dual Groups
+                      - cc444569854e9de0b084ab2b8b1532b2 # Black and White Editions
+                      - ae9b7c9ebde1f3bd336a8cbd1ec4c5e5 # No-RlsGroup
+                      - 7357cf5161efbf8c4d5d0c30b4815ee2 # Obfuscated
+                      - 5c44f52a8714fdd79bb4d98e2673be1f # Retags
+                      - f537cf427b64c38c8e36298f657e4828 # Scene
+                    assign_scores_to:
+                      - name: Any Quality
