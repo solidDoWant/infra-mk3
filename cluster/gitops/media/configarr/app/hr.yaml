@@ -142,6 +142,49 @@ spec:
                 delete_unmanaged_custom_formats:
                   enabled: true
 
+                # Media Management tab. Fields are passed through to radarr's
+                # /api/v3/config/mediamanagement endpoint — camelCase keys
+                # match the API schema 1:1
+                # (https://radarr.video/docs/api/#/MediaManagementConfig).
+                # Values below reflect radarr's current state at time of
+                # codification; adjust as needed and reconcile.
+                media_management:
+                  # ---- File management
+                  # Files are on the same NFS share but use different mount points,
+                  # so copying is required
+                  copyUsingHardlinks: false
+                  # Probably not needed
+                  importExtraFiles: true
+                  extraFileExtensions: sub,nfo
+                  # Get codec information, resolution, runtime, etc. for imported files
+                  enableMediaInfo: true
+                  # ---- Importing
+                  skipFreeSpaceCheckWhenImporting: false
+                  # Size in MB that must be free _after_ importing
+                  minimumFreeSpaceWhenImporting: 100
+                  useScriptImport: false
+                  scriptImportPath: ""
+                  # ---- Folder behavior
+                  createEmptyMovieFolders: false
+                  # Clean up empty folders after movie deletion
+                  deleteEmptyFolders: true
+                  autoRenameFolders: false
+                  pathsDefaultStatic: false
+                  # ---- Recycle bin
+                  # Just permanently delete files
+                  recycleBin: ""
+                  recycleBinCleanupDays: 7
+                  # ---- File handling
+                  downloadPropersAndRepacks: preferAndUpgrade
+                  autoUnmonitorPreviouslyDownloadedMovies: false
+                  fileDate: none
+                  rescanAfterRefresh: always
+                  # ---- Permissions
+                  # The NFS server will handle permissions so this is not needed
+                  setPermissionsLinux: false
+                  chmodFolder: "755"
+                  chownGroup: ""
+
                 # File and folder naming. Values are TRaSH-Guides preset keys
                 # (see TRaSH-Guides/Guides docs/json/radarr/naming/radarr-naming.json
                 # for the full list and the actual format strings).
