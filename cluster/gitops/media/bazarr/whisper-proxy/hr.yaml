@@ -34,7 +34,7 @@ spec:
               # ingress. Routes through the internal-gateway only — the
               # hostname is internal-DNS-only and not reachable from outside
               # the home network.
-              LINGARR_BASE_URL: https://lingarr.media.svc.cluster.local:8080
+              LINGARR_BASE_URL: http://lingarr.media.svc.cluster.local:8080
               LOG_FORMAT: json
               # Flush stdout immediately so logs aren't held until shutdown.
               PYTHONUNBUFFERED: "1"
