@@ -17,6 +17,8 @@ spec:
     - name: temporal-postgres-auth
   values:
     clusterName: temporal
+    storage:
+      size: 10Gi
     certificates:
       serving:
         issuerRef:
