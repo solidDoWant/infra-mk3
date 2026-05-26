@@ -22,7 +22,7 @@ spec:
           app:
             image:
               repository: ghcr.io/soliddowant/bazarr-whisper-proxy
-              tag: 0.0.10
+              tag: 0.0.12
             env:
               # Upstream ASR — OpenAI-compatible /v1/audio/transcriptions on openarc-subtitles.
               OPENARC_BASE_URL: http://openarc-subtitles.media.svc.cluster.local:8000
