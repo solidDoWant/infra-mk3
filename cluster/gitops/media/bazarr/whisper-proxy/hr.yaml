@@ -35,10 +35,6 @@ spec:
               # hostname is internal-DNS-only and not reachable from outside
               # the home network.
               LINGARR_BASE_URL: https://lingarr.media.svc.cluster.local:8080
-              LINGARR_API_KEY:
-                secretKeyRef:
-                  name: bazarr-whisper-proxy-lingarr
-                  key: API_KEY
               LOG_FORMAT: json
               # Flush stdout immediately so logs aren't held until shutdown.
               PYTHONUNBUFFERED: "1"
