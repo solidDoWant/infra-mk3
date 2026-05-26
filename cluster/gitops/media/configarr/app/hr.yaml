@@ -142,6 +142,28 @@ spec:
                 delete_unmanaged_custom_formats:
                   enabled: true
 
+                # File and folder naming. Values are TRaSH-Guides preset keys
+                # (see TRaSH-Guides/Guides docs/json/radarr/naming/radarr-naming.json
+                # for the full list and the actual format strings).
+                #
+                # folder: jellyfin-tmdb →
+                #   "{Movie CleanTitle} ({Release Year}) [tmdbid-{TmdbId}]"
+                # movie.standard: jellyfin-anime-tmdb →
+                #   Same as jellyfin-tmdb plus MediaInfo AudioLanguages and
+                #   MediaInfo VideoBitDepth in the filename. Useful for a
+                #   mixed-HDR/multi-bitdepth library — filenames distinguish
+                #   8-bit SDR from 10-bit HDR at a glance. Despite the name,
+                #   it's not anime-specific. The plain "jellyfin-tmdb" file
+                #   preset would drop those two tags for shorter filenames.
+                #
+                # rename: true → applies the new format to existing files on
+                # the next radarr media scan, not just newly imported ones.
+                media_naming:
+                  folder: jellyfin-tmdb
+                  movie:
+                    rename: true
+                    standard: jellyfin-anime-tmdb
+
                 # Recyclarr include-templates create the canonical "UHD Bluray
                 # + WEB" and "HD Bluray + WEB" profiles as alternates AND
                 # import the full custom-format library that we re-score below
