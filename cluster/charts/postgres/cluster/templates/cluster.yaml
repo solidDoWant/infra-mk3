@@ -64,20 +64,14 @@ spec:
     clientCASecret: {{ tpl .Values.certificates.clientCA.secretName . }}
     replicationTLSSecret: {{ tpl .Values.certificates.replicationUser.secretName . }}
   topologySpreadConstraints:
+    # Don't schedule instances or new join jobs on the same node. Both values must
+    # be included here so that new join jobs don't end up on the same node, tying
+    # the instance's volume to that node.
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname
       labelSelector:
         matchLabels:
           cnpg.io/cluster: {{ include "cluster-resource-name" . }}
-        matchExpressions:
-        - key: cnpg.io/podRole
-          operator: In
-          # Don't schedule instances or new join jobs on the same node. Both values must
-          # be included here so that new join jobs don't end up on the same node, tying
-          # the instance's volume to that node.
-          values:
-            - instance
-            - join
       whenUnsatisfiable: DoNotSchedule
 {{- if .Values.additionalClusterConfig }}
 {{ .Values.additionalClusterConfig | toYaml | indent 2 }}
