@@ -43,6 +43,14 @@ spec:
                 secretKeyRef:
                   name: radarr-api-key
                   key: API_KEY
+              # NZBGet password from the kyverno-mirrored credentials secret
+              # (mirrored from downloads/ → media/ by the
+              # copy-nzbget-credentials-to-clients policy, triggered by the
+              # nzbget-client pod label below).
+              NZBGET_PASSWORD:
+                secretKeyRef:
+                  name: nzbget-add-user-credentials
+                  key: NZBGET_ADD_PASSWORD
               # Exit with non-zero code when something fails to apply
               STOP_ON_ERROR: true
             securityContext:
@@ -65,6 +73,13 @@ spec:
         containers:
           configarr: *configarr_container
     defaultPodOptions:
+      # Triggers Kyverno's copy-{nzbget,qbittorrent}-credentials-to-clients
+      # policies to mirror the source secrets from the downloads namespace
+      # into media — required for the env vars above and for configarr to
+      # reconstruct full download-client configs in radarr/sonarr.
+      labels:
+        endpoints.netpols.home.arpa/nzbget-client: "true"
+        endpoints.netpols.home.arpa/qbittorrent-client: "true"
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -146,6 +161,62 @@ spec:
                 # in radarr's helmrelease.
                 root_folders:
                   - /mnt/library
+
+                # Download clients radarr submits to. Field names under
+                # `fields:` are snake_case versions of the radarr API field
+                # names (e.g. useSsl → use_ssl), per configarr's convention.
+                # `type:` matches the lowercase form of radarr's implementation
+                # name (radarr API "Nzbget" → "nzbget", "QBittorrent" → "qbittorrent").
+                #
+                # delete_unmanaged: true makes configarr authoritative — any
+                # download client added to radarr but not listed here gets
+                # removed on the next reconcile.
+                download_clients:
+                  update_password: false
+                  delete_unmanaged:
+                    enabled: true
+                  config:
+                    enable_completed_download_handling: true
+                    auto_redownload_failed: true
+                  data:
+                    - name: NZBGet
+                      type: nzbget
+                      enable: true
+                      priority: 1
+                      remove_completed_downloads: true
+                      remove_failed_downloads: true
+                      fields:
+                        host: nzbget.downloads.svc.cluster.local
+                        port: 6789
+                        use_ssl: false
+                        url_base: ""
+                        username: nzbget
+                        password: dummy-value
+                        movie_category: Movies
+                        recent_movie_priority: 0 # Normal
+                        older_movie_priority: 0 # Normal
+                        add_paused: false
+                    - name: qBittorrent
+                      type: qbittorrent
+                      enable: true
+                      priority: 1
+                      remove_completed_downloads: true
+                      remove_failed_downloads: true
+                      fields:
+                        host: qbittorrent.downloads.svc.cluster.local
+                        port: 8080
+                        use_ssl: false
+                        url_base: ""
+                        username: ""
+                        password: ""
+                        movie_category: Movies
+                        movie_imported_category: ""
+                        recent_movie_priority: 0 # Last
+                        older_movie_priority: 0 # Last
+                        initial_state: 0 # Started
+                        sequential_order: false
+                        first_and_last: false
+                        content_layout: 0 # Default
 
                 # Media Management tab. Fields are passed through to radarr's
                 # /api/v3/config/mediamanagement endpoint — camelCase keys
