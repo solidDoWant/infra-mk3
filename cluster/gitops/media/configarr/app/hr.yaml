@@ -268,6 +268,38 @@ spec:
                     rename: true
                     standard: jellyfin-anime-tmdb
 
+                # Delay profile (default — applies to all movies without a
+                # tagged override). NOTE: fields inside the profile use
+                # camelCase, matching radarr's API verbatim — unlike most
+                # configarr fields which are snake_case.
+                #
+                # Both delays are 0 — release age is ignored entirely. Every
+                # release that comes back in a search is eligible regardless
+                # of how recently it was uploaded.
+                #
+                # Once releases are eligible, radarr sorts them by:
+                #   1. Custom format score (descending)
+                #   2. Quality (descending)
+                #   3. Languages (descending)
+                #   4. preferredProtocol — usenet sorts above torrent on ties
+                #   5. Indexer priority, then download client priority
+                #
+                # Net effect: best release wins; when an NZB and torrent are
+                # tied on quality + score + language, the NZB wins via the
+                # protocol tiebreaker. bypassIf* fields are inert when both
+                # delays are 0 (no delay to bypass) but left at their defaults
+                # for clarity.
+                delay_profiles:
+                  default:
+                    enableUsenet: true
+                    enableTorrent: true
+                    preferredProtocol: usenet
+                    usenetDelay: 0
+                    torrentDelay: 0
+                    bypassIfHighestQuality: false
+                    bypassIfAboveCustomFormatScore: false
+                    minimumCustomFormatScore: 0
+
                 # Recyclarr include-templates create the canonical "UHD Bluray
                 # + WEB" and "HD Bluray + WEB" profiles as alternates AND
                 # import the full custom-format library that we re-score below
