@@ -160,9 +160,40 @@ spec:
                   update_password: true
                   delete_unmanaged:
                     enabled: true
+                  # Global download client behavior — maps 1:1 to radarr's
+                  # /api/v3/config/downloadclient. Snake_case field names.
                   config:
+                    # When a download client reports a download as completed,
+                    # radarr imports it (vs ignoring and letting the user
+                    # manually import).
                     enable_completed_download_handling: true
+                    # Comma-separated list of folder name fragments radarr
+                    # should treat as "unfinished" and skip during import
+                    # scans. Default matches scene/SABnzbd unpack conventions.
+                    download_client_working_folders: "_UNPACK_|_FAILED_"
+                    # Minutes between polls of the download client for
+                    # completion status. 1min is the default and fine.
+                    check_for_finished_download_interval: 1
+                    # Automatically re-search and re-grab on download failure
+                    # (corrupt, deleted by indexer, etc.).
                     auto_redownload_failed: true
+                    # Same, but also applies to manually-triggered interactive
+                    # searches (where the user explicitly picked a release).
+                    auto_redownload_failed_from_interactive_search: true
+                  # Remote path mappings — translate the path the download
+                  # client reports back to radarr into the path radarr can
+                  # actually access. Needed because nzbget and qbittorrent
+                  # write downloads to paths inside their own pods (under
+                  # /config) but radarr mounts the same NFS share at a
+                  # different path (/mnt/complete). host: matches the
+                  # download client's host field (FQDN), not its name.
+                  remote_paths:
+                    - host: nzbget.downloads.svc.cluster.local
+                      remote_path: /config/completed/Movies/
+                      local_path: /mnt/complete/
+                    - host: qbittorrent.downloads.svc.cluster.local
+                      remote_path: /config/Downloads/Movies/
+                      local_path: /mnt/complete/
                   data:
                     - name: NZBGet
                       type: nzbget
