@@ -43,14 +43,6 @@ spec:
                 secretKeyRef:
                   name: radarr-api-key
                   key: API_KEY
-              # NZBGet password from the kyverno-mirrored credentials secret
-              # (mirrored from downloads/ → media/ by the
-              # copy-nzbget-credentials-to-clients policy, triggered by the
-              # nzbget-client pod label below).
-              NZBGET_PASSWORD:
-                secretKeyRef:
-                  name: nzbget-add-user-credentials
-                  key: NZBGET_ADD_PASSWORD
               # Exit with non-zero code when something fails to apply
               STOP_ON_ERROR: true
             securityContext:
@@ -73,13 +65,6 @@ spec:
         containers:
           configarr: *configarr_container
     defaultPodOptions:
-      # Triggers Kyverno's copy-{nzbget,qbittorrent}-credentials-to-clients
-      # policies to mirror the source secrets from the downloads namespace
-      # into media — required for the env vars above and for configarr to
-      # reconstruct full download-client configs in radarr/sonarr.
-      labels:
-        endpoints.netpols.home.arpa/nzbget-client: "true"
-        endpoints.netpols.home.arpa/qbittorrent-client: "true"
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

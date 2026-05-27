@@ -18,6 +18,6 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
-    # The post-install Job calls radarr's API immediately; without radarr up,
-    # the hook fails and Helm rolls back the release.
     - name: radarr
+    - name: nzbget
+    - name: qbittorrent
