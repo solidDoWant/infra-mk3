@@ -157,7 +157,7 @@ spec:
                 # download client added to radarr but not listed here gets
                 # removed on the next reconcile.
                 download_clients:
-                  update_password: false
+                  update_password: true
                   delete_unmanaged:
                     enabled: true
                   config:
