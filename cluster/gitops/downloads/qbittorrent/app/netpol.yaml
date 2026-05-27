@@ -35,10 +35,10 @@ specs:
           - ports:
               - port: "8090"
                 protocol: TCP
-      # From download requesters
+      # From qBittorrent clients (radarr, sonarr, nzbhydra2, etc.)
       - fromEndpoints:
           - matchLabels:
-              endpoints.netpols.home.arpa/download-requester: "true"
+              endpoints.netpols.home.arpa/qbittorrent-client: "true"
             matchExpressions:
               - key: io.kubernetes.pod.namespace
                 operator: Exists

@@ -71,10 +71,10 @@ specs:
           - ports:
               - port: "9452"
                 protocol: TCP
-      # From download requesters
+      # From NZBGet clients (radarr, sonarr, nzbhydra2, etc.)
       - fromEndpoints:
           - matchLabels:
-              endpoints.netpols.home.arpa/download-requester: "true"
+              endpoints.netpols.home.arpa/nzbget-client: "true"
             matchExpressions:
               - key: io.kubernetes.pod.namespace
                 operator: Exists

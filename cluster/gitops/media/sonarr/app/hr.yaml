@@ -71,7 +71,8 @@ spec:
         pod:
           labels:
             endpoints.netpols.home.arpa/download-search-requester: "true"
-            endpoints.netpols.home.arpa/download-requester: "true"
+            endpoints.netpols.home.arpa/nzbget-client: "true"
+            endpoints.netpols.home.arpa/qbittorrent-client: "true"
             endpoints.netpols.home.arpa/nzbhydra2-sync: "true"
       exportarr:
         # Run this as a separate deployment so that I can try deploying multiple Radarr instances

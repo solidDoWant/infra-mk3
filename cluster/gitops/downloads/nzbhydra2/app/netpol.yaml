@@ -12,15 +12,22 @@ specs:
         app.kubernetes.io/controller: nzbhydra2
         app.kubernetes.io/instance: nzbhydra2
     egress:
-      # To downloaders
+      # To NZBGet
       - toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: downloads
-              endpoints.netpols.home.arpa/downloader: "true"
+              endpoints.netpols.home.arpa/nzbget-server: "true"
         toPorts:
           - ports:
               - port: "6789"
                 protocol: TCP
+      # To qBittorrent
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: downloads
+              endpoints.netpols.home.arpa/qbittorrent-server: "true"
+        toPorts:
+          - ports:
               - port: "8080"
                 protocol: TCP
       # To Jackett
