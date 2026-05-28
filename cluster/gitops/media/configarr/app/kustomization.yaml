@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization.json
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - hr.yaml
+  - netpol.yaml
+# Build the configarr config into a ConfigMap from the standalone YAML file in
+# config/, rather than inlining it as a string in the HelmRelease. The HR
+# references it via persistence.config.name.
+#
+# The hash suffix is intentionally LEFT ENABLED (no disableNameSuffixHash) so a
+# config.yml edit produces a new ConfigMap name. hr-values-from-cm-transformer.yaml then
+# rewrites that hashed name into the HelmRelease's persistence.config.name,
+# which changes the HR -> Flux runs a Helm upgrade -> the post-upgrade Job
+# fires and applies the new config immediately (instead of waiting for the
+# weekly cron). Flux prunes the superseded hashed ConfigMap.
+configMapGenerator:
+  - name: configarr-config
+    files:
+      - config.yml=config/config.yml
+configurations:
+  - hr-values-from-cm-transformer.yaml
