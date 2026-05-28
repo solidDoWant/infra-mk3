@@ -47,7 +47,6 @@ spec:
                 secretKeyRef:
                   name: sonarr-api-key
                   key: API_KEY
-              DRY_RUN: true
               # Exit with non-zero code when something fails to apply
               STOP_ON_ERROR: true
             securityContext:
