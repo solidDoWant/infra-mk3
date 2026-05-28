@@ -124,7 +124,12 @@ Use only when the app has no OIDC support. This mode intercepts every request th
 Additional requirements beyond OIDC blueprint:
 1. Replace `oauth2provider` with `proxyprovider` in the blueprint
 2. Add an outpost rule to the HTTPRoute
-3. Configure the app to trust the `X-Authentik-*` headers (if it supports external auth mode)
+3. **Enroll the hostname in the gateway's Istio `AuthorizationPolicy`** (see below) — easy to miss, and nothing works without it
+4. Configure the app to trust the `X-Authentik-*` headers (if it supports external auth mode)
+
+> **The three pieces must all be present.** The blueprint registers the provider, the HTTPRoute rule exposes the `/outpost.goauthentik.io` callback path, and the `AuthorizationPolicy` is what actually makes the gateway invoke the outpost (ext_authz) for the host. If the hostname is not in the `AuthorizationPolicy`, the gateway serves the app directly: **no redirect to Authentik, and no `X-authentik-*` headers reach the backend.** This is the single most common reason "auth silently does nothing."
+>
+> The proxy outpost auto-assigns every proxy provider (`providers: !FindMany [authentik_providers_proxy.proxyprovider]` in `cluster/gitops/security/authentik/outpost/blueprints/outpost.yaml`), so a new `proxyprovider` blueprint is picked up automatically — there is no separate "assign provider to outpost" step.
 
 ```yaml
       # Replace the oauth2provider entry with this:
@@ -169,6 +174,30 @@ route:
           - path:
               type: PathPrefix
               value: /outpost.goauthentik.io
+```
+
+**Enroll the hostname in the Istio `AuthorizationPolicy`** (add only for proxy auth). Edit `cluster/gitops/networking/gateways/ingress/authorization-policy.yaml` and add the service hostname to the `internal-gateway-authentik-auth` policy's `hosts` list:
+
+```yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: internal-gateway-authentik-auth
+spec:
+  targetRef:
+    kind: Gateway
+    group: gateway.networking.k8s.io
+    name: internal-gateway
+  action: CUSTOM
+  provider:
+    name: authentik
+  rules:
+    - to:
+        - operation:
+            hosts:
+              - radarr.${SECRET_PUBLIC_DOMAIN_NAME}
+              - sonarr.${SECRET_PUBLIC_DOMAIN_NAME}
+              - <service>.${SECRET_PUBLIC_DOMAIN_NAME}   # <-- add the new hostname here
 ```
 
 **Required secrets:** Same `SECRET_AUTHENTIK_<SERVICE>_DISCORD_ROLE_ID`, but no OIDC client ID/secret needed.
