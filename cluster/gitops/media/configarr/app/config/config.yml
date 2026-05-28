@@ -336,13 +336,21 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Block Dolby Vision releases that don't have an HDR10
-      # fallback layer (DV-only streams won't play on non-DV
-      # hardware). Standard DV with HDR10 fallback passes fine.
+      # Hard-block Dolby Vision releases with no HDR10 fallback layer
+      # (DV-only streams won't play on non-DV hardware). Standard DV with an
+      # HDR10 fallback doesn't match this CF and passes through fine.
+      #
+      # Explicit -1000000 instead of the TRaSH default (-10000): the default is
+      # a rounding error next to the +100000 English-audio score plus a
+      # well-sourced release's CF bonuses (audio codec, release-group tier,
+      # streaming service), so DV-only releases were still outscoring clean HDR
+      # ones. -1000000 drives the total negative — below min_format_score (0) —
+      # so the release is rejected outright rather than just deprioritized.
       - trash_ids:
           - 923b6abef9b17f937fab56cfcf89e1f1 # DV (w/o HDR fallback)
         assign_scores_to:
           - name: Any Quality
+            score: -1000000
 
       # Remasters / special editions — boost when available.
       - trash_ids:
@@ -723,11 +731,18 @@ sonarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Block DV-only releases (no HDR10 fallback layer).
+      # Hard-block DV-only releases (no HDR10 fallback layer) — unplayable on
+      # non-DV hardware. Explicit -1000000 instead of the TRaSH default
+      # (-10000), which was too small to overcome the +100000 English-audio
+      # score plus a well-sourced release's bonuses, so DV-only releases were
+      # still outscoring clean HDR ones. -1000000 drives the total below
+      # min_format_score (0) so the release is rejected. DV+HDR10 hybrids don't
+      # match this CF and pass through fine.
       - trash_ids:
           - 9b27ab6498ec0f31a3353992e19434ca # DV (w/o HDR fallback)
         assign_scores_to:
           - name: Any Quality
+            score: -1000000
 
       # Remaster — boost when available. Sonarr's catalog only
       # ships the generic "Remaster" CF; radarr's other entries in
