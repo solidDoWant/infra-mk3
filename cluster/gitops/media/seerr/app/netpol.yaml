@@ -80,6 +80,9 @@ specs:
           - matchName: image.tmdb.org
           - matchName: api4.thetvdb.com
           - matchName: artworks.thetvdb.com
+          # See https://github.com/seerr-team/seerr/blob/c04172aee415e9a457a7df64cc69e36fc74468d4/server/api/rating/rottentomatoes.ts#L106,
+          # something to do with RottenTomatoes private API
+          - matchPattern: "79frdp12pn-dsn.algolia.net"
           # Mapping file download (TheTVDB→TMDB id mappings hosted in the repo).
           - matchName: raw.githubusercontent.com
           - matchName: api.github.com
