@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: media-processor
-      version: 0.0.29
+      version: 0.0.30
       sourceRef:
         kind: HelmRepository
         namespace: flux-system
@@ -68,6 +68,7 @@ spec:
             preserveSource: true
             ignorePatterns: &qbittorrent_ignore
               - "\\.!qB$" # qbittorrent incomplete downloads
+            skipCropDetection: true
           - name: bittorrent-shows
             mediaType: show
             input:
@@ -81,6 +82,7 @@ spec:
               remotePath: /mnt/complete
             preserveSource: true
             ignorePatterns: *qbittorrent_ignore
+            skipCropDetection: true
           - name: usenet-movies
             mediaType: movie
             input:
@@ -92,6 +94,7 @@ spec:
             ignorePatterns: &nzbget_ignore
               - "(^|/)_unpack(/|$)" # nzbget in-progress extraction directories
               - (?:^|/)[0-9a-zA-Z]{32}\.[^/]+$ # hashed temp names of moved files pending rename. This is less than ideal, but the only realistic workaround
+            skipCropDetection: true
           - name: usenet-shows
             mediaType: show
             input:
@@ -101,6 +104,7 @@ spec:
             output: *show_output
             preserveSource: false
             ignorePatterns: *nzbget_ignore
+            skipCropDetection: true
         volumes:
           media:
             type: nfs
