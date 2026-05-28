@@ -1,10 +1,7 @@
 ---
-# Teach kustomize that a ConfigMap name is referenced inside the HelmRelease at
-# spec.values.persistence.config.name. With the configMapGenerator hash suffix
-# enabled, kustomize rewrites that field to the hashed name (e.g.
-# configarr-config-abc123). A config.yml edit -> new hash -> new ConfigMap name
-# -> the HelmRelease's values change -> Flux performs a Helm upgrade -> the
-# post-upgrade Job fires and applies the new config immediately.
+# Tells kustomize that the HelmRelease field spec.values.persistence.config.name
+# is a ConfigMap-name reference, so the configMapGenerator's hash suffix is
+# rewritten into it. See kustomization.yaml for why this matters.
 nameReference:
   - kind: ConfigMap
     fieldSpecs:

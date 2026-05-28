@@ -5,16 +5,12 @@ kind: Kustomization
 resources:
   - hr.yaml
   - netpol.yaml
-# Build the configarr config into a ConfigMap from the standalone YAML file in
-# config/, rather than inlining it as a string in the HelmRelease. The HR
-# references it via persistence.config.name.
-#
-# The hash suffix is intentionally LEFT ENABLED (no disableNameSuffixHash) so a
-# config.yml edit produces a new ConfigMap name. hr-values-from-cm-transformer.yaml then
-# rewrites that hashed name into the HelmRelease's persistence.config.name,
-# which changes the HR -> Flux runs a Helm upgrade -> the post-upgrade Job
-# fires and applies the new config immediately (instead of waiting for the
-# weekly cron). Flux prunes the superseded hashed ConfigMap.
+# Builds the configarr config into a ConfigMap from the standalone config/ file
+# instead of inlining it in the HelmRelease. The hash suffix is left enabled so
+# a config.yml edit yields a new ConfigMap name; hr-values-from-cm-transformer.yaml
+# rewrites that name into the HR's persistence.config.name, so an edit changes
+# the HR → Flux upgrades it → the post-upgrade Job applies the change (no wait
+# for the weekly cron). Flux prunes the superseded ConfigMap.
 configMapGenerator:
   - name: configarr-config
     files:

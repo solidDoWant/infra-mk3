@@ -1,15 +1,8 @@
-# Inline custom format definitions (top-level — applies across all
-# *arr instances). configarr creates these in radarr/sonarr by
-# name and lets us reference them by trash_id (any unique slug
-# works for inline CFs).
+# Custom formats defined in-config (top-level → applied to every *arr
+# instance). configarr matches by name; the trash_id can be any unique slug.
 customFormatDefinitions:
-  # Matches releases tagged as containing English audio by
-  # radarr's parser. LanguageSpecification.value=1 is the radarr
-  # language enum entry for "English". Paired with the +100000
-  # score in custom_formats below so that English releases
-  # dominate; with the profile set to language: Any, non-English
-  # releases are still eligible as fallback when no English
-  # release exists.
+  # value: 1 is the radarr/sonarr language-enum entry for English. Scored
+  # heavily in custom_formats below — see there for the rationale.
   - trash_id: prefer-english-audio
     name: "Language: English Audio"
     includeCustomFormatWhenRenaming: false
@@ -26,63 +19,37 @@ radarr:
     base_url: http://radarr.media.svc.cluster.local:7878
     api_key: !env RADARR_API_KEY
 
-    # Make configarr authoritative: any quality profile or custom
-    # format that exists in radarr but isn't managed by this config
-    # (or by an included template) gets deleted on each run.
-    # First run will be aggressive — deletes radarr default
-    # profiles like Any/SD/DVD/Bluray/WEB-DL/HD-1080p/Ultra-HD
-    # plus any CFs not referenced by a kept profile.
+    # configarr is authoritative: profiles/CFs present in radarr but not
+    # managed here (or by an included template) are deleted each run. The first
+    # run is aggressive — it removes radarr's built-in default profiles.
     delete_unmanaged_quality_profiles:
       enabled: true
     delete_unmanaged_custom_formats:
       enabled: true
 
-    # Root folders radarr scans for movies. Match the NFS mount point
-    # in radarr's helmrelease.
+    # Must match radarr's library mount path.
     root_folders:
       - /mnt/library
 
-    # Download clients radarr submits to. Field names under
-    # `fields:` are snake_case versions of the radarr API field
-    # names (e.g. useSsl → use_ssl), per configarr's convention.
-    # `type:` matches the lowercase form of radarr's implementation
-    # name (radarr API "Nzbget" → "nzbget", "QBittorrent" → "qbittorrent").
-    #
-    # delete_unmanaged: true makes configarr authoritative — any
-    # download client added to radarr but not listed here gets
-    # removed on the next reconcile.
+    # `fields:` keys are snake_case of the radarr API names (useSsl → use_ssl);
+    # `type:` is the lowercase implementation name (Nzbget → nzbget).
     download_clients:
       update_password: true
       delete_unmanaged:
         enabled: true
-      # Global download client behavior — maps 1:1 to radarr's
-      # /api/v3/config/downloadclient. Snake_case field names.
       config:
         # Disabling this causes several problems:
         # * Radarr stops tracking downloads, which makes it impossible to tell ingestion state from the UI
         # * Radarr seems to sometimes download multiple copies via different releases because it doesn't know another one is in-flight
         # * The media-processor pipeline can no longer look up media information via Radarr because the file path is not in the download queue
         enable_completed_download_handling: true
-        # Comma-separated list of folder name fragments radarr
-        # should treat as "unfinished" and skip during import
-        # scans. Default matches scene/SABnzbd unpack conventions.
         download_client_working_folders: "_UNPACK_|_FAILED_"
-        # Minutes between polls of the download client for
-        # completion status. 1min is the default and fine.
-        check_for_finished_download_interval: 1
-        # Automatically re-search and re-grab on download failure
-        # (corrupt, deleted by indexer, etc.).
+        check_for_finished_download_interval: 1 # minutes
         auto_redownload_failed: true
-        # Same, but also applies to manually-triggered interactive
-        # searches (where the user explicitly picked a release).
         auto_redownload_failed_from_interactive_search: true
-      # Remote path mappings — translate the path the download
-      # client reports back to radarr into the path radarr can
-      # actually access. Needed because nzbget and qbittorrent
-      # write downloads to paths inside their own pods (under
-      # /config) but radarr mounts the same NFS share at a
-      # different path (/mnt/complete). host: matches the
-      # download client's host field (FQDN), not its name.
+      # Translate the client's reported path to radarr's mount: the clients
+      # write under /config in their own pods; radarr sees the same NFS share
+      # at /mnt/complete. host: matches the client's host FQDN, not its name.
       remote_paths:
         - host: nzbget.downloads.svc.cluster.local
           remote_path: /config/completed/Movies/
@@ -130,37 +97,28 @@ radarr:
             first_and_last: false
             content_layout: 0 # Default
 
-    # Media Management tab. Fields are passed through to radarr's
-    # /api/v3/config/mediamanagement endpoint — camelCase keys
-    # match the API schema 1:1
-    # (https://radarr.video/docs/api/#/MediaManagementConfig).
-    # Values below reflect radarr's current state at time of
-    # codification; adjust as needed and reconcile.
+    # Maps to radarr's /api/v3/config/mediamanagement. NOTE: keys here are
+    # camelCase (verbatim API names), unlike the snake_case used elsewhere.
     media_management:
       # ---- File management
       # Files are on the same NFS share but use different mount points,
       # so copying is required
       copyUsingHardlinks: false
-      # Probably not needed
       importExtraFiles: true
       extraFileExtensions: sub,nfo
-      # Get codec information, resolution, runtime, etc. for imported files
       enableMediaInfo: true
       # ---- Importing
       skipFreeSpaceCheckWhenImporting: false
-      # Size in MB that must be free _after_ importing
-      minimumFreeSpaceWhenImporting: 100
+      minimumFreeSpaceWhenImporting: 100 # MB, required free space after import
       useScriptImport: false
       scriptImportPath: ""
       # ---- Folder behavior
       createEmptyMovieFolders: false
-      # Clean up empty folders after movie deletion
       deleteEmptyFolders: true
       autoRenameFolders: false
       pathsDefaultStatic: false
       # ---- Recycle bin
-      # Just permanently delete files
-      recycleBin: ""
+      recycleBin: "" # empty = delete permanently
       recycleBinCleanupDays: 7
       # ---- File handling
       downloadPropersAndRepacks: preferAndUpgrade
@@ -173,49 +131,22 @@ radarr:
       chmodFolder: "755"
       chownGroup: ""
 
-    # File and folder naming. Values are TRaSH-Guides preset keys
-    # (see TRaSH-Guides/Guides docs/json/radarr/naming/radarr-naming.json
-    # for the full list and the actual format strings).
-    #
-    # folder: jellyfin-tmdb →
-    #   "{Movie CleanTitle} ({Release Year}) [tmdbid-{TmdbId}]"
-    # movie.standard: jellyfin-anime-tmdb →
-    #   Same as jellyfin-tmdb plus MediaInfo AudioLanguages and
-    #   MediaInfo VideoBitDepth in the filename. Useful for a
-    #   mixed-HDR/multi-bitdepth library — filenames distinguish
-    #   8-bit SDR from 10-bit HDR at a glance. Despite the name,
-    #   it's not anime-specific. The plain "jellyfin-tmdb" file
-    #   preset would drop those two tags for shorter filenames.
-    #
-    # rename: true → applies the new format to existing files on
-    # the next radarr media scan, not just newly imported ones.
+    # Values are TRaSH-Guides preset keys (radarr-naming.json). The "anime"
+    # file preset is used for ALL movies deliberately: it equals jellyfin-tmdb
+    # but adds MediaInfo AudioLanguages + VideoBitDepth, so 8-bit SDR and 10-bit
+    # HDR are distinguishable in the filename. rename: true also reformats
+    # existing files on the next scan.
     media_naming:
       folder: jellyfin-tmdb
       movie:
         rename: true
         standard: jellyfin-anime-tmdb
 
-    # Delay profile (default — applies to all movies without a
-    # tagged override). NOTE: fields inside the profile use
-    # camelCase, matching radarr's API verbatim — unlike most
-    # configarr fields which are snake_case.
-    #
-    # Both delays are 0 — release age is ignored entirely. Every
-    # release that comes back in a search is eligible regardless
-    # of how recently it was uploaded.
-    #
-    # Once releases are eligible, radarr sorts them by:
-    #   1. Custom format score (descending)
-    #   2. Quality (descending)
-    #   3. Languages (descending)
-    #   4. preferredProtocol — usenet sorts above torrent on ties
-    #   5. Indexer priority, then download client priority
-    #
-    # Net effect: best release wins; when an NZB and torrent are
-    # tied on quality + score + language, the NZB wins via the
-    # protocol tiebreaker. bypassIf* fields are inert when both
-    # delays are 0 (no delay to bypass) but left at their defaults
-    # for clarity.
+    # NOTE: these fields are camelCase (verbatim radarr API), unlike the
+    # snake_case used elsewhere. Both delays are 0, so release age is ignored
+    # and every release is immediately eligible. radarr then sorts by: CF score
+    # → quality → languages → preferredProtocol (usenet beats torrent on ties)
+    # → indexer/client priority. bypassIf* fields are inert at delay 0.
     delay_profiles:
       default:
         enableUsenet: true
@@ -227,17 +158,11 @@ radarr:
         bypassIfAboveCustomFormatScore: false
         minimumCustomFormatScore: 0
 
-    # Recyclarr include-templates create the canonical "UHD Bluray
-    # + WEB" and "HD Bluray + WEB" profiles as alternates AND
-    # import the full custom-format library that we re-score below
-    # against our Any Quality profile. The two extra profiles cost
-    # nothing to keep around and may be useful as one-off picks.
-    #
-    # Note: configarr resolves RECYCLARR-source templates against
-    # the recyclarr/config-templates `includes/` tree (prefixed
-    # names like radarr-quality-profile-*), not the top-level
-    # `templates/` directory. The top-level `uhd-bluray-web` /
-    # `hd-bluray-web` template names are not findable from here.
+    # These templates both create the UHD/HD Bluray+WEB profiles (kept as
+    # alternates) AND import the full CF library re-scored below.
+    # GOTCHA: configarr resolves RECYCLARR templates against the `includes/`
+    # tree (prefixed names like radarr-quality-profile-*), NOT the top-level
+    # `templates/` dir — short names like `uhd-bluray-web` won't resolve.
     include:
       - template: radarr-quality-definition-movie
       - template: radarr-quality-profile-uhd-bluray-web
@@ -245,29 +170,19 @@ radarr:
       - template: radarr-quality-profile-hd-bluray-web
       - template: radarr-custom-formats-hd-bluray-web
 
-    # Single catch-all profile. language: Any so non-English
-    # releases are eligible as a fallback, but the inline
-    # "Language: English Audio" CF scored at +100000 below makes
-    # English the always-preferred pick when one is available.
-    # No manual per-movie intervention needed.
-    #
-    # qualities: all of them enabled, Remux-2160p down to CAM,
-    # sorted top-down by preference (radarr grabs best available
-    # and falls back to lower tiers when nothing higher exists).
-    # min_format_score: 0 — releases with no negative CF scores
-    # are always eligible; heavily-negative releases (Scene,
-    # Obfuscated, x265 re-encodes, etc.) are filtered out via
-    # TRaSH default scores and never reach the queue.
+    # Single catch-all profile. language: Any keeps non-English releases
+    # eligible as a fallback (the English CF below biases toward English).
+    # Qualities are enabled top-down by preference; radarr grabs the best
+    # available. min_format_score: 0 filters out negatively-scored releases
+    # (Scene, x265 re-encodes, etc.) so they're never queued.
     quality_profiles:
       - name: Any Quality
         language: Any
         score_set: default
         min_format_score: 0
         quality_sort: top
-        # Any CF score on this profile that's not defined in our
-        # custom_formats blocks below gets reset to 0. Keeps the
-        # profile's scoring exactly as configured here, so manual
-        # tweaks in the radarr UI don't persist.
+        # CF scores not set by our blocks below are reset to 0, so manual
+        # tweaks made in the radarr UI don't persist.
         reset_unmatched_scores:
           enabled: true
         upgrade:
@@ -304,55 +219,40 @@ radarr:
           - name: TELESYNC
           - name: TELECINE
           - name: CAM
-          # BR-DISK (full Blu-ray disc structures / .iso / BDMV /
-          # VIDEO_TS) and Raw-HD (raw broadcast .ts streams) are
-          # intentionally omitted — these are container formats,
-          # not finished media files. The BR-DISK custom format
-          # scored negatively below provides a second layer of
-          # defense against disc-format releases sneaking in via
-          # mis-tagged quality.
+          # BR-DISK (disc structures: .iso/BDMV/VIDEO_TS) and Raw-HD (raw .ts
+          # streams) are intentionally omitted — containers, not finished
+          # files. The negative BR-DISK CF below is a second line of defense.
 
-    # All scoring blocks below target the Any Quality profile.
-    # Most use TRaSH default scores (via score_set: default on
-    # the profile) — no explicit score: integers — so upstream
-    # curation stays current with TRaSH guide updates. The
-    # English-audio block is the lone exception with an
-    # explicit score chosen to dominate everything else.
+    # Most blocks below omit an explicit score: and inherit TRaSH defaults
+    # (score_set: default) so upstream curation stays current. The exceptions
+    # are the English-audio and DV blocks, which set explicit scores.
     custom_formats:
-      # English audio preference. +100000 is enough to outscore
-      # the sum of every other CF (HQ groups, HDR, Atmos, etc.
-      # all add up to a few thousand at most), so any release
-      # tagged as English ranks above any non-English release.
+      # +100000 dwarfs the sum of every other CF (a few thousand at most), so
+      # any English-tagged release outranks any non-English one.
       - trash_ids:
           - prefer-english-audio
         assign_scores_to:
           - name: Any Quality
             score: 100000
 
-      # HDR — prefer when available. Single unified HDR custom
-      # format covers HDR10 / HDR10+ / HLG / PQ in one.
+      # HDR — one unified CF covering HDR10/HDR10+/HLG/PQ.
       - trash_ids:
           - 493b6d1dbec3c3364c59d7607f7e3405 # HDR
         assign_scores_to:
           - name: Any Quality
 
-      # Hard-block Dolby Vision releases with no HDR10 fallback layer
-      # (DV-only streams won't play on non-DV hardware). Standard DV with an
-      # HDR10 fallback doesn't match this CF and passes through fine.
-      #
-      # Explicit -1000000 instead of the TRaSH default (-10000): the default is
-      # a rounding error next to the +100000 English-audio score plus a
-      # well-sourced release's CF bonuses (audio codec, release-group tier,
-      # streaming service), so DV-only releases were still outscoring clean HDR
-      # ones. -1000000 drives the total negative — below min_format_score (0) —
-      # so the release is rejected outright rather than just deprioritized.
+      # Hard-block DV-only releases (no HDR10 fallback) — unplayable on non-DV
+      # hardware. -1000000 (vs the TRaSH default -10000, which the +100000
+      # English score easily outweighs) drives the total below min_format_score
+      # so the release is rejected, not just deprioritized. DV+HDR10 hybrids
+      # don't match this CF and pass through fine.
       - trash_ids:
           - 923b6abef9b17f937fab56cfcf89e1f1 # DV (w/o HDR fallback)
         assign_scores_to:
           - name: Any Quality
             score: -1000000
 
-      # Remasters / special editions — boost when available.
+      # Remasters / special editions.
       - trash_ids:
           - 570bc9ebecd92723d2d21500f4be314c # Remaster
           - eca37840c13c6ef2dd0262b141a5482f # 4K Remaster
@@ -365,11 +265,8 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Audio codecs — prefer higher-end when available. TRaSH
-      # default ranks Atmos/TrueHD > DTS-HD MA > FLAC > DTS-HD
-      # HRA > DD+ > DTS > AAC > DD. Downstream media-processor
-      # handles channel layout (5.1→2.0 downmix etc.) so we
-      # don't filter by channel count.
+      # Audio codecs, ranked by TRaSH defaults. No channel-count filtering —
+      # the downstream media-processor handles layout (5.1→2.0 downmix etc.).
       - trash_ids:
           - 496f355514737f7d83bf7aa4d24f8169 # TrueHD Atmos
           - 2f22d89048b01681dde8afe203bf2e95 # DTS X
@@ -388,8 +285,7 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-      # HQ release groups — TRaSH-curated tier list of known-good
-      # encoder groups. Tier 01 (e.g. FraMeSToR) scores highest.
+      # HQ release groups — TRaSH-curated encoder-group tiers.
       - trash_ids:
           - 4d74ac4c4db0b64bff6ce0cffef99bf0 # UHD Bluray Tier 01
           - a58f517a70193f8e578056642178419d # UHD Bluray Tier 02
@@ -403,8 +299,7 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Streaming services — prefer known-good services with
-      # consistent bitrates. AMZN/ATVP/DSNP/MAX/etc.
+      # Streaming services — consistent-bitrate sources.
       - trash_ids:
           - b3b3a6ac74ecbd56bcdbefa4799fb9df # AMZN
           - 40e9380490e748672c2522eaaeb692f7 # ATVP
@@ -424,8 +319,7 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Repack / Proper — prefer the fixed re-release over the
-      # original buggy one.
+      # Repack / Proper.
       - trash_ids:
           - e7718d7a3ce595f289bfee26adc178f5 # Repack/Proper
           - ae43b294509409a6a13919dedd4764c4 # Repack2
@@ -433,15 +327,9 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Unwanted release attributes — deprioritized via TRaSH
-      # default scores (heavily negative). With min_format_score
-      # at 0 these effectively block matching releases. Includes:
-      #   - x265 (HD): re-encoded h.265 from h.264 source — lower
-      #     quality than native h.265 in remuxes/blurays. Native
-      #     HEVC in Remux-2160p / Bluray-2160p is unaffected.
-      #   - AV1: low compatibility with most playback hardware.
-      #   - BR-DISK / 3D / Upscaled / Generated Dynamic HDR: not
-      #     what we want even as fallback.
+      # Unwanted attributes — TRaSH defaults are heavily negative, so at
+      # min_format_score 0 these are effectively blocked. Note x265 (HD) targets
+      # re-encodes (h264→h265); native HEVC in 2160p remux/bluray is unaffected.
       - trash_ids:
           - ed38b889b31be83fda192888e2286d83 # BR-DISK
           - e6886871085226c3da1830830146846c # Generated Dynamic HDR
@@ -456,11 +344,8 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Bad release flags — deprioritize via TRaSH defaults.
-      # Per user pref these are *not* hard-blocked; min_format_score
-      # of 0 means they still won't be picked while better options
-      # exist, but the door is left open if explicit opt-in is
-      # needed (e.g. lowering min_format_score on a specific movie).
+      # Bad release flags — deprioritized, not hard-blocked: at
+      # min_format_score 0 they lose to better options but stay eligible.
       - trash_ids:
           - b6832f586342ef70d9c128d40c07b872 # Bad Dual Groups
           - cc444569854e9de0b084ab2b8b1532b2 # Black and White Editions
@@ -471,11 +356,9 @@ radarr:
         assign_scores_to:
           - name: Any Quality
 
-# Sonarr instance — mirrors the radarr setup above, adapted for
-# series-specific schema differences (episodes vs movies,
-# tv_category vs movie_category, sonarr-specific CF trash_ids,
-# WEB-centric quality profiles since the language-neutral sonarr
-# TRaSH catalog ships no Bluray+WEB combo profiles).
+# Sonarr — mirrors the radarr setup above; comments below cover only the
+# series-specific differences (episodes vs movies, sonarr-specific trash_ids,
+# WEB-centric profiles).
 sonarr:
   sonarr:
     base_url: http://sonarr.media.svc.cluster.local:8989
@@ -489,10 +372,8 @@ sonarr:
     root_folders:
       - /mnt/library
 
-    # Download clients — same hosts as radarr but TV categories
-    # and tv_*_priority field names instead of movie_*_priority.
-    # NZBGet password is a dummy because nzbget itself runs
-    # without auth (ControlUsername/Password empty).
+    # Same as radarr but with TV categories / tv_* fields. The NZBGet password
+    # is a dummy: nzbget runs with no auth (empty ControlUsername/Password).
     download_clients:
       update_password: true
       delete_unmanaged:
@@ -555,14 +436,12 @@ sonarr:
     # autoRenameFolders, adds episodeTitleRequired.
     media_management:
       # ---- File management
-      # Files are on the same NFS share but use different mount
-      # points, so copying is required (matches radarr).
+      # Copy, not hardlink — same NFS-mount reason as radarr.
       copyUsingHardlinks: false
       importExtraFiles: true
       extraFileExtensions: sub,nfo
       enableMediaInfo: true
-      # Reject releases that can't have episode titles resolved
-      # (forces sonarr to wait for proper metadata).
+      # Wait for proper metadata; reject releases with unresolved episode titles.
       episodeTitleRequired: always
       # ---- Importing
       skipFreeSpaceCheckWhenImporting: false
@@ -585,40 +464,13 @@ sonarr:
       chmodFolder: "755"
       chownGroup: ""
 
-    # Media naming. Mirrors radarr's preset-based approach
-    # (jellyfin folder + MediaInfo-rich filenames) rather than
-    # codifying sonarr's bare current defaults.
-    #
-    # series: jellyfin-tvdb →
-    #   "{Series TitleYear} [tvdbid-{TvdbId}]" — the sonarr analog
-    #   of radarr's jellyfin-tmdb folder preset (year + DB id in
-    #   brackets). Existing series folders are NOT renamed
-    #   automatically (sonarr has no autoRenameFolders); only
-    #   newly-added series use the new format unless you manually
-    #   rename.
-    # season: default → "Season {season:00}"
-    # episodes.standard/daily/anime: default → TRaSH's rich
-    #   episode format with Quality Full, MediaInfo
-    #   VideoDynamicRangeType, VideoCodec, AudioCodec,
-    #   AudioChannels, Custom Formats, release group.
-    #
-    #   NOTE: unlike radarr (which gets AudioLanguages +
-    #   VideoBitDepth from the jellyfin-anime-tmdb movie preset),
-    #   sonarr's TRaSH *standard* and *daily* episode presets omit
-    #   those two tags — only the *anime* preset includes them.
-    #   This is a TRaSH upstream design choice; matching radarr's
-    #   richness on standard episodes would require media_naming_api
-    #   with hand-crafted format strings (and lose preset
-    #   auto-update). Chose presets for consistency with radarr's
-    #   mechanism.
-    #
-    # rename: true → applies the new episode format to existing
-    # files on the next sonarr scan, not just newly imported ones.
-    #
-    # Not covered by media_naming (would need media_naming_api):
-    # multiEpisodeStyle, colonReplacementFormat,
-    # replaceIllegalCharacters, specialsFolderFormat. Sonarr's
-    # current values stay in place for those.
+    # TRaSH preset keys mirroring radarr's jellyfin scheme (series jellyfin-tvdb
+    # → "{Series TitleYear} [tvdbid-{TvdbId}]"). GOTCHA: sonarr's standard/daily
+    # episode presets omit AudioLanguages + VideoBitDepth (only the anime preset
+    # has them), so episode filenames are slightly less rich than radarr's
+    # movies — exact parity would need media_naming_api. Existing folders aren't
+    # auto-renamed (no autoRenameFolders); rename: true still reformats files.
+    # media_naming can't set multiEpisodeStyle/colonReplacementFormat/etc.
     media_naming:
       series: jellyfin-tvdb
       season: default
@@ -628,10 +480,8 @@ sonarr:
         daily: default
         anime: default
 
-    # Delay profile (default). Same approach as radarr: zero
-    # delays, quality + score wins, NZB over torrent on ties.
-    # bypassIf* fields are inert when both delays are 0 (no delay
-    # to bypass) but left at their defaults for clarity.
+    # Same as radarr's delay profile (see above): zero delays, NZB beats
+    # torrent on ties.
     delay_profiles:
       default:
         enableUsenet: true
@@ -643,18 +493,10 @@ sonarr:
         bypassIfAboveCustomFormatScore: false
         minimumCustomFormatScore: 0
 
-    # Recyclarr include-templates create WEB-2160p and WEB-1080p
-    # profiles as alternates AND import the full sonarr CF
-    # library that we re-score below against Any Quality.
-    #
-    # No language-neutral Bluray+WEB combo profile exists for
-    # sonarr (only German variants) — series are predominantly
-    # WEB-sourced upstream, hence the WEB-only canonical set.
-    #
-    # Note the prefix difference vs radarr: sonarr uses the
-    # `sonarr-v4-` prefix for profile/CF templates but
-    # `sonarr-quality-definition-series` (no v4) for the quality
-    # definition.
+    # Like radarr, but WEB-only: sonarr's language-neutral catalog has no
+    # Bluray+WEB combo profile (series are WEB-sourced). GOTCHA: profile/CF
+    # templates use the `sonarr-v4-` prefix, but the quality definition is
+    # `sonarr-quality-definition-series` (no v4).
     include:
       - template: sonarr-quality-definition-series
       - template: sonarr-v4-quality-profile-web-2160p
@@ -662,14 +504,8 @@ sonarr:
       - template: sonarr-v4-quality-profile-web-1080p
       - template: sonarr-v4-custom-formats-web-1080p
 
-    # Single catch-all profile. Same shape as radarr's Any
-    # Quality: language Any with inline English-audio CF at
-    # +100000 forcing English-when-available, all qualities
-    # enabled top-down, min_format_score 0 so negative-scored
-    # releases drop out while neutral ones stay eligible.
-    #
-    # Raw-HD intentionally omitted (raw broadcast .ts streams).
-    # BR-DISK not in sonarr's quality enum (radarr-only).
+    # Same shape as radarr's Any Quality. Raw-HD is omitted (raw .ts streams);
+    # BR-DISK isn't a sonarr quality enum (radarr-only).
     quality_profiles:
       - name: Any Quality
         language: Any
@@ -712,13 +548,10 @@ sonarr:
               - WEBRip-480p
           - name: SDTV
 
-    # Sonarr-specific trash_ids — different from radarr's even
-    # when the CF name matches. Catalog gaps vs radarr called
-    # out per-block below.
+    # Sonarr trash_ids differ from radarr's even when the CF name matches;
+    # catalog gaps vs radarr are noted per block.
     custom_formats:
-      # English audio preference. Re-uses the same inline
-      # top-level customFormatDefinition (`prefer-english-audio`)
-      # — top-level CF defs apply across all *arr instances.
+      # English preference (the shared top-level prefer-english-audio CF).
       - trash_ids:
           - prefer-english-audio
         assign_scores_to:
@@ -731,32 +564,22 @@ sonarr:
         assign_scores_to:
           - name: Any Quality
 
-      # Hard-block DV-only releases (no HDR10 fallback layer) — unplayable on
-      # non-DV hardware. Explicit -1000000 instead of the TRaSH default
-      # (-10000), which was too small to overcome the +100000 English-audio
-      # score plus a well-sourced release's bonuses, so DV-only releases were
-      # still outscoring clean HDR ones. -1000000 drives the total below
-      # min_format_score (0) so the release is rejected. DV+HDR10 hybrids don't
-      # match this CF and pass through fine.
+      # Hard-block DV-only releases — see the radarr DV block for why -1000000
+      # (vs the TRaSH default -10000).
       - trash_ids:
           - 9b27ab6498ec0f31a3353992e19434ca # DV (w/o HDR fallback)
         assign_scores_to:
           - name: Any Quality
             score: -1000000
 
-      # Remaster — boost when available. Sonarr's catalog only
-      # ships the generic "Remaster" CF; radarr's other entries in
-      # this category (4K Remaster, Criterion Collection, Masters
-      # of Cinema, Vinegar Syndrome, Special Edition, IMAX, IMAX
-      # Enhanced) are movie-specific and have no sonarr equivalent.
+      # Remaster. Sonarr ships only this generic CF; radarr's other
+      # remaster/edition CFs (Criterion, IMAX, etc.) are movie-only.
       - trash_ids:
           - b735f09d3c025cbb7d75a5d38325b73b # Remaster
         assign_scores_to:
           - name: Any Quality
 
-      # Audio codecs — TRaSH-default ranking. Media processor
-      # handles channel layout (5.1→2.0 downmix) downstream so
-      # we don't filter by channel count.
+      # Audio codecs (see radarr's note on skipping channel-count filtering).
       - trash_ids:
           - 0d7824bb924701997f874e7ff7d4844a # TrueHD ATMOS
           - 9d00418ba386a083fbf4d58235fc37ef # DTS X
@@ -775,10 +598,8 @@ sonarr:
         assign_scores_to:
           - name: Any Quality
 
-      # HQ release groups — sonarr's catalog has fewer tiers than
-      # radarr's (no UHD Bluray tiers, no HD Bluray Tier 03,
-      # only Remux Tier 01/02). Includes WEB Scene CF that the
-      # WEB-2160p recyclarr template uses.
+      # HQ release groups — sonarr has fewer tiers than radarr (no UHD Bluray,
+      # no HD Bluray Tier 03) plus a WEB Scene CF.
       - trash_ids:
           - e6258996055b9fbab7e9cb2f75819294 # WEB Tier 01
           - 58790d4e2fdcd9733aa7ae68ba2bb503 # WEB Tier 02

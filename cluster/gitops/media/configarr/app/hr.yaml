@@ -17,13 +17,10 @@ spec:
       version: 4.6.2
   values:
     controllers:
-      # Post-install/upgrade Job. Fires whenever the HelmRelease upgrades.
-      # The config lives in config/config.yml and is built into a hash-suffixed
-      # ConfigMap by kustomize (see kustomization.yaml); kustomizeconfig.yaml
-      # rewrites that hashed name into persistence.config.name below. So a
-      # config.yml edit changes the ConfigMap name → changes this HelmRelease →
-      # Flux runs a Helm upgrade → this Job fires and applies the change
-      # immediately, without waiting for the weekly cron.
+      # Post-install/upgrade Job. Fires on every HelmRelease upgrade —
+      # including config.yml edits, which re-hash the mounted ConfigMap's name
+      # and so change the HR (see kustomization.yaml). Applies config changes
+      # without waiting for the weekly cron.
       job:
         type: job
         annotations:
@@ -50,7 +47,6 @@ spec:
                 secretKeyRef:
                   name: sonarr-api-key
                   key: API_KEY
-              # Exit with non-zero code when something fails to apply
               STOP_ON_ERROR: true
             securityContext:
               readOnlyRootFilesystem: true
