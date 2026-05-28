@@ -58,13 +58,11 @@ radarr:
       # Global download client behavior — maps 1:1 to radarr's
       # /api/v3/config/downloadclient. Snake_case field names.
       config:
-        # Completed Download Handling OFF: radarr will NOT
-        # automatically import finished downloads from the client.
-        # Something else must trigger import (manual, or the
-        # media-processor pipeline). With this off, downloads sit
-        # in the client and radarr's queue shows them as
-        # completed-but-not-imported.
-        enable_completed_download_handling: false
+        # Disabling this causes several problems:
+        # * Radarr stops tracking downloads, which makes it impossible to tell ingestion state from the UI
+        # * Radarr seems to sometimes download multiple copies via different releases because it doesn't know another one is in-flight
+        # * The media-processor pipeline can no longer look up media information via Radarr because the file path is not in the download queue
+        enable_completed_download_handling: true
         # Comma-separated list of folder name fragments radarr
         # should treat as "unfinished" and skip during import
         # scans. Default matches scene/SABnzbd unpack conventions.
@@ -492,11 +490,8 @@ sonarr:
       delete_unmanaged:
         enabled: true
       config:
-        # Completed Download Handling OFF (matches radarr): sonarr
-        # will NOT automatically import finished downloads from the
-        # client; an external trigger (manual / media-processor
-        # pipeline) must do it.
-        enable_completed_download_handling: false
+        # See Radarr note about download handling - same issue with sonarr
+        enable_completed_download_handling: true
         download_client_working_folders: "_UNPACK_|_FAILED_"
         auto_redownload_failed: true
         auto_redownload_failed_from_interactive_search: true
