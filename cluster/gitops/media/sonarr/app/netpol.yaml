@@ -143,6 +143,12 @@ specs:
               app.kubernetes.io/name: bazarr
               app.kubernetes.io/controller: bazarr
               app.kubernetes.io/instance: bazarr
+          # Configarr — applies TRaSH custom formats / quality profiles via
+          # the Sonarr API. Allowed in advance so adding sonarr to configarr's
+          # config.yml later does not require a netpol change.
+          - matchLabels:
+              app.kubernetes.io/name: configarr
+              app.kubernetes.io/instance: configarr
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector

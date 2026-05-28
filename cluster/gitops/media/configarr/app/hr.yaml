@@ -43,6 +43,11 @@ spec:
                 secretKeyRef:
                   name: radarr-api-key
                   key: API_KEY
+              SONARR_API_KEY:
+                secretKeyRef:
+                  name: sonarr-api-key
+                  key: API_KEY
+              DRY_RUN: true
               # Exit with non-zero code when something fails to apply
               STOP_ON_ERROR: true
             securityContext:
@@ -163,10 +168,13 @@ spec:
                   # Global download client behavior — maps 1:1 to radarr's
                   # /api/v3/config/downloadclient. Snake_case field names.
                   config:
-                    # When a download client reports a download as completed,
-                    # radarr imports it (vs ignoring and letting the user
-                    # manually import).
-                    enable_completed_download_handling: true
+                    # Completed Download Handling OFF: radarr will NOT
+                    # automatically import finished downloads from the client.
+                    # Something else must trigger import (manual, or the
+                    # media-processor pipeline). With this off, downloads sit
+                    # in the client and radarr's queue shows them as
+                    # completed-but-not-imported.
+                    enable_completed_download_handling: false
                     # Comma-separated list of folder name fragments radarr
                     # should treat as "unfinished" and skip during import
                     # scans. Default matches scene/SABnzbd unpack conventions.
@@ -564,5 +572,371 @@ spec:
                       - 7357cf5161efbf8c4d5d0c30b4815ee2 # Obfuscated
                       - 5c44f52a8714fdd79bb4d98e2673be1f # Retags
                       - f537cf427b64c38c8e36298f657e4828 # Scene
+                    assign_scores_to:
+                      - name: Any Quality
+
+            # Sonarr instance — mirrors the radarr setup above, adapted for
+            # series-specific schema differences (episodes vs movies,
+            # tv_category vs movie_category, sonarr-specific CF trash_ids,
+            # WEB-centric quality profiles since the language-neutral sonarr
+            # TRaSH catalog ships no Bluray+WEB combo profiles).
+            sonarr:
+              sonarr:
+                base_url: http://sonarr.media.svc.cluster.local:8989
+                api_key: !env SONARR_API_KEY
+
+                delete_unmanaged_quality_profiles:
+                  enabled: true
+                delete_unmanaged_custom_formats:
+                  enabled: true
+
+                root_folders:
+                  - /mnt/library
+
+                # Download clients — same hosts as radarr but TV categories
+                # and tv_*_priority field names instead of movie_*_priority.
+                # NZBGet password is a dummy because nzbget itself runs
+                # without auth (ControlUsername/Password empty).
+                download_clients:
+                  update_password: true
+                  delete_unmanaged:
+                    enabled: true
+                  config:
+                    # Completed Download Handling OFF (matches radarr): sonarr
+                    # will NOT automatically import finished downloads from the
+                    # client; an external trigger (manual / media-processor
+                    # pipeline) must do it.
+                    enable_completed_download_handling: false
+                    download_client_working_folders: "_UNPACK_|_FAILED_"
+                    auto_redownload_failed: true
+                    auto_redownload_failed_from_interactive_search: true
+                  remote_paths:
+                    - host: nzbget.downloads.svc.cluster.local
+                      remote_path: /config/completed/Series/
+                      local_path: /mnt/complete/
+                    - host: qbittorrent.downloads.svc.cluster.local
+                      remote_path: /config/Downloads/Series/
+                      local_path: /mnt/complete/
+                  data:
+                    - name: NZBGet
+                      type: nzbget
+                      enable: true
+                      priority: 1
+                      remove_completed_downloads: true
+                      remove_failed_downloads: true
+                      fields:
+                        host: nzbget.downloads.svc.cluster.local
+                        port: 6789
+                        use_ssl: false
+                        url_base: ""
+                        username: nzbget
+                        password: dummy-value
+                        tv_category: Series
+                        recent_tv_priority: 0 # Normal
+                        older_tv_priority: 0 # Normal
+                        add_paused: false
+                    - name: qBittorrent
+                      type: qbittorrent
+                      enable: true
+                      priority: 1
+                      remove_completed_downloads: true
+                      remove_failed_downloads: true
+                      fields:
+                        host: qbittorrent.downloads.svc.cluster.local
+                        port: 8080
+                        use_ssl: false
+                        url_base: ""
+                        username: ""
+                        password: ""
+                        tv_category: Series
+                        tv_imported_category: ""
+                        recent_tv_priority: 0 # Last
+                        older_tv_priority: 0 # Last
+                        initial_state: 0 # Started
+                        sequential_order: false
+                        first_and_last: false
+                        content_layout: 0 # Default
+
+                # Media Management tab. Schema differs from radarr's:
+                # episodes-vs-movies field names, no pathsDefaultStatic or
+                # autoRenameFolders, adds episodeTitleRequired.
+                media_management:
+                  # ---- File management
+                  # Files are on the same NFS share but use different mount
+                  # points, so copying is required (matches radarr).
+                  copyUsingHardlinks: false
+                  importExtraFiles: true
+                  extraFileExtensions: sub,nfo
+                  enableMediaInfo: true
+                  # Reject releases that can't have episode titles resolved
+                  # (forces sonarr to wait for proper metadata).
+                  episodeTitleRequired: always
+                  # ---- Importing
+                  skipFreeSpaceCheckWhenImporting: false
+                  minimumFreeSpaceWhenImporting: 100
+                  useScriptImport: false
+                  scriptImportPath: ""
+                  # ---- Folder behavior
+                  createEmptySeriesFolders: false
+                  deleteEmptyFolders: true
+                  # ---- Recycle bin
+                  recycleBin: ""
+                  recycleBinCleanupDays: 7
+                  # ---- File handling
+                  downloadPropersAndRepacks: preferAndUpgrade
+                  autoUnmonitorPreviouslyDownloadedEpisodes: false
+                  fileDate: none
+                  rescanAfterRefresh: always
+                  # ---- Permissions
+                  setPermissionsLinux: false
+                  chmodFolder: "755"
+                  chownGroup: ""
+
+                # Media naming. Mirrors radarr's preset-based approach
+                # (jellyfin folder + MediaInfo-rich filenames) rather than
+                # codifying sonarr's bare current defaults.
+                #
+                # series: jellyfin-tvdb →
+                #   "{Series TitleYear} [tvdbid-{TvdbId}]" — the sonarr analog
+                #   of radarr's jellyfin-tmdb folder preset (year + DB id in
+                #   brackets). Existing series folders are NOT renamed
+                #   automatically (sonarr has no autoRenameFolders); only
+                #   newly-added series use the new format unless you manually
+                #   rename.
+                # season: default → "Season {season:00}"
+                # episodes.standard/daily/anime: default → TRaSH's rich
+                #   episode format with Quality Full, MediaInfo
+                #   VideoDynamicRangeType, VideoCodec, AudioCodec,
+                #   AudioChannels, Custom Formats, release group.
+                #
+                #   NOTE: unlike radarr (which gets AudioLanguages +
+                #   VideoBitDepth from the jellyfin-anime-tmdb movie preset),
+                #   sonarr's TRaSH *standard* and *daily* episode presets omit
+                #   those two tags — only the *anime* preset includes them.
+                #   This is a TRaSH upstream design choice; matching radarr's
+                #   richness on standard episodes would require media_naming_api
+                #   with hand-crafted format strings (and lose preset
+                #   auto-update). Chose presets for consistency with radarr's
+                #   mechanism.
+                #
+                # rename: true → applies the new episode format to existing
+                # files on the next sonarr scan, not just newly imported ones.
+                #
+                # Not covered by media_naming (would need media_naming_api):
+                # multiEpisodeStyle, colonReplacementFormat,
+                # replaceIllegalCharacters, specialsFolderFormat. Sonarr's
+                # current values stay in place for those.
+                media_naming:
+                  series: jellyfin-tvdb
+                  season: default
+                  episodes:
+                    rename: true
+                    standard: default
+                    daily: default
+                    anime: default
+
+                # Delay profile (default). Same approach as radarr: zero
+                # delays, quality + score wins, NZB over torrent on ties.
+                # bypassIf* fields are inert when both delays are 0 (no delay
+                # to bypass) but left at their defaults for clarity.
+                delay_profiles:
+                  default:
+                    enableUsenet: true
+                    enableTorrent: true
+                    preferredProtocol: usenet
+                    usenetDelay: 0
+                    torrentDelay: 0
+                    bypassIfHighestQuality: false
+                    bypassIfAboveCustomFormatScore: false
+                    minimumCustomFormatScore: 0
+
+                # Recyclarr include-templates create WEB-2160p and WEB-1080p
+                # profiles as alternates AND import the full sonarr CF
+                # library that we re-score below against Any Quality.
+                #
+                # No language-neutral Bluray+WEB combo profile exists for
+                # sonarr (only German variants) — series are predominantly
+                # WEB-sourced upstream, hence the WEB-only canonical set.
+                #
+                # Note the prefix difference vs radarr: sonarr uses the
+                # `sonarr-v4-` prefix for profile/CF templates but
+                # `sonarr-quality-definition-series` (no v4) for the quality
+                # definition.
+                include:
+                  - template: sonarr-quality-definition-series
+                  - template: sonarr-v4-quality-profile-web-2160p
+                  - template: sonarr-v4-custom-formats-web-2160p
+                  - template: sonarr-v4-quality-profile-web-1080p
+                  - template: sonarr-v4-custom-formats-web-1080p
+
+                # Single catch-all profile. Same shape as radarr's Any
+                # Quality: language Any with inline English-audio CF at
+                # +100000 forcing English-when-available, all qualities
+                # enabled top-down, min_format_score 0 so negative-scored
+                # releases drop out while neutral ones stay eligible.
+                #
+                # Raw-HD intentionally omitted (raw broadcast .ts streams).
+                # BR-DISK not in sonarr's quality enum (radarr-only).
+                quality_profiles:
+                  - name: Any Quality
+                    language: Any
+                    score_set: default
+                    min_format_score: 0
+                    quality_sort: top
+                    reset_unmatched_scores:
+                      enabled: true
+                    upgrade:
+                      allowed: true
+                      until_quality: Bluray-2160p Remux
+                      until_score: 10000
+                    qualities:
+                      - name: Bluray-2160p Remux
+                      - name: Bluray-2160p
+                      - name: WEB 2160p
+                        qualities:
+                          - WEBDL-2160p
+                          - WEBRip-2160p
+                      - name: HDTV-2160p
+                      - name: Bluray-1080p Remux
+                      - name: Bluray-1080p
+                      - name: WEB 1080p
+                        qualities:
+                          - WEBDL-1080p
+                          - WEBRip-1080p
+                      - name: HDTV-1080p
+                      - name: Bluray-720p
+                      - name: WEB 720p
+                        qualities:
+                          - WEBDL-720p
+                          - WEBRip-720p
+                      - name: HDTV-720p
+                      - name: Bluray-576p
+                      - name: Bluray-480p
+                      - name: DVD
+                      - name: WEB 480p
+                        qualities:
+                          - WEBDL-480p
+                          - WEBRip-480p
+                      - name: SDTV
+
+                # Sonarr-specific trash_ids — different from radarr's even
+                # when the CF name matches. Catalog gaps vs radarr called
+                # out per-block below.
+                custom_formats:
+                  # English audio preference. Re-uses the same inline
+                  # top-level customFormatDefinition (`prefer-english-audio`)
+                  # — top-level CF defs apply across all *arr instances.
+                  - trash_ids:
+                      - prefer-english-audio
+                    assign_scores_to:
+                      - name: Any Quality
+                        score: 100000
+
+                  # HDR — single unified CF covers HDR10/HDR10+/HLG/PQ.
+                  - trash_ids:
+                      - 505d871304820ba7106b693be6fe4a9e # HDR
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Block DV-only releases (no HDR10 fallback layer).
+                  - trash_ids:
+                      - 9b27ab6498ec0f31a3353992e19434ca # DV (w/o HDR fallback)
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Remaster — boost when available. Sonarr's catalog only
+                  # ships the generic "Remaster" CF; radarr's other entries in
+                  # this category (4K Remaster, Criterion Collection, Masters
+                  # of Cinema, Vinegar Syndrome, Special Edition, IMAX, IMAX
+                  # Enhanced) are movie-specific and have no sonarr equivalent.
+                  - trash_ids:
+                      - b735f09d3c025cbb7d75a5d38325b73b # Remaster
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Audio codecs — TRaSH-default ranking. Media processor
+                  # handles channel layout (5.1→2.0 downmix) downstream so
+                  # we don't filter by channel count.
+                  - trash_ids:
+                      - 0d7824bb924701997f874e7ff7d4844a # TrueHD ATMOS
+                      - 9d00418ba386a083fbf4d58235fc37ef # DTS X
+                      - b6fbafa7942952a13e17e2b1152b539a # ATMOS (undefined)
+                      - 4232a509ce60c4e208d13825b7c06264 # DD+ ATMOS
+                      - 1808e4b9cee74e064dfae3f1db99dbfe # TrueHD
+                      - c429417a57ea8c41d57e6990a8b0033f # DTS-HD MA
+                      - 851bd64e04c9374c51102be3dd9ae4cc # FLAC
+                      - 30f70576671ca933adbdcfc736a69718 # PCM
+                      - cfa5fbd8f02a86fc55d8d223d06a5e1f # DTS-HD HRA
+                      - 63487786a8b01b7f20dd2bc90dd4a477 # DD+
+                      - c1a25cd67b5d2e08287c957b1eb903ec # DTS-ES
+                      - 5964f2a8b3be407d083498e4459d05d0 # DTS
+                      - a50b8a0c62274a7c38b09a9619ba9d86 # AAC
+                      - dbe00161b08a25ac6154c55f95e6318d # DD
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # HQ release groups — sonarr's catalog has fewer tiers than
+                  # radarr's (no UHD Bluray tiers, no HD Bluray Tier 03,
+                  # only Remux Tier 01/02). Includes WEB Scene CF that the
+                  # WEB-2160p recyclarr template uses.
+                  - trash_ids:
+                      - e6258996055b9fbab7e9cb2f75819294 # WEB Tier 01
+                      - 58790d4e2fdcd9733aa7ae68ba2bb503 # WEB Tier 02
+                      - d84935abd3f8556dcd51d4f27e22d0a6 # WEB Tier 03
+                      - d6819cba26b1a6508138d25fb5e32293 # HD Bluray Tier 01
+                      - c2216b7b8aa545dc1ce8388c618f8d57 # HD Bluray Tier 02
+                      - 9965a052eb87b0d10313b1cea89eb451 # Remux Tier 01
+                      - 8a1d0c3d7497e741736761a1da866a2e # Remux Tier 02
+                      - d0c516558625b04b363fa6c5c2c7cfd4 # WEB Scene
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Streaming services. BCORE/CRiT/MA are radarr-only and
+                  # not present in sonarr's catalog.
+                  - trash_ids:
+                      - d660701077794679fd59e8bdf4ce3a29 # AMZN
+                      - f67c9ca88f463a48346062e8ad07713f # ATVP
+                      - 89358767a60cc28783cdc3d0be9388a4 # DSNP
+                      - 7a235133c87f7da4c8cccceca7e3c7a6 # HBO
+                      - a880d6abc21e7c16884f3ae393f84179 # HMAX
+                      - f6cce30f1733d5c8194222a7507909bb # Hulu
+                      - 0ac24a2a68a9700bcb7eeca8e5cd644c # iT
+                      - 81d1fbf600e2540cee87f3a23f9d3c1c # MAX
+                      - d34870697c9db575f17700212167be23 # NF
+                      - 1656adc6d7bb2c8cca6acfb6592db421 # PCOK
+                      - c67a75ae4a1715f2bb4d492755ba4195 # PMTP
+                      - 1efe8da11bfd74fbbcd4d8117ddb9213 # STAN
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Repack / Proper.
+                  - trash_ids:
+                      - ec8fa7296b64e8cd390a1600981f3923 # Repack/Proper
+                      - eb3d5cc0a2be0db205fb823640db6a3c # Repack2
+                      - 44e7c4de10ae50265753082e5dc76047 # Repack3
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Unwanted release attributes. Sonarr catalog has no
+                  # Generated Dynamic HDR, no 3D, no Black-and-White
+                  # Editions (all radarr-only).
+                  - trash_ids:
+                      - 85c61753df5da1fb2aab6f2a47426b09 # BR-DISK
+                      - 9c11cd3f07101cdba90a2d81cf0e56b4 # LQ
+                      - e2315f990da2e2cbfc9fa5b7a6fcfe48 # LQ (Release Title)
+                      - 47435ece6b99a0b477caf360e79ba0bb # x265 (HD)
+                      - fbcb31d8dabd2a319072b84fc0b7249c # Extras
+                      - 23297a736ca77c0fc8e70f8edd7ee56c # Upscaled
+                      - 15a05bc7c1a36e2b57fd628f8977e2fc # AV1
+                    assign_scores_to:
+                      - name: Any Quality
+
+                  # Bad release flags — deprioritize, don't hard-block.
+                  - trash_ids:
+                      - 32b367365729d530ca1c124a0b180c64 # Bad Dual Groups
+                      - 82d40da2bc6923f41e14394075dd4b03 # No-RlsGroup
+                      - e1a997ddb54e3ecbfe06341ad323c458 # Obfuscated
+                      - 06d66ab109d4d2eddb2794d21526d140 # Retags
+                      - 1b3994c551cbb92a2c781af061f4ab44 # Scene
                     assign_scores_to:
                       - name: Any Quality
