@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: houndarr
+specs:
+  - description: houndarr
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: houndarr
+        app.kubernetes.io/controller: houndarr
+        app.kubernetes.io/instance: houndarr
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # To Radarr — read missing/cutoff-unmet items and POST search commands
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: radarr
+              app.kubernetes.io/controller: radarr
+              app.kubernetes.io/instance: radarr
+        toPorts:
+          - ports:
+              - port: "7878"
+                protocol: TCP
+      # To Sonarr — read missing/cutoff-unmet items and POST search commands
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: sonarr
+              app.kubernetes.io/controller: sonarr
+              app.kubernetes.io/instance: sonarr
+        toPorts:
+          - ports:
+              - port: "8989"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts: &webservice_ports
+          - ports:
+              - port: "8877"
+                protocol: TCP
+      # Gateway to webservice (web UI, fronted by the Authentik outpost)
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *webservice_ports

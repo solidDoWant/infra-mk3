@@ -1,0 +1,120 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: houndarr
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      houndarr:
+        containers:
+          app:
+            image:
+              # Project's own image — only published to GHCR (no Docker Hub image exists).
+              repository: ghcr.io/av1155/houndarr
+              tag: v1.12.0@sha256:4a837a90400ed8aa24b7bb4c62154c6290ae3b51780a69ed9842e481e563363c
+            env:
+              # Forward-auth via the Authentik outpost. Houndarr has first-class
+              # proxy-auth support: it reads the authenticated username from a
+              # trusted header rather than relying on blind reverse-proxy trust.
+              HOUNDARR_AUTH_MODE: proxy
+              HOUNDARR_AUTH_PROXY_HEADER: X-authentik-username
+              # Only trust forwarded auth headers from in-cluster proxies (the
+              # internal-gateway / Authentik outpost). 10.32.0.0/16 is the pod CIDR.
+              HOUNDARR_TRUSTED_PROXIES: 10.32.0.0/16
+              # Served over HTTPS via the gateway — set the Secure flag on cookies.
+              HOUNDARR_SECURE_COOKIES: "true"
+            ports:
+              - name: web
+                containerPort: &web_port 8877
+            probes:
+              readiness: &probe
+                enabled: true
+                type: HTTP
+                path: /api/health
+                port: web
+              liveness: *probe
+              # First boot runs DB migrations; give ~10 min before liveness kicks in,
+              # matching the upstream chart's startup-probe budget.
+              startup:
+                <<: *probe
+                spec:
+                  failureThreshold: 60
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: 10m
+                memory: &memory 256Mi
+              limits:
+                memory: *memory
+        defaultContainerOptions:
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # The image starts as root and drops privileges via PUID/PGID by default,
+        # but its entrypoint detects a non-root start and simply preflights /data,
+        # so a fixed non-root UID works. appuser is uid/gid 1000 in the image.
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # SQLite database (houndarr.db + WAL/SHM) and the Fernet master key used to
+      # encrypt stored *arr API keys at rest. The only path the app writes to.
+      data:
+        type: persistentVolumeClaim
+        storageClass: ssd-replicated-3x
+        accessMode: ReadWriteOnce
+        size: 2Gi
+        advancedMounts:
+          houndarr:
+            app:
+              - path: /data
+    service:
+      houndarr:
+        controller: houndarr
+        ports:
+          web:
+            port: *web_port
+            primary: true
+    route:
+      houndarr:
+        hostnames:
+          - houndarr.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: houndarr
+                port: *web_port
+          # Send auth requests to the Authentik outpost (proxy forward-auth)
+          - backendRefs:
+              - name: authentik-outpost-proxy
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io

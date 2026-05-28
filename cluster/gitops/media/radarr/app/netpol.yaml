@@ -140,6 +140,12 @@ specs:
           - matchLabels:
               app.kubernetes.io/name: configarr
               app.kubernetes.io/instance: configarr
+          # Houndarr — paces "search missing/upgrade" requests by reading the
+          # Radarr API and POSTing search commands in throttled batches.
+          - matchLabels:
+              app.kubernetes.io/name: houndarr
+              app.kubernetes.io/controller: houndarr
+              app.kubernetes.io/instance: houndarr
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector
