@@ -54,8 +54,11 @@ stringData:
           authorization_flow:
             !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
           invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
-          access_token_validity: hours=4
-          refresh_token_validity: days=2
+          # Long-lived to avoid mid-session proxy-cookie renewal, which breaks the
+          # SPA's XHR/SignalR traffic via CORS on stock authentik (no PR #17233).
+          # Renewal then happens on a normal page load instead.
+          access_token_validity: days=7
+          refresh_token_validity: days=30
           property_mappings:
             - !Find [
                 authentik_providers_oauth2.scopemapping,
