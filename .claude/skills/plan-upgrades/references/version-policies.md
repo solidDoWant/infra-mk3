@@ -89,3 +89,19 @@ When the skill encounters a dep that does not have an entry here, it must ask th
 - **Release notes**: bundled inside the Kubernetes per-minor CHANGELOG (search the file for `### kubectl` sections) at https://github.com/kubernetes/kubernetes/blob/release-{major}.{minor}/CHANGELOG/CHANGELOG-{major}.{minor}.md
 - **Breaking-change indicators**: kubectl flag/output deprecations are called out in the CHANGELOG's "Deprecation" section under kubectl; also check `kubectl ... --help` diffs across versions when a flag is suspected of being renamed.
 - **Skip-allowed**: patches may be skipped freely. The minor must match (or be one off from) the chosen cluster k8s minor — bump kubectl in lockstep with each k8s minor upgrade.
+
+### vaultwarden
+
+- **Identifies**: image `vaultwarden/server` (Docker Hub), used with the `-alpine` tag variant in this cluster (e.g. `1.33.2-alpine`). This is the unofficial Rust Bitwarden-compatible server by dani-garcia.
+- **Stable definition**: the highest non-prerelease tag `X.Y.Z` published at https://github.com/dani-garcia/vaultwarden/releases (reject `-alpha`, `-beta`, `-rc`, `testing`, and any pre-release marker). Use the matching `X.Y.Z-alpine` image variant published on Docker Hub (https://hub.docker.com/r/vaultwarden/server/tags) — the cluster standardizes on the alpine variant.
+- **Release notes**: per-release at https://github.com/dani-garcia/vaultwarden/releases/tag/{version} ; wiki for operational/breaking guidance at https://github.com/dani-garcia/vaultwarden/wiki
+- **Breaking-change indicators**: GitHub release notes call out breaking changes inline (look for "breaking", env-var renames/removals, DB migration notes, admin-token format changes). Cross-check the wiki pages referenced from release notes. Watch for changed/removed environment variables (this cluster configures vaultwarden entirely via env vars in `app/hr.yaml`) and any new required settings.
+- **Skip-allowed**: minor and patch versions may be skipped, but read every intervening release's notes for breaking changes and DB migrations (migrations are forward-only and run automatically on start). No formal "no-skip" constraint, but landing on the latest patch is preferred.
+
+### vwmetrics
+
+- **Identifies**: image `ghcr.io/tricked-dev/vwmetrics`, typically pinned by a git-short-SHA tag plus `@sha256:` digest (e.g. `71b7637@sha256:...`). A vaultwarden-specific Prometheus metrics exporter that connects to the vaultwarden postgres DB.
+- **Stable definition**: prefer the highest non-prerelease tagged release at https://github.com/Tricked-dev/vwmetrics/releases or a semver image tag at https://github.com/Tricked-dev/vwmetrics/pkgs/container/vwmetrics if one exists. If the project publishes no semver releases, recommend the newest commit on the default branch, pinned as `<short-sha>@sha256:<digest>` to match the existing pin style.
+- **Release notes**: GitHub releases at https://github.com/Tricked-dev/vwmetrics/releases (may be empty); otherwise the commit log at https://github.com/Tricked-dev/vwmetrics/commits/ and GHCR tag list at https://github.com/Tricked-dev/vwmetrics/pkgs/container/vwmetrics.
+- **Breaking-change indicators**: no formal release notes expected — diff commits since the current pin for changed env vars (`DATABASE_URL` and any new config), changed metrics port (currently `3040`), changed `/metrics` path, or changed DB query/permission requirements. Verify the exporter still works against the cluster's postgres major.
+- **Skip-allowed**: N/A (SHA-pinned rolling). Move directly to the chosen target SHA/tag; review the full commit diff since `71b7637`.
