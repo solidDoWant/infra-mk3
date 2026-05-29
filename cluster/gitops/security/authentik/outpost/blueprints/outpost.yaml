@@ -34,6 +34,9 @@ entries:
         log_level: trace
         object_naming_template: ak-outpost-%(name)s
         refresh_interval: minutes=5
-      providers: !FindMany [authentik_providers_proxy.proxyprovider]
+      # Authentik isn't reviewing my PRs after they said they would several times, so
+      # this entry is removed.
+      # PR I wrote for !FindMay: https://github.com/goauthentik/authentik/pull/16942
+      # providers: !FindMany [authentik_providers_proxy.proxyprovider]
       # This is deployed via the authentik-outpost kustomization
       service_connection: ""
