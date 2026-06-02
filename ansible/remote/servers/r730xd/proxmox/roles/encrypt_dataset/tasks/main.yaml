@@ -1,41 +1,100 @@
 ---
-# cspell:words nabijaczleweli libexec setownable takeownership tcsd oneshot
-- name: Add the tzpfms GPG signing key
-  ansible.builtin.get_url:
-    url: https://{{ domain_name }}/nabijaczleweli.gpg.key
-    dest: >-
-      {{ key_path }}
-    checksum: sha256:f2450a7aebb8b916c3baac61efe46884ddb51a403ce79b0d2637e6b4a84d1c10
+# cspell:words nabijaczleweli libexec setownable takeownership tcsd oneshot dpkg buildpackage libzfslinux libzfs
+- name: Check whether tzpfms-tpm2 is already installed
+  ansible.builtin.command: dpkg-query -W tzpfms-tpm2
+  register: tzpfms_installed
+  changed_when: false
+  failed_when: false
 
-- name: Add the tzpfms repository
-  ansible.builtin.apt_repository:
-    # This needs to be `sid` until tzpfms adds a `trixie` dist
-    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }} sid main
-    # repo: deb [signed-by={{ key_path }}] https://{{ domain_name }} {{ ansible_distribution_release }} main
-    state: present
-    filename: tzpfms
-    update_cache: true
+# Proxmox started publishing a new version of OpenZFS (and therefore libzfslinux) to their repos to fix a critical
+# bug. This broke all third-party packages that rely on libzfslinux, including tzpfms. There are two options to
+# work around this:
+# * Move the tzpfms repo to `sid`, which has libzfs7linux. This doesn't work because tzpfms for sid isn't actually
+#   built against libzfs7linux, so the binaries are still linked against libzfs.so.6 and thus uninstallable.
+# * Pull the tzpfms source from the same repo, and build it locally. This is less desirable (more complex), but
+#   it works consistently.
+# This can be reverted in a few years upon the next major Debian and Proxmox release.
+- name: Build and install tzpfms from source
+  when: tzpfms_installed.rc != 0
+  block:
+    - name: Add the tzpfms GPG signing key
+      ansible.builtin.get_url:
+        url: https://{{ domain_name }}/nabijaczleweli.gpg.key
+        dest: "{{ key_path }}"
+        checksum: sha256:f2450a7aebb8b916c3baac61efe46884ddb51a403ce79b0d2637e6b4a84d1c10
 
-- name: Limit the repo to only install tzpfms packages 
-  ansible.builtin.blockinfile:
-    path: "{{ apt_preferences_dir }}/50-tzpfms-pinning"
-    mode: 0644
-    create: true
-    block: |
-      Package: *
-      Pin: origin {{ domain_name }}
-      Pin-Priority: -1
+    - name: Add the tzpfms source repository (transient — for this build only)
+      ansible.builtin.apt_repository:
+        repo: "{{ tzpfms_src_repo }}"
+        state: present
+        filename: tzpfms
+        update_cache: true
 
-      Package: tzpfms-tpm2 tzpfms-common
-      Pin: origin {{ domain_name }}
-      Pin-Priority: 500
+    - name: Create a temporary build directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: .tzpfms-build
+      register: tzpfms_workdir
 
-- name: Install tzpfms 
+    - name: Install tzpfms build dependencies
+      # Build-Depends pulls libzfslinux-dev, which on Proxmox is the 2.4 (libzfs7)
+      # dev package, so the binaries link against libzfs.so.7.
+      ansible.builtin.apt:
+        name:
+          - tzpfms-tpm2
+          - tzpfms-common
+        state: build-dep
+
+    - name: Download and compile the tzpfms source package
+      # --compile runs dpkg-buildpackage -b; outputs the .deb files into the build dir.
+      ansible.builtin.command:
+        cmd: apt-get source --compile tzpfms-common tzpfms-tpm2
+        chdir: "{{ tzpfms_workdir.path }}"
+      register: tzpfms_build
+      changed_when: tzpfms_build.rc == 0
+
+    - name: Locate the built tzpfms-common package
+      ansible.builtin.find:
+        paths: "{{ tzpfms_workdir.path }}"
+        patterns: tzpfms-common_*.deb
+      register: tzpfms_common_deb
+
+    - name: Locate the built tzpfms-tpm2 package
+      ansible.builtin.find:
+        paths: "{{ tzpfms_workdir.path }}"
+        patterns: tzpfms-tpm2_*.deb
+      register: tzpfms_tpm2_deb
+
+    - name: Install the built tzpfms packages
+      # common before tpm2; apt resolves the libzfs7linux dependency from the repos.
+      ansible.builtin.apt:
+        deb: "{{ item }}"
+      loop:
+        - "{{ (tzpfms_common_deb.files | sort(attribute='mtime') | last).path }}"
+        - "{{ (tzpfms_tpm2_deb.files | sort(attribute='mtime') | last).path }}"
+
+  always:
+    - name: Remove the transient tzpfms source repository
+      ansible.builtin.apt_repository:
+        repo: "{{ tzpfms_src_repo }}"
+        state: absent
+        filename: tzpfms
+        update_cache: true
+
+    - name: Remove the tzpfms GPG signing key
+      ansible.builtin.file:
+        path: "{{ key_path }}"
+        state: absent
+
+    - name: Remove the temporary build directory
+      ansible.builtin.file:
+        path: "{{ tzpfms_workdir.path }}"
+        state: absent
+      when: tzpfms_workdir.path is defined
+
+- name: Install tpm2-tools
   ansible.builtin.apt:
-    name:
-      - tzpfms-tpm2
-      - tzpfms-common
-      - tpm2-tools
+    name: tpm2-tools
     state: latest
     update_cache: true
     cache_valid_time: 600
