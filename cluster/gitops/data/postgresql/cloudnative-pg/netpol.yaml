@@ -45,6 +45,15 @@ specs:
           - ports:
               - port: status
                 protocol: TCP
+      # Barman Cloud plugin gRPC (mTLS)
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: plugin-barman-cloud
+              app.kubernetes.io/instance: plugin-barman-cloud
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
     ingress:
       # Kubelet to webhook for healthcheck
       - fromEntities:

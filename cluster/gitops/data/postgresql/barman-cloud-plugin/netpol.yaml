@@ -22,8 +22,8 @@ specs:
       # CNPG operator -> plugin CNPG-I gRPC (mTLS)
       - fromEndpoints:
           - matchLabels:
-              io.kubernetes.pod.namespace: data
               app.kubernetes.io/name: cloudnative-pg
+              app.kubernetes.io/instance: cloudnative-pg
         toPorts:
           - ports:
               - port: "9090"
