@@ -1,0 +1,65 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app_name plugin-barman-cloud
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: plugin-barman-cloud
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: cnpg-charts
+      version: 0.6.0
+  values:
+    nameOverride: *app_name
+    fullnameOverride: *app_name
+    # The CNPG-I plugin uses leader election, so run two replicas: if the plugin
+    # is down, WAL archival and restore for every cluster using it fails.
+    replicaCount: 2
+    priorityClassName: system-cluster-critical
+    crds:
+      create: true
+    certificate:
+      # The CNPG-I mTLS certs are authored directly (server-cert.yaml /
+      # client-cert.yaml) so they issue from the namespace CA with the correct
+      # namespace-scoped names, rather than being rewritten via post-render.
+      createServerCertificate: false
+      createClientCertificate: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: &memory 128Mi
+      limits:
+        memory: *memory
+  postRenderers:
+    - kustomize:
+        patches:
+          # The chart creates a selfSigned Issuer unconditionally. This cluster
+          # issues all in-namespace certs from the namespace intermediary CA
+          # (and approver-policy would deny certs from an ad-hoc issuer anyway),
+          # so drop it.
+          - target:
+              group: cert-manager.io
+              version: v1
+              kind: Issuer
+              name: plugin-barman-cloud-selfsigned-issuer
+            patch: |
+              $patch: delete
+              apiVersion: cert-manager.io/v1
+              kind: Issuer
+              metadata:
+                name: plugin-barman-cloud-selfsigned-issuer
+          # By default the operator verifies the plugin's server cert against the
+          # bare Service name; tell it to use the namespace-scoped DNS name that
+          # the CA is actually able to sign (see server-cert.yaml).
+          - target:
+              version: v1
+              kind: Service
+              name: barman-cloud
+            patch: |
+              - op: add
+                path: /metadata/annotations/cnpg.io~1pluginServerName
+                value: barman-cloud.data.svc

@@ -45,3 +45,29 @@ spec:
   wait: true
   dependsOn:
     - name: cloudnative-pg
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name barman-cloud-plugin
+spec:
+  targetNamespace: data
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/data/postgresql/barman-cloud-plugin
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # Plugin must live in the operator's namespace; CRDs come from the operator chart
+    - name: cloudnative-pg
+    # mTLS certs are issued by the data namespace CA and gated by approver-policy
+    - name: cert-manager
+    - name: approver-policy
+    - name: data-namespace-issuer

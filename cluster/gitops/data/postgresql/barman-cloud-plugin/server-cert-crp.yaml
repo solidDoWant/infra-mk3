@@ -1,0 +1,40 @@
+---
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: data-intermediary-ca-barman-cloud-server
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: data-intermediary-ca
+    namespace:
+      matchNames:
+        - data
+  allowed:
+    commonName:
+      required: true
+      value: barman-cloud
+    dnsNames:
+      required: true
+      values:
+        - barman-cloud.data.svc
+        - barman-cloud.data.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 720h # One month

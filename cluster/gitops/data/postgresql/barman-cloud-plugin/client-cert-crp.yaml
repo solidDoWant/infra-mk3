@@ -1,0 +1,22 @@
+---
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: data-intermediary-ca-barman-cloud-client
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: data-intermediary-ca
+    namespace:
+      matchNames:
+        - data
+  allowed:
+    commonName:
+      required: true
+      value: barman-cloud-client
+    usages:
+      - client auth
+  constraints:
+    maxDuration: 720h # One month
