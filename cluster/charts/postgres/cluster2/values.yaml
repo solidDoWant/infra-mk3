@@ -1,0 +1,167 @@
+clusterName: ""
+majorVersion: 17
+databaseName: ""
+imageName: ""
+instances: 2
+teleportDomainName: ""
+certificates:
+  client:
+    ca:
+      subject: {} # This is currently only supported for the CA certificate (TODO add support for user certs)
+      issuerRef:
+        name: self-signed
+        kind: ClusterIssuer
+        group: cert-manager.io
+  serving:
+    issuerRef:
+      name: ""
+      kind: Issuer
+      group: cert-manager.io
+    subject:
+      countries:
+        - US
+      provinces:
+        - ${SECRET_STATE}
+      organizations:
+        - infra-mk3
+    privateKey:
+      algorithm: Ed25519
+      encoding: PKCS8
+      rotationPolicy: Always
+users:
+  streaming-replica:
+    username: streaming_replica
+  pooler:
+    username: cnpg_pooler_pgbouncer
+    disabled: true
+  # example-application:
+  #   name: example-application
+  #   disabled: true # If true, no Certificate or CertificateRequestPolicy is created
+  #   disableReloading: true # If true, pods mounting this cert will NOT be reloaded on cert changes
+  #   duration: 8760h # 1 year # If set, override the default duration for user certificate (1h)
+  #   renewBefore: 720h # 30 days # Optionally set renewBefore for user certificate
+storage:
+  size: 5Gi
+  storageClass: postgres
+resources:
+  requests:
+    cpu: 100m
+    memory: 1Gi
+  limits:
+    memory: 1Gi
+parameters:
+  shared_buffers: 256MB # This should be 25% of the total allocated memory per the docs
+  # Not needed, backing storage (ZFS) uses CoW:
+  # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#setting-full_page_writesoff
+  # This cannot be set or the cluster will fail to restart
+  # full_page_writes: off
+  # Not needed on ZFS:
+  # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#tune-wal_init_zero--wal_recycle
+  wal_init_zero: "off"
+  wal_recycle: "off"
+  # Needs OpenZFS 2.3.0 to be effective, which will likely require Talos 1.9 or 1.10
+  # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#alternative-wal_sync_methodopen_datasync
+  wal_sync_method: open_datasync
+  # This is per connection. However, because the cluster will be used by one application, the number of individual connections
+  # should be low.
+  work_mem: 16MB
+  # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
+  # These are already set by default, don't set them again
+  # wal_level: logical
+  # max_replication_slots: 10  # Default is 32
+
+# managed:
+#   roles:
+#     - name: ${DATABASE_NAME:=${NAME}}
+#       # Remove the app user password. TLS auth will be enforce instead.
+#       disablePassword: true
+#       # Required for Teleport for cluster state per https://github.com/gravitational/teleport/discussions/30247
+#       replication: true
+#       login: true
+bootstrap:
+  recovery:
+    source: "" # barman recovery: name of an entry in additionalClusterConfig.externalClusters
+    volumeSnapshot:
+      name: "" # volume snapshot recovery: name of the VolumeSnapshot to restore from
+additionalClusterConfig: {}
+bucket:
+  endpoint: ""
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    maxObjects: "10000"
+    maxSize: 20Gi
+    # Barman will technically expire old WAL segments, but only if there is at least one WAL-based
+    # full backup and any older segments are not needed for recovery from that backup.
+    bucketLifecycle: |
+      {
+        "Rules": [
+          {
+            "ID": "AbortIncompleteMultipartUploads",
+            "Status": "Enabled",
+            "Prefix": "",
+            "AbortIncompleteMultipartUpload": {
+              "DaysAfterInitiation": 1
+            }
+          },
+          {
+            "ID": "ExpireAfter1Week",
+            "Status": "Enabled",
+            "Prefix": "",
+            "Expiration": {
+              "Days": 7
+            }
+          }
+        ]
+      }
+backups:
+  # WAL archiving is mainly to support WAL streaming when a replica can't
+  # fetch segments directly from the primary, and for cluster cloning.
+  retentionPolicy: "1d"
+  volumeSnapshot:
+    className: postgres
+pooler:
+  rw:
+    enabled: false
+    instances: 2
+    poolMode: session
+  ro:
+    enabled: false
+    instances: 2
+    poolMode: session
+netpol:
+  dns:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: networking
+        endpoints.netpols.home.arpa/cluster-dns: "true"
+  bucket:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: networking
+        app.kubernetes.io/name: ingress-gateways
+        gateway.networking.k8s.io/gateway-name: internal-gateway
+  metricsScraper:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: monitoring
+        endpoints.netpols.home.arpa/metrics-scraper: "true"
+  operator:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: data
+        app.kubernetes.io/name: cloudnative-pg
+        app.kubernetes.io/instance: cloudnative-pg
+  teleportAccess:
+    selector:
+      matchLabels:
+        io.kubernetes.pod.namespace: security
+        app: teleport-agent
+  applicationAccess:
+    selector:
+      # matchLabels:
+      #   app: some-application
+    selectors: []
+      # - matchLabels:
+      #     app: some-application-1
+      # - matchLabels:
+      #     app: some-application-2
