@@ -6,7 +6,6 @@ metadata:
   labels:
     teleport.home.arpa/database.enabled: "true"
 spec:
-  description: {{ include "cluster-readable-name" . }}
   protocol: postgres
   uri: {{ include "cluster-resource-name" . }}-rw.{{ .Release.Namespace }}.svc.cluster.local:5432
   tls:
