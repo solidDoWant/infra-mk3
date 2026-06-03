@@ -48,7 +48,9 @@ spec:
               sslrootcert=/etc/teleport-backend/secrets/audit/server/ca.crt&\
               sslcert=/etc/teleport-backend/secrets/audit/client/tls.crt&\
               sslkey=/etc/teleport-backend/secrets/audit/client/tls.key&\
-              sslmode=verify-full"
+              sslmode=verify-full#\
+              cert_reload_interval=5m"
+            client_cert_reload_interval: 5m
         auth_service:
           tunnel_strategy:
             type: proxy_peering
