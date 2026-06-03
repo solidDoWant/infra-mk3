@@ -35,7 +35,7 @@ spec:
               repository: alpine/psql
               tag: 17.6
             env:
-              PGHOST: authentik-postgres-17-rw.security.svc.cluster.local
+              PGHOST: authentik-postgres-rw.security.svc.cluster.local
               PGPORT: 5432
               PGDATABASE: authentik
               PGUSER: authentik

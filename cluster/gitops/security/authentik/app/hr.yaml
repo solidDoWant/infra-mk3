@@ -27,7 +27,7 @@ spec:
         # Postgres
         ## RW endpoint
         - name: AUTHENTIK_POSTGRESQL__HOST
-          value: authentik-postgres-17-rw.security.svc.cluster.local
+          value: authentik-postgres-rw.security.svc.cluster.local
         - name: AUTHENTIK_POSTGRESQL__NAME
           value: authentik
         - name: AUTHENTIK_POSTGRESQL__USER
@@ -48,7 +48,7 @@ spec:
         # For details, see https://github.com/goauthentik/authentik/issues/12186 and
         # https://discord.com/channels/673534664354430999/1152393369687965736/1311410413090373694
         # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST
-        #   value: authentik-postgres-17-ro.security.svc.cluster.local
+        #   value: authentik-postgres-ro.security.svc.cluster.local
         # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME
         #   value: authentik
         # - name: AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER

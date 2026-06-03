@@ -29,7 +29,7 @@ specs:
       # Access to the backing CNPG cluster to query for the outpost token
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: authentik-postgres-17
+              cnpg.io/cluster: authentik-postgres
         toPorts:
           - ports:
               - port: "5432"

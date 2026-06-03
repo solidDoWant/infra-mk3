@@ -30,7 +30,7 @@ specs:
       # Access to the backing CNPG cluster
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: authentik-postgres-17
+              cnpg.io/cluster: authentik-postgres
         toPorts:
           - ports:
               - port: "5432"
