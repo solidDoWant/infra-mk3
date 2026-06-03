@@ -9,14 +9,16 @@ spec:
   imageName: {{ .Values.imageName }} # Needed for Teleport
   {{- end }}
   bootstrap:
-  {{- if .Values.bootstrap.recovery.source }}
+  {{- $recoverySource := include "recovery-source" . }}
+  {{- $recoverySnapshot := include "recovery-snapshot-name" . }}
+  {{- if $recoverySource }}
     recovery:
-      source: {{ .Values.bootstrap.recovery.source }}
-  {{- else if .Values.bootstrap.recovery.volumeSnapshot.name }}
+      source: {{ $recoverySource }}
+  {{- else if $recoverySnapshot }}
     recovery:
       volumeSnapshots:
         storage:
-          name: {{ .Values.bootstrap.recovery.volumeSnapshot.name }}
+          name: {{ $recoverySnapshot }}
           kind: VolumeSnapshot
           apiGroup: snapshot.storage.k8s.io
   {{- else }}

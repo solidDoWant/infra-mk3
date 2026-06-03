@@ -109,6 +109,7 @@ specs:
               cnpg.io/cluster: {{ include "cluster-resource-name" . }}
               cnpg.io/podRole: instance
         toPorts: *status_ports
+  {{- if and (not (include "recovery-source" .)) (not (include "recovery-snapshot-name" .)) }}
   - description: initdb
     endpointSelector:
       matchLabels:
@@ -122,6 +123,7 @@ specs:
           - ports:
               - port: "6443"
                 protocol: TCP
+  {{- end }}
   - description: join
     endpointSelector:
       matchLabels:
@@ -154,6 +156,21 @@ specs:
           - ports:
               - port: postgresql
                 protocol: TCP
+  {{- if include "recovery-snapshot-name" . }}
+  - description: snapshot-recovery
+    endpointSelector:
+      matchLabels:
+        cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+        cnpg.io/jobRole: snapshot-recovery
+    egress:
+      # Kubelet to get cluster info
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+  {{- end }}
   {{- if .Values.pooler.rw.enabled }}
   - description: pooler-rw
     endpointSelector:

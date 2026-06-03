@@ -89,6 +89,25 @@ extract-{{ .Values.clusterName }}-postgres-auth-ca-certificate
 {{ .Values.clusterName }}-client-auth-public-certs
 {{- end -}}
 
+{{/*
+    Bootstrap recovery selectors, resolved null-safely: a missing or explicit-null
+    bootstrap / recovery / volumeSnapshot key (e.g. a dangling `recovery:` left by a
+    half-removed bootstrap block) yields "" rather than a nil-pointer error.
+*/}}
+{{- define "recovery-source" -}}
+{{- ((.Values.bootstrap | default dict).recovery | default dict).source | default "" -}}
+{{- end -}}
+
+{{- define "recovery-snapshot-name" -}}
+{{- $recovery := (.Values.bootstrap | default dict).recovery | default dict -}}
+{{- ($recovery.volumeSnapshot | default dict).name | default "" -}}
+{{- end -}}
+
+{{/* Non-empty when any recovery bootstrap (barman source or volume snapshot) is set. */}}
+{{- define "recovery-enabled" -}}
+{{- or (include "recovery-source" .) (include "recovery-snapshot-name" .) -}}
+{{- end -}}
+
 {{- define "streaming-replica-cert-name" -}}
 {{ .Values.clusterName }}-postgres-streaming-replica-user
 {{- end -}}
