@@ -11,11 +11,14 @@ spec:
   bootstrap:
   {{- $recoverySource := include "recovery-source" . }}
   {{- $recoverySnapshot := include "recovery-snapshot-name" . }}
+  {{- $appDatabase := default .Values.clusterName .Values.databaseName }}
   {{- if $recoverySource }}
     recovery:
+      database: {{ $appDatabase }}
       source: {{ $recoverySource }}
   {{- else if $recoverySnapshot }}
     recovery:
+      database: {{ $appDatabase }}
       volumeSnapshots:
         storage:
           name: {{ $recoverySnapshot }}
@@ -23,7 +26,7 @@ spec:
           apiGroup: snapshot.storage.k8s.io
   {{- else }}
     initdb:
-      database: {{ default .Values.clusterName .Values.databaseName }}
+      database: {{ $appDatabase }}
   {{- end }}
   postgresql:
     parameters: {{ .Values.parameters | toYaml | nindent 6 }}
