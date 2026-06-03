@@ -154,19 +154,6 @@ specs:
           - ports:
               - port: postgresql
                 protocol: TCP
-  - description: major-upgrade
-    endpointSelector:
-      matchLabels:
-        cnpg.io/cluster: {{ include "cluster-resource-name" . }}
-        cnpg.io/jobRole: major-upgrade
-    egress:
-      # API server to get cluster info
-      - toEntities:
-          - kube-apiserver
-        toPorts:
-          - ports:
-              - port: "6443"
-                protocol: TCP
   {{- if .Values.pooler.rw.enabled }}
   - description: pooler-rw
     endpointSelector:
