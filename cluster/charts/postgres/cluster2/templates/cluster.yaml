@@ -34,6 +34,9 @@ spec:
   {{- end }}
   postgresql:
     parameters: {{ .Values.parameters | toYaml | nindent 6 }}
+    {{- with .Values.extensions }}
+    extensions: {{ . | toYaml | nindent 6 }}
+    {{- end }}
     pg_hba:
       {{- if or .Values.pooler.rw.enabled .Values.pooler.ro.enabled }}
       # pooler_map lets cnpg_pooler_pgbouncer's cert authenticate as any user,

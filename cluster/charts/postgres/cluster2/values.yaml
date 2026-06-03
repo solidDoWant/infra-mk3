@@ -78,6 +78,13 @@ parameters:
   # wal_level: logical
   # max_replication_slots: 10  # Default is 32
 
+# Image-volume extensions, passed through verbatim to spec.postgresql.extensions.
+# extensions:
+#   - name: wal2json
+#     image:
+#       reference: ghcr.io/cloudnative-pg/wal2json:2.6-18-trixie
+extensions: []
+
 # managed:
 #   roles:
 #     - name: ${DATABASE_NAME:=${NAME}}

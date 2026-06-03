@@ -52,9 +52,7 @@ spec:
             app.kubernetes.io/instance: teleport-cluster
             app.kubernetes.io/name: teleport-cluster
             app.kubernetes.io/component: auth
-    additionalClusterConfig:
-      postgresql:
-        extensions:
-          - name: wal2json
-            image:
-              reference: ghcr.io/cloudnative-pg/wal2json:2.6-18-trixie
+    extensions:
+      - name: wal2json
+        image:
+          reference: ghcr.io/cloudnative-pg/wal2json:2.6-18-trixie
