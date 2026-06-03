@@ -33,6 +33,17 @@ spec:
     users:
       vaultwarden:
         username: vaultwarden
+        disableReloading: true
+      vaultwarden-metrics:
+        username: vaultwarden-metrics
+        disableReloading: true
+        # Same perms as the vaultwarden user (inRoles) but a separate identity so
+        # audit trails distinguish it. Too permissive, but the best achievable
+        # declaratively. See https://github.com/cloudnative-pg/cloudnative-pg/issues/7133
+        role:
+          comment: VaultWarden metrics
+          inRoles:
+            - vaultwarden
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:
@@ -44,19 +55,3 @@ spec:
           - matchLabels:
               app.kubernetes.io/instance: vaultwarden-metrics
               app.kubernetes.io/name: vaultwarden-metrics
-    additionalClusterConfig:
-      # Add the vaultwarden-metrics user to the vaultwarden database
-      # This unfortunately has the same perms as the vaultwarden user
-      # but audit trails will show this user separately from the VW
-      # user.
-      managed:
-        roles:
-          - name: vaultwarden-metrics
-            comment: VaultWarden metrics
-            disablePassword: true # TLS auth only
-            login: true
-            inRoles:
-              # This is way too permissive, but it's the best that can be done
-              # declaratively after the DB is deployed.
-              # See https://github.com/cloudnative-pg/cloudnative-pg/issues/7133
-              - vaultwarden
