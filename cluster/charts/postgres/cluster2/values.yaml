@@ -34,11 +34,20 @@ users:
     username: cnpg_pooler_pgbouncer
     disabled: true
   # example-application:
-  #   name: example-application
-  #   disabled: true # If true, no Certificate or CertificateRequestPolicy is created
+  #   username: example-application
+  #   disabled: true # If true, no Certificate, CertificateRequestPolicy, or managed role is created
   #   disableReloading: true # If true, pods mounting this cert will NOT be reloaded on cert changes
   #   duration: 8760h # 1 year # If set, override the default duration for user certificate (1h)
   #   renewBefore: 720h # 30 days # Optionally set renewBefore for user certificate
+  #   # If `role` is set, the chart also creates a CNPG managed Postgres role for this
+  #   # user. The block is merged over defaults {ensure: present, login: true,
+  #   # disablePassword: true} and passed through verbatim, so any field from CNPG's
+  #   # managed RoleConfiguration is accepted. The role name is always the username.
+  #   # (Owner roles created by initdb do not need this — only additional roles do.)
+  #   role:
+  #     comment: Example application
+  #     inRoles:
+  #       - some-owner
 storage:
   size: 5Gi
   storageClass: postgres

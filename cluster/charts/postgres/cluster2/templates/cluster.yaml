@@ -1,3 +1,7 @@
+{{- $acc := .Values.additionalClusterConfig | default dict -}}
+{{- if (($acc.managed | default dict).roles) -}}
+{{- fail "additionalClusterConfig.managed.roles is not supported — declare managed roles under users.<name>.role instead" -}}
+{{- end -}}
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
@@ -78,6 +82,18 @@ spec:
       isWALArchiver: true
       parameters:
         barmanObjectName: {{ include "wal-bucket-name" . }}
+  {{- /* Build spec.managed.roles from any users.<name>.role block, merged over defaults. */}}
+  {{- $roleDefaults := dict "ensure" "present" "login" true "disablePassword" true }}
+  {{- $roles := list }}
+  {{- range $name, $user := .Values.users }}
+  {{- if and $user.role (not $user.disabled) }}
+  {{- $roles = append $roles (merge (dict "name" $user.username) $user.role $roleDefaults) }}
+  {{- end }}
+  {{- end }}
+  {{- if $roles }}
+  managed:
+    roles: {{ $roles | toYaml | nindent 6 }}
+  {{- end }}
 {{- if .Values.additionalClusterConfig }}
 {{ .Values.additionalClusterConfig | toYaml | indent 2 }}
 {{- end }}
