@@ -53,7 +53,7 @@ spec:
             app.kubernetes.io/name: teleport-cluster
             app.kubernetes.io/component: auth
     additionalClusterConfig:
-      postgres:
+      postgresql:
         extensions:
           - name: wal2json
             image:
