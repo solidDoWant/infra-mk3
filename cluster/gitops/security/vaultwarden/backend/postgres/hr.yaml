@@ -14,11 +14,6 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-    instances: 1
-    bootstrap:
-      recovery:
-        volumeSnapshot:
-          name: vaultwarden-postgres-17-pre-migration
     clusterName: vaultwarden
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     certificates:
