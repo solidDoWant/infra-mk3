@@ -25,7 +25,7 @@ spec:
         backupName: vaultwarden-backup
         volumeStorageClass: zfs-generic-nfs # Backed by storage server
         dataPVCName: vaultwarden-data
-        cnpgClusterName: vaultwarden-postgres-17
+        cnpgClusterName: vaultwarden-postgres
         # These can (and should) be self signed as only the backup tool
         # will be using them, and only temporarily (less than a minute)
         servingCertIssuerName: self-signed

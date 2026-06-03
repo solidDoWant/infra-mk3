@@ -32,7 +32,7 @@ spec:
               IP_HEADER: X-Forwarded-For
               # Database config
               DATABASE_URL: "\
-                postgresql://vaultwarden@vaultwarden-postgres-17-rw.security.svc:5432/vaultwarden?\
+                postgresql://vaultwarden@vaultwarden-postgres-rw.security.svc:5432/vaultwarden?\
                 sslrootcert=/certs/postgres/serving/ca.crt&\
                 sslcert=/certs/postgres/user/tls.crt&\
                 sslkey=/certs/postgres/user/tls.key&\
@@ -101,7 +101,7 @@ spec:
               - path: /data
       postgres-serving-cert:
         type: secret
-        name: vaultwarden-postgres-17-serving-cert
+        name: vaultwarden-postgres-serving-cert
         defaultMode: 0444
         items:
           - key: ca.crt
