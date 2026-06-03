@@ -2,7 +2,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: teleport-audit-postgres-auth
+  name: teleport-core-postgres-auth
 spec:
   interval: 5m
   chart:
@@ -14,7 +14,7 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-    serviceName: teleport-audit
+    serviceName: teleport-core
     certificates:
       ca:
         subject:
@@ -26,5 +26,5 @@ spec:
             - infra-mk3
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     users:
-      teleport-audit:
-        username: teleport-audit
+      teleport-core:
+        username: teleport-core
