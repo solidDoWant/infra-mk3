@@ -31,6 +31,8 @@ spec:
       hostpathClass:
         enabled: false
     # Disable everything but zfs-localpv
+    preUpgradeHook:
+      enabled: false
     loki:
       enabled: false
     alloy:
