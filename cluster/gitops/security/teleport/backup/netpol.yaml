@@ -10,7 +10,7 @@ specs:
       matchLabels:
         app.kubernetes.io/name: dr-job
         app.kubernetes.io/instance: teleport-backup
-        app.kubernetes.io/component: backup-tool
+        app.kubernetes.io/controller: backup-tool
     egress:
       # DNS resolution
       - &dns_resolution
