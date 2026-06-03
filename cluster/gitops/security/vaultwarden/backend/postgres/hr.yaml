@@ -1,0 +1,67 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden-postgres
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster2
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    instances: 1
+    bootstrap:
+      recovery:
+        volumeSnapshot:
+          name: vaultwarden-postgres-17-pre-migration
+    clusterName: vaultwarden
+    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    certificates:
+      client:
+        ca:
+          subject: &subject
+            countries:
+              - US
+            provinces:
+              - ${SECRET_STATE}
+            organizations:
+              - infra-mk3
+      serving:
+        issuerRef:
+          name: security-intermediary-ca
+        subject: *subject
+    users:
+      vaultwarden:
+        username: vaultwarden
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/instance: vaultwarden
+              app.kubernetes.io/name: vaultwarden
+          - matchLabels:
+              app.kubernetes.io/instance: vaultwarden-metrics
+              app.kubernetes.io/name: vaultwarden-metrics
+    additionalClusterConfig:
+      # Add the vaultwarden-metrics user to the vaultwarden database
+      # This unfortunately has the same perms as the vaultwarden user
+      # but audit trails will show this user separately from the VW
+      # user.
+      managed:
+        roles:
+          - name: vaultwarden-metrics
+            comment: VaultWarden metrics
+            disablePassword: true # TLS auth only
+            login: true
+            inRoles:
+              # This is way too permissive, but it's the best that can be done
+              # declaratively after the DB is deployed.
+              # See https://github.com/cloudnative-pg/cloudnative-pg/issues/7133
+              - vaultwarden
