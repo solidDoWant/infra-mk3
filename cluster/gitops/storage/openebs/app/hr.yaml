@@ -49,9 +49,9 @@ spec:
         resources: &resources
           requests:
             cpu: 10m
-            memory: 32Mi
+            memory: &memory 128Mi
           limits:
-            memory: 32Mi
+            memory: *memory
         # cspell:words encr
         encrKeysDir: /var/zfs/encryption-keys
         nodeSelector: &node_selector
