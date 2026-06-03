@@ -27,9 +27,9 @@ spec:
           storageClass: zfs-generic-nfs # Backed by storage server
         cnpgClusters:
           core:
-            name: teleport-core-postgres-17
+            name: teleport-core-postgres
           audit:
-            name: teleport-audit-postgres-17
+            name: teleport-audit-postgres
         servingCertIssuerName: self-signed
         clientCACertIssuerName: self-signed
         clusterCloning:

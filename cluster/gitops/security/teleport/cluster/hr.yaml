@@ -36,7 +36,7 @@ spec:
             type: postgresql
             conn_string: "\
               postgresql://\
-              teleport-core@teleport-core-postgres-17-rw.security.svc.cluster.local:5432/teleport-core?\
+              teleport-core@teleport-core-postgres-rw.security.svc.cluster.local:5432/teleport-core?\
               pool_max_conns=20&\
               sslrootcert=/etc/teleport-backend/secrets/core/server/ca.crt&\
               sslcert=/etc/teleport-backend/secrets/core/client/tls.crt&\
@@ -44,7 +44,7 @@ spec:
               sslmode=verify-full"
             audit_events_uri: "\
               postgresql://\
-              teleport-audit@teleport-audit-postgres-17-rw.security.svc.cluster.local:5432/teleport-audit?\
+              teleport-audit@teleport-audit-postgres-rw.security.svc.cluster.local:5432/teleport-audit?\
               sslrootcert=/etc/teleport-backend/secrets/audit/server/ca.crt&\
               sslcert=/etc/teleport-backend/secrets/audit/client/tls.crt&\
               sslkey=/etc/teleport-backend/secrets/audit/client/tls.key&\

@@ -70,7 +70,7 @@ specs:
       # To backing core postgres cluster
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: teleport-core-postgres-17
+              cnpg.io/cluster: teleport-core-postgres
         toPorts:
           - ports:
               - port: postgresql
@@ -78,7 +78,7 @@ specs:
       # To backing audit logging postgres cluster
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: teleport-audit-postgres-17
+              cnpg.io/cluster: teleport-audit-postgres
         toPorts:
           - ports:
               - port: postgresql
