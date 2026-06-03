@@ -76,6 +76,7 @@ specs:
     egress:
       # Access to the k8s api for watching for credential secret changes
       - *to_k8s_api
+      - *dns_resolution
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
