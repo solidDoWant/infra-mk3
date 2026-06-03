@@ -57,7 +57,8 @@ specs:
               - port: "5432"
                 protocol: TCP
       # Access to s3 (audit session storage)
-      - toEndpoints:
+      - &to_s3
+        toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
@@ -86,7 +87,9 @@ specs:
     egress:
       # Access to the k8s api for watching for credential secret changes
       - *to_k8s_api
+      # Needed for WAL replay during restore
       - *dns_resolution
+      - *to_s3
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
