@@ -26,7 +26,7 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: bazarr-postgres-17-rw.media.svc.cluster.local
+                      address: bazarr-postgres-rw.media.svc.cluster.local
                       port_value: 5432
       health_checks:
         - timeout: 1s

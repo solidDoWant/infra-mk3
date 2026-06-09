@@ -30,7 +30,7 @@ specs:
       # Envoy sidecar → backend PostgreSQL (TLS terminated on Envoy)
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: bazarr-postgres-17
+              cnpg.io/cluster: bazarr-postgres
         toPorts:
           - ports:
               - port: "5432"
