@@ -29,7 +29,7 @@ specs:
       # Backend PostgreSQL database
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: seerr-postgres-17
+              cnpg.io/cluster: seerr-postgres
         toPorts:
           - ports:
               - port: "5432"
