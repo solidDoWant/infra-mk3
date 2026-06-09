@@ -14,12 +14,6 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-    instances: 1
-    bootstrap:
-      recovery:
-        volumeSnapshot:
-          name: bazarr-postgres-17-pre-migration
-
     clusterName: bazarr
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     certificates:
