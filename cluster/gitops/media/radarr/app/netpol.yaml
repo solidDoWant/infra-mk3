@@ -30,7 +30,7 @@ specs:
       # Access to the backend PostgreSQL database
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: radarr-postgres-17
+              cnpg.io/cluster: radarr-postgres
         toPorts:
           - ports:
               - port: "5432"
