@@ -39,7 +39,7 @@ specs:
       # Access to the backend PostgreSQL database
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: coder-postgres-17
+              cnpg.io/cluster: coder-postgres
         toPorts:
           - ports:
               - port: "5432"

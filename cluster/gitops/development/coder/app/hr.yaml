@@ -79,7 +79,7 @@ spec:
             defaultMode: 0400
         - name: postgres-serving-cert
           secret:
-            secretName: coder-postgres-17-serving-cert
+            secretName: coder-postgres-serving-cert
             items:
               - key: tls.crt
                 path: tls.crt
