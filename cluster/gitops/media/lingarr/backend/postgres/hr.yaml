@@ -14,12 +14,6 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-    instances: 1
-    bootstrap:
-      recovery:
-        volumeSnapshot:
-          name: lingarr-postgres-17-pre-migration
-
     clusterName: lingarr
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     certificates:
