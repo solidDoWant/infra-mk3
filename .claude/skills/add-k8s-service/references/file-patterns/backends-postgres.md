@@ -70,8 +70,14 @@ spec:
           provinces: ["${SECRET_STATE}"]
           organizations: [infra-mk3]
         privateKey:
-          # Use ECDSA for .NET/C# apps — Ed25519 is not supported by the .NET runtime
-          # Use Ed25519 for everything else (better performance, smaller keys)
+          # Prefer Ed25519 (better performance, smaller keys) for any app that
+          # supports it. .NET/C# apps do NOT — the .NET runtime can't use Ed25519
+          # certs, so use ECDSA there instead.
+          # IMPORTANT: if the app reaches postgres through the Envoy mTLS sidecar
+          # (references/envoy-sidecar-pg.yaml), an Ed25519 serving cert REQUIRES
+          # `ed25519` in that sidecar's tls_params.signature_algorithms — Envoy's
+          # BoringSSL won't advertise it by default, and the handshake fails with
+          # "no suitable signature algorithm". See that file's comment for detail.
           algorithm: Ed25519   # or ECDSA with size: 384, encoding: PKCS8 for .NET
           encoding: PKCS8
           rotationPolicy: Always

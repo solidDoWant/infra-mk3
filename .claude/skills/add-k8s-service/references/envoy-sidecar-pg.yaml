@@ -57,6 +57,19 @@ static_resources:
               tls_params:
                 tls_minimum_protocol_version: TLSv1_3
                 tls_maximum_protocol_version: TLSv1_3
+                # REQUIRED when the postgres serving cert uses Ed25519 (the chart
+                # default). Envoy embeds BoringSSL, which supports Ed25519 but does
+                # NOT advertise `ed25519` in its default signature_algorithms list.
+                # In TLS 1.3 the server signs the handshake with its serving-cert
+                # key, so if the client never offers `ed25519` the OpenSSL-based
+                # postgres rejects the connection with "no suitable signature
+                # algorithm" (surfacing app-side as "connection requires a valid
+                # client certificate"). Keep an RSA entry too, for the RSA client
+                # cert's own CertificateVerify. Omit this block ONLY if the serving
+                # cert is RSA/ECDSA (e.g. a .NET/C# app's cluster).
+                signature_algorithms:
+                  - ed25519
+                  - rsa_pss_rsae_sha512
               tls_certificate_sds_secret_configs:
                 - name: postgres_client_cert
                   sds_config:

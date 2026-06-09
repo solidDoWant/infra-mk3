@@ -64,9 +64,13 @@ static_resources:
               tls_minimum_protocol_version: TLSv1_3
               tls_maximum_protocol_version: TLSv1_3
               signature_algorithms:
-                # Ed25519 is not enabled by default (not FIPS-compliant)
-                - rsa_pss_rsae_sha512
+                # REQUIRED when the serving cert is Ed25519 (the chart default).
+                # Envoy's BoringSSL supports Ed25519 but doesn't advertise it by
+                # default, so without this the TLS 1.3 handshake fails with "no
+                # suitable signature algorithm". Keep an RSA entry for the RSA
+                # client cert's CertificateVerify. Omit only for RSA/ECDSA certs.
                 - ed25519
+                - rsa_pss_rsae_sha512
             tls_certificate_sds_secret_configs:
               - name: redis_client_cert
                 sds_config:
