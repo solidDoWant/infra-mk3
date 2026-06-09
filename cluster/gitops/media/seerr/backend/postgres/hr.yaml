@@ -14,11 +14,11 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-  instances: 1
-  bootstrap:
-    recovery:
-      volumeSnapshot:
-        name: seerr-postgres-17-pre-migration
+    instances: 1
+    bootstrap:
+      recovery:
+        volumeSnapshot:
+          name: seerr-postgres-17-pre-migration
 
     clusterName: seerr
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
