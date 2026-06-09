@@ -36,7 +36,7 @@ spec:
               tag: 1.2.4@sha256:1acaed7642794141978d836a75227de4e5d927d580f99beffdd62cff0aa4ad41
             env:
               # PostgreSQL — connection terminates on the envoy sidecar at
-              # 127.0.0.1:5432, which proxies to lingarr-postgres-17 over
+              # 127.0.0.1:5432, which proxies to lingarr-postgres over
               # mTLS. Lingarr's Npgsql connection string is built from
               # discrete env vars and includes no TLS params (see
               # Lingarr.Core/Configuration/DatabaseConfiguration.cs), so the
