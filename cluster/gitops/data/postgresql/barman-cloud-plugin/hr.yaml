@@ -63,3 +63,44 @@ spec:
               - op: add
                 path: /metadata/annotations/cnpg.io~1pluginServerName
                 value: barman-cloud.data.svc
+          # The chart hard-codes a tcpSocket readiness probe on the gRPC port
+          # 9090, which only the elected leader ever opens — so the passive
+          # replica is perpetually NotReady and spams "connection refused"
+          # (cnpg charts #710 / #896). Point the probes at the controller-runtime
+          # health server on :8081 instead: every replica serves it, and /readyz
+          # + /healthz are ungated healthz.Ping checks, so the standby reports
+          # Ready. Also adds the liveness probe the chart omits. Implements
+          # cloudnative-pg/charts#776 (discussion r2732064035).
+          #
+          # Trade-off: a Ready standby now joins the barman-cloud Service
+          # endpoints even though it does NOT serve gRPC on 9090, so the operator
+          # will occasionally dial the standby and get refused. Its plugin
+          # connection pool pings and retries onto the leader, so this is
+          # tolerable, but expect some reconnect churn until upstream routes the
+          # Service to the leader only.
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: plugin-barman-cloud
+            patch: |
+              # Single-container Deployment, so index 0 is the barman-cloud
+              # container. `replace` drops the chart's tcpSocket handler wholesale.
+              - op: replace
+                path: /spec/template/spec/containers/0/readinessProbe
+                value:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                    scheme: HTTP
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+              - op: add
+                path: /spec/template/spec/containers/0/livenessProbe
+                value:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                    scheme: HTTP
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
