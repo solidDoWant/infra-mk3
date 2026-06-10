@@ -1,0 +1,53 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: insurgency-postgres
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster2
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    instances: 1
+    bootstrap:
+      recovery:
+        volumeSnapshot:
+          name: insurgency-postgres-17-pre-migration
+
+    clusterName: insurgency
+    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    certificates:
+      client:
+        ca:
+          subject: &subject
+            countries:
+              - US
+            provinces:
+              - ${SECRET_STATE}
+            organizations:
+              - infra-mk3
+      serving:
+        issuerRef:
+          name: tug2-intermediary-ca
+        subject: *subject
+    users:
+      insurgency:
+        username: insurgency
+        # Cert will be reloaded on disk automatically, so no need to restart the pod (which would restart the entire VM as well)
+        disableReloading: true
+        # Set this to a long time due to https://github.com/envoyproxy/envoy/issues/41850 making envoy not auto-reload
+        duration: 8760h # 1 year
+        renewBefore: 4380h # 6 months
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selector:
+          matchLabels:
+            kubevirt.io/vm: insurgency-server
