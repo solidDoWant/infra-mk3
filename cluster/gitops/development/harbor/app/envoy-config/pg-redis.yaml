@@ -35,6 +35,9 @@ static_resources:
               tls_params:
                 tls_minimum_protocol_version: TLSv1_3
                 tls_maximum_protocol_version: TLSv1_3
+                signature_algorithms:
+                  - ed25519
+                  - rsa_pss_rsae_sha512
               tls_certificates:
                 - certificate_chain:
                     filename: /etc/envoy/secrets/postgres/tls.crt
