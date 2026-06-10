@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teleport-audit-sessions-versioning
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      # Rook's ObjectBucketClaim has no field to enable S3 bucket versioning, so
+      # this Job turns it on out-of-band via the S3 API. It runs as a Helm
+      # post-install/upgrade hook so each reconcile re-asserts the setting from
+      # what's checked into git. Delete this HelmRelease once versioning can be
+      # set declaratively on the OBC: https://github.com/rook/rook/issues/17318
+      enable-versioning:
+        type: job
+        annotations:
+          helm.sh/hook: post-install,post-upgrade,post-rollback
+          # before-hook-creation: deletes the previous Job before recreating it
+          #   (Jobs are immutable, so without this the upgrade would fail).
+          # hook-succeeded: cleans up the Job after success so kubectl is tidy.
+          # Failed Jobs are left in place for debugging.
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+        job:
+          backoffLimit: 6
+          ttlSecondsAfterFinished: 600
+        containers:
+          aws:
+            image:
+              repository: public.ecr.aws/aws-cli/aws-cli
+              tag: 2.35.2
+            # Bucket name (random suffix) + endpoint come from the OBC ConfigMap;
+            # credentials (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, read natively
+            # by aws-cli) come from the OBC Secret. Both are named after the OBC.
+            envFrom:
+              - configMapRef:
+                  name: teleport-audit-sessions
+              - secretRef:
+                  name: teleport-audit-sessions
+            # Default (virtual-host) addressing works against this RGW — the
+            # authentik, teleport-audit and CNPG-backup clients all reach it that
+            # way. --region is required by aws-cli but ignored by RGW. The call is
+            # idempotent: re-enabling on an already-versioned bucket is a no-op.
+            args:
+              - s3api
+              - put-bucket-versioning
+              - --endpoint-url
+              - https://$(BUCKET_HOST):$(BUCKET_PORT)
+              - --region
+              - dummy-value
+              - --bucket
+              - $(BUCKET_NAME)
+              - --versioning-configuration
+              - Status=Enabled
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch

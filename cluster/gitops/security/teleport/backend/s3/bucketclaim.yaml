@@ -10,3 +10,36 @@ spec:
   additionalConfig:
     maxObjects: "10000"
     maxSize: 10G
+    # Versioning is enabled out-of-band by the teleport-audit-sessions-versioning
+    # HelmRelease — Rook's OBC has no field to enable it (rook/rook#17318). These
+    # rules clean up the resulting deleted/old versions so they don't accumulate:
+    # drop noncurrent versions after 30 days and remove leftover delete markers.
+    bucketLifecycle: |
+      {
+        "Rules": [
+          {
+            "ID": "AbortIncompleteMultipartUploads",
+            "Status": "Enabled",
+            "Prefix": "",
+            "AbortIncompleteMultipartUpload": {
+              "DaysAfterInitiation": 1
+            }
+          },
+          {
+            "ID": "ExpireDeleteMarkers",
+            "Status": "Enabled",
+            "Prefix": "",
+            "Expiration": {
+              "ExpiredObjectDeleteMarker": true
+            }
+          },
+          {
+            "ID": "ExpireNoncurrentVersions",
+            "Status": "Enabled",
+            "Prefix": "",
+            "NoncurrentVersionExpiration": {
+              "NoncurrentDays": 30
+            }
+          }
+        ]
+      }
