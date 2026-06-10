@@ -85,7 +85,7 @@ specs:
       # Access to the backend PostgreSQL database
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: insurgency-postgres-17
+              cnpg.io/cluster: insurgency-postgres
         toPorts:
           - ports:
               - port: "5432"

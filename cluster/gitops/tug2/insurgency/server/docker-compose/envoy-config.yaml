@@ -24,7 +24,7 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: insurgency-postgres-17-rw.tug2.svc.cluster.local
+                      address: insurgency-postgres-rw.tug2.svc.cluster.local
                       port_value: 5432
       health_checks:
         - timeout: 1s
@@ -42,6 +42,9 @@ static_resources:
               tls_params:
                 tls_minimum_protocol_version: TLSv1_3
                 tls_maximum_protocol_version: TLSv1_3
+                signature_algorithms:
+                  - ed25519
+                  - rsa_pss_rsae_sha512
               # Unfortunately this doesn't currently work due to https://github.com/envoyproxy/envoy/issues/41850.
               # Leaving this here for when/if it is addressed.
               tls_certificate_sds_secret_configs:
