@@ -7,7 +7,7 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: ./cluster/charts/postgres/cluster2
+      chart: ./cluster/charts/postgres/cluster
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
