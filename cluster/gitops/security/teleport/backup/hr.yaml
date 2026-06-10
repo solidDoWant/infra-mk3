@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: soliddowant-charts
-      version: 0.0.14
+      version: 0.0.17
   values:
     jobConfig:
       drType: teleport
@@ -30,26 +30,11 @@ spec:
             name: teleport-core-postgres
           audit:
             name: teleport-audit-postgres
-        servingCertIssuerName: self-signed
-        clientCACertIssuerName: self-signed
-        clusterCloning:
-          certificates:
-            servingCert:
-              issuerKind: ClusterIssuer
-            clientCACert:
-              issuerKind: ClusterIssuer
-            postgresUserCert:
-              certificateRequestPolicy:
-                enabled: true
-            streamingReplicaUserCert:
-              certificateRequestPolicy:
-                enabled: true
         auditSessionLogs:
           credentials:
             # Required when not using AWS S3
             region: dummy-value
             s3ForcePathStyle: true
-        namespace: "{{ .Release.Namespace }}"
   valuesFrom:
     - kind: Secret
       name: teleport-audit-sessions

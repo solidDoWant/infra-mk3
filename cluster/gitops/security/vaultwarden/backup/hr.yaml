@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: soliddowant-charts
-      version: 0.0.14
+      version: 0.0.17
   values:
     jobConfig:
       drType: vaultwarden
@@ -23,24 +23,8 @@ spec:
         schedule: "@daily"
       configFile:
         backupName: vaultwarden-backup
-        volumeStorageClass: zfs-generic-nfs # Backed by storage server
+        backupVolume:
+          storageClass: zfs-generic-nfs # Backed by storage server
         dataPVCName: vaultwarden-data
-        cnpgClusterName: vaultwarden-postgres
-        # These can (and should) be self signed as only the backup tool
-        # will be using them, and only temporarily (less than a minute)
-        servingCertIssuerName: self-signed
-        clientCACertIssuerName: self-signed
-        clusterCloning:
-          certificates:
-            servingCert:
-              issuerKind: ClusterIssuer
-            clientCACert:
-              issuerKind: ClusterIssuer
-            postgresUserCert:
-              certificateRequestPolicy:
-                enabled: true
-            streamingReplicaUserCert:
-              certificateRequestPolicy:
-                enabled: true
-        backupToolPodCreationTimeout: 3m
-        namespace: "{{ .Release.Namespace }}"
+        cluster:
+          name: vaultwarden-postgres

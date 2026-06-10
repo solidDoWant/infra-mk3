@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: soliddowant-charts
-      version: 0.0.14
+      version: 0.0.17
   values:
     jobConfig:
       drType: authentik
@@ -27,26 +27,11 @@ spec:
           storageClass: zfs-generic-nfs # Backed by storage server
         cluster:
           name: authentik-postgres
-          servingCertIssuerName: self-signed
-          clientCACertIssuerName: self-signed
-          clusterCloning:
-            certificates:
-              servingCert:
-                issuerKind: ClusterIssuer
-              clientCACert:
-                issuerKind: ClusterIssuer
-              postgresUserCert:
-                certificateRequestPolicy:
-                  enabled: true
-              streamingReplicaUserCert:
-                certificateRequestPolicy:
-                  enabled: true
         s3:
           credentials:
             # Required when not using AWS S3
             region: dummy-value
             s3ForcePathStyle: true
-        namespace: "{{ .Release.Namespace }}"
   valuesFrom:
     - kind: Secret
       name: authentik-media
