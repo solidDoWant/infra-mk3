@@ -33,7 +33,7 @@ spec:
           # Seerr's /app/config PVC: settings, cookies, schema migration markers,
           # etc. Postgres holds the relational data; this captures everything else.
           - name: config
-            pvc: seerr-config
+            pvc: seerr
             snapshotClass: ssd-replicated-3x-block
             exclude:
               - glob: cache
