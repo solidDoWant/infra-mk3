@@ -36,7 +36,7 @@ specs:
       # PostgreSQL — access to the CNPG cluster (select only primary/rw pods)
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: <service>-postgres-17
+              cnpg.io/cluster: <service>-postgres
         toPorts:
           - ports:
               - port: "5432"

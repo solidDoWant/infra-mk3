@@ -157,7 +157,7 @@ When the application supports TLS client certs natively, mount all certs under `
       # Mount the postgres client cert and root CA together under the backend directory
       <service>-postgres-user-cert:
         type: secret
-        name: <service>-postgres-<user>    # Created by the postgres/auth chart
+        name: <service>-postgres-<user>-user    # Created by the postgres chart for users.<user>
         defaultMode: 0440
         items:
           - key: tls.crt
@@ -189,17 +189,17 @@ The connection string format varies significantly by language and library. Commo
 
 **.NET (Npgsql)**:
 ```
-Server=<service>-postgres-17-rw.<namespace>.svc.cluster.local;Database=<db>;Username=<user>;SSLMode=VerifyCA;RootCertificate=/etc/<service>/certs/postgres/ca.crt;SSLCertificate=/etc/<service>/certs/postgres/tls.crt;SSLKey=/etc/<service>/certs/postgres/tls.key
+Server=<service>-postgres-rw.<namespace>.svc.cluster.local;Database=<db>;Username=<user>;SSLMode=VerifyCA;RootCertificate=/etc/<service>/certs/postgres/ca.crt;SSLCertificate=/etc/<service>/certs/postgres/tls.crt;SSLKey=/etc/<service>/certs/postgres/tls.key
 ```
 
 **Go / libpq URL**:
 ```
-postgresql://<user>@<service>-postgres-17-rw.<namespace>.svc.cluster.local/<db>?sslmode=verify-ca&sslrootcert=/etc/<service>/certs/postgres/ca.crt&sslcert=/etc/<service>/certs/postgres/tls.crt&sslkey=/etc/<service>/certs/postgres/tls.key
+postgresql://<user>@<service>-postgres-rw.<namespace>.svc.cluster.local/<db>?sslmode=verify-ca&sslrootcert=/etc/<service>/certs/postgres/ca.crt&sslcert=/etc/<service>/certs/postgres/tls.crt&sslkey=/etc/<service>/certs/postgres/tls.key
 ```
 
 **libpq environment variables**:
 ```yaml
-PGHOST: <service>-postgres-17-rw.<namespace>.svc.cluster.local
+PGHOST: <service>-postgres-rw.<namespace>.svc.cluster.local
 PGDATABASE: <db>
 PGUSER: <user>
 PGSSLMODE: verify-ca

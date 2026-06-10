@@ -6,7 +6,7 @@
 # picks up the new cert content.
 #
 # Copy this to app/envoy-config/postgres.yaml (or similar) and update:
-#   - <service>-postgres-17-rw.<namespace>.svc.cluster.local → actual hostname
+#   - <service>-postgres-rw.<namespace>.svc.cluster.local → actual hostname
 #
 # Reference implementation: cluster/gitops/media/bazarr/app/envoy-config/
 # Note: Must use envoyproxy/envoy:contrib-vX.Y.Z — the postgres_proxy filter
@@ -39,7 +39,7 @@ static_resources:
                   address:
                     socket_address:
                       # UPDATE: replace with the actual postgres service hostname
-                      address: <service>-postgres-17-rw.<namespace>.svc.cluster.local
+                      address: <service>-postgres-rw.<namespace>.svc.cluster.local
                       port_value: 5432
       health_checks:
         - timeout: 1s

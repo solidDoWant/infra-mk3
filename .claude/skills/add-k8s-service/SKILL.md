@@ -74,9 +74,7 @@ Optional app resources (create only when needed):
 If backends are needed, add:
 ```
 └── backend/
-    └── postgres/
-    │   ├── auth/hr.yaml       # mTLS client certs (always deploy before cluster)
-    │   └── 17/hr.yaml         # CNPG cluster via cluster/charts/postgres/cluster
+    └── postgres/hr.yaml       # CNPG cluster + client PKI via cluster/charts/postgres/cluster
     └── redis/hr.yaml          # Dragonfly cluster via cluster/charts/dragonfly/cluster
     └── rabbitmq/              # RabbitMQ User + Permission CRDs
     └── s3/bucketclaim.yaml    # ObjectBucketClaim for Rook Ceph S3
@@ -98,7 +96,7 @@ If using an external chart that isn't already in `cluster/gitops/flux-system/flu
 **Prefer PostgreSQL over embedded/local databases** (SQLite, BoltDB, etc.) whenever the application supports it — PostgreSQL provides automated backups, HA, mTLS, and consistent operations across the cluster.
 
 For each backend type, name the operator/chart:
-- **PostgreSQL**: `cluster/charts/postgres/cluster` + `cluster/charts/postgres/auth` — deploy `auth` first. Default 2 instances (HA).
+- **PostgreSQL**: `cluster/charts/postgres/cluster` — single merged chart (CNPG cluster + client-auth PKI + WAL backups). One HelmRelease, no separate `auth` chart. Default 2 instances (HA).
 - **Redis/Cache**: `cluster/charts/dragonfly/cluster` — custom chart wrapping the Dragonfly operator CRD. Default 2 instances (HA).
 - **Message queue**: RabbitMQ operator CRDs — `RabbitMQCluster` (3 replicas for quorum), `User`, `Permission`, plus dedicated certificate infrastructure. See `references/file-patterns/backends-rabbitmq.md` for the full setup. **Flag RabbitMQ usage to the user** — the raw CRD approach is complex enough that it should probably be wrapped in a dedicated chart (like `cluster/charts/postgres/` or `cluster/charts/dragonfly/`) before deploying. Raise this with the user and confirm whether they want to proceed with raw CRDs or create a chart first.
 - **S3 object storage**: `ObjectBucketClaim` with `storageClassName: ssd-replicated-object`. Always create a Kyverno `Policy` to transform the OBC-generated ConfigMap/Secret into app-specific key names and construct the full S3 endpoint URL.
