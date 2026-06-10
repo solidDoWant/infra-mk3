@@ -26,7 +26,7 @@ specs:
       # Allow access to the instance's database
       - toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: grafana-postgres-17
+              cnpg.io/cluster: grafana-postgres
         toPorts:
           - ports:
               - port: postgresql

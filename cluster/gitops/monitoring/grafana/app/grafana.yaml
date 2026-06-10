@@ -35,14 +35,14 @@ spec:
       root_url: https://grafana.${SECRET_PUBLIC_DOMAIN_NAME}
     database:
       type: postgres
-      host: grafana-postgres-17-rw.monitoring.svc:5432
+      host: grafana-postgres-rw.monitoring.svc:5432
       name: grafana
       user: grafana
       ssl_mode: verify-full
       ca_cert_path: /etc/grafana/secrets/root-ca-cert/ca.crt
       client_cert_path: /etc/grafana/secrets/postgres-grafana-user/tls.crt
       client_key_path: /etc/grafana/secrets/postgres-grafana-user/tls.key
-      server_cert_name: grafana-postgres-17-rw.monitoring.svc
+      server_cert_name: grafana-postgres-rw.monitoring.svc
     remote_cache:
       type: database
     unified_alerting:
