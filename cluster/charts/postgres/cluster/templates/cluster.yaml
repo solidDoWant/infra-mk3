@@ -1,0 +1,102 @@
+{{- $acc := .Values.additionalClusterConfig | default dict -}}
+{{- if (($acc.managed | default dict).roles) -}}
+{{- fail "additionalClusterConfig.managed.roles is not supported — declare managed roles under users.<name>.role instead" -}}
+{{- end -}}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "cluster-resource-name" . }}
+spec:
+  instances: {{ .Values.instances }}
+  {{- if .Values.imageName }}
+  imageName: {{ .Values.imageName }} # Needed for Teleport
+  {{- end }}
+  bootstrap:
+  {{- $recoverySource := include "recovery-source" . }}
+  {{- $recoverySnapshot := include "recovery-snapshot-name" . }}
+  {{- $appDatabase := default .Values.clusterName .Values.databaseName }}
+  {{- if $recoverySource }}
+    recovery:
+      database: {{ $appDatabase }}
+      source: {{ $recoverySource }}
+  {{- else if $recoverySnapshot }}
+    recovery:
+      database: {{ $appDatabase }}
+      volumeSnapshots:
+        storage:
+          name: {{ $recoverySnapshot }}
+          kind: VolumeSnapshot
+          apiGroup: snapshot.storage.k8s.io
+  {{- else }}
+    initdb:
+      database: {{ $appDatabase }}
+  {{- end }}
+  postgresql:
+    parameters: {{ .Values.parameters | toYaml | nindent 6 }}
+    {{- with .Values.extensions }}
+    extensions: {{ . | toYaml | nindent 6 }}
+    {{- end }}
+    pg_hba:
+      {{- if or .Values.pooler.rw.enabled .Values.pooler.ro.enabled }}
+      # pooler_map lets cnpg_pooler_pgbouncer's cert authenticate as any user,
+      # and passes direct client cert CNs through to the same-named role.
+      - hostssl all all all cert map=pooler_map
+      {{- else }}
+      # Require TLS cert auth for all databases, users, and IP addresses
+      - hostssl all all all cert
+      {{- end }}
+    {{- if or .Values.pooler.rw.enabled .Values.pooler.ro.enabled }}
+    pg_ident:
+      - "pooler_map  cnpg_pooler_pgbouncer  all"
+      - "pooler_map  /^(.*)$  \\1"
+    {{- end }}
+  storage: {{ .Values.storage | toYaml | nindent 4 }}
+  resources: {{ .Values.resources | toYaml | nindent 4 }}
+  primaryUpdateMethod: switchover
+  backup:
+    target: prefer-standby
+    volumeSnapshot:
+      {{- if .Values.backups.volumeSnapshot.className }}
+      className: {{ .Values.backups.volumeSnapshot.className }}
+      {{- end }}
+      online: true
+      onlineConfiguration:
+        immediateCheckpoint: false
+        waitForArchive: true
+      snapshotOwnerReference: backup
+  certificates:
+    serverTLSSecret: {{ include "serving-cert-name" . }}
+    serverCASecret: {{ include "serving-cert-name" . }}
+    clientCASecret: {{ include "ca-secret-name" . }}
+    replicationTLSSecret: {{ include "streaming-replica-cert-name" . }}
+  topologySpreadConstraints:
+    # Don't schedule instances or new join jobs on the same node. Both values must
+    # be included here so that new join jobs don't end up on the same node, tying
+    # the instance's volume to that node.
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+      whenUnsatisfiable: DoNotSchedule
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ include "wal-bucket-name" . }}
+  {{- /* Build spec.managed.roles from any users.<name>.role block, merged over defaults. */}}
+  {{- $roleDefaults := dict "ensure" "present" "login" true "disablePassword" true }}
+  {{- $roles := list }}
+  {{- range $name, $user := .Values.users }}
+  {{- if and $user.role (not $user.disabled) }}
+  {{- $roles = append $roles (merge (dict "name" $user.username) $user.role $roleDefaults) }}
+  {{- end }}
+  {{- end }}
+  {{- if $roles }}
+  managed:
+    roles: {{ $roles | toYaml | nindent 6 }}
+  {{- end }}
+{{- if .Values.additionalClusterConfig }}
+{{ .Values.additionalClusterConfig | toYaml | indent 2 }}
+{{- end }}

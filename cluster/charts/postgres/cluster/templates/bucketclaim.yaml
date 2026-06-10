@@ -1,0 +1,11 @@
+---
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ include "wal-bucket-name" . }}
+spec:
+  # Unfortunately the cluster resource can't pull S3 endpoint or bucket name from the created configmap,
+  # so the bucket name must be static
+  bucketName: {{ include "wal-bucket-name" . }}
+  storageClassName: {{ .Values.bucket.storageClassName }}
+  additionalConfig: {{ .Values.bucket.additionalConfig | toYaml | nindent 4 }}

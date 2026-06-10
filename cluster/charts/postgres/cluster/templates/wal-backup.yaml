@@ -1,0 +1,21 @@
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ include "wal-bucket-name" . }}
+spec:
+  retentionPolicy: {{ .Values.backups.retentionPolicy | quote }}
+  configuration:
+    destinationPath: s3://{{ include "wal-bucket-name" . }}/
+    {{- if .Values.bucket.endpoint }}
+    endpointURL: {{ .Values.bucket.endpoint }}
+    {{- end }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ include "wal-bucket-name" . }}
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKey:
+        name: {{ include "wal-bucket-name" . }}
+        key: AWS_SECRET_ACCESS_KEY
+    wal:
+      compression: zstd
