@@ -128,6 +128,11 @@ spec:
           jellyfin:
             jellyfin:
               - path: /tmp
+                subPath: tmp
+              - path: /config/log
+                subPath: log
+              - path: /config/temp
+                subPath: temp
       # Read-only media library mount.
       media:
         type: nfs
