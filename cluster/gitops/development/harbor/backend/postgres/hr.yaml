@@ -14,12 +14,6 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-    instances: 1
-    bootstrap:
-      recovery:
-        volumeSnapshot:
-          name: harbor-postgres-17-pre-migration
-
     clusterName: harbor
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     certificates:

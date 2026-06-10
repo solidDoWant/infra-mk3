@@ -17,7 +17,7 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: harbor-postgres-17-rw.development.svc.cluster.local
+                      address: harbor-postgres-rw.development.svc.cluster.local
                       port_value: 5432
       health_checks:
         - timeout: 1s

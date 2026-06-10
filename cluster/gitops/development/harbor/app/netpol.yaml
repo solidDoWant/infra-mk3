@@ -31,7 +31,7 @@ specs:
       - &to_database
         toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: harbor-postgres-17
+              cnpg.io/cluster: harbor-postgres
         toPorts:
           - ports:
               - port: "5432"
