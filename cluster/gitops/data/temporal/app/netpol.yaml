@@ -37,7 +37,7 @@ specs:
       - &postgres_egress
         toEndpoints:
           - matchLabels:
-              cnpg.io/cluster: temporal-postgres-17
+              cnpg.io/cluster: temporal-postgres
         toPorts:
           - ports:
               - port: "5432"

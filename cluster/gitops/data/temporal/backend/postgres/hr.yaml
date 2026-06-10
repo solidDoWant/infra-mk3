@@ -14,12 +14,6 @@ spec:
         namespace: flux-system
         name: infra-mk3
   values:
-    instances: 1
-    bootstrap:
-      recovery:
-        volumeSnapshot:
-          name: temporal-postgres-17-pre-migration
-
     clusterName: temporal
     storage:
       size: 10Gi

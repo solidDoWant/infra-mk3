@@ -86,7 +86,7 @@ spec:
                 path: tls.key
         - name: postgres-serving-ca
           secret:
-            secretName: temporal-postgres-17-serving-cert
+            secretName: temporal-postgres-serving-cert
             defaultMode: 0440
             items:
               - key: ca.crt
@@ -177,7 +177,7 @@ spec:
                 createDatabase: false
                 pluginName: postgres12
                 databaseName: temporal_persistence
-                connectAddr: temporal-postgres-17-rw.data.svc.cluster.local:5432
+                connectAddr: temporal-postgres-rw.data.svc.cluster.local:5432
                 connectProtocol: tcp
                 user: temporal
                 # 10 conns/pod for History's hot-path workflow state writes.
@@ -191,13 +191,13 @@ spec:
                   certFile: /etc/temporal/certs/postgres/user/tls.crt
                   keyFile: /etc/temporal/certs/postgres/user/tls.key
                   enableHostVerification: true
-                  serverName: temporal-postgres-17-rw.data.svc.cluster.local
+                  serverName: temporal-postgres-rw.data.svc.cluster.local
             visibility:
               sql:
                 createDatabase: false
                 pluginName: postgres12
                 databaseName: temporal_visibility
-                connectAddr: temporal-postgres-17-rw.data.svc.cluster.local:5432
+                connectAddr: temporal-postgres-rw.data.svc.cluster.local:5432
                 connectProtocol: tcp
                 user: temporal
                 # 5 conns/pod for the cooler visibility workload (Frontend list queries,
@@ -211,7 +211,7 @@ spec:
                   certFile: /etc/temporal/certs/postgres/user/tls.crt
                   keyFile: /etc/temporal/certs/postgres/user/tls.key
                   enableHostVerification: true
-                  serverName: temporal-postgres-17-rw.data.svc.cluster.local
+                  serverName: temporal-postgres-rw.data.svc.cluster.local
 
         # Namespaces are managed externally via Job manifests in app/namespaces/, not
         # by the chart's namespace-creation feature.
@@ -366,7 +366,7 @@ spec:
                 path: tls.key
         - name: postgres-serving-ca
           secret:
-            secretName: temporal-postgres-17-serving-cert
+            secretName: temporal-postgres-serving-cert
             defaultMode: 0440
             items:
               - key: ca.crt
