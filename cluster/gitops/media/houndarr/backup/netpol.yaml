@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: houndarr-backup
+specs:
+  - description: backup-tool
+    endpointSelector: &backup_tool_selector
+      matchLabels:
+        app.kubernetes.io/name: dr-job
+        app.kubernetes.io/instance: houndarr-backup
+        app.kubernetes.io/controller: backup-tool
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+      # k8s API
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Access backup-tool GRPC server pod
+      - toEndpoints:
+          - &backup_tool_grpc_server_selector
+            matchLabels:
+              app.kubernetes.io/name: dr-job
+              app.kubernetes.io/instance: houndarr-backup
+              app.kubernetes.io/component: backup-tool-grpc-server
+        toPorts:
+          - ports:
+              - port: "40983"
+                protocol: TCP
+  - description: backup-tool-grpc-server
+    endpointSelector: *backup_tool_grpc_server_selector
+    egress:
+      - *dns_resolution
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "40983"
+                protocol: TCP
+      # backup-tool for calling remote procedures
+      - fromEndpoints:
+          - *backup_tool_selector
+        toPorts:
+          - ports:
+              - port: "40983"
+                protocol: TCP
