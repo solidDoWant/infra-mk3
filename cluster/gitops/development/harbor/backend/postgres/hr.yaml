@@ -1,0 +1,58 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-postgres
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster2
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    instances: 1
+    bootstrap:
+      recovery:
+        volumeSnapshot:
+          name: harbor-postgres-17-pre-migration
+
+    clusterName: harbor
+    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    certificates:
+      client:
+        ca:
+          subject: &subject
+            countries:
+              - US
+            provinces:
+              - ${SECRET_STATE}
+            organizations:
+              - infra-mk3
+      serving:
+        issuerRef:
+          name: development-intermediary-ca
+        subject: *subject
+    users:
+      harbor:
+        username: harbor
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: core
+              app.kubernetes.io/instance: harbor
+          - matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: jobservice
+              app.kubernetes.io/instance: harbor
+          - matchLabels:
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: exporter
+              app.kubernetes.io/instance: harbor
