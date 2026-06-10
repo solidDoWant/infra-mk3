@@ -1,0 +1,65 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: temporal-postgres
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster2
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    instances: 1
+    bootstrap:
+      recovery:
+        volumeSnapshot:
+          name: temporal-postgres-17-pre-migration
+
+    clusterName: temporal
+    storage:
+      size: 10Gi
+    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    certificates:
+      client:
+        ca:
+          subject: &subject
+            countries:
+              - US
+            provinces:
+              - ${SECRET_STATE}
+            organizations:
+              - infra-mk3
+      serving:
+        issuerRef:
+          name: media-intermediary-ca
+        subject: *subject
+    users:
+      temporal:
+        username: temporal
+        disableReloading: true
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    # Sized for Temporal's connection load: 8 server pods × 15 conns/pod = 120 + ~12 internal
+    # = ~132. max_connections=150 leaves a 16-conn buffer for chart upgrades / admintools.
+    # Per-conn ~8MiB measured + 512MiB shared_buffers + ~250MiB overhead ≈ 2GiB needed.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 2Gi
+      limits:
+        memory: 2Gi
+    parameters:
+      max_connections: "150"
+      shared_buffers: 512MB
+      work_mem: 16MB # TODO should this shrink?
+    netpol:
+      applicationAccess:
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: temporal
+            app.kubernetes.io/instance: temporal
