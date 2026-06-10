@@ -68,6 +68,12 @@ specs:
                 endPort: 27036
                 protocol: TCP
       - toFQDNs:
+          - matchPattern: "test.steampowered.com"
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
+      - toFQDNs:
           # To Let's Encrypt to get CRLs
           - matchPattern: "*.c.lencr.org"
           # To digicert to get CRLs
