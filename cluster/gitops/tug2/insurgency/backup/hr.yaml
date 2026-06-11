@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: insurgency-backup
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: dr-job
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: soliddowant-charts
+      version: 0.0.17
+  values:
+    jobConfig:
+      drType: generic
+      drAction: backup
+      cronjob:
+        schedule: "@daily"
+      configFile:
+        backupName: insurgency-backup
+        backupVolume:
+          storageClass: zfs-generic-nfs # Backed by storage server
+          size: 1Gi
+        postgres:
+          - name: &cluster_name insurgency-postgres
+            cluster: *cluster_name
