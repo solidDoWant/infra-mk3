@@ -25,3 +25,27 @@ spec:
     - name: gateway-crds
     - name: nzbget
     - name: qbittorrent
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name nzbhydra2-backup
+spec:
+  targetNamespace: downloads
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/downloads/nzbhydra2/backup
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: nzbhydra2
+    - name: volume-snapshot-crds
+    - name: rook-ceph-cluster
+    - name: democratic-csi-zfs-generic-nfs
