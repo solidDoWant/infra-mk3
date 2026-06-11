@@ -68,25 +68,44 @@ spec:
                   /etc/seerr/settings-source/settings.json \
                   > /app/config/settings.json
                 chmod 0640 /app/config/settings.json
+          # Native sidecar: terminates Seerr's plaintext postgres connection on
+          # 127.0.0.1:5432 and proxies to the postgres cluster with mTLS. Seerr's
+          # pg driver doesn't reload TLS certs from disk after a connection is
+          # opened, so on the hourly client-cert rotation new connections failed;
+          # offloading TLS to Envoy (which hot-reloads the certs via SDS) fixes
+          # that.
+          envoy:
+            restartPolicy: Always
+            # contrib image is required for the postgres_proxy filter
+            image:
+              repository: envoyproxy/envoy
+              tag: contrib-v1.35.3
+            ports:
+              - name: envoy-admin
+                containerPort: 8000
+            resources:
+              requests:
+                cpu: 25m
+                memory: &envoy_memory 64Mi
+              limits:
+                memory: *envoy_memory
         containers:
           seerr:
             image: *image
             env:
               LOG_LEVEL: info
               PORT: &web_port 5055
-              # Postgres connection — cluster uses pg_hba `hostssl all all all
-              # cert`, so the client cert IS the credential. No password is
-              # sent or required.
+              # Postgres connection goes through the Envoy sidecar on
+              # 127.0.0.1:5432, which terminates mTLS upstream. The app speaks
+              # plaintext to localhost (DB_USE_SSL off); Envoy presents the
+              # client cert — which the cluster's pg_hba `hostssl all all all
+              # cert` treats as the credential, so no password is sent.
               DB_TYPE: postgres
-              DB_HOST: seerr-postgres-rw.media.svc.cluster.local
+              DB_HOST: 127.0.0.1
               DB_PORT: "5432"
               DB_USER: seerr
               DB_NAME: seerr
-              DB_USE_SSL: "true"
-              DB_SSL_REJECT_UNAUTHORIZED: "true"
-              DB_SSL_CA_FILE: /etc/seerr/certs/root-ca/ca.crt
-              DB_SSL_CERT_FILE: /etc/seerr/certs/postgres/user/tls.crt
-              DB_SSL_KEY_FILE: /etc/seerr/certs/postgres/user/tls.key
+              DB_USE_SSL: "false"
             ports:
               - name: web
                 containerPort: *web_port
@@ -172,6 +191,16 @@ spec:
           seerr:
             seerr:
               - path: /tmp
+      # Envoy proxy config + file-based SDS for the postgres client cert and
+      # CA validation context.
+      envoy-config:
+        type: configMap
+        name: seerr-envoy-pg-config
+        defaultMode: 0440
+        advancedMounts:
+          seerr:
+            envoy:
+              - path: /etc/envoy
       root-ca:
         type: secret
         name: root-ca-pub-cert
@@ -181,8 +210,8 @@ spec:
             path: ca.crt
         advancedMounts:
           seerr:
-            seerr:
-              - path: /etc/seerr/certs/root-ca
+            envoy:
+              - path: /etc/envoy/secrets/root-ca
       seerr-postgres-seerr-user-cert:
         type: secret
         name: seerr-postgres-seerr-user
@@ -194,8 +223,8 @@ spec:
             path: tls.key
         advancedMounts:
           seerr:
-            seerr:
-              - path: /etc/seerr/certs/postgres/user
+            envoy:
+              - path: /etc/envoy/secrets/postgres
     service:
       seerr:
         controller: seerr
