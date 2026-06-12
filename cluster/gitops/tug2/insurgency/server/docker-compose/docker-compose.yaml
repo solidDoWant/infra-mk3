@@ -10,7 +10,7 @@ services:
   tug2-insurgency-main:
     depends_on:
       - envoy
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.93-dev.migration
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.100-dev.lag-fix
     pull_policy: always
     environment:
       - PORT=27000
@@ -29,7 +29,6 @@ services:
       resources:
         limits:
           memory: 4G
-          cpus: "1.0"
         reservations:
           memory: 4G
           cpus: "1.0"
