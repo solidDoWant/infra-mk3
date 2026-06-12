@@ -10,9 +10,6 @@ resources:
   - ./k8s-sidecar-rbac.yaml
   - ./netpol.yaml
 configMapGenerator:
-  - name: authentik-python-user-settings
-    files:
-      - user_settings.py
   # Unfortunately because this needs to be mounted in the server pods, it
   # cannot live in the "configuration" fluxtomization
   - name: authentik-css

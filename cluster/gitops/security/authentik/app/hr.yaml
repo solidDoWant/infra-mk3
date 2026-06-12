@@ -153,10 +153,6 @@ spec:
                 path: tls.crt
               - key: tls.key
                 path: tls.key
-        - name: authentik-python-user-settings
-          configMap:
-            name: authentik-python-user-settings
-            defaultMode: 0440
         - name: authentik-css
           configMap:
             name: authentik-css
@@ -168,8 +164,6 @@ spec:
           mountPath: /etc/authentik/secrets/postgres-authentik-user
         - name: dragonfly-authentik-user
           mountPath: /etc/authentik/secrets/dragonfly-authentik-user
-        - name: authentik-python-user-settings
-          mountPath: /data
         - name: authentik-css
           mountPath: /web/dist/custom.css
           subPath: custom.css
