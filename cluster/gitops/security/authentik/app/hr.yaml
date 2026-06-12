@@ -13,16 +13,11 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: goauthentik-charts
-      version: 2025.8.3
+      version: 2025.10.3
   values:
     global:
       podLabels:
         endpoints.netpols.home.arpa/email-sender: "true"
-      image:
-        # This is a fork build of the 2025.8.3 release that includes CORS fixes.
-        # See https://github.com/goauthentik/authentik/pull/17233
-        repository: ghcr.io/soliddowant/authentik
-        tag: 2025.8.3-2.cors.1
       env:
         # Postgres
         ## RW endpoint
