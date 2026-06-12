@@ -13,7 +13,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: goauthentik-charts
-      version: 2026.2.3
+      version: 2026.5.3
   values:
     global:
       podLabels:
@@ -95,6 +95,17 @@ spec:
           value: "true"
         - name: AUTHENTIK_ERROR_REPORTING__ENABLED
           value: "false"
+        # Needed because IPv6 is disabled at the kernel level
+        - name: AUTHENTIK_LISTEN__HTTP
+          value: 0.0.0.0:9000
+        - name: AUTHENTIK_LISTEN__HTTPS
+          value: 0.0.0.0:9443
+        - name: AUTHENTIK_LISTEN__LDAP
+          value: 0.0.0.0:3389
+        - name: AUTHENTIK_LISTEN__LDAPS
+          value: 0.0.0.0:6636
+        - name: AUTHENTIK_LISTEN__METRICS
+          value: 0.0.0.0:9300
       envFrom:
         - configMapRef:
             name: authentik-media

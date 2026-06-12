@@ -55,12 +55,17 @@ spec:
           proxy:
             image:
               repository: ghcr.io/goauthentik/proxy
-              tag: 2026.2.3
+              tag: 2026.5.3
             env:
               AUTHENTIK_HOST: http://authentik-server.security.svc.cluster.local
               AUTHENTIK_INSECURE: true
               OUTPUT_PATH: *token_path
               AUTHENTIK_HOST_BROWSER: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}
+              AUTHENTIK_LISTEN__HTTP: 0.0.0.0:9000
+              AUTHENTIK_LISTEN__HTTPS: 0.0.0.0:9443
+              AUTHENTIK_LISTEN__LDAP: 0.0.0.0:3389
+              AUTHENTIK_LISTEN__LDAPS: 0.0.0.0:6636
+              AUTHENTIK_LISTEN__METRICS: 0.0.0.0:9300
             command:
               - /bin/sh
               - -c
