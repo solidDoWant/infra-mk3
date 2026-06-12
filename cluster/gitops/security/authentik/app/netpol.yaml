@@ -35,15 +35,6 @@ specs:
           - ports:
               - port: "5432"
                 protocol: TCP
-      # Access to the backing Dragonfly cluster
-      - toEndpoints:
-          - matchLabels:
-              app.kubernetes.io/name: dragonfly
-              app.kubernetes.io/instance: authentik-dragonfly
-        toPorts:
-          - ports:
-              - port: redis
-                protocol: TCP
       # Allow emailing alerts via SMTP relay
       - toEndpoints:
           - matchLabels:
