@@ -53,9 +53,9 @@ stringData:
           description: Temporal authorization permissions claim
           expression: |
             permissions = []
-            if request.user.ak_groups.filter(name="Temporal admins").exists():
+            if request.user.groups.filter(name="Temporal admins").exists():
                 permissions.append("temporal-system:admin")
-            elif request.user.ak_groups.filter(name="Temporal users").exists():
+            elif request.user.groups.filter(name="Temporal users").exists():
                 permissions.append("temporal-system:read")
             return {"permissions": permissions}
       # Application

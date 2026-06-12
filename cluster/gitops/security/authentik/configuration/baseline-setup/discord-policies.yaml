@@ -114,8 +114,8 @@ entries:
 
         # Split user groups into discord groups and non discord groups
         authentik_discord_group_pks = authentik_discord_groups.values_list("pk", flat=True)
-        user_groups_non_discord = request.user.ak_groups.exclude(pk__in=authentik_discord_group_pks)
-        user_groups_discord = list(request.user.ak_groups.filter(pk__in=authentik_discord_group_pks))
+        user_groups_non_discord = request.user.groups.exclude(pk__in=authentik_discord_group_pks)
+        user_groups_discord = list(request.user.groups.filter(pk__in=authentik_discord_group_pks))
 
         # Filter matching roles based on guild_member_info['roles']
         user_groups_discord_updated = authentik_discord_groups.filter(attributes__discord_role_id__in=guild_member_info["roles"])
@@ -124,7 +124,7 @@ entries:
         user_groups_updated = user_groups_non_discord.union(user_groups_discord_updated)
 
         # Update user's groups
-        request.user.ak_groups.set(user_groups_updated)
+        request.user.groups.set(user_groups_updated)
 
         # Create event with roles changed
         ak_create_event(
