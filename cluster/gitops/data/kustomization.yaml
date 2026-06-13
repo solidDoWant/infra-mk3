@@ -6,5 +6,6 @@ resources:
   - ./issuers/ks.yaml
   - ./dragonfly/ks.yaml
   - ./postgresql/ks.yaml
-  - ./rabbitmq/ks.yaml
+  # Currently disabled as nothing is using RabbitMQ in the cluster today
+  # - ./rabbitmq/ks.yaml
   - ./temporal/ks.yaml
