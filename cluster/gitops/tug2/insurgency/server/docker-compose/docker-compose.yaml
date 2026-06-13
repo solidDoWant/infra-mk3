@@ -10,7 +10,7 @@ services:
   tug2-insurgency-main:
     depends_on:
       - envoy
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.104-dev.map-crash-fix-wine.calladmin-fix
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:101-dev.lag-fix
     pull_policy: always
     environment:
       - PORT=27000
