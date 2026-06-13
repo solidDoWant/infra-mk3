@@ -34,6 +34,9 @@ spec:
   {{- end }}
   postgresql:
     parameters: {{ .Values.parameters | toYaml | nindent 6 }}
+    {{- with .Values.sharedPreloadLibraries }}
+    shared_preload_libraries: {{ . | toYaml | nindent 6 }}
+    {{- end }}
     {{- with .Values.extensions }}
     extensions: {{ . | toYaml | nindent 6 }}
     {{- end }}

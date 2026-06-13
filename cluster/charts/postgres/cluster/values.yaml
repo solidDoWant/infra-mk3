@@ -85,6 +85,14 @@ parameters:
 #       reference: ghcr.io/cloudnative-pg/wal2json:2.6-18-trixie
 extensions: []
 
+# Libraries to preload at server start, rendered to spec.postgresql.shared_preload_libraries.
+# CNPG manages shared_preload_libraries via this dedicated field (it is rejected if set under
+# `parameters`), so extensions that require preloading (e.g. VectorChord's vchord) must be
+# declared here. Default empty = unchanged behavior for existing consumers.
+# sharedPreloadLibraries:
+#   - vchord
+sharedPreloadLibraries: []
+
 # managed:
 #   roles:
 #     - name: ${DATABASE_NAME:=${NAME}}
