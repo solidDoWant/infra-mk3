@@ -48,6 +48,10 @@ spec:
               # Shared DB/Redis/ML config (anchored so the microservices worker
               # reuses it without the api-only worker selector above).
               <<: &immich_app_env
+                # Bind IPv4 only — IPv6 is disabled on the host kernel. The server
+                # otherwise binds `::` (and the ML default is `[::]`), which fails
+                # to bind on an IPv6-disabled kernel.
+                IMMICH_HOST: "0.0.0.0"
                 # DB + Redis are reached over plaintext localhost; the Envoy
                 # sidecar re-originates them as mTLS to CNPG / Dragonfly.
                 DB_HOSTNAME: 127.0.0.1
@@ -180,6 +184,9 @@ spec:
               repository: ghcr.io/immich-app/immich-machine-learning
               tag: v2.7.5-openvino
             env:
+              # Bind IPv4 only — the ML service defaults to immich_host "[::]",
+              # which fails to bind on the IPv6-disabled host kernel.
+              IMMICH_HOST: "0.0.0.0"
               MACHINE_LEARNING_CACHE_FOLDER: /cache
               # HuggingFace / matplotlib caches must live on the writable PVC.
               TRANSFORMERS_CACHE: /cache
