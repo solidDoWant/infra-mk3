@@ -1,0 +1,155 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: immich
+specs:
+  # ---- API / web workers ----
+  - description: immich server (api)
+    endpointSelector: &server_selector
+      matchLabels:
+        app.kubernetes.io/name: immich
+        app.kubernetes.io/instance: immich
+        app.kubernetes.io/controller: server
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # PostgreSQL (via the in-pod Envoy sidecar)
+      - &to_postgres
+        toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: immich-postgres
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Dragonfly / Redis (via the in-pod Envoy sidecar)
+      - &to_dragonfly
+        toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: dragonfly
+              app.kubernetes.io/instance: immich-dragonfly
+        toPorts:
+          - ports:
+              - port: "6379"
+                protocol: TCP
+      # Machine learning inference
+      - &to_machine_learning
+        toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: immich
+              app.kubernetes.io/instance: immich
+              app.kubernetes.io/controller: machine-learning
+        toPorts:
+          - ports:
+              - port: "3003"
+                protocol: TCP
+    ingress:
+      # Kubelet for the liveness/readiness probe
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "2283"
+                protocol: TCP
+      # Web UI / API from the internal gateway
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "2283"
+                protocol: TCP
+      # Prometheus metrics (api telemetry)
+      - fromEndpoints:
+          - &metrics_scraper
+            matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
+
+  # ---- Background job worker ----
+  - description: immich microservices (jobs)
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: immich
+        app.kubernetes.io/instance: immich
+        app.kubernetes.io/controller: microservices
+    egress:
+      - *dns_resolution
+      - *to_postgres
+      - *to_dragonfly
+      - *to_machine_learning
+    ingress:
+      # Kubelet for the TCP liveness probe (telemetry port)
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8082"
+                protocol: TCP
+      # Prometheus metrics (microservices telemetry)
+      - fromEndpoints:
+          - *metrics_scraper
+        toPorts:
+          - ports:
+              - port: "8082"
+                protocol: TCP
+
+  # ---- Machine learning ----
+  - description: immich machine learning
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: immich
+        app.kubernetes.io/instance: immich
+        app.kubernetes.io/controller: machine-learning
+    egress:
+      - *dns_resolution
+      # Model downloads from HuggingFace (weights + Xet CAS). First-run only;
+      # cached on the PVC thereafter.
+      - toFQDNs:
+          - matchName: huggingface.co
+          - matchPattern: "*.huggingface.co"
+          - matchPattern: "*.hf.co"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for the liveness/readiness probe
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "3003"
+                protocol: TCP
+      # Inference requests from the server + microservices workers
+      - fromEndpoints:
+          - *server_selector
+          - matchLabels:
+              app.kubernetes.io/name: immich
+              app.kubernetes.io/instance: immich
+              app.kubernetes.io/controller: microservices
+        toPorts:
+          - ports:
+              - port: "3003"
+                protocol: TCP

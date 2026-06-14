@@ -1,0 +1,14 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: immich
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  # Community "Immich Overview" dashboard (Prometheus). Renders Immich's
+  # OpenTelemetry metrics exposed on the api (:8081) / microservices (:8082) ports.
+  grafanaCom:
+    id: 22555

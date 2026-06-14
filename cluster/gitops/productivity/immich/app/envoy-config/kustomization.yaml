@@ -1,0 +1,11 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: immich-envoy-config
+    files:
+      - envoy.yaml=./pg-redis.yaml
+    options:
+      labels:
+        kyverno.home.arpa/reload: "true"
+      disableNameSuffixHash: true

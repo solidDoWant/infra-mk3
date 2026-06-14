@@ -1,0 +1,26 @@
+---
+# Intel GPU for the immich machine-learning pods (OpenVINO inference), via DRA.
+#
+# Exclusive claim on an Arc Pro (A40/A50, 6GB dedicated VRAM). The only other
+# exclusive Arc Pro consumer is openarc-subtitles (a single fixed replica), so two
+# of the three Arc Pro dGPUs are always free for the two ML replicas — each gets a
+# dedicated GPU that always schedules. media-processor / Coder use adminAccess
+# (shared) and never block an exclusive claim.
+#
+# Arc Pro is chosen over the Iris Xe iGPUs for performance and to avoid sharing
+# compute; the model set only needs ~1-2GB of the 6GB. Because there is one Arc Pro
+# per node, the two replicas naturally land on different nodes (good spread / HA).
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: immich-machine-learning-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.intel.com
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro'
