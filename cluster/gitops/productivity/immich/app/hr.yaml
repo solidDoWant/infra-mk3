@@ -108,7 +108,10 @@ spec:
             resources:
               requests:
                 cpu: 25m
-                memory: &envoy_memory 64Mi
+                # 256Mi (not 64Mi): the microservices worker's first-boot geodata
+                # import bulk-COPYs the reverse-geocoding dataset through this proxy,
+                # which OOMKills a 64Mi sidecar and drops the DB connection mid-import.
+                memory: &envoy_memory 256Mi
               limits:
                 memory: *envoy_memory
             securityContext:
