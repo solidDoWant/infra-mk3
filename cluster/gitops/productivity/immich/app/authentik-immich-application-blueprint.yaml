@@ -67,6 +67,12 @@ stringData:
           client_type: confidential
           client_id: "${SECRET_IMMICH_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_IMMICH_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          # Required since Authentik added the grant_types field (default is an
+          # empty list, which rejects the auth-code flow with "Invalid grant_type
+          # for provider"). refresh_token is needed for the offline_access scope.
+          grant_types:
+            - authorization_code
+            - refresh_token
           # Authentik docs are wrong. The redirect URI should not have a trailing slash.
           redirect_uris:
             - url: https://immich.${SECRET_PUBLIC_DOMAIN_NAME}/auth/login
