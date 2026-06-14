@@ -39,22 +39,28 @@ static_resources:
                                   exact: GET
                           route:
                             cluster: authentik_upstream
-                            host_rewrite_literal: authentik.${SECRET_PUBLIC_DOMAIN_NAME}
-                          # Authentik builds the URLs in the discovery doc from
-                          # the request's perceived scheme. We're talking to it
-                          # over plain HTTP, so without this header it returns
-                          # http:// URLs — which then fail to match the Lua
-                          # rewrite pattern (and would also be wrong for the
-                          # keys we deliberately keep pointing at the public
-                          # gateway). Authentik trusts the pod CIDR
-                          # (AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.32.0.0/16
-                          # in authentik/app/hr.yaml) so this header is honored.
-                          # OVERWRITE so a client can't forge http:// URLs by
-                          # sending its own X-Forwarded-Proto.
+                            # Rewrite the Host to the internal service name so the
+                            # discovery `issuer` (and token/jwks/userinfo URLs)
+                            # Authentik stamps here are identical to the `iss` it
+                            # stamps when an app calls authentik-server directly
+                            # for the token exchange. Strict OIDC clients (e.g.
+                            # Immich's openid-client) enforce token.iss ===
+                            # metadata.issuer, so the two MUST match. The Lua below
+                            # rewrites only the browser-facing endpoints back to
+                            # the public gateway.
+                            host_rewrite_literal: authentik-server.security.svc.cluster.local
+                          # Force the perceived scheme to http so the issuer scheme
+                          # also matches the plain-HTTP token call (apps reach
+                          # authentik-server over http). Authentik builds the
+                          # discovery URLs from this and trusts the pod CIDR
+                          # (AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.32.0.0/16 in
+                          # authentik/app/hr.yaml), so the header is honored.
+                          # OVERWRITE because Envoy otherwise sets https for the
+                          # 8443 (TLS) listener.
                           request_headers_to_add:
                             - header:
                                 key: X-Forwarded-Proto
-                                value: https
+                                value: http
                               append_action: OVERWRITE_IF_EXISTS_OR_ADD
                           # Force the upstream response to be uncompressed so
                           # the Lua filter can pattern-match the JSON body.
@@ -103,11 +109,16 @@ static_resources:
                               local pub = "https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}"
                               local int = "http://authentik-server.security.svc.cluster.local"
                               local function pesc(s) return (s:gsub("(%W)", "%%%1")) end
+                              -- The Host rewrite makes Authentik emit every URL
+                              -- (incl. issuer) with the internal host, matching the
+                              -- direct token call's iss. Rewrite ONLY the two
+                              -- browser-facing endpoints to the public gateway; the
+                              -- issuer and the back-channel endpoints (token, jwks,
+                              -- userinfo, revoke, introspect) stay internal.
                               for _, k in ipairs({
-                                "token_endpoint", "jwks_uri", "userinfo_endpoint",
-                                "revocation_endpoint", "introspection_endpoint",
+                                "authorization_endpoint", "end_session_endpoint",
                               }) do
-                                body = body:gsub('("' .. k .. '"%s*:%s*")' .. pesc(pub), "%1" .. int)
+                                body = body:gsub('("' .. k .. '"%s*:%s*")' .. pesc(int), "%1" .. pub)
                               end
                               rh:body():setBytes(body)
                               rh:headers():remove("content-length")
