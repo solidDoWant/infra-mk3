@@ -38,6 +38,23 @@ stringData:
           identifiers:
             name: Blueprint library
           required: true
+      # Scope mapping that emits the `immich_role` claim (value "admin" for members
+      # of the "Immich admins" group, otherwise "user"). On the Immich side, set
+      # OAuth "Scope" to `openid email profile immich_role` and leave "Role Claim"
+      # at its default (immich_role). Note: Immich only reads the role on user
+      # creation, not on subsequent logins.
+      - model: authentik_providers_oauth2.scopemapping
+        id: immich-role-scope
+        identifiers:
+          name: Immich Role
+        attrs:
+          name: Immich Role
+          scope_name: immich_role
+          description: "Immich role (admin for the Immich admins group, else user)"
+          expression: |
+            return {
+                "immich_role": "admin" if ak_is_group_member(request.user, name="Immich admins") else "user",
+            }
       # Application
       - model: authentik_providers_oauth2.oauth2provider
         id: immich-provider
@@ -87,6 +104,8 @@ stringData:
                 authentik_providers_oauth2.scopemapping,
                 [name, "authentik default OAuth Mapping: OpenID 'offline_access'"],
               ]
+            # Immich role claim (immich_role: user|admin)
+            - !KeyOf immich-role-scope
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
           issuer_mode: per_provider
@@ -101,16 +120,29 @@ stringData:
           provider: !KeyOf immich-provider
           policy_engine_mode: any
           meta_launch_url: https://immich.${SECRET_PUBLIC_DOMAIN_NAME}
-      # Groups
+      # Groups — membership drives the immich_role claim above and app access below.
       - model: authentik_core.group
         id: immich-users-group
         identifiers:
           name: Immich users
         attrs:
           attributes:
-            discord_role_id: "${SECRET_AUTHENTIK_IMMICH_DISCORD_ROLE_ID}"
+            discord_role_id: "${SECRET_AUTHENTIK_IMMICH_USERS_DISCORD_ROLE_ID}"
+      - model: authentik_core.group
+        id: immich-admins-group
+        identifiers:
+          name: Immich admins
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_IMMICH_ADMINS_DISCORD_ROLE_ID}"
+      # Both groups may launch the application (policy_engine_mode: any).
       - model: authentik_policies.policybinding
         identifiers:
           order: 0
           group: !KeyOf immich-users-group
+          target: !KeyOf immich-application
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 1
+          group: !KeyOf immich-admins-group
           target: !KeyOf immich-application
