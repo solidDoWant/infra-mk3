@@ -36,6 +36,10 @@ spec:
       # present for mTLS cert auth (CN=immich) — no managed role is created.
       immich:
         username: immich
+        # Don't roll the immich pods when this cert rotates — the Envoy sidecars
+        # hot-reload it via file-based SDS (watched_directory). Drops the
+        # cnpg.io/reload label the kyverno workload-reloader keys on.
+        disableReloading: true
     # VectorChord requires its shared library to be preloaded at server start.
     # The `.so` suffix matches the official immich-charts example and the
     # bo0tzz/m00nwtchr reference deployments.

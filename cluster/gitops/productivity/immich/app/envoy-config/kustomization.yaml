@@ -5,6 +5,13 @@ configMapGenerator:
   - name: immich-envoy-config
     files:
       - envoy.yaml=./pg-redis.yaml
+      # File-based SDS resources, mounted alongside envoy.yaml at /etc/envoy/.
+      # They reference the cert files; Envoy watches the secret mount dirs and
+      # hot-reloads on cert-manager rotation (no pod restart).
+      - postgres-client-cert-sds.yaml=./postgres-client-cert-sds.yaml
+      - postgres-validation-context-sds.yaml=./postgres-validation-context-sds.yaml
+      - redis-client-cert-sds.yaml=./redis-client-cert-sds.yaml
+      - redis-validation-context-sds.yaml=./redis-validation-context-sds.yaml
     options:
       labels:
         kyverno.home.arpa/reload: "true"

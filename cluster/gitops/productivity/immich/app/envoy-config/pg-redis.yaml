@@ -5,6 +5,12 @@ admin:
       address: 127.0.0.1
       port_value: 8000
 
+# SDS requires node.id and node.cluster to be set (sent in the discovery request
+# even for file-based path_config_source). Arbitrary labels used only in stats/logs.
+node:
+  id: envoy-immich-proxy
+  cluster: productivity
+
 static_resources:
   clusters:
     # ---- PostgreSQL (mTLS via STARTTLS) ----
@@ -41,14 +47,25 @@ static_resources:
                   # because it is not FIPS compliant.
                   - ed25519
                   - rsa_pss_rsae_sha512
-              tls_certificates:
-                - certificate_chain:
-                    filename: /etc/envoy/secrets/postgres/tls.crt
-                  private_key:
-                    filename: /etc/envoy/secrets/postgres/tls.key
-              validation_context:
-                trusted_ca:
-                  filename: /etc/envoy/secrets/root-ca/ca.crt
+              # File-based SDS: Envoy hot-reloads the client cert when the secret
+              # mount changes (watched_directory), so cert-manager rotations don't
+              # require a pod restart.
+              tls_certificate_sds_secret_configs:
+                - name: postgres_client_cert
+                  sds_config:
+                    resource_api_version: V3
+                    path_config_source:
+                      path: /etc/envoy/postgres-client-cert-sds.yaml
+                      watched_directory:
+                        path: /etc/envoy/secrets/postgres
+              validation_context_sds_secret_config:
+                name: postgres_serving_cert
+                sds_config:
+                  resource_api_version: V3
+                  path_config_source:
+                    path: /etc/envoy/postgres-validation-context-sds.yaml
+                    watched_directory:
+                      path: /etc/envoy/secrets/root-ca
             auto_host_sni: true
             auto_sni_san_validation: true
       close_connections_on_host_health_failure: true
@@ -90,14 +107,23 @@ static_resources:
               signature_algorithms:
                 - rsa_pss_rsae_sha512
                 - ed25519
-            tls_certificates:
-              - certificate_chain:
-                  filename: /etc/envoy/secrets/redis/tls.crt
-                private_key:
-                  filename: /etc/envoy/secrets/redis/tls.key
-            validation_context:
-              trusted_ca:
-                filename: /etc/envoy/secrets/root-ca/ca.crt
+            # File-based SDS — hot-reloaded on cert-manager rotation (see above).
+            tls_certificate_sds_secret_configs:
+              - name: redis_client_cert
+                sds_config:
+                  resource_api_version: V3
+                  path_config_source:
+                    path: /etc/envoy/redis-client-cert-sds.yaml
+                    watched_directory:
+                      path: /etc/envoy/secrets/redis
+            validation_context_sds_secret_config:
+              name: redis_serving_cert
+              sds_config:
+                resource_api_version: V3
+                path_config_source:
+                  path: /etc/envoy/redis-validation-context-sds.yaml
+                  watched_directory:
+                    path: /etc/envoy/secrets/root-ca
           auto_host_sni: true
           auto_sni_san_validation: true
           # Dragonfly does not support TLS session resumption; resumed sessions

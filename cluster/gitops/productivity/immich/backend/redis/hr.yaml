@@ -23,6 +23,9 @@ spec:
       # Issues the client cert (CN=immich) the Envoy sidecars present for mTLS.
       immich:
         username: immich
+        # Don't roll the immich pods when this cert rotates — the Envoy sidecars
+        # hot-reload it via file-based SDS (watched_directory).
+        disableReloading: true
     netpol:
       applicationAccess:
         # api (server) + microservices reach Dragonfly via their Envoy sidecar.

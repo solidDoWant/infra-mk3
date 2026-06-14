@@ -1,0 +1,8 @@
+# File-based SDS resource for the root CA used to validate the postgres serving
+# cert. Hot-reloaded via watched_directory on /etc/envoy/secrets/root-ca.
+resources:
+  - "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
+    name: postgres_serving_cert
+    validation_context:
+      trusted_ca:
+        filename: /etc/envoy/secrets/root-ca/ca.crt
