@@ -168,10 +168,20 @@ spec:
                 memory: &ms_memory 2Gi
               limits:
                 memory: *ms_memory
+              # GPU attached via the DRA ResourceClaimTemplate in pod.resourceClaims.
+              claims:
+                - name: gpu
             securityContext: *immich_security
           envoy: *envoy_sidecar
+        # Iris Xe GPU (adminAccess/shared) for ffmpeg hardware transcoding. Set
+        # Settings -> Video Transcoding -> Hardware Acceleration to QSV in the
+        # Immich admin UI to actually use it.
+        pod:
+          resourceClaims:
+            - name: gpu
+              resourceClaimTemplateName: immich-microservices-transcode-gpu
 
-      # ---- Machine learning (OpenVINO on Intel Iris Xe GPU) ----
+      # ---- Machine learning (OpenVINO on Intel Arc Pro GPU) ----
       machine-learning:
         replicas: 2
         strategy: RollingUpdate

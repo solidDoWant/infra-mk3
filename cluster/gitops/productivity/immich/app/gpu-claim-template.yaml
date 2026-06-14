@@ -24,3 +24,27 @@ spec:
             selectors:
               - cel:
                   expression: device.attributes["gpu.intel.com"].family == 'Arc Pro'
+---
+# Intel GPU for the immich microservices worker's video transcoding (ffmpeg
+# QSV/VAAPI), via DRA.
+#
+# adminAccess (shared) — the cluster convention for transcode workloads. Targets
+# the Iris Xe iGPUs because they are the least-scheduled GPU type by adminAccess
+# claims (the Arc Pros carry ML, Coder, and media-processor transcode). Requires
+# the namespace label resource.kubernetes.io/admin-access: "true".
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: immich-microservices-transcode-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.intel.com
+            adminAccess: true
+            allocationMode: All
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].family == 'Iris Xe'

@@ -3,3 +3,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: productivity
+  labels:
+    # Required for the immich microservices worker's adminAccess (shared) GPU
+    # claim used for video transcoding.
+    resource.kubernetes.io/admin-access: "true"
