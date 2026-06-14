@@ -11,6 +11,11 @@ spec:
     - client auth
   commonName: {{ $info.username }}
   duration: 1h
+  {{- if not $info.disableReloading }}
+  # secret-labels carries the kyverno.home.arpa/reload label that rolls workloads
+  # mounting this cert. Omit it when the consumer hot-reloads the cert itself
+  # (e.g. an Envoy sidecar using file-based SDS).
   secretTemplate: {{ include "secret-labels" $ | nindent 4 }}
+  {{- end }}
   issuerRef: {{ include "auth.ca-issuer-ref" $ | nindent 4 }}
 {{ end }}

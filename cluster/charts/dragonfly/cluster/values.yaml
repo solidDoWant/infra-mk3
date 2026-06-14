@@ -31,6 +31,10 @@ teleportDomainName: ""
 users:
   # example-application:
   #   username: application_username
+  #   # If true, the user cert secret omits the kyverno.home.arpa/reload label, so
+  #   # the kyverno workload-reloader will NOT roll pods mounting it on rotation.
+  #   # Use when the consumer hot-reloads the cert itself (e.g. Envoy file SDS).
+  #   disableReloading: true
 netpol:
   dns:
     selector:
