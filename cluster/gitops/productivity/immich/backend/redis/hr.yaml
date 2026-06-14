@@ -16,6 +16,16 @@ spec:
   values:
     serviceName: immich
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    # Immich's job queue (BullMQ) runs Lua scripts that access keys without
+    # declaring them in KEYS[]. Dragonfly rejects this by default, which breaks
+    # the bull-board dashboard at /admin/queues ("script tried accessing
+    # undeclared key, key: immich_bull:..."). allow-undeclared-keys restores the
+    # Redis-compatible behavior BullMQ relies on (single instance, so it only
+    # trades some Lua throughput for compatibility — safe, atomicity preserved).
+    # NOTE: `args` replaces the chart default, so --proactor_threads is repeated.
+    args:
+      - --proactor_threads=2
+      - --default_lua_flags=allow-undeclared-keys
     certificates:
       serving:
         issuerRef:
