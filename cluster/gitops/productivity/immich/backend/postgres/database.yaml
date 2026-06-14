@@ -1,0 +1,26 @@
+---
+# Declaratively create the extensions Immich requires, run by the CNPG operator
+# (superuser) against the initdb-created `immich` database. Immich's app role is a
+# non-superuser and CANNOT create untrusted extensions (vchord/vector) itself — it
+# would fail to boot. Once present, Immich detects the installed versions and skips
+# its own CREATE EXTENSION. `vchord` depends on `vector` (pgvector); `cube` and
+# `earthdistance` are contrib extensions in the base CNPG image.
+# Mirrors immich-charts local/cloudnative-pg-database.yaml.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: immich
+spec:
+  name: immich
+  owner: immich
+  cluster:
+    name: immich-postgres
+  extensions:
+    - name: vector
+      ensure: present
+    - name: vchord
+      ensure: present
+    - name: cube
+      ensure: present
+    - name: earthdistance
+      ensure: present

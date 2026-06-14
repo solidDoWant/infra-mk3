@@ -1,0 +1,37 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich-dragonfly
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/dragonfly/cluster
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    serviceName: immich
+    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    certificates:
+      serving:
+        issuerRef:
+          name: productivity-intermediary-ca
+    users:
+      # Issues the client cert (CN=immich) the Envoy sidecars present for mTLS.
+      immich:
+        username: immich
+    netpol:
+      applicationAccess:
+        # api (server) + microservices reach Dragonfly via their Envoy sidecar.
+        selectors:
+          - matchLabels:
+              app.kubernetes.io/name: immich
+              app.kubernetes.io/instance: immich
+              app.kubernetes.io/controller: server
+          - matchLabels:
+              app.kubernetes.io/name: immich
+              app.kubernetes.io/instance: immich
+              app.kubernetes.io/controller: microservices
