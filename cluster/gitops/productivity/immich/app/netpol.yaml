@@ -152,7 +152,8 @@ specs:
       - toFQDNs:
           - matchName: huggingface.co
           - matchPattern: "*.huggingface.co"
-          - matchPattern: "*.hf.co"
+          - matchPattern: "**.hf.co"
+          - matchPattern: "www.modelscope.cn"
         toPorts:
           - ports:
               - port: "443"
