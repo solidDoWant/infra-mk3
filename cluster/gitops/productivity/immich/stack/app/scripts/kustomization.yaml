@@ -14,3 +14,5 @@ configMapGenerator:
       - inject.sh
     options:
       disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
