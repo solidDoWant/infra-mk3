@@ -24,5 +24,8 @@ spec:
       # host. Teleport enforces its own authN/authZ on these connections.
       SecRule REQUEST_HEADERS:Host "@streq teleport.${SECRET_PUBLIC_DOMAIN_NAME}" \
         "id:1000,phase:1,pass,nolog,ctl:ruleEngine=Off"
+      # Same for Teleport application access subdomains (<app>.teleport.<domain>).
+      SecRule REQUEST_HEADERS:Host "@endsWith .teleport.${SECRET_PUBLIC_DOMAIN_NAME}" \
+        "id:1001,phase:1,pass,nolog,ctl:ruleEngine=Off"
       Include @crs-setup-conf
       Include @owasp_crs/*.conf

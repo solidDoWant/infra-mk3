@@ -71,3 +71,39 @@ spec:
         name: root-ca-pub-cert
     # Must match a SAN on the proxy's internal serving cert (see proxy-cert.yaml).
     hostname: teleport-cluster.security.svc.cluster.local
+---
+# Teleport Application Access serves proxied apps at <app>.teleport.<domain>.
+# This second-level wildcard attaches to the gateways' existing *.<domain> HTTPS
+# listener (Gateway API does multi-label suffix matching); the listener cert
+# (wildcard-public-domain-name-cert) carries the *.teleport.<domain> SAN. Same
+# backend + BackendTLSPolicy re-encrypt as the apex route above.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: teleport-apps
+  labels:
+    external-dns.home.arpa/publish: "true"
+  annotations:
+    # Cloudflare Universal SSL does not cover second-level wildcards, so it can't
+    # proxy *.teleport.<domain> without Advanced Certificate Manager. Publish
+    # DNS-only: clients hit the gateway directly (which serves the LE wildcard
+    # cert). Teleport + Authentik still enforce auth on app access.
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+spec:
+  hostnames:
+    - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
+  parentRefs:
+    - name: external-gateway
+      namespace: networking
+      sectionName: https
+    - name: internal-gateway
+      namespace: networking
+      sectionName: https
+  rules:
+    - backendRefs:
+        - name: teleport-cluster
+          port: 443
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

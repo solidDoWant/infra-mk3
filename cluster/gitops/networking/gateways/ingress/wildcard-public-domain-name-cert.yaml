@@ -14,6 +14,8 @@ spec:
     - "*.s3.${SECRET_PUBLIC_DOMAIN_NAME}"
     # Required for coder
     - "*.coder.${SECRET_PUBLIC_DOMAIN_NAME}"
+    # Required for Teleport application access (apps served at <app>.teleport.<domain>)
+    - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
   subject:
     countries:
       - US
@@ -59,6 +61,7 @@ spec:
         - "*.${SECRET_PUBLIC_DOMAIN_NAME}"
         - "*.s3.${SECRET_PUBLIC_DOMAIN_NAME}"
         - "*.coder.${SECRET_PUBLIC_DOMAIN_NAME}"
+        - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
     subject:
       countries:
         required: true
