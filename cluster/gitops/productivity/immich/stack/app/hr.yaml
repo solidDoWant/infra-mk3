@@ -54,7 +54,12 @@ spec:
               PGSSLMODE: verify-full
               PGSSLCERT: /certs/tls.crt
               PGSSLKEY: /certs/tls.key
-              PGSSLROOTCERT: /certs/ca.crt
+              # Verify the postgres SERVING cert against the cluster root CA — the
+              # serving cert is issued by productivity-intermediary-ca which chains
+              # to the root, and the server sends the intermediate in the handshake.
+              # NOT /certs/ca.crt: that's the client-auth CA (it signs our cert,
+              # not the server's). This matches what the app's Envoy sidecar trusts.
+              PGSSLROOTCERT: /etc/ssl/root-ca/ca.crt
             securityContext: &hardened
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
@@ -127,3 +132,13 @@ spec:
           stack:
             inject-keys:
               - path: /certs
+      # Cluster root CA (distributed to every namespace) — the trust anchor for
+      # verify-full of the postgres serving cert.
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        advancedMounts:
+          stack:
+            inject-keys:
+              - path: /etc/ssl/root-ca
