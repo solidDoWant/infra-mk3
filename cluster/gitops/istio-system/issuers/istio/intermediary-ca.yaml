@@ -30,8 +30,9 @@ spec:
   nameConstraints:
     critical: true
     permitted:
-      uriDomains:
-        - spiffe://istio.cluster.local
+      # Disabled because istio's ztunnel's rustls-webpki doesn't support `spiffee://` prefixes in issuer constraints
+      # uriDomains:
+      #   - spiffe://istio.cluster.local
       # The issuer cert must also have these, see
       # https://github.com/cert-manager/istio-csr/issues/153
       dnsDomains:
