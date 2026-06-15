@@ -42,9 +42,14 @@ spec:
   # status.observedGeneration as a string (CRD declares it as IntOrString),
   # which trips Flux's default int64 accessor. Issue tracked in
   # https://github.com/istio/istio/issues/39605
+  # `current: "true"` alone leaves the object stuck InProgress (Flux's implicit
+  # in-progress state is matched first), so set all three explicitly: never
+  # failed, never in-progress, always current once applied.
   healthCheckExprs:
     - apiVersion: security.istio.io/v1
       kind: AuthorizationPolicy
+      failed: "false"
+      inProgress: "false"
       current: "true"
   dependsOn:
     - name: gateway-classes
