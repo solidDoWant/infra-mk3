@@ -52,6 +52,15 @@ spec:
               cert_reload_interval=5m"
             client_cert_reload_interval: 5m
         auth_service:
+          authentication:
+            # Disable device trust. It is not enforced here, but the web SSO
+            # callback still tries to create a DeviceWebToken, which parses the
+            # client User-Agent for the device OS and fails on mobile browsers
+            # ("cannot parse OS from user agent"), aborting OIDC login on phones.
+            # The chart's `authentication` block has no deviceTrust key, so set it
+            # via raw config (deep-merges with the chart-generated authentication).
+            device_trust:
+              mode: "off"
           tunnel_strategy:
             type: proxy_peering
             # When operating in proxy peering mode (instead of mesh mode), agents don't have to connect to
