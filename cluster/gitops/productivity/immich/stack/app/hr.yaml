@@ -35,6 +35,13 @@ spec:
           # Connects to immich-postgres over mTLS (dedicated cert, CN=immich) and
           # provisions the per-user keys into /keys/api-keys.env for the main
           # container to load via the env-file (fileKeyRef) feature.
+          #
+          # UPGRADE CHECK: scripts/inject.sh writes directly to Immich's internal
+          # api-key table. Immich renames these tables/columns between versions
+          # (the script already handles api_key/"user" -> api_keys/users), so when
+          # bumping the immich-server image (cluster/gitops/.../immich/app/hr.yaml),
+          # re-verify the table/column names and that API keys are still validated
+          # as an unsalted SHA-256 of the token.
           inject-keys:
             image:
               # Client-only use (psql); the SQL relies on server-side functions so
