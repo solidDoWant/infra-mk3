@@ -83,6 +83,16 @@ spec:
               API_URL: http://immich-server.productivity.svc.cluster.local:2283/api
               RUN_MODE: once
               LOG_FORMAT: json
+              # Group burst frames by their shared capture-second. Camera burst
+              # files are named YYYYMMDD_HHMMSS_NNN.<ext> (all frames share the
+              # YYYYMMDD_HHMMSS second; NNN is the frame), and singles are
+              # YYYYMMDD_HHMMSS.<ext>, so grouping on the captured second stacks
+              # bursts while leaving singles (groups of 1) untouched. The default
+              # ("legacy") criteria only pairs same-basename files (e.g. RAW+JPEG)
+              # and so formed 0 stacks here. The JSON has no `$`, so Flux postBuild
+              # substitution leaves it alone; YAML single quotes keep \\d literal
+              # for the JSON parser.
+              CRITERIA: '[{"key":"originalFileName","regex":{"key":"^(\\d{8}_\\d{6})","index":1}}]'
               # Start in dry-run; flip to "false" once a run's logs look right.
               DRY_RUN: "true"
               # Comma-separated per-user keys, written by the inject-keys init
