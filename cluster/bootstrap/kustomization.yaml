@@ -10,7 +10,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/fluxcd/flux2//manifests/install/?timeout=120&version=v2.6.4
+  - https://github.com/fluxcd/flux2//manifests/install/?timeout=120&version=v2.8.8
   - ./netpol.yaml
 patches:
   # Don't deploy the image automation controller, or the image reflector controller.
@@ -27,6 +27,12 @@ patches:
   - <<: *delete_patch
     target:
       labelSelector: app.kubernetes.io/component=image-reflector-controller
+  # Don't deploy the source-watcher controller (added by upstream in v2.7). Nothing in this
+  # cluster uses the ArtifactGenerator/ExternalArtifact APIs it provides. Pulling the raw
+  # manifests/install kustomization includes it by default, so it must be deleted explicitly.
+  - <<: *delete_patch
+    target:
+      labelSelector: app.kubernetes.io/component=source-watcher
   # Flux performance tuning patches, see https://fluxcd.io/flux/installation/configuration/vertical-scaling/
   # Allow more jobs to run in parallel
   - patch: |
