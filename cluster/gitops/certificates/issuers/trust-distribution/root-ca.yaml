@@ -40,3 +40,36 @@ spec:
             # Match the Teleport format
             ca.pem: >-
               {{ rootCAPubCert }}
+    - name: extract-root-ca-certificate-configmap
+      # Trigger on new and existing namespaces
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      skipBackgroundRequests: true
+      # Pull in the cert. This is guaranteed to exist because this fluxtomization
+      # depends on the resource that creates this cert.
+      context:
+        - name: rootCAPubCert
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/certificates/secrets/root-ca
+            # Secret data is base64-encoded; ConfigMap data must be plaintext PEM.
+            jmesPath: base64_decode(data."tls.crt")
+      # Gateway API BackendTLSPolicy.caCertificateRefs only reliably supports a
+      # ConfigMap (Istio does not support Secret refs), so mirror the root CA into
+      # a ConfigMap as well. Used by Teleport's BackendTLSPolicy (and available for
+      # other re-encrypt backends, e.g. rook-ceph, proxmox).
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: root-ca-pub-cert
+        namespace: >-
+          {{ request.object.metadata.name }}
+        data:
+          data:
+            ca.crt: >-
+              {{ rootCAPubCert }}

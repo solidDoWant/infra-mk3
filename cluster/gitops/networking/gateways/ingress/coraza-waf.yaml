@@ -18,5 +18,11 @@ spec:
       # reducing the need to fine-tune the configuration.
       Include @recommended-conf
       SecRuleEngine On
+      # Teleport multiplexes binary protocols (SSH/kube/db) and WebSocket ALPN
+      # connection-upgrades over HTTPS. The OWASP CRS reliably flags this as
+      # malicious and breaks tsh/Connect, so disable the WAF for the Teleport
+      # host. Teleport enforces its own authN/authZ on these connections.
+      SecRule REQUEST_HEADERS:Host "@streq teleport.${SECRET_PUBLIC_DOMAIN_NAME}" \
+        "id:1000,phase:1,pass,nolog,ctl:ruleEngine=Off"
       Include @crs-setup-conf
       Include @owasp_crs/*.conf

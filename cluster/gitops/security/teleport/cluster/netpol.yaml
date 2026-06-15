@@ -201,6 +201,18 @@ specs:
           - ports:
               - port: tls
                 protocol: TCP
+      # Public access via the external gateway (TLS terminate + re-encrypt).
+      # The gateway originates a new TLS connection to the proxy's multiplex
+      # port, validated against the root CA via BackendTLSPolicy (see routes.yaml).
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: external-gateway
+        toPorts:
+          - ports:
+              - port: tls
+                protocol: TCP
       # In-cluster OIDC consumers (e.g. Temporal fetching JWKS for JWT
       # validation). Hits the proxy's TLS-routing port (multiplex mode).
       - fromEndpoints:
