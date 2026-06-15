@@ -29,7 +29,15 @@ spec:
   hostnames:
     - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
   parentRefs:
+    # Public ingress (Cloudflare -> external gateway).
     - name: external-gateway
+      namespace: networking
+      sectionName: https
+    # Internal/intranet ingress. The k8s-gateway CoreDNS watches HTTPRoutes on
+    # the internal-gateways class and publishes teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    # -> the internal gateway address, so in-network clients flow through it
+    # (terminate + re-encrypt) instead of hitting the proxy LB directly.
+    - name: internal-gateway
       namespace: networking
       sectionName: https
   rules:

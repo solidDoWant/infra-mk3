@@ -98,10 +98,12 @@ spec:
         - name: AWS_DEFAULT_REGION
           value: dummy-value
     proxy:
-      # See note in routes.yaml
-      annotations:
-        service:
-          coredns.io/hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+      # Internal DNS for teleport.${SECRET_PUBLIC_DOMAIN_NAME} is now published by
+      # the k8s-gateway CoreDNS via the internal-gateway-attached HTTPRoute (-> the
+      # internal gateway), so in-network clients flow through the gateway. The old
+      # coredns.io/hostname annotation that pinned the name to the proxy LB was
+      # removed. In-cluster services still reach the proxy directly via the
+      # teleport-cluster.security.svc publicAddr (ClusterIP).
       extraLabels:
         pod:
           endpoints.netpols.home.arpa/oidc-supplier: "true"

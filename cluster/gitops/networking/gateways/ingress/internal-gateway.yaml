@@ -12,30 +12,11 @@ spec:
     - type: IPAddress
       value: 10.34.0.1
   listeners:
-    # Teleport
-    - &teleport_listener
-      name: teleport-tls
-      hostname: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
-      port: 443
-      protocol: TLS
-      tls:
-        mode: Passthrough
-      allowedRoutes:
-        namespaces:
-          from: All
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: security
-    - <<: *teleport_listener
-      name: teleport-tls-wildcard
-      hostname: "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
-    - <<: *teleport_listener
-      name: teleport-cluster-tls
-      hostname: teleport.cluster.local
-    - <<: *teleport_listener
-      name: teleport-cluster-wildcard-tls
-      hostname: "*.teleport.cluster.local"
-    # Listeners for everything else
+    # Teleport is now served by the shared `https` (Terminate) listener below via
+    # an HTTPRoute + BackendTLSPolicy re-encrypt (see teleport/cluster/routes.yaml).
+    # The old TLS-passthrough listeners were removed: they relied on a TLSRoute
+    # that never existed (0 attached routes) and conflicted with the wildcard
+    # listener for teleport.${SECRET_PUBLIC_DOMAIN_NAME} (IST0145).
     - name: https
       hostname: &hostname "*.${SECRET_PUBLIC_DOMAIN_NAME}"
       port: 443
