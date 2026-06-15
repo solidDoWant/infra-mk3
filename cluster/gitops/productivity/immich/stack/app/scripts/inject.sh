@@ -56,5 +56,8 @@ if [ -z "$tokens" ]; then
   exit 1
 fi
 
-printf 'API_KEY=%s\n' "$tokens" > /keys/api-keys.env
+# The kubelet EnvFiles parser is strict: values MUST be single-quoted
+# (VAR='value'), with the content taken literally. Tokens are hex + commas and
+# never contain a single quote, so no escaping is needed.
+printf "API_KEY='%s'\n" "$tokens" > /keys/api-keys.env
 echo "inject: provisioned ephemeral keys for $(echo "$tokens" | tr ',' '\n' | wc -l) user(s)" >&2
