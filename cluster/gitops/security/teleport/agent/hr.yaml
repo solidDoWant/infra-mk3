@@ -15,7 +15,7 @@ spec:
         name: teleport-charts
       version: 18.8.2
   values:
-    roles: db
+    roles: db,app
     proxyAddr: teleport-cluster.security.svc.cluster.local:443
     enterprise: true
     joinParams:
@@ -24,6 +24,10 @@ spec:
     databaseResources:
       - labels:
           teleport.home.arpa/database.enabled: "true"
+    # Dynamically proxy any TeleportAppV3 labelled for app access (e.g. coder).
+    appResources:
+      - labels:
+          teleport.home.arpa/app.enabled: "true"
     updater:
       # Make absolutely certain that the auto updater is never enabled
       enabled: false

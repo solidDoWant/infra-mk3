@@ -1,0 +1,16 @@
+---
+# Register Coder as a Teleport application. The teleport-agent's app_service
+# (roles: db,app + appResources matcher) picks this up via the label below and
+# proxies it. Public access is 100% through Teleport: users reach it at
+# coder.teleport.<domain> (the *.teleport wildcard route -> proxy -> app access
+# -> this internal URI). Coder's own coder.<domain> stays internal-only, so
+# there is no public path that bypasses Teleport auth.
+apiVersion: resources.teleport.dev/v1
+kind: TeleportAppV3
+metadata:
+  name: coder
+  labels:
+    teleport.home.arpa/app.enabled: "true"
+spec:
+  uri: "http://coder.development.svc.cluster.local"
+  public_addr: coder.teleport.${SECRET_PUBLIC_DOMAIN_NAME}

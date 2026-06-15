@@ -99,6 +99,10 @@ specs:
           - matchLabels:
               app.kubernetes.io/name: coder
               app.kubernetes.io/instance: coder
+          # Allow the Teleport agent's app_service to proxy Coder (app access)
+          - matchLabels:
+              io.kubernetes.pod.namespace: security
+              app: teleport-agent
         toPorts:
           - ports:
               - port: "8080"

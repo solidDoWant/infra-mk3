@@ -61,6 +61,16 @@ specs:
           - ports:
               - port: tls
                 protocol: TCP
+      # App access: proxy the Coder web app (TeleportAppV3 "coder")
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: development
+              app.kubernetes.io/name: coder
+              app.kubernetes.io/instance: coder
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
       # Access to get the agent state secret
       - toEntities:
           - kube-apiserver
