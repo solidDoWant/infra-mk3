@@ -13,7 +13,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: kiali-charts
-      version: 2.0.0
+      version: 2.27.0
   values:
     # TODO auth
     auth:
@@ -39,9 +39,9 @@ spec:
     resources:
       requests:
         cpu: 10m
-        memory: 128Mi
+        memory: &memory 512Mi
       limits:
-        memory: 128Mi
+        memory: *memory
     external_services:
       istio:
         # If https://github.com/kiali/kiali/issues/8220 is addressed then this can be removed
