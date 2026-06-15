@@ -1,0 +1,129 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich-stack
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      # Daily one-shot run: an init container mints an ephemeral, random Immich
+      # API key per active user (see configmap.yaml), then immich-stack groups
+      # sequenced/burst photos into stacks for every user and exits. RUN_MODE=once
+      # leaves scheduling to the CronJob rather than the tool's internal cron.
+      stack:
+        type: cronjob
+        cronjob:
+          schedule: "@daily"
+          # A run never overlaps itself; skip a new run if the prior is still going.
+          concurrencyPolicy: Forbid
+          successfulJobsHistory: 1
+          failedJobsHistory: 3
+          backoffLimit: 1
+          ttlSecondsAfterFinished: 600
+        initContainers:
+          # Connects to immich-postgres over mTLS (dedicated cert, CN=immich) and
+          # provisions the per-user keys into /keys/api-keys.env for the main
+          # container to load via the env-file (fileKeyRef) feature.
+          inject-keys:
+            image:
+              # Client-only use (psql); the SQL relies on server-side functions so
+              # the client version is irrelevant. docker.io fallback — no rootless
+              # ghcr psql-client image is maintained, and this isn't the app image.
+              repository: docker.io/library/postgres
+              tag: "18-alpine"
+            command: /scripts/inject.sh
+            env:
+              PGHOST: immich-postgres-rw.productivity.svc.cluster.local
+              PGPORT: "5432"
+              # Dedicated role (inherits immich) so the injector's writes are
+              # attributable to immich-stack, not the app. CN of the mounted cert
+              # matches, so cert auth maps to this role.
+              PGUSER: immich-stack
+              PGDATABASE: immich
+              PGSSLMODE: verify-full
+              PGSSLCERT: /certs/tls.crt
+              PGSSLKEY: /certs/tls.key
+              PGSSLROOTCERT: /certs/ca.crt
+            securityContext: &hardened
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+        containers:
+          main:
+            image:
+              # cspell:words majorfi
+              repository: ghcr.io/majorfi/immich-stack
+              tag: v0.2.31
+            env:
+              API_URL: http://immich-server.productivity.svc.cluster.local:2283/api
+              RUN_MODE: once
+              LOG_FORMAT: json
+              # Start in dry-run; flip to "false" once a run's logs look right.
+              DRY_RUN: "true"
+              # Comma-separated per-user keys, written by the inject-keys init
+              # container into the shared `keys` emptyDir. Loaded by the kubelet at
+              # container start (EnvFiles feature) — no volume mount needed here.
+              API_KEY:
+                valueFrom:
+                  fileKeyRef:
+                    path: api-keys.env
+                    volumeName: keys
+                    key: API_KEY
+            securityContext: *hardened
+            resources:
+              requests:
+                cpu: 50m
+                memory: &mem 256Mi
+              limits:
+                memory: *mem
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # Shared scratch the init container writes the env file into; the main
+      # container reads it via fileKeyRef (kubelet-side), so it mounts only here.
+      keys:
+        type: emptyDir
+        advancedMounts:
+          stack:
+            inject-keys:
+              - path: /keys
+      # The key-provisioning script.
+      scripts:
+        type: configMap
+        name: immich-stack-injector
+        defaultMode: 0555
+        advancedMounts:
+          stack:
+            inject-keys:
+              - path: /scripts
+      # Dedicated postgres client cert (separate from the app's Envoy cert).
+      certs:
+        type: secret
+        name: immich-postgres-immich-stack-user
+        defaultMode: 0440
+        advancedMounts:
+          stack:
+            inject-keys:
+              - path: /certs

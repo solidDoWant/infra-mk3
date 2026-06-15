@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization.json
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Builds the key-injector script into a ConfigMap from the standalone scripts/
+# file instead of inlining it in the HelmRelease, so it can be edited (and
+# shell-linted) as a real .sh file. The name-suffix hash is disabled (and so no
+# name-reference transformer is needed): this is only consumed by a CronJob, so
+# there are no running pods to roll on a change — the next scheduled run just
+# mounts the current ConfigMap by its stable name.
+configMapGenerator:
+  - name: immich-stack-injector
+    files:
+      - inject.sh
+    options:
+      disableNameSuffixHash: true

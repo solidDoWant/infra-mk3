@@ -40,6 +40,16 @@ spec:
         # hot-reload it via file-based SDS (watched_directory). Drops the
         # cnpg.io/reload label the kyverno workload-reloader keys on.
         disableReloading: true
+      # Dedicated login role + client cert for the immich-stack daily CronJob's
+      # key-injector init container. A distinct role (not the immich app role) so
+      # its DB activity is auditable separately in the logs / pg_stat_activity. It
+      # inherits the immich role to reach the api_keys + users tables the app owns.
+      immich-stack:
+        username: immich-stack
+        role:
+          comment: immich-stack daily stacker key-injector (audit-distinct role)
+          inRoles:
+            - immich
     # VectorChord requires its shared library to be preloaded at server start.
     # The `.so` suffix matches the official immich-charts example and the
     # bo0tzz/m00nwtchr reference deployments.
@@ -73,3 +83,8 @@ spec:
               app.kubernetes.io/name: immich
               app.kubernetes.io/instance: immich
               app.kubernetes.io/controller: microservices
+          # immich-stack CronJob's inject-keys init container provisions per-user
+          # API keys directly over mTLS.
+          - matchLabels:
+              app.kubernetes.io/name: immich-stack
+              app.kubernetes.io/instance: immich-stack

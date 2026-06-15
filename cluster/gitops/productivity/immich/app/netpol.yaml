@@ -89,12 +89,16 @@ specs:
           - ports:
               - port: "2283"
                 protocol: TCP
-      # Web UI / API from the internal gateway
       - fromEndpoints:
+          # Web UI / API from the internal gateway
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
+          # immich-stack daily cronjob calls the API to create photo stacks.
+          - matchLabels:
+              app.kubernetes.io/name: immich-stack
+              app.kubernetes.io/instance: immich-stack
         toPorts:
           - ports:
               - port: "2283"
