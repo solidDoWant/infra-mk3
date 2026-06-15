@@ -105,6 +105,9 @@ spec:
       extraLabels:
         pod:
           endpoints.netpols.home.arpa/oidc-supplier: "true"
+          # Permit the external gateway's egress netpol to reach the proxy for
+          # public ingress (terminate + re-encrypt via BackendTLSPolicy).
+          endpoints.netpols.home.arpa/external-ingress-enabled: "true"
       teleportConfig:
         proxy_service:
           # TODO limit access to proxy to only gateways per RFD 123:
