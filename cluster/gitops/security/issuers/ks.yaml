@@ -15,6 +15,12 @@ spec:
   postBuild:
     substitute:
       NAMESPACE: *namespace
+      # The security intermediary CA signs the Teleport proxy's internal serving
+      # cert, which the Istio/Envoy gateway must validate for BackendTLSPolicy
+      # re-encrypt. Envoy's BoringSSL cannot validate Ed25519 cert chains (same
+      # limitation the root CA documents for .NET), so this intermediary must be
+      # ECDSA. Size 384 (P-384) matches the root.
+      CERT_ALGORITHM: ECDSA
   prune: true
   sourceRef:
     kind: GitRepository
