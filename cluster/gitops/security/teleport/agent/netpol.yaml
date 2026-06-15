@@ -61,6 +61,19 @@ specs:
           - ports:
               - port: tls
                 protocol: TCP
+      # Reverse tunnel to the proxy via the internal gateway. The agent dials the
+      # proxy's public_addr (teleport.<domain>), which now resolves to the
+      # internal gateway for in-cluster clients; it tunnels through it via the
+      # ALPN connection upgrade.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
       # App access: proxy the Coder web app (TeleportAppV3 "coder")
       - toEndpoints:
           - matchLabels:
