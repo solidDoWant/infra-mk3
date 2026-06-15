@@ -22,9 +22,10 @@ kind: HTTPRoute
 metadata:
   name: teleport
   labels:
-    # Publish a public DNS record (Cloudflare) for this host.
-    # TEMP TODO
-    # external-dns.home.arpa/publish: "true"
+    # Publish the public DNS record (Cloudflare). external-dns runs with
+    # --cloudflare-proxied and --default-targets=public-wan, so this becomes a
+    # CF-proxied CNAME to the WAN (the internal 10.x gateway IP is excluded).
+    external-dns.home.arpa/publish: "true"
 spec:
   hostnames:
     - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
