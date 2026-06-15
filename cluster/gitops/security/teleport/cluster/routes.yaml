@@ -52,11 +52,13 @@ metadata:
   name: teleport-cluster
 spec:
   targetRefs:
-    - kind: Service
+    - group: ""
+      kind: Service
       name: teleport-cluster
   validation:
     caCertificateRefs:
-      - kind: ConfigMap
+      - group: ""
+        kind: ConfigMap
         name: root-ca-pub-cert
     # Must match a SAN on the proxy's internal serving cert (see proxy-cert.yaml).
     hostname: teleport-cluster.security.svc.cluster.local
