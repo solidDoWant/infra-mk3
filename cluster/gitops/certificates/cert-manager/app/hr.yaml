@@ -16,7 +16,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: jetstack-charts
-      version: 1.18.6
+      version: 1.19.5
   values:
     global:
       leaderElection:
@@ -82,7 +82,7 @@ spec:
           whenUnsatisfiable: DoNotSchedule
     cainjector:
       replicaCount: 2
-      featureGates: ServerSideApply=true,CAInjectorMerging=true
+      featureGates: ServerSideApply=true
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
