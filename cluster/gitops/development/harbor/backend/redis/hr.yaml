@@ -8,6 +8,7 @@ spec:
   chart:
     spec:
       chart: ./cluster/charts/dragonfly/cluster
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         namespace: flux-system

@@ -24,10 +24,6 @@ labels:
   kyverno.home.arpa/reload: "true"
 {{- end }}
 
-{{- define "db-registration-configmap-name" -}}
-{{ include "cluster-resource-name" .}}-db-registration
-{{- end }}
-
 {{- define "pod-selector-labels" -}}
 app.kubernetes.io/name: dragonfly
 app.kubernetes.io/instance: {{ include "cluster-resource-name" . }}

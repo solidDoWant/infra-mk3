@@ -1,9 +1,8 @@
 ---
-kind: db
-version: v3
+apiVersion: resources.teleport.dev/v1
+kind: TeleportDatabaseV3
 metadata:
-  name: '{{ include "cluster-resource-name" . }}'
-  description: '{{ include "cluster-readable-name" . }}'
+  name: {{ include "cluster-resource-name" . }}
   labels:
     teleport.home.arpa/database.enabled: "true"
 spec:
