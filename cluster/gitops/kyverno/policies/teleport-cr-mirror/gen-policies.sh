@@ -82,14 +82,20 @@ EOF
         # covers every kind in the match list. Cross-namespace name
         # collisions are rejected by Kyverno (loud failure) — service-scoped
         # source names should make this rare in practice.
-        apiVersion: "{{ request.object.apiVersion }}"
-        kind: "{{ request.object.kind }}"
-        name: "{{ request.object.metadata.name }}"
+        #
+        # Each field falls back to request.oldObject: on DELETE admission
+        # events request.object is null (only oldObject is populated), so
+        # without the fallback the synchronize cleanup resolves to a literal
+        # "{{ request.object.kind }}" GVK, hits "schema not found", and never
+        # deletes the mirror — leaving it orphaned in security.
+        apiVersion: "{{ request.object.apiVersion || request.oldObject.apiVersion }}"
+        kind: "{{ request.object.kind || request.oldObject.kind }}"
+        name: "{{ request.object.metadata.name || request.oldObject.metadata.name }}"
         namespace: security
         synchronize: true
         clone:
           namespace: "{{ request.namespace }}"
-          name: "{{ request.object.metadata.name }}"
+          name: "{{ request.object.metadata.name || request.oldObject.metadata.name }}"
 EOF
 } > "$OUTPUT"
 
