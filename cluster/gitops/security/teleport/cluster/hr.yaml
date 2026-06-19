@@ -192,6 +192,8 @@ spec:
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
+    service:
+      type: ClusterIP
     ingress:
       # enabled: true
       # See note in routes.yaml
