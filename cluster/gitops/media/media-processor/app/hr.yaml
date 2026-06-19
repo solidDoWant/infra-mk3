@@ -181,6 +181,12 @@ spec:
                 # kubernetes join method reads the audience-scoped projected
                 # token mounted via the sa-token persistence entry.
                 KUBERNETES_TOKEN_PATH: /var/run/secrets/tokens/token
+                # Dial the configured proxy_server for the reverse tunnel too,
+                # instead of the proxy's advertised public_addr (teleport.<domain>,
+                # which resolves to the internal gateway in-cluster). Keeps all
+                # tbot traffic direct to the proxy ClusterIP. Requires the proxy's
+                # TLS routing/multiplex mode, which is enabled.
+                TBOT_USE_PROXY_ADDR: "yes"
               ports:
                 - name: tbot-diag
                   containerPort: 4444
