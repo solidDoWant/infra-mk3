@@ -13,10 +13,11 @@ data:
   # without any restarts.
   tbot.yaml: |
     version: v2
-    # Public hostname; the proxy Service has a coredns.io/hostname annotation
-    # that resolves this to the in-cluster LoadBalancer IP, so the connection
-    # never leaves the cluster but the TLS SNI / JWT issuer URL match.
-    proxy_server: teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443
+    # In-cluster ClusterIP publicAddr of the proxy. tbot only joins and renews
+    # SVIDs (no reverse tunnel), so it honors the dialed address and reaches the
+    # proxy directly — bypassing the internal gateway. The proxy lists this name
+    # in publicAddr and serves a matching internal keypair, so TLS/SNI validate.
+    proxy_server: teleport-cluster.security.svc.cluster.local:443
     onboarding:
       token: media-temporal-keda-auth
       join_method: kubernetes
