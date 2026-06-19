@@ -192,11 +192,6 @@ spec:
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
-    # See note in routes.yaml
-    service:
-      type: LoadBalancer
-      spec:
-        loadBalancerIP: 10.34.0.3
     ingress:
       # enabled: true
       # See note in routes.yaml
