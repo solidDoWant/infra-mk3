@@ -25,15 +25,15 @@ metadata:
     # Publish the public DNS record (Cloudflare). external-dns runs with
     # --cloudflare-proxied and --default-targets=public-wan, so this becomes a
     # CF-proxied CNAME to the WAN (the internal 10.x gateway IP is excluded).
-    external-dns.home.arpa/publish: "true"
+    # external-dns.home.arpa/publish: "true"
 spec:
   hostnames:
     - teleport.${SECRET_PUBLIC_DOMAIN_NAME}
   parentRefs:
-    # Public ingress (Cloudflare -> external gateway).
-    - name: external-gateway
-      namespace: networking
-      sectionName: https
+    # # Public ingress (Cloudflare -> external gateway).
+    # - name: external-gateway
+    #   namespace: networking
+    #   sectionName: https
     # Internal/intranet ingress. The k8s-gateway CoreDNS watches HTTPRoutes on
     # the internal-gateways class and publishes teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     # -> the internal gateway address, so in-network clients flow through it
@@ -81,8 +81,8 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: teleport-apps
-  labels:
-    external-dns.home.arpa/publish: "true"
+  # labels:
+  #   external-dns.home.arpa/publish: "true"
   annotations:
     # Cloudflare Universal SSL does not cover second-level wildcards, so it can't
     # proxy *.teleport.<domain> without Advanced Certificate Manager. Publish
@@ -93,9 +93,9 @@ spec:
   hostnames:
     - "*.teleport.${SECRET_PUBLIC_DOMAIN_NAME}"
   parentRefs:
-    - name: external-gateway
-      namespace: networking
-      sectionName: https
+    # - name: external-gateway
+    #   namespace: networking
+    #   sectionName: https
     - name: internal-gateway
       namespace: networking
       sectionName: https
