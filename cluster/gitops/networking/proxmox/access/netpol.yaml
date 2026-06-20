@@ -10,8 +10,8 @@ specs:
     # shared app-template release labels.
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: proxmox
-        app.kubernetes.io/instance: proxmox
+        app.kubernetes.io/name: proxmox-cert-refresher
+        app.kubernetes.io/instance: proxmox-cert-refresher
     egress:
       # k8s API to upsert the pinned-cert ConfigMap
       - toEntities:
