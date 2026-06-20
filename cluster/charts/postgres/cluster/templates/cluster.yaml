@@ -31,6 +31,17 @@ spec:
   {{- else }}
     initdb:
       database: {{ $appDatabase }}
+      {{- if or .Values.pooler.rw.enabled .Values.pooler.ro.enabled }}
+      # CNPG reserves the cnpg_pooler_pgbouncer role name (it cannot be declared in
+      # spec.managed.roles), and only auto-creates the role when it manages the pooler
+      # integration itself — which it does not here, because the Pooler supplies a custom
+      # authQuery for cert auth. Create it as the superuser at bootstrap instead.
+      # NOTE: postInitSQL only runs on a fresh initdb. When enabling a pooler on an
+      # EXISTING cluster, create the role once manually:
+      #   CREATE ROLE cnpg_pooler_pgbouncer WITH LOGIN;
+      postInitSQL:
+        - CREATE ROLE cnpg_pooler_pgbouncer WITH LOGIN
+      {{- end }}
   {{- end }}
   postgresql:
     parameters: {{ .Values.parameters | toYaml | nindent 6 }}
