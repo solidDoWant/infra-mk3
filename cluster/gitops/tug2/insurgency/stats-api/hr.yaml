@@ -135,7 +135,8 @@ spec:
         hostnames:
           - insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}
         parentRefs:
-          # Public read-only API — internet-facing on the external gateway, no auth.
+          - name: internal-gateway
+            namespace: networking
           - name: external-gateway
             namespace: networking
         rules:
