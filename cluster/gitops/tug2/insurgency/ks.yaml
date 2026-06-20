@@ -100,3 +100,5 @@ spec:
     - name: tug2-insurgency-backend
     # HTTPRoute CRD for the external-gateway route.
     - name: gateway-crds
+    # Kyverno generates the dockerconfigjson pull secret from tug2-pull-credentials.
+    - name: kyverno-app

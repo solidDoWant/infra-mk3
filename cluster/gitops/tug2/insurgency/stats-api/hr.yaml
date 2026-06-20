@@ -66,9 +66,11 @@ spec:
                 memory: *memory
                 cpu: 500m
         pod:
-          # Harbor project tug2 is private; reuse the namespace pull credentials.
+          # Harbor project tug2 is private. tug2-pull-credentials-dockerconfig is the
+          # kubernetes.io/dockerconfigjson secret derived from tug2-pull-credentials by
+          # the Kyverno policy in pull-credentials-policy.yaml.
           imagePullSecrets:
-            - name: tug2-pull-credentials
+            - name: tug2-pull-credentials-dockerconfig
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
