@@ -38,10 +38,34 @@ spec:
         # Set this to a long time due to https://github.com/envoyproxy/envoy/issues/41850 making envoy not auto-reload
         duration: 8760h # 1 year
         renewBefore: 4380h # 6 months
+      # Read-only consumer (stats-api)
+      stats-api:
+        username: stats-api
+        # Create a CNPG-managed login role that is a member of the built-in
+        # pg_read_all_data role, so it can only SELECT.
+        role:
+          comment: Read-only stats API consumer
+          inRoles:
+            - pg_read_all_data
+      # Enable the PgBouncer backend user so the read-only pooler can authenticate to the cluster.
+      pooler:
+        disabled: false
+    # Read-only PgBouncer pooler (type: ro, routes to the replicas). stats-api connects here.
+    pooler:
+      ro:
+        enabled: true
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:
       applicationAccess:
         selector:
-          matchLabels:
-            kubevirt.io/vm: insurgency-server
+        selectors:
+          # The insurgency game server connects directly to the cluster.
+          - matchLabels:
+              kubevirt.io/vm: insurgency-server
+          # stats-api reaches the read-only pooler. The chart applies these selectors to the
+          # pooler ingress as well; stats-api's own egress policy restricts it to the pooler.
+          - matchLabels:
+              app.kubernetes.io/name: stats-api
+              app.kubernetes.io/controller: stats-api
+              app.kubernetes.io/instance: stats-api
