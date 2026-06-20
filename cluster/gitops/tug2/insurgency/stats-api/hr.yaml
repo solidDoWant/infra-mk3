@@ -39,6 +39,7 @@ spec:
               PGSSLCERT: /etc/stats-api/certs/postgres/tls.crt
               PGSSLKEY: /etc/stats-api/certs/postgres/tls.key
               PGSSLROOTCERT: /etc/stats-api/certs/root-ca/ca.crt
+              PGOPTIONS: -c statement_timeout=5000 # Fail fast if the database is unresponsive
             ports:
               - name: web
                 containerPort: &web_port 8080
