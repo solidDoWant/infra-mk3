@@ -78,6 +78,8 @@ spec:
           imagePullSecrets:
             - name: tug2-pull-credentials-dockerconfig
     defaultPodOptions:
+      # Run under the kata-containers runtime for VM-level isolation (public-facing API).
+      runtimeClassName: kata
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
