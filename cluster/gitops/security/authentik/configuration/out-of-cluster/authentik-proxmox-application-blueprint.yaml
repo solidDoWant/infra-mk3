@@ -54,6 +54,8 @@ stringData:
           redirect_uris:
             - url: https://10.2.2.1:8006.*
               matching_mode: regex
+            - url: https://proxmox.${SECRET_PUBLIC_DOMAIN_NAME}.*
+              matching_mode: regex
           signing_key:
             !Find [
               authentik_crypto.certificatekeypair,
