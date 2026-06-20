@@ -132,6 +132,8 @@ spec:
             path: /metrics
     route:
       stats-api:
+        labels:
+          external-dns.home.arpa/publish: "true"
         hostnames:
           - insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}
         parentRefs:
