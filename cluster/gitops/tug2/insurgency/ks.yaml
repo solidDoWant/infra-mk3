@@ -102,3 +102,5 @@ spec:
     - name: gateway-crds
     # Kyverno generates the dockerconfigjson pull secret from tug2-pull-credentials.
     - name: kyverno-app
+    # ServiceMonitor CRD for the metrics scrape.
+    - name: prometheus-crds

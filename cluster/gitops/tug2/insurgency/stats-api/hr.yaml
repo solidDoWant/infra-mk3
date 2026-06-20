@@ -43,6 +43,8 @@ spec:
             ports:
               - name: web
                 containerPort: &web_port 8080
+              - name: metrics
+                containerPort: &metrics_port 9090
             probes:
               # /readyz pings the database; /livez does not.
               readiness:
@@ -120,6 +122,14 @@ spec:
           web:
             port: *web_port
             primary: true
+          metrics:
+            port: *metrics_port
+    serviceMonitor:
+      stats-api:
+        endpoints:
+          # /metrics on port 9090; scraped on both replicas (per-pod metrics).
+          - port: metrics
+            path: /metrics
     route:
       stats-api:
         hostnames:
