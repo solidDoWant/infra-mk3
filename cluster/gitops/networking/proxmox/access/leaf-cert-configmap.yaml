@@ -1,0 +1,12 @@
+---
+# Trust anchor for the Proxmox BackendTLSPolicy, populated at runtime by the
+# cert-refresher (hr.yaml). Pre-created empty and Flux-managed only for lifecycle
+# (GC'd with the service); ssa: IfNotPresent makes Flux ensure it exists but never
+# reconcile its contents, so it won't clobber the scraped cert. Mirrors the
+# Kyverno-populated ksm-custom-resource-config ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxmox-vm-host-01-leaf-cert
+  labels:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent

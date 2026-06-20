@@ -1,0 +1,21 @@
+---
+# Re-encrypt to Proxmox and validate its cert. Proxmox serves a self-signed leaf
+# from its own PVE Cluster CA, which doesn't chain to the infra root CA, so we
+# can't validate against root-ca-pub-cert like other backends — instead we pin the
+# leaf (leaf-cert-configmap, kept current by the cert-refresher in hr.yaml, so a
+# `pvecm updatecerts` self-heals). hostname is a DNS SAN on that leaf.
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: proxmox
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: proxmox
+  validation:
+    caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: proxmox-vm-host-01-leaf-cert
+    hostname: proxmox-vm-host-01

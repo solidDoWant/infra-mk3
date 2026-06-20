@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: proxmox-cert-refresher-scripts
+    files:
+      - ./refresh-proxmox-cert.sh
+    options:
+      # Stable name (no hash) so it matches the fixed persistence ref in hr.yaml.
+      disableNameSuffixHash: true
+      labels:
+        # The script contains shell ${...} expansions; keep Flux post-build
+        # variable substitution away from it.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+        kyverno.home.arpa/reload: "true"

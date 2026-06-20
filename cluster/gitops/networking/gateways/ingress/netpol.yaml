@@ -110,6 +110,13 @@ specs:
       # TODO label everything and use a label instead
       - toEntities:
           - cluster
+      # Proxmox runs off-cluster; re-encrypt backend for the proxmox HTTPRoute.
+      - toCIDRSet:
+          - cidrGroupRef: proxmox-nodes
+        toPorts:
+          - ports:
+              - port: "8006"
+                protocol: TCP
     ingress:
       - *healthcheck
       - *metrics
