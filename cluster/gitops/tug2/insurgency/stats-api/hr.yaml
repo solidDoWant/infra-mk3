@@ -144,6 +144,25 @@ spec:
           - name: external-gateway
             namespace: networking
         rules:
+          # Block the kubelet-only health endpoints from gateway access by rewriting to a
+          # path the app doesn't recognize (so it returns a real 404). Kubelet probes the
+          # pod directly, not through the gateway, so they are unaffected.
+          - matches:
+              - path:
+                  type: Exact
+                  value: /readyz
+              - path:
+                  type: Exact
+                  value: /livez
+            filters:
+              - type: URLRewrite
+                urlRewrite:
+                  path:
+                    type: ReplaceFullPath
+                    replaceFullPath: /health-not-exposed-via-gateway
+            backendRefs:
+              - identifier: stats-api
+                port: *web_port
           - backendRefs:
               - identifier: stats-api
                 port: *web_port
