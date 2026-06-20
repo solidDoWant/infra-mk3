@@ -38,7 +38,7 @@ spec:
               PGSSLMODE: verify-full
               PGSSLCERT: /etc/stats-api/certs/postgres/tls.crt
               PGSSLKEY: /etc/stats-api/certs/postgres/tls.key
-              PGSSLROOTCERT: /etc/stats-api/certs/postgres/ca.crt
+              PGSSLROOTCERT: /etc/stats-api/certs/root-ca/ca.crt
             ports:
               - name: web
                 containerPort: &web_port 8080
@@ -99,7 +99,8 @@ spec:
           stats-api:
             app:
               - path: /etc/stats-api/certs/postgres
-      # Cluster root CA, mounted alongside the client cert as the TLS trust anchor.
+      # Cluster root CA (TLS trust anchor) in its own directory — mounting it as a
+      # subPath file inside the postgres cert dir fails (nested volume mount points).
       root-ca:
         type: secret
         name: root-ca-pub-cert
@@ -110,8 +111,7 @@ spec:
         advancedMounts:
           stats-api:
             app:
-              - path: /etc/stats-api/certs/postgres/ca.crt
-                subPath: ca.crt
+              - path: /etc/stats-api/certs/root-ca
     service:
       stats-api:
         controller: stats-api
