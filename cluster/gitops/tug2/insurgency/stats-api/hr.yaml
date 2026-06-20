@@ -1,0 +1,131 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: stats-api
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      stats-api:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          app:
+            image:
+              repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/stats-api
+              tag: 0.0.2
+            env:
+              LISTEN_ADDR: ":8080"
+              # Read-only access through the PgBouncer ro pooler (routes to the replicas).
+              # pgx reads the standard libpq env vars when DATABASE_URL is unset.
+              PGHOST: insurgency-postgres-pooler-ro.tug2.svc.cluster.local
+              PGPORT: "5432"
+              PGDATABASE: sourcemod-insurgency-stats
+              PGUSER: stats-api
+              # The pooler serving cert SAN matches the FQDN above, so verify-full is safe.
+              PGSSLMODE: verify-full
+              PGSSLCERT: /etc/stats-api/certs/postgres/tls.crt
+              PGSSLKEY: /etc/stats-api/certs/postgres/tls.key
+              PGSSLROOTCERT: /etc/stats-api/certs/postgres/ca.crt
+            ports:
+              - name: web
+                containerPort: &web_port 8080
+            probes:
+              # /readyz pings the database; /livez does not.
+              readiness:
+                enabled: true
+                type: HTTP
+                path: /readyz
+              liveness:
+                enabled: true
+                type: HTTP
+                path: /livez
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 25m
+                memory: &memory 128Mi
+              limits:
+                memory: *memory
+                cpu: 500m
+        pod:
+          # Harbor project tug2 is private; reuse the namespace pull credentials.
+          imagePullSecrets:
+            - name: tug2-pull-credentials
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    persistence:
+      # Postgres client cert (CN=stats-api) issued by the postgres chart. Left reloadable
+      # so the cert secret keeps the cnpg.io/reload label (Kyverno restarts this Deployment
+      # on rotation).
+      stats-api-postgres-user-cert:
+        type: secret
+        name: insurgency-postgres-stats-api-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          stats-api:
+            app:
+              - path: /etc/stats-api/certs/postgres
+      # Cluster root CA, mounted alongside the client cert as the TLS trust anchor.
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          stats-api:
+            app:
+              - path: /etc/stats-api/certs/postgres/ca.crt
+                subPath: ca.crt
+    service:
+      stats-api:
+        controller: stats-api
+        ports:
+          web:
+            port: *web_port
+            primary: true
+    route:
+      stats-api:
+        hostnames:
+          - insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          # Public read-only API — internet-facing on the external gateway, no auth.
+          - name: external-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: stats-api
+                port: *web_port

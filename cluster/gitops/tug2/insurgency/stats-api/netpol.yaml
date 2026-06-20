@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: stats-api
+specs:
+  - description: stats-api
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: stats-api
+        app.kubernetes.io/controller: stats-api
+        app.kubernetes.io/instance: stats-api
+    egress:
+      # DNS resolution (used to resolve the pooler service FQDN)
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # PostgreSQL via the read-only PgBouncer pooler
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/poolerName: insurgency-postgres-pooler-ro
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+    ingress:
+      # Kubelet for liveness/readiness probes
+      - fromEntities:
+          - host
+        toPorts: &api_port
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # API traffic from the external (internet-facing) gateway
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: external-gateway
+        toPorts: *api_port
