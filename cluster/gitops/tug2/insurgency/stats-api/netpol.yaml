@@ -42,8 +42,12 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
-      # API traffic from the external (internet-facing) gateway
+      # API traffic from the gateways
       - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways

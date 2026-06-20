@@ -69,6 +69,8 @@ spec:
                 memory: *memory
                 cpu: 500m
         pod:
+          labels:
+            endpoints.netpols.home.arpa/external-ingress-enabled: "true"
           # Harbor project tug2 is private. tug2-pull-credentials-dockerconfig is the
           # kubernetes.io/dockerconfigjson secret derived from tug2-pull-credentials by
           # the Kyverno policy in pull-credentials-policy.yaml.
