@@ -26,7 +26,7 @@ spec:
           app:
             image:
               repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/stats-api
-              tag: 0.0.6
+              tag: 0.0.7
             env:
               LISTEN_ADDR: ":8080"
               # Read-only access through the PgBouncer ro pooler (routes to the replicas).
