@@ -26,7 +26,7 @@ spec:
           app:
             image:
               repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/stats-api
-              tag: 0.0.5
+              tag: 0.0.6
             env:
               LISTEN_ADDR: ":8080"
               # Read-only access through the PgBouncer ro pooler (routes to the replicas).
@@ -135,6 +135,12 @@ spec:
           # /metrics on port 9090; scraped on both replicas (per-pod metrics).
           - port: metrics
             path: /metrics
+            relabelings:
+              # Report `instance` as the pod name rather than the default <pod-ip>:<port>.
+              - action: replace
+                sourceLabels:
+                  - __meta_kubernetes_pod_name
+                targetLabel: instance
     route:
       stats-api:
         labels:
