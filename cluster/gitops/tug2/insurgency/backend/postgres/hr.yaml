@@ -41,6 +41,7 @@ spec:
       # Read-only consumer (stats-api)
       stats-api:
         username: stats-api
+        disableReloading: true
         # Create a CNPG-managed login role that is a member of the built-in
         # pg_read_all_data role, so it can only SELECT.
         role:
