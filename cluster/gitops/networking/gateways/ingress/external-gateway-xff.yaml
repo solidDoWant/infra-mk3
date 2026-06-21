@@ -1,0 +1,55 @@
+---
+# Normalize X-Forwarded-For on the external gateway to the single, trustworthy
+# client IP that Cloudflare provides.
+#
+# Every request to this gateway arrives via Cloudflare (the OPNsense firewall
+# only admits Cloudflare source IPs), and Cloudflare always sets CF-Connecting-IP
+# to the real client IP, overwriting any client-supplied value. The standard
+# X-Forwarded-For chain, by contrast, is attacker-influenced: a client can
+# prepend arbitrary entries that Cloudflare and Envoy only ever append to, so a
+# backend that reads the left-most XFF entry would trust spoofed data. (Envoy's
+# own client-IP attribution is already correct via numTrustedProxies=1 on the
+# Gateway; this filter protects naive backends that parse XFF directly.)
+#
+# Overwrite XFF with CF-Connecting-IP so every backend sees exactly one trusted
+# client IP. This also satisfies Teleport's proxy_service.trust_x_forwarded_for,
+# which requires exactly one IP in XFF (the original, Teleport-only reason this
+# filter existed, now generalized to every host on the gateway).
+#
+# Trust anchor: the OPNsense Cloudflare-only IP allowlist. If a request could
+# reach this gateway without traversing Cloudflare, CF-Connecting-IP would be
+# spoofable. The guard below skips the overwrite when the header is absent, so
+# any such traffic falls back to Envoy's appended chain rather than a forged
+# single entry.
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: external-gateway-xff-from-cf-connecting-ip
+spec:
+  workloadSelector:
+    labels:
+      app.kubernetes.io/name: ingress-gateways
+      gateway.networking.k8s.io/gateway-name: external-gateway
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: external-gateway-xff-from-cf-connecting-ip
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            inline_code: |
+              function envoy_on_request(handle)
+                local cf = handle:headers():get("cf-connecting-ip")
+                if cf ~= nil and cf ~= "" then
+                  handle:headers():replace("x-forwarded-for", cf)
+                end
+              end

@@ -1,0 +1,56 @@
+---
+# Normalize X-Forwarded-For on the internal gateway to the real connecting IP.
+#
+# Nothing proxies in front of this gateway — intranet clients (and in-cluster
+# callers) connect directly with their source IP preserved — so the only
+# trustworthy client IP is the actual downstream TCP peer. Envoy already treats
+# that peer as the client (numTrustedProxies=0 on the Gateway), but it only
+# *appends* to X-Forwarded-For and never strips, so a client can still prepend
+# arbitrary entries and a backend that reads the left-most XFF entry would trust
+# spoofed data.
+#
+# Overwrite XFF with the directly-connected downstream address so every backend
+# sees exactly one trusted client IP. downstreamDirectRemoteAddress is the L3
+# connection peer, independent of any client-supplied header, so it cannot be
+# spoofed regardless of what the client puts in XFF.
+#
+# The external gateway has an equivalent filter that sources the IP from
+# CF-Connecting-IP instead (see external-gateway-xff.yaml).
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: internal-gateway-xff-from-remote-address
+spec:
+  workloadSelector:
+    labels:
+      app.kubernetes.io/name: ingress-gateways
+      gateway.networking.k8s.io/gateway-name: internal-gateway
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: internal-gateway-xff-from-remote-address
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            inline_code: |
+              function envoy_on_request(handle)
+                local addr = handle:streamInfo():downstreamDirectRemoteAddress()
+                if addr == nil or addr == "" then
+                  return
+                end
+                -- addr is "1.2.3.4:5678" or "[2001:db8::1]:5678"; strip the port.
+                local ip = addr:match("^%[(.+)%]:%d+$")
+                if ip == nil then
+                  ip = addr:gsub(":%d+$", "")
+                end
+                handle:headers():replace("x-forwarded-for", ip)
+              end

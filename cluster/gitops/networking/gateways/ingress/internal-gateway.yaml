@@ -8,6 +8,14 @@ metadata:
     app.kubernetes.io/component: internal
 spec:
   gatewayClassName: internal-gateways
+  infrastructure:
+    annotations:
+      # No HTTP proxy sits in front of this gateway — intranet clients route
+      # straight here with their source IP preserved — so trust zero XFF hops:
+      # Envoy uses the directly connected peer as the client and never treats a
+      # client-supplied XFF entry as trusted. Explicit (0 is also the default) so
+      # the trust boundary can't drift if a global default is ever set.
+      proxy.istio.io/config: '{"gatewayTopology":{"numTrustedProxies":0}}'
   addresses:
     - type: IPAddress
       value: 10.34.0.1

@@ -8,6 +8,14 @@ metadata:
     app.kubernetes.io/component: internal
 spec:
   gatewayClassName: external-gateways
+  infrastructure:
+    annotations:
+      # Cloudflare is the single trusted HTTP proxy in front of this gateway, so
+      # trust one XFF hop. Envoy then resolves the real client IP
+      # (X-Envoy-External-Address, access logs, source.ip) from the right of the
+      # XFF chain and ignores any entries a client prepends. The OPNsense DNAT in
+      # front is L4 and appends no XFF hop, so the count stays 1.
+      proxy.istio.io/config: '{"gatewayTopology":{"numTrustedProxies":1}}'
   addresses:
     - type: IPAddress
       value: 10.34.0.2
