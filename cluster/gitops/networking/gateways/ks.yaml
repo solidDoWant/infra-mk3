@@ -20,38 +20,93 @@ spec:
   dependsOn:
     - name: gateway-crds
 ---
+# The ingress gateway manifests are split across two Flux Kustomizations because
+# some Istio policy CRDs break Flux's kstatus health reader (see -policies
+# below). `ingress-gateways` itself is now a no-op aggregator so that other
+# Kustomizations can keep depending on it unchanged.
+#
+# ingress-gateways-base — everything whose status kstatus CAN read, so it keeps
+# the default `wait: true` (health-check every applied object).
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name ingress-gateways
+  name: ingress-gateways-base
 spec:
   targetNamespace: networking
   commonMetadata:
     labels:
-      app.kubernetes.io/name: *app_name
+      app.kubernetes.io/name: ingress-gateways
   interval: 5m
-  path: /cluster/gitops/networking/gateways/ingress
+  path: /cluster/gitops/networking/gateways/ingress/base
   prune: true
   sourceRef:
     kind: GitRepository
     name: infra-mk3
   wait: true
-  # Skip health-checking AuthorizationPolicy: Istio writes
-  # status.observedGeneration as a string (CRD declares it as IntOrString),
-  # which trips Flux's default int64 accessor. Issue tracked in
-  # https://github.com/istio/istio/issues/39605
-  # `current: "true"` alone leaves the object stuck InProgress (Flux's implicit
-  # in-progress state is matched first), so set all three explicitly: never
-  # failed, never in-progress, always current once applied.
-  healthCheckExprs:
-    - apiVersion: security.istio.io/v1
-      kind: AuthorizationPolicy
-      failed: "false"
-      inProgress: "false"
-      current: "true"
   dependsOn:
     - name: gateway-classes
     - name: istio-csr
     - name: istio-base
+---
+# ingress-gateways-policies — Istio EnvoyFilter + AuthorizationPolicy objects
+# whose status breaks kstatus, so this Kustomization sets `wait: false`.
+#   - EnvoyFilter writes status.observedGeneration as a STRING (the CRD declares
+#     IntOrString); kstatus's int64 accessor errors ("1 is of the type string,
+#     expected int64") and the object is reported 'Unknown'.
+#   - AuthorizationPolicy lags its top-level observedGeneration behind
+#     metadata.generation (only the condition's observedGeneration is updated),
+#     so kstatus reports 'InProgress' indefinitely.
+# healthCheckExprs does NOT help: kstatus runs the observedGeneration accessor
+# BEFORE evaluating the CEL `current` expression, so the error/stale verdict
+# wins before `current: "true"` is ever read (verified on kustomize-controller
+# v1.8.5; Istio issue https://github.com/istio/istio/issues/39605). These
+# objects apply fine; they just can't be health-checked, so the wait is skipped.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: ingress-gateways-policies
+spec:
+  targetNamespace: networking
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: ingress-gateways
+  interval: 5m
+  path: /cluster/gitops/networking/gateways/ingress/policies
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: false
+  # After -base so the Gateways exist before these policies attach to them.
+  dependsOn:
+    - name: ingress-gateways-base
+---
+# ingress-gateways — pure no-op aggregator. Its path renders nothing
+# (ingress/kustomization.yaml has `resources: []`); it only becomes Ready once
+# both child Kustomizations are, preserving `dependsOn: ingress-gateways` for
+# every other service. prune is disabled because it intentionally owns no
+# objects: the resources it used to own are adopted by -base/-policies (which
+# reconcile first via dependsOn), and disabling prune guarantees this no-op can
+# never delete them during that ownership hand-off.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: ingress-gateways
+spec:
+  targetNamespace: networking
+  interval: 5m
+  path: /cluster/gitops/networking/gateways/ingress
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: ingress-gateways-base
+    - name: ingress-gateways-policies

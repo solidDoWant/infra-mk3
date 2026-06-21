@@ -1,0 +1,8 @@
+---
+# No-op anchor for the `ingress-gateways` Flux Kustomization. The actual
+# manifests live in ./base (health-checked) and ./policies (wait: false); this
+# directory intentionally renders nothing so `ingress-gateways` is a pure
+# aggregator that other Kustomizations can depend on. See ../ks.yaml.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources: []
