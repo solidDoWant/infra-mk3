@@ -121,9 +121,11 @@ spec:
           - backendRefs:
               - identifier: <service>
                 port: *web_port
-          # Include the outpost rule ONLY when using Authentik proxy forward-auth (not OIDC)
+          # Include the outpost rule ONLY when using Authentik proxy forward-auth (not OIDC).
+          # authentik-server runs the embedded outpost (Postgres-backed, HA sessions);
+          # the standalone authentik-outpost-proxy was retired.
           # - backendRefs:
-          #     - name: authentik-outpost-proxy
+          #     - name: authentik-server
           #       namespace: security
           #       port: 80
           #   matches:

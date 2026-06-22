@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-embedded-outpost-providers-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Assign every proxy provider to authentik's built-in embedded outpost (which
+  # runs inside the authentik-server pods and stores sessions in PostgreSQL).
+  # This replaces the standalone "authentik Proxy Outpost", whose per-pod
+  # /dev/shm sessions broke the OAuth callback (HTTP 400 "invalid state") under
+  # multiple replicas and lost all sessions on pod restart.
+  #
+  # The embedded outpost is matched by its reserved managed identifier, so this
+  # updates the existing object rather than creating a new one. Only `providers`
+  # is set, leaving the rest of the embedded outpost's managed config untouched.
+  #
+  # !FindMany would be cleaner but is unavailable in this authentik version
+  # (PR https://github.com/goauthentik/authentik/pull/16942 is unmerged), so the
+  # providers are enumerated explicitly via !Find.
+  authentik-embedded-outpost-providers-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: Embedded outpost provider assignment
+      labels:
+        blueprints.goauthentik.io/description: >-
+          Assign proxy providers to the embedded outpost
+    entries:
+      - model: authentik_outposts.outpost
+        identifiers:
+          managed: goauthentik.io/outposts/embedded
+        attrs:
+          providers:
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Sonarr]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Radarr]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Bazarr]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Houndarr]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Jackett]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, NZBGet]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, "NZBHydra 2"]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent]]

@@ -99,15 +99,6 @@ specs:
           - ports:
               - port: "9000"
                 protocol: TCP
-      # Outposts to access the main server
-      - fromEndpoints:
-          - matchLabels:
-              app.kubernetes.io/name: authentik-outpost
-              app.kubernetes.io/instance: authentik-outpost
-        toPorts:
-          - ports:
-              - port: "9000"
-                protocol: TCP
       # Metrics
       - fromEndpoints:
           - matchLabels:

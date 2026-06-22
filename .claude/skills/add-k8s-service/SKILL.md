@@ -123,13 +123,14 @@ Authentik handles **user authentication only** — not service-to-service auth.
 
 For web UIs, always prefer native **OIDC** integration if the app supports it. Configure the app to use Authentik as an OIDC provider directly. This is more reliable than proxy auth and avoids credential renewal issues.
 
-Only use **Authentik proxy forward-auth** as an absolute last resort for apps with no OIDC support whatsoever — proxy forward-auth breaks many applications due to credential renewal behavior, and some configuration requires manual Authentik UI setup (missing blueprint support).
+Only use **Authentik proxy forward-auth** as an absolute last resort for apps with no OIDC support whatsoever — proxy forward-auth breaks many applications due to credential renewal behavior. Forward-auth is served by the **embedded outpost** inside `authentik-server` (Postgres-backed sessions, HA across replicas); the standalone `authentik-outpost-proxy` was retired (its per-pod `/dev/shm` sessions returned HTTP 400 on the OAuth callback under multiple replicas).
 
 Every service with Authentik integration (OIDC or proxy) requires:
 1. An Authentik blueprint Secret labeled `k8s-sidecar.home.arpa/application: authentik`
 2. A dedicated Discord role (never shared) — `SECRET_AUTHENTIK_<SERVICE>_DISCORD_ROLE_ID` in `cluster-secrets.sops.yaml`
-3. For proxy auth only: an HTTPRoute rule forwarding `/outpost.goauthentik.io` to `authentik-outpost-proxy.security:80`
-4. For proxy auth only: enrolling the hostname in the gateway's Istio `AuthorizationPolicy` (`cluster/gitops/networking/gateways/ingress/authorization-policy.yaml`) — this is what actually triggers auth; without it the app is served unauthenticated. See `auth.md` for details.
+3. For proxy auth only: an HTTPRoute rule forwarding `/outpost.goauthentik.io` to `authentik-server.security:80`
+4. For proxy auth only: enrolling the hostname in the gateway's Istio `AuthorizationPolicy` (`cluster/gitops/networking/gateways/ingress/policies/authorization-policy.yaml`) — this is what actually triggers auth; without it the app is served unauthenticated. See `auth.md` for details.
+5. For proxy auth only: assigning the new provider to the embedded outpost — add a `!Find` line to `cluster/gitops/security/authentik/configuration/embedded-outpost/embedded-outpost-blueprint.yaml`. See `auth.md` for details.
 
 **Never add the service to the `external-gateway`** unless explicitly requested.
 
@@ -222,7 +223,7 @@ For non-app-template charts, use a standalone `pdb.yaml`.
 
 **CiliumNetworkPolicy**: Always required. Every service needs one. See `references/file-patterns/netpol.md` for the template and required rules. Always add comments explaining what each egress/ingress rule allows and why.
 
-**HTTPRoute**: Always use `internal-gateway` in namespace `networking`. Include the Authentik outpost rule (`/outpost.goauthentik.io` → `authentik-outpost-proxy.security:80`) only when using proxy forward-auth, not OIDC.
+**HTTPRoute**: Always use `internal-gateway` in namespace `networking`. Include the Authentik outpost rule (`/outpost.goauthentik.io` → `authentik-server.security:80`, the embedded outpost) only when using proxy forward-auth, not OIDC.
 
 **Certificate mount paths**: Mount mTLS certs under `/etc/<app>/certs/` (e.g., `/etc/radarr/certs/postgres/`), not a generic `/certs/` path.
 
@@ -239,7 +240,8 @@ For non-app-template charts, use a standalone `pdb.yaml`.
 
 The skill should handle all of the following automatically (don't tell the user to do them):
 - Add the new service's `ks.yaml` to the domain's `kustomization.yaml`
-- For proxy forward-auth services: add the hostname to the `hosts` list in `cluster/gitops/networking/gateways/ingress/authorization-policy.yaml`
+- For proxy forward-auth services: add the hostname to the `hosts` list in `cluster/gitops/networking/gateways/ingress/policies/authorization-policy.yaml`
+- For proxy forward-auth services: add a `!Find` entry for the provider to the embedded outpost in `cluster/gitops/security/authentik/configuration/embedded-outpost/embedded-outpost-blueprint.yaml`
 - If this is a new domain: create `namespace.yaml`, `kustomization.yaml`, and `issuers/` if postgres is used
 - If any new `endpoints.netpols.home.arpa/` labels were created: add them to `docs/labels and annotations.md` with key, value (`true`), valid resources (`Pod`), required (`No`), and a description
 

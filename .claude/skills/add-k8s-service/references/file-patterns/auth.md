@@ -119,17 +119,28 @@ SECRET_AUTHENTIK_<SERVICE>_DISCORD_ROLE_ID: "<discord role id>"
 
 ## Proxy forward-auth (last resort only)
 
-Use only when the app has no OIDC support. This mode intercepts every request through the Authentik outpost proxy. It breaks applications that don't handle cookie/header-based credential renewal well, and some configuration requires manual Authentik UI setup.
+Use only when the app has no OIDC support. This mode intercepts every request through the Authentik embedded outpost (running in `authentik-server`). It breaks applications that don't handle cookie/header-based credential renewal well. All wiring below is declarative (GitOps) — no manual Authentik UI setup is required.
 
 Additional requirements beyond OIDC blueprint:
 1. Replace `oauth2provider` with `proxyprovider` in the blueprint
-2. Add an outpost rule to the HTTPRoute
+2. Add an outpost rule to the HTTPRoute (`/outpost.goauthentik.io` → `authentik-server.security:80`)
 3. **Enroll the hostname in the gateway's Istio `AuthorizationPolicy`** (see below) — easy to miss, and nothing works without it
-4. Configure the app to trust the `X-Authentik-*` headers (if it supports external auth mode)
+4. **Assign the new provider to the embedded outpost** (see below) — add it to the `!Find` list in `cluster/gitops/security/authentik/configuration/embedded-outpost/embedded-outpost-blueprint.yaml`
+5. Configure the app to trust the `X-Authentik-*` headers (if it supports external auth mode)
 
-> **The three pieces must all be present.** The blueprint registers the provider, the HTTPRoute rule exposes the `/outpost.goauthentik.io` callback path, and the `AuthorizationPolicy` is what actually makes the gateway invoke the outpost (ext_authz) for the host. If the hostname is not in the `AuthorizationPolicy`, the gateway serves the app directly: **no redirect to Authentik, and no `X-authentik-*` headers reach the backend.** This is the single most common reason "auth silently does nothing."
+> **The four pieces must all be present.** The blueprint registers the provider, the HTTPRoute rule exposes the `/outpost.goauthentik.io` callback path, the `AuthorizationPolicy` is what actually makes the gateway invoke the outpost (ext_authz) for the host, and the embedded-outpost blueprint assigns the provider so the outpost serves it. If the hostname is not in the `AuthorizationPolicy`, the gateway serves the app directly: **no redirect to Authentik, and no `X-authentik-*` headers reach the backend.** This is the single most common reason "auth silently does nothing."
 >
-> The proxy outpost auto-assigns every proxy provider (`providers: !FindMany [authentik_providers_proxy.proxyprovider]` in `cluster/gitops/security/authentik/outpost/blueprints/outpost.yaml`), so a new `proxyprovider` blueprint is picked up automatically — there is no separate "assign provider to outpost" step.
+> Forward-auth runs on the **embedded outpost** inside `authentik-server` (Postgres-backed sessions, shared across the server replicas — survives load-balancing and pod restarts). The standalone `authentik-outpost-proxy` was retired because its per-pod `/dev/shm` sessions returned HTTP 400 on the OAuth callback under multiple replicas. Because `!FindMany` is unavailable in this authentik version (PR #16942 unmerged), providers are assigned to the embedded outpost **explicitly** — add a `!Find` line for the new provider to `embedded-outpost-blueprint.yaml`:
+>
+> ```yaml
+>     entries:
+>       - model: authentik_outposts.outpost
+>         identifiers:
+>           managed: goauthentik.io/outposts/embedded
+>         attrs:
+>           providers:
+>             - !Find [authentik_providers_proxy.proxyprovider, [name, <Service>]]   # <-- add the new provider here
+> ```
 
 ```yaml
       # Replace the oauth2provider entry with this:
@@ -165,9 +176,11 @@ route:
       - backendRefs:
           - identifier: <service>
             port: *web_port
-      # Outpost rule — only needed for proxy forward-auth
+      # Outpost rule — only needed for proxy forward-auth.
+      # authentik-server runs the embedded outpost (Postgres-backed sessions,
+      # shared across replicas); the standalone authentik-outpost-proxy was retired.
       - backendRefs:
-          - name: authentik-outpost-proxy
+          - name: authentik-server
             namespace: security
             port: 80
         matches:
@@ -176,7 +189,7 @@ route:
               value: /outpost.goauthentik.io
 ```
 
-**Enroll the hostname in the Istio `AuthorizationPolicy`** (add only for proxy auth). Edit `cluster/gitops/networking/gateways/ingress/authorization-policy.yaml` and add the service hostname to the `internal-gateway-authentik-auth` policy's `hosts` list:
+**Enroll the hostname in the Istio `AuthorizationPolicy`** (add only for proxy auth). Edit `cluster/gitops/networking/gateways/ingress/policies/authorization-policy.yaml` and add the service hostname to the `internal-gateway-authentik-auth` policy's `hosts` list:
 
 ```yaml
 apiVersion: security.istio.io/v1

@@ -165,7 +165,7 @@ spec:
                 port: 6789
           # Send auth requests to the authentik outpost
           - backendRefs:
-              - name: authentik-outpost-proxy
+              - name: authentik-server
                 namespace: security
                 port: 80
             matches:
