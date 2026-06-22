@@ -13,8 +13,16 @@ spec:
       app.kubernetes.io/service: sonarr-metrics
       app.kubernetes.io/instance: sonarr
   endpoints:
+    # exportarr enumerates the entire Sonarr library on every scrape
+    # (ENABLE_ADDITIONAL_METRICS), which on this large library has been observed
+    # to take up to ~59s. With interval 1m and no explicit scrapeTimeout the
+    # effective timeout (~10s) was far below that, so the target flapped to
+    # up=0 ~10% of the time and sonarr_* metrics (and their alerts) disappeared
+    # intermittently. Scrape less often and allow well beyond the observed worst
+    # case. scrapeTimeout must be <= interval.
     - port: metrics
-      interval: 1m
+      interval: 5m
+      scrapeTimeout: 2m
   jobLabel: sonarr-metrics
   # Exports are HA, and will always contain the same data.
   # Only scrape one of them to prevent duplicate metrics.

@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sonarr-queue
+spec:
+  groups:
+    - name: sonarr-queue
+      rules:
+        # Hung queue items. `sonarr_queue_total` (exportarr, with
+        # ENABLE_ADDITIONAL_METRICS) is a gauge of queue items broken down by
+        # `status`, `download_status` (Sonarr's trackedDownloadStatus: ok /
+        # warning / error) and `download_state` (trackedDownloadState:
+        # downloading / importPending / importBlocked / importing / ...).
+        #
+        # Label values below are taken from 14 days of this cluster's own
+        # history, not guessed:
+        #   ok      + downloading             -> healthy
+        #   ok      + importPending           -> normal, transient (just queued to import)
+        #   warning + importBlocked           -> HUNG, needs manual intervention
+        #   warning + importPending/importing -> HUNG, import stalled
+        # So `download_status` of warning/error is the clean discriminator for a
+        # stuck item, and ok-state items (including normal importPending) are
+        # correctly excluded.
+        #
+        # We group by `download_status` rather than `download_state` on purpose:
+        # a genuinely stuck item keeps download_status="warning" continuously even
+        # if it oscillates between importPending and importBlocked, so `for: 30m`
+        # is not falsely reset by state churn. 30m is well past the transient
+        # importPending window but quick enough to surface a truly hung item.
+        #
+        # The series only exists while items are queued, so its absence (empty
+        # queue) is fine — the alert simply has nothing to evaluate.
+        - alert: SonarrHungQueueItems
+          expr: |
+            sum by (download_status) (
+              sonarr_queue_total{download_status=~"warning|error"}
+            ) > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: Sonarr has hung queue item(s) ({{ $labels.download_status }})
+            description: |
+              {{ $value | printf "%.0f" }} Sonarr queue item(s) have been in a
+              "{{ $labels.download_status }}" tracked-download state for over 30m —
+              typically importBlocked (manual intervention required) or an import
+              stuck pending/failing. Check the Sonarr Activity > Queue view.
+
+    - name: sonarr-health
+      rules:
+        # Sonarr's own health panel, surfaced by exportarr as
+        # `sonarr_system_health_issues` (one series per source/type/message).
+        # `type` is the *arr severity; observed values here are "error" and
+        # "warning". We alert only on `type="error"` (e.g. DownloadClientCheck —
+        # download client unreachable), since warnings are typically persistent
+        # and benign (UpdateCheck = update available, IndexerStatusCheck, etc.)
+        # and would just create noise. `for: 15m` rides out transient blips like
+        # a download client briefly restarting.
+        - alert: SonarrHealthIssueError
+          expr: |
+            sum by (source) (sonarr_system_health_issues{type="error"}) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Sonarr health issue (error) from {{ $labels.source }}
+            description: |
+              Sonarr has reported an error-level health issue from
+              {{ $labels.source }} for over 15m. Check Sonarr > System > Status.

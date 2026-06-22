@@ -13,8 +13,15 @@ spec:
       app.kubernetes.io/service: radarr-metrics
       app.kubernetes.io/instance: radarr
   endpoints:
+    # exportarr enumerates the entire Radarr library on every scrape
+    # (ENABLE_ADDITIONAL_METRICS). Today this library is small so scrapes are
+    # fast, but Sonarr hit the same exporter being slow (~59s) with the default
+    # ~10s timeout, flapping the target to up=0 and dropping metrics. Apply the
+    # same headroom here pre-emptively as the movie library grows. scrapeTimeout
+    # must be <= interval.
     - port: metrics
-      interval: 1m
+      interval: 5m
+      scrapeTimeout: 2m
   jobLabel: radarr-metrics
   # Exports are HA, and will always contain the same data.
   # Only scrape one of them to prevent duplicate metrics.
