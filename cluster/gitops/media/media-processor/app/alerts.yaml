@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: media-processor-watcher
+spec:
+  groups:
+    - name: media-processor-watcher
+      rules:
+        # The watcher scans each mapping's directory on a short interval
+        # (~60s observed) and dispatches workflows for new files. If it wedges,
+        # ingestion silently stops for that mapping with no other visible signal,
+        # so staleness of the last-successful-scan timestamp is the key health
+        # check. `watcher_last_successful_scan_unix_seconds` is a gauge set only
+        # on a successful scan, so `time() - <gauge>` is the age since the last
+        # good scan. 600s is ~10 missed scans — comfortably past transient blips
+        # while still catching a stuck watcher quickly. The value increases
+        # monotonically until a scan succeeds, so it crosses the threshold once
+        # and resolves cleanly on recovery; no `for:` needed.
+        #
+        # Limitation: this only covers a *running-but-wedged* watcher. If the pod
+        # is gone/crashlooping the series disappears and this won't fire — that
+        # case is covered by pod-level (kube-state-metrics) alerting instead.
+        - alert: MediaProcessorWatcherScanStale
+          expr: |
+            time() - watcher_last_successful_scan_unix_seconds > 600
+          labels:
+            severity: warning
+          annotations:
+            summary: media-processor watcher scans stale for mapping {{ $labels.mapping_name }}
+            description: |
+              The media-processor watcher has not completed a successful scan of
+              mapping {{ $labels.mapping_name }} in over 10 minutes
+              ({{ $value | printf "%.0f" }}s). New media for this mapping is not
+              being dispatched to Temporal. Check the media-processor-watcher pod.
+
+        # Dispatch failures are sparse "something is broken" events (watcher found
+        # a file but could not submit the workflow to Temporal). Same sparse-event
+        # hold pattern as the Temporal alerts: increase over a 30m window fires on
+        # the next eval after any error, holds for 30m, and re-arms on each new
+        # error — so it stays active through a burst instead of flapping per
+        # scrape. The series only materialises after the first error, so its
+        # absence today is expected, not a misconfig.
+        - alert: MediaProcessorDispatchErrors
+          expr: |
+            sum by (mapping_name, media_type) (
+              increase(watcher_dispatch_errors_total[30m])
+            ) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: media-processor dispatch failures for mapping {{ $labels.mapping_name }}
+            description: |
+              {{ $value | printf "%.0f" }} workflow dispatch failure(s) for mapping
+              {{ $labels.mapping_name }} ({{ $labels.media_type }}) in the last 30m.
+              The watcher discovered files but could not submit workflows to Temporal.
+              Holds for 30m after the most recent failure and re-arms on each new one.

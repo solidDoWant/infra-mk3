@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: temporal-workflow-failures
+spec:
+  groups:
+    - name: temporal-workflow-failures
+      rules:
+        # IMPORTANT — label collision: Temporal's metrics carry their own
+        # `namespace` label (the Temporal namespace, e.g. "media"). The scraper
+        # also attaches a `namespace` label (the Kubernetes namespace, always
+        # "data" here). On conflict Prometheus/VM keeps the scraper's and renames
+        # the original to `exported_namespace`. So:
+        #   namespace          = "data"   (k8s — useless for grouping here)
+        #   exported_namespace = "media"  (the Temporal namespace we care about)
+        # We deliberately group/filter on `exported_namespace`, matching the
+        # existing repo convention for the same clash in cert-manager
+        # (certificates/cert-manager/monitoring/dashboard.json). The scrape is
+        # left untouched so the k8s `namespace` stays consistent with every other
+        # series in the stack.
+        #
+        # Workflows here can be slow to fail (long retry chains, long timeouts),
+        # so failures arrive sparsely rather than as a sustained rate. We want an
+        # alert that fires the moment a failure lands and then *stays* firing for
+        # a while, re-arming on each new failure, instead of flapping per scrape.
+        #
+        # The hold behaviour lives in the lookback WINDOW, not in `for:`:
+        #   - `for:` delays firing until the condition holds continuously — the
+        #     opposite of what we want for sparse events.
+        #   - `increase(...[30m]) > 0` goes positive on the next eval after any
+        #     failure in the trailing 30m, stays positive while failures keep
+        #     occurring within 30m of each other (each one slides the window
+        #     forward), and auto-resolves 30m after the last failure.
+        # So the 30m window is the hold time and it self-extends on every new
+        # failure — "stays triggered until it hasn't gone up again".
+        #
+        # `increase()` handles counter resets (e.g. history-service restarts).
+        # Metric name verified live: `workflow_failed` (no `_total` suffix).
+        #
+        # `temporal-system` is excluded: failures of Temporal's own internal
+        # system workflows are operational noise for an app-failure alert. Drop
+        # the matcher if you want to catch those too.
+        - alert: TemporalWorkflowFailures
+          expr: |
+            sum by (exported_namespace) (
+              increase(workflow_failed{exported_namespace!="temporal-system"}[30m])
+            ) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: Temporal workflows failing in namespace {{ $labels.exported_namespace }}
+            description: |
+              {{ $value | printf "%.0f" }} Temporal workflow execution(s) reached a
+              Failed state in Temporal namespace {{ $labels.exported_namespace }} within
+              the last 30m. This alert holds for 30m after the most recent failure and
+              re-arms on each new one, so it stays active for the duration of a burst.
+
+        # Same sparse-failure hold pattern for workflow timeouts. The
+        # `workflow_timeout` series only materialises after the first timeout
+        # occurs (tally counters are not exported until first observed), so this
+        # alert stays dormant until then — that is expected, not a misconfig.
+        - alert: TemporalWorkflowTimeouts
+          expr: |
+            sum by (exported_namespace) (
+              increase(workflow_timeout{exported_namespace!="temporal-system"}[30m])
+            ) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: Temporal workflows timing out in namespace {{ $labels.exported_namespace }}
+            description: |
+              {{ $value | printf "%.0f" }} Temporal workflow execution(s) hit a run or
+              execution timeout in Temporal namespace {{ $labels.exported_namespace }}
+              within the last 30m. Holds for 30m after the most recent timeout and
+              re-arms on each new one.
