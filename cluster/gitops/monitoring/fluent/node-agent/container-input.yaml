@@ -11,7 +11,7 @@ spec:
   tail:
     # Decode the file name and store it in the tag for downstream filtering
     tag: kube.<namespace_name>.<pod_name>.<container_name>.<container_id>
-    tagRegex: ^\/var\/log\/containers\/(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<container_id>[a-z0-9]{64})\.log$
+    tagRegex: ^\/var\/log\/containers\/(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<container_id>[a-z0-9]{64})\.log$
     path: /var/log/containers/*.log
     parser: cri
     multilineParser: cri
