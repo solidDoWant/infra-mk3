@@ -20,6 +20,12 @@ spec:
         addTagPrefix: forward
         sourceAddressKey: _input.source_address
         sourceHostnameKey: _input.source_hostname
+        # Must be set explicitly: when unset the operator renders the StatefulSet
+        # forward containerPort / Service targetPort as 24424, while fluentd's
+        # in_forward still defaults to 24224 — mismatching each other AND the
+        # aggregator netpol (which allows 24224). That silently breaks forward
+        # delivery, so 24224 here is load-bearing (not just the old #1563 panic).
+        port: 24224
   fluentdCfgSelector:
     matchLabels:
       config.fluentd.fluent.io/enabled: "true"
