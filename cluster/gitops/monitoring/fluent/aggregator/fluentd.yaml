@@ -20,12 +20,10 @@ spec:
         addTagPrefix: forward
         sourceAddressKey: _input.source_address
         sourceHostnameKey: _input.source_hostname
-        # Needed until https://github.com/fluent/fluent-operator/pull/1563 merges and releases
-        port: 24224
   fluentdCfgSelector:
     matchLabels:
       config.fluentd.fluent.io/enabled: "true"
-  image: ghcr.io/fluent/fluent-operator/fluentd:v1.17.1-1
+  image: ghcr.io/fluent/fluent-operator/fluentd:v1.19.2
   mode: collector
   priorityClassName: system-cluster-critical
   replicas: 2

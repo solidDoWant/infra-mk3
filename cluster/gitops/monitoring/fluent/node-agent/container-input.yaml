@@ -19,7 +19,6 @@ spec:
     memBufLimit: 64MB
     skipLongLines: true
     db: /fluent-bit/tail/containers.db
-    # Pending merge/release of https://github.com/fluent/fluent-operator/pull/1567
-    # dbLocking: true
+    dbLocking: true
     readFromHead: true
     storageType: filesystem

@@ -64,7 +64,11 @@ spec:
               compress gzip
               <buffer tag,$._meta.stream_fields>
                 @type file
-                compress gzip
+                # zstd buffer compression (fluentd >= v1.19.0): better ratio and
+                # faster than gzip, which reduces the on-disk buffer write
+                # amplification noted above. Transport compression to VL stays
+                # gzip (out_http does not support zstd).
+                compress zstd
                 total_limit_size 4GB
                 flush_at_shutdown true
                 flush_mode interval
@@ -81,7 +85,8 @@ spec:
               compress gzip
               <buffer tag,$._meta.stream_fields>
                 @type file
-                compress gzip
+                # zstd buffer compression (fluentd >= v1.19.0); see note on store 1.
+                compress zstd
                 total_limit_size 4GB
                 flush_at_shutdown true
                 flush_mode interval

@@ -19,11 +19,9 @@ spec:
         bufferSize: 10MB
         kubeTagPrefix: kube.
         regexParser: kube-tag-parser
-        # Pending merge/release of https://github.com/fluent/fluent-operator/pull/1565
-        # useTagForMeta: true
+        useTagForMeta: true
         cacheUseDockerId: true
-        # Pending merge/release of https://github.com/fluent/fluent-operator/pull/1566
-        # ownerReferences: true
+        ownerReferences: true
     # This is a "trick" to work around the `modify` filter not supporting record accessors
     # on the action itself (only conditionals)
     - nest:
