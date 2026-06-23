@@ -32,8 +32,12 @@ spec:
   volumesMounts:
     - name: chunks
       mountPath: /fluent-bit/chunks
+  # /api/v1/uptime is a pure "process is alive" check. fluent-bit v5.0 stopped
+  # registering /api/v1/health unless `Health_Check On` is set (returns 404
+  # otherwise), and the v5.0 /api/v2/health returns 500 on output error/retry
+  # thresholds — unsafe for liveness (a fluentd outage would kill every node-agent).
   readinessProbe: &probe
     httpGet:
       port: 2020
-      path: /api/v1/health
+      path: /api/v1/uptime
   livenessProbe: *probe
