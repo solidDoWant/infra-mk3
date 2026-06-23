@@ -169,10 +169,21 @@ configure_datasets() {
     # cSpell:words primarycache
     configure_dataset "${POOL_NAME}/openebs/postgres" "primarycache" "metadata"
     # ******************************* IMPORTANT ********************************
-    # * This disables sync writes. Data will be written at least as frequently *
-    # * as zfs_txg_timeout, which is 1 seconds by default.                     *
+    # * sync=disabled drops the ZIL for these datasets: fsync() returns        *
+    # * immediately and data is flushed at most every zfs_txg_timeout (1s).    *
+    # * Risk on unclean shutdown = loss of up to ~1s of acknowledged writes    *
+    # * (ZFS stays consistent — CoW/txg-atomic, no corruption). Only applied   *
+    # * to loss-tolerant workloads (logs/metrics/buffers), NEVER to the        *
+    # * postgres databases. sync inherits to child PVC datasets, so setting it *
+    # * on these parents covers all current and future volumes (no recreate).  *
+    # * This is the dominant fsync load on the pool (vlogs alone was ~34/s)    *
+    # * that was contending with CNPG :9187 metric scrapes on the shared NVMe. *
     # **************************************************************************
     configure_dataset "${POOL_NAME}/openebs/fluent/bit" "sync" "disabled"
+    configure_dataset "${POOL_NAME}/openebs/fluent/d" "sync" "disabled"
+    configure_dataset "${POOL_NAME}/openebs/victoria-metrics/logs" "sync" "disabled"
+    configure_dataset "${POOL_NAME}/openebs/victoria-metrics/vmstorage" "sync" "disabled"
+    configure_dataset "${POOL_NAME}/openebs/victoria-metrics/anomaly" "sync" "disabled"
 
     # Daemonset quotas
     configure_dataset "${POOL_NAME}/daemonset/monitoring/fluent/node-agent" "quota" "10G"
