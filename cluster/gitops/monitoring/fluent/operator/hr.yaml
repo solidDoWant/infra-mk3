@@ -19,6 +19,12 @@ spec:
     operator:
       extraArgs:
         - --leader-elect=true
+        # Operator 3.9.0 defaults --metrics-bind-address to "0" (metrics disabled)
+        # and --metrics-secure to true (HTTPS). The chart still ships an HTTP
+        # metrics Service + ServiceMonitor on 8080, so enable HTTP metrics there
+        # explicitly, otherwise the scrape gets connection-refused.
+        - --metrics-bind-address=:8080
+        - --metrics-secure=false
       # Leave resources unbounded so actual usage can be measured (the chart's
       # default caps are low). `null` clears the chart's default requests/limits.
       resources: null
