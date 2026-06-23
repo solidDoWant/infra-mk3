@@ -12,3 +12,8 @@ spec:
   forward:
     host: fluentd-aggregator.monitoring.svc
     requireAckResponse: true
+    # fluent-bit v5.0.4 flipped this default to true, which embeds event metadata
+    # in an extended MessagePack that the Fluentd aggregator cannot parse (it
+    # rejects the events). Keep it false to stay compatible with the Fluentd
+    # collector this forwards to.
+    retainMetadataInForwardMode: false
