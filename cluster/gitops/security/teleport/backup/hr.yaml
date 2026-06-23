@@ -20,7 +20,7 @@ spec:
       drType: teleport
       drAction: backup
       cronjob:
-        schedule: "@daily"
+        schedule: "40 1 * * *" # Staggered to avoid concurrent snapshots on the shared zfs-generic-nfs provisioner
       configFile:
         backupName: teleport-backup
         backupVolume:

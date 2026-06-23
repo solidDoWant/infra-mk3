@@ -20,7 +20,7 @@ spec:
       drType: generic
       drAction: backup
       cronjob:
-        schedule: "@daily"
+        schedule: "30 0 * * *" # Staggered to avoid concurrent snapshots on the shared zfs-generic-nfs provisioner
       configFile:
         backupName: seerr-backup
         backupVolume:

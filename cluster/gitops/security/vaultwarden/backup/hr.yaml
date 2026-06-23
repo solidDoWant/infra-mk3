@@ -20,7 +20,7 @@ spec:
       drType: vaultwarden
       drAction: backup
       cronjob:
-        schedule: "@daily"
+        schedule: "50 0 * * *" # Staggered to avoid concurrent snapshots on the shared zfs-generic-nfs provisioner
       configFile:
         backupName: vaultwarden-backup
         backupVolume:
