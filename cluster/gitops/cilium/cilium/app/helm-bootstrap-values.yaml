@@ -41,7 +41,7 @@ dashboards: &dashboards
   namespace: cilium
   label: "" # Remove the label, and use operator resources to load the dashboards.
 debug:
-  enabled: true
+  enabled: false
 # Looks like the NIC on the ms-01 nodes does not support GRO :(
 # enableIPv4BIGTCP: true
 # This is a tradeoff between performance (not where you'd think) and security
