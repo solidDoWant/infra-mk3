@@ -24,23 +24,65 @@ locals {
   uid = 1000
   gid = local.uid
 
+  # NFS bulk storage. A single mount of the pool root exposes every share
+  # underneath it (e.g. /mnt/bulk-pool-01/media), provided the NFS server
+  # exports the parent path - the client never enumerates individual shares.
+  # These mirror NFS_ADDRESS / the parent of NFS_MEDIA_PATH from the Flux
+  # cluster-config; Flux variable substitution does not reach this template
+  # (it is pushed with `coder templates push`), so the values are inlined.
+  nfs_address    = "10.2.3.1"
+  nfs_path       = "/mnt/bulk-pool-01"
+  nfs_mount_path = "/mnt/bulk-pool-01"
+
+  # Cluster PKI root CA. The root-ca-pub-cert secret is replicated into every
+  # namespace by the extract-root-ca-certificate Kyverno ClusterPolicy. Mounting
+  # ca.crt into Ubuntu's CA drop-in dir (+ update-ca-certificates on start) makes
+  # every process in the pod trust the cluster's internal CA automatically.
+  cluster_ca_secret     = "root-ca-pub-cert"
+  cluster_ca_mount_path = "/usr/local/share/ca-certificates/cluster-pki-root.crt"
+
+  # Public domain (SECRET_PUBLIC_DOMAIN_NAME), read from the Flux-substituted
+  # coder-workspace-cluster-info ConfigMap. The template files are pushed
+  # out-of-band so they never see Flux substitution, and the coder access_url is
+  # the internal service URL (coder.development.svc.cluster.local), not the
+  # public domain. teleport.<public-domain> resolves to the internal ingress
+  # gateway (allowed by the netpol egress rule below).
+  public_domain  = data.kubernetes_config_map.cluster_info.data["public_domain_name"]
+  teleport_proxy = "teleport.${local.public_domain}:443"
+
   env_vars = {
     CODER_TELEMETRY_ENABLE           = "false"
     CODER_AGENT_TOKEN                = coder_agent.main.token
     CODER_DERP_SERVER_STUN_ADDRESSES = "disable"
+    # Node does not consult the system trust store; point it at the mounted CA so
+    # node-based tooling (e.g. Claude Code) also trusts the cluster PKI root.
+    NODE_EXTRA_CA_CERTS = local.cluster_ca_mount_path
+    # Default the Teleport proxy so `tsh login` works with no flags.
+    TELEPORT_PROXY = local.teleport_proxy
   }
 
-  pvcs = {
-    home = {
-      size_gb    = data.coder_parameter.home_disk_size.value
-      mount_path = "/home/coder"
-    }
+  pvcs = merge(
+    {
+      home = {
+        size_gb    = data.coder_parameter.home_disk_size.value
+        mount_path = "/home/coder"
+      }
 
-    workspace = {
-      size_gb    = data.coder_parameter.workspace_disk_size.value
-      mount_path = "/workspace"
-    }
-  }
+      workspace = {
+        size_gb    = data.coder_parameter.workspace_disk_size.value
+        mount_path = "/workspace"
+      }
+    },
+    # Persistent Nix store (single-user install puts the store at /nix). Only
+    # created when Nix is enabled, so packages are cached across restarts instead
+    # of being re-downloaded on every boot.
+    local.enable_nix ? {
+      "nix-store" = {
+        size_gb    = data.coder_parameter.nix_store_disk_size.value
+        mount_path = "/nix"
+      }
+    } : {}
+  )
 
   runtime_class = "kata"
 
@@ -64,7 +106,18 @@ locals {
 # Parameters
 locals {
   workspace_resources_order_start = local.claude_order_start + local.claude_size
-  workspace_resources_size        = 7
+  workspace_resources_size        = 8
+}
+
+data "coder_parameter" "enable_nfs" {
+  name         = "enable_nfs"
+  display_name = "Mount NFS storage"
+  description  = "Mount the bulk-pool-01 NFS storage (all shares) at ${local.nfs_mount_path}"
+  type         = "bool"
+  default      = "false"
+  mutable      = true
+  icon         = "/emojis/1f4c1.png"
+  order        = local.workspace_resources_order_start + 7
 }
 
 data "coder_parameter" "cpu" {
@@ -183,6 +236,15 @@ data "coder_workspace_owner" "me" {}
 # Actual Kubernetes resources
 provider "kubernetes" {}
 
+# Flux-substituted cluster values (e.g. the public domain) for use in the
+# template. See the coder-workspace-cluster-info ConfigMap.
+data "kubernetes_config_map" "cluster_info" {
+  metadata {
+    name      = "coder-workspace-cluster-info"
+    namespace = local.namespace
+  }
+}
+
 # Use an external datasource to get a list of available environment variables
 locals {
   environment_vars = [
@@ -202,6 +264,7 @@ locals {
   is_in_cluster = data.external.env.result["KUBE_POD_IP"] != ""
 
   enable_gpu       = data.coder_parameter.enable_gpu.value == "true"
+  enable_nfs       = data.coder_parameter.enable_nfs.value == "true"
   gpu_admin_access = data.coder_parameter.gpu_admin_access.value == "true"
   gpu_cel_selector = data.coder_parameter.gpu_type.value == "arc-pro" ? "device.attributes[\"gpu.intel.com\"].family == 'Arc Pro'" : "device.attributes[\"gpu.intel.com\"].family == 'Iris Xe'"
 }
@@ -243,6 +306,10 @@ resource "kubectl_manifest" "deployment" {
   server_side_apply = true
   ignore_fields     = ["status"]
 
+  timeouts {
+    create = "10m"
+  }
+
   yaml_body = yamlencode({
     apiVersion = "apps/v1"
     kind       = "Deployment"
@@ -271,7 +338,12 @@ resource "kubectl_manifest" "deployment" {
             # User namespace isolation: root (uid 0) inside the container maps to an
             # unprivileged UID on the host, providing VM-equivalent containment without
             # needing Kata when GPU passthrough is required.
-            hostUsers          = local.enable_gpu
+            #
+            # Kata does NOT support user namespaces ("RuntimeClass handler kata does not
+            # support user namespaces"), so the non-GPU/Kata path must run with hostUsers
+            # true. NFS likewise rejects userns ("user namespaces are not supported with
+            # nfs mounts"). Only the GPU path (runc, no Kata) without NFS gets a userns.
+            hostUsers          = !local.enable_gpu || local.enable_nfs
             enableServiceLinks = false
             hostname           = data.coder_workspace.me.name
             securityContext = {
@@ -279,6 +351,10 @@ resource "kubectl_manifest" "deployment" {
               runAsGroup   = local.gid
               fsGroup      = local.gid
               runAsNonRoot = true
+              # Avoid a recursive chown of the (multi-TB) NFS share on startup.
+              # The bulk-pool shares are already owned by gid 1000, so the root
+              # gid matches and kubelet skips the recursive ownership change.
+              fsGroupChangePolicy = "OnRootMismatch"
             }
             containers = [{
               name            = "dev"
@@ -286,7 +362,16 @@ resource "kubectl_manifest" "deployment" {
               imagePullPolicy = "Always"
               command         = ["sh", "-c", coder_agent.main.init_script]
               env             = [for k, v in local.env_vars : { name = k, value = v }]
-              volumeMounts    = [for k, v in local.pvcs : { name = k, mountPath = v.mount_path }]
+              volumeMounts = concat(
+                [for k, v in local.pvcs : { name = k, mountPath = v.mount_path }],
+                local.enable_nfs ? [{ name = "nfs-bulk-pool", mountPath = local.nfs_mount_path }] : [],
+                [{
+                  name      = "cluster-pki-root"
+                  mountPath = local.cluster_ca_mount_path
+                  subPath   = "cluster-pki-root.crt"
+                  readOnly  = true
+                }]
+              )
               resources = merge(
                 {
                   limits = local.enable_gpu ? {
@@ -308,12 +393,31 @@ resource "kubectl_manifest" "deployment" {
                 }
               }
             }]
-            volumes = [for k, v in local.pvcs : {
-              name = k
-              persistentVolumeClaim = {
-                claimName = kubernetes_persistent_volume_claim.pvcs[k].metadata[0].name
-              }
-            }]
+            volumes = concat(
+              [for k, v in local.pvcs : {
+                name = k
+                persistentVolumeClaim = {
+                  claimName = kubernetes_persistent_volume_claim.pvcs[k].metadata[0].name
+                }
+              }],
+              local.enable_nfs ? [{
+                name = "nfs-bulk-pool"
+                nfs = {
+                  server = local.nfs_address
+                  path   = local.nfs_path
+                }
+              }] : [],
+              [{
+                name = "cluster-pki-root"
+                secret = {
+                  secretName = local.cluster_ca_secret
+                  items = [{
+                    key  = "ca.crt"
+                    path = "cluster-pki-root.crt"
+                  }]
+                }
+              }]
+            )
             hostAliases = [{
               hostnames = local.blackhole_domains
               ip        = local.blackhole_address
@@ -374,8 +478,12 @@ resource "kubernetes_pod_disruption_budget_v1" "main" {
 resource "kubectl_manifest" "netpol" {
   count             = data.coder_workspace.me.start_count
   server_side_apply = true
-  wait              = true
-  ignore_fields     = ["status"]
+  # cilium-operator-generic co-manages parts of .specs (it writes derived policy
+  # state back via the status subresource), so a plain SSA update conflicts. Force
+  # ownership of the fields we declare; we remain the manager of the policy intent.
+  force_conflicts = true
+  wait            = true
+  ignore_fields   = ["status"]
 
   yaml_body = yamlencode({
     "apiVersion" = "cilium.io/v2"
@@ -431,6 +539,36 @@ resource "kubectl_manifest" "netpol" {
             "toEndpoints" = [
               {
                 "matchLabels" = local.coder_labels
+              }
+            ]
+          },
+
+          # To the internal ingress gateway, where teleport.<public-domain>
+          # resolves for in-cluster clients (the gateway TLS-terminates and
+          # re-encrypts to the Teleport proxy). Routing via the gateway means
+          # tsh works even though it follows the proxy's advertised public_addr.
+          # The gateway's own netpol admits in-cluster clients (fromEntities:
+          # cluster) on 443, so no extra label is needed on this pod. The gateway
+          # IP is in 10.0.0.0/8, which the internet rule below excepts, so this
+          # explicit allow is required.
+          {
+            "toEndpoints" = [
+              {
+                "matchLabels" = {
+                  "io.kubernetes.pod.namespace"            = "networking"
+                  "app.kubernetes.io/name"                 = "ingress-gateways"
+                  "gateway.networking.k8s.io/gateway-name" = "internal-gateway"
+                }
+              }
+            ]
+            "toPorts" = [
+              {
+                "ports" = [
+                  {
+                    "port"     = "443"
+                    "protocol" = "TCP"
+                  }
+                ]
               }
             ]
           },

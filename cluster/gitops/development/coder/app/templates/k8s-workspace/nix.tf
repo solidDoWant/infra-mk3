@@ -1,7 +1,7 @@
 # Parameters
 locals {
   nix_order_start = local.code_server_order_start + local.code_server_size
-  nix_size        = 1
+  nix_size        = 2
 }
 
 data "coder_parameter" "enable_nix" {
@@ -14,6 +14,23 @@ data "coder_parameter" "enable_nix" {
   icon         = "/icon/nix.svg"
   mutable      = true
   order        = local.nix_order_start + 0
+}
+
+data "coder_parameter" "nix_store_disk_size" {
+  name         = "nix_store_disk_size"
+  display_name = "Nix store disk size"
+  description  = "Size of the persistent /nix store cache disk in GB. Only used when Nix is enabled."
+  default      = "20"
+  type         = "number"
+  icon         = "/icon/nix.svg"
+  mutable      = true
+  order        = local.nix_order_start + 1
+
+  validation {
+    min       = 1
+    max       = 100
+    monotonic = "increasing"
+  }
 }
 
 locals {

@@ -37,6 +37,15 @@ spec:
               - coder-claude-oauth-token
             verbs:
               - get
+          # Read cluster info (e.g. public domain) for the workspace template
+          - apiGroups:
+              - ""
+            resources:
+              - configmaps
+            resourceNames:
+              - coder-workspace-cluster-info
+            verbs:
+              - get
           # Rule to manage CiliumNetworkPolicy objects for workspaces
           - apiGroups:
               - cilium.io

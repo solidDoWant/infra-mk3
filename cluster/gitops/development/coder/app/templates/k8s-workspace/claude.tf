@@ -47,6 +47,14 @@ module "claude_code" {
 
   subdomain = true
 
+  # Disable all Coder reporting integration: the injected CLAUDE.md/system-prompt
+  # task-reporting instructions, the coder MCP server (coder_report_task tool), and
+  # task-status reporting to the Coder UI. With this false, install.sh runs
+  # configure_standalone_mode (no coder MCP, no reporting prompt) while AgentAPI
+  # still powers the Claude web/CLI app. Intentionally hardcoded with no
+  # coder_parameter, so there is no path to re-enable reporting per-workspace.
+  report_tasks = false
+
   model                        = "sonnet"
   workdir                      = local.repo_directory
   dangerously_skip_permissions = true

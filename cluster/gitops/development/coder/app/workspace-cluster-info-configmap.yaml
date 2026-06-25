@@ -1,0 +1,12 @@
+---
+# Exposes Flux-substituted cluster values to the coder workspace Terraform
+# template. The template files are pushed out-of-band via `coder templates push`
+# and never see Flux substitution themselves, and the coder access_url is the
+# internal service URL (not the public domain), so the template reads this
+# ConfigMap to obtain SECRET_PUBLIC_DOMAIN_NAME at plan time.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coder-workspace-cluster-info
+data:
+  public_domain_name: ${SECRET_PUBLIC_DOMAIN_NAME}
