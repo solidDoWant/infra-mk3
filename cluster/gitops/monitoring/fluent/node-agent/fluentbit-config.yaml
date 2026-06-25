@@ -24,6 +24,10 @@ spec:
       path: /fluent-bit/chunks
       deleteIrrecoverableChunks: "on"
       checksum: "on"
-      sync: full
+      # normal (not full): fsync chunks on rotation/shutdown, not on every
+      # write. full was the dominant fsync/write-op amplifier on the node-agent
+      # buffer for a loss-tolerant log stream — normal keeps crash-consistency
+      # of completed chunks without an fsync per chunk write.
+      sync: normal
       metrics: "on"
     # logLevel: trace

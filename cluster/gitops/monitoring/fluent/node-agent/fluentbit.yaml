@@ -31,6 +31,16 @@ spec:
       path: /var/mnt/local-storage/daemonset/monitoring/fluent/node-agent/position-db
       type: DirectoryOrCreate
   fluentBitConfigName: fluentbit-node-agent-config
+  # Additively pulls in per-namespace FluentBitConfigs (filter-only) so a
+  # namespace can own its node-agent log filters vertically — see
+  # cluster/components/logging/namespace. Their filters merge into the same
+  # rendered fluent-bit.conf as this cluster config's input/output. Scoped to
+  # the convention labels (not an empty/match-all selector) so pickup is
+  # intentional.
+  namespaceFluentBitCfgSelector:
+    matchLabels:
+      config.fluentbit.fluent.io/enabled: "true"
+      config.fluentbit.fluent.io/agent: node
   priorityClassName: system-node-critical
   # Needed for kubelet access
   hostNetwork: true

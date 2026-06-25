@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  # Sorts before "kubernetes" so the drop happens before the (kubelet-querying)
+  # kubernetes enrichment filter — dropped records skip enrichment entirely.
+  name: drop-leaderelection-spam
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: kube.*
+  filters:
+    # client-go leaderelection from a standby replica re-logs every renewal
+    # attempt (~every 2s) — pure noise (VPA recommender, openebs-zfs controller,
+    # etc.). Leader state is observable via Lease objects/metrics, never needs
+    # log archival. We drop only the high-frequency standby chatter and KEEP the
+    # rare, meaningful transitions ("successfully acquired lease", "became
+    # leader", "stopped leading"). Field is `log` (CRI parser body key).
+    - grep:
+        exclude: 'log (failed to acquire lease|lock is held by)'

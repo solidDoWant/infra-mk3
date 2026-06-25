@@ -116,7 +116,9 @@ spec:
               args:
                 topologyBalanceNodeFit: true
     cmdOptions:
-      v: 4
+      # v=1 keeps actual evictions (klog V(1)) and errors while dropping the
+      # per-pod evaluation spam.
+      v: 1
     service:
       enabled: true
     serviceMonitor:
