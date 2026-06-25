@@ -31,13 +31,11 @@ spec:
       operator:
         # Delete the VM version of prom resources if the prom resources are deleted
         enable_converter_ownership: true
-      # Drop the operator's default 200m CPU limit for vmalert ("0" is the operator's
-      # "unlimited" sentinel: the field is skipped, not set to a literal 0). vmalert rule
-      # evaluation is bursty and was being CFS-throttled against the 200m default. The
-      # default CPU/mem requests and the 500Mi memory limit are still applied.
+      # Disable the operator's per-field default resource injection for VMAlert so we can
+      # omit the CPU limit
       env:
-        - name: VM_VMALERTDEFAULT_RESOURCE_LIMIT_CPU
-          value: "0"
+        - name: VM_VMALERTDEFAULT_USEDEFAULTRESOURCES
+          value: "false"
       replicaCount: 2
       podDisruptionBudget:
         enabled: true
@@ -365,6 +363,16 @@ spec:
         useStrictSecurity: true
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
+        # Explicit resources (operator default injection is disabled via
+        # VM_VMALERTDEFAULT_USEDEFAULTRESOURCES=false). No CPU limit on purpose: rule
+        # evaluation is bursty and a CPU limit only causes CFS throttling. Requests and the
+        # memory limit are kept; values mirror the operator's former defaults.
+        resources:
+          requests:
+            cpu: 50m
+            memory: 200Mi
+          limits:
+            memory: 500Mi
         extraArgs:
           # This will be used in the "source" links in the alert messages.
           # This will add grafana links to alerts.
