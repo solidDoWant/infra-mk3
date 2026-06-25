@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# ClusterFilter (NOT namespaced): fluent-operator's namespaced-Filter isolation
+# rewrites the Match with a per-namespace hash via an injected rewrite_tag keyed
+# on `$kubernetes['namespace_name']` — which this repo's kubernetes filter nests
+# to `kubernetes.namespace.name`, so the rewrite never fires and namespaced
+# filters silently match nothing (fluent/fluent-operator#1211, #1096; the
+# emitterRuleKey fix was never merged). ClusterFilters skip that machinery, so
+# the Match is used verbatim and actually works.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: coredns-drop-successful-queries
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # All three coredns deployments in the networking namespace.
+  matchRegex: ^kube\.networking\.coredns
+  filters:
+    # CoreDNS query logging stays enabled (lines still hit /var/log -> visible
+    # via `kubectl logs`). This only keeps successful responses OUT of the
+    # ingest pipeline: excluding `" NOERROR ` drops successes (incl. NODATA)
+    # while KEEPING NXDOMAIN / SERVFAIL / REFUSED / etc. (more likely to
+    # indicate a real problem), plus [ERROR]/[WARNING]. Field is `log`.
+    - grep:
+        exclude: 'log " NOERROR '
