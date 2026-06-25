@@ -31,6 +31,13 @@ spec:
       operator:
         # Delete the VM version of prom resources if the prom resources are deleted
         enable_converter_ownership: true
+      # Drop the operator's default 200m CPU limit for vmalert ("0" is the operator's
+      # "unlimited" sentinel: the field is skipped, not set to a literal 0). vmalert rule
+      # evaluation is bursty and was being CFS-throttled against the 200m default. The
+      # default CPU/mem requests and the 500Mi memory limit are still applied.
+      env:
+        - name: VM_VMALERTDEFAULT_RESOURCE_LIMIT_CPU
+          value: "0"
       replicaCount: 2
       podDisruptionBudget:
         enabled: true
