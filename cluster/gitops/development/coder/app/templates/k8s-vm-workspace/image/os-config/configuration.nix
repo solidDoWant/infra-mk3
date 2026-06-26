@@ -107,7 +107,20 @@
 
     # Keep a copy of the system config in the image for reference / rebuilds.
     etc."nixos".source = ./.;
+
+    # The Coder modules install tools into ~/.local/bin (Claude Code) and
+    # /usr/local/bin (AgentAPI); put both on interactive shells' PATH too so the
+    # user can run them directly.
+    localBinInPath = true;
+    extraInit = ''
+      export PATH="$PATH:/usr/local/bin"
+    '';
   };
+
+  # /usr/local/bin doesn't exist on NixOS; the AgentAPI installer does
+  # `mv agentapi /usr/local/bin/` and fails without it. Create it (ephemeral root,
+  # recreated each boot - the module reinstalls on start anyway).
+  systemd.tmpfiles.rules = [ "d /usr/local/bin 0755 root root -" ];
 
   users = {
     # Coder workspace user. uid/gid 1000 to match the agent expectations and the
@@ -177,7 +190,10 @@
         ExecStart = pkgs.writeShellScript "coder-set-hostname" ''
           name=$(${pkgs.coreutils}/bin/tr -d '[:space:]' < /etc/coder/hostname)
           [ -n "$name" ] || exit 0
-          ${pkgs.systemd}/bin/hostnamectl set-hostname "$name"
+          # --transient only: /etc/hostname is a read-only Nix store path, so the
+          # static hostname can't be written. The transient hostname is what
+          # gethostname()/Teleport read, which is all we need.
+          ${pkgs.systemd}/bin/hostnamectl --transient set-hostname "$name"
         '';
       };
     };
@@ -209,9 +225,12 @@
         EnvironmentFile = "/etc/coder/agent.env";
         # Make system tooling + the sudo wrapper available to the agent and the
         # scripts it spawns.
+        # Includes the dirs the Coder modules install into - ~/.local/bin (Claude
+        # Code) and /usr/local/bin (AgentAPI) - so the scripts that later invoke
+        # `claude` / `agentapi` find them on PATH.
         Environment = [
           "HOME=/home/coder"
-          "PATH=/run/wrappers/bin:/home/coder/.nix-profile/bin:/run/current-system/sw/bin:/usr/bin:/bin"
+          "PATH=/run/wrappers/bin:/home/coder/.nix-profile/bin:/home/coder/.local/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin"
         ];
         ExecStart = "${pkgs.coder}/bin/coder agent";
         Restart = "on-failure";
