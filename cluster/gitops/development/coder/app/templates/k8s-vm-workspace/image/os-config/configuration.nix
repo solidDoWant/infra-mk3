@@ -65,8 +65,14 @@
   # (mounts the CA via virtiofs and builds a combined system+cluster bundle).
 
   networking = {
-    hostName = lib.mkDefault "coder-workspace"; # overridden by cloud-init
+    # Empty so nothing here imposes a name; the hostname is set at runtime to the
+    # Coder workspace name by the coder-set-hostname service below (so the VM, the
+    # shell prompt, and the Teleport node all show the workspace name).
+    hostName = lib.mkForce "";
     useDHCP = lib.mkForce true; # KubeVirt masquerade serves the guest via DHCP
+    # KubeVirt's DHCP hands out the VM id as the hostname; don't let dhcpcd apply
+    # it, or it would clobber the workspace name we set above.
+    dhcpcd.extraConfig = "nohook hostname";
     # Outbound-only workload (the agent dials out and tunnels apps); the
     # CiliumNetworkPolicy is the real perimeter. Keep the host firewall simple.
     firewall.enable = false;
@@ -128,6 +134,12 @@
   };
 
   services = {
+    # Serve /bin and /usr/bin from PATH (FUSE). Non-Nix tooling that hard-codes
+    # `#!/bin/bash` - notably the Coder Claude Code / AgentAPI install scripts -
+    # otherwise fails instantly (NixOS has no /bin/bash), so Claude never starts
+    # and the app shows "unresponsive". envfs makes /bin/bash and friends resolve.
+    envfs.enable = true;
+
     cloud-init = {
       enable = true;
       network.enable = false; # KubeVirt masquerade + DHCP handles networking
@@ -143,6 +155,40 @@
   systemd.services = {
     # Restart the serial console on exit so `kubectl virt console` keeps working.
     "serial-getty@ttyS0".serviceConfig.Restart = "always";
+
+    # Set the guest hostname to the Coder workspace name (written to
+    # /etc/coder/hostname by cloud-init). Runs before Teleport and the agent so
+    # the Teleport node and the agent see the right name. networking.hostName is
+    # forced empty and dhcpcd's hostname hook is disabled (see networking above),
+    # so this is the single authority for the hostname.
+    coder-set-hostname = {
+      description = "Set the hostname to the Coder workspace name";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "cloud-init.service" ];
+      wants = [ "cloud-init.service" ];
+      before = [
+        "teleport.service"
+        "coder-agent.service"
+      ];
+      unitConfig.ConditionPathExists = "/etc/coder/hostname";
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "coder-set-hostname" ''
+          name=$(${pkgs.coreutils}/bin/tr -d '[:space:]' < /etc/coder/hostname)
+          [ -n "$name" ] || exit 0
+          ${pkgs.systemd}/bin/hostnamectl set-hostname "$name"
+        '';
+      };
+    };
+
+    # Teleport registers as a node under the OS hostname, so it must start after
+    # the hostname has been set to the workspace name (merges with the ordering
+    # in modules/teleport-node).
+    teleport = {
+      after = [ "coder-set-hostname.service" ];
+      wants = [ "coder-set-hostname.service" ];
+    };
 
     # The Coder agent. cloud-init writes /etc/coder/agent.env (token, server URL,
     # etc.) on boot, then starts this unit (see cloud-init.yaml.tftpl). Runs the

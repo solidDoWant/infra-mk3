@@ -16,6 +16,17 @@ write_files:
     owner: root:root
     content: ${AGENT_ENV_B64}
 
+  # The Coder workspace name. The coder-set-hostname service (in the image) reads
+  # this and sets the guest hostname to it, so the VM, the shell prompt, and the
+  # Teleport node all show the workspace name instead of the opaque KubeVirt VM
+  # id (or the DHCP/NixOS default). Set here as the authoritative source applied
+  # before Teleport and the agent start; the `hostname:` directive above is a
+  # best-effort early hint.
+  - path: /etc/coder/hostname
+    permissions: '0644'
+    owner: root:root
+    content: ${HOSTNAME}
+
 %{ if ENABLE_NFS ~}
 # Mount the bulk-pool NFS share. Written to /etc/fstab so it survives reboots;
 # nofail/_netdev keep boot resilient if the server is unreachable.

@@ -1,13 +1,13 @@
 ---
-display_name: Workspace on Kubernetes (VM)
+display_name: Workspace on Kubernetes (virtual machine)
 description: Provision a workspace as a NixOS KubeVirt virtual machine
-icon: /icon/k8s.svg
+icon: /icon/desktop.svg
 maintainer_github: solidDoWant
 verified: true
 tags: [kubernetes, vm, kubevirt, nixos]
 ---
 
-# Workspace on Kubernetes (VM)
+# Workspace on Kubernetes (virtual machine)
 
 A workspace that runs as a full virtual machine (NixOS) instead of a container.
 Unlike the standard workspace, it has a real, mutable kernel — you can **load
