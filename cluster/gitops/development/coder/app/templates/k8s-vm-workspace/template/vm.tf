@@ -16,8 +16,13 @@
 # traffic out the launcher pod IP, so the VM behaves like a normal pod.
 resource "kubectl_manifest" "vm" {
   server_side_apply = true
-  wait              = false
-  ignore_fields     = ["status"]
+  # KubeVirt's virt-api co-owns .spec.runStrategy (it writes it back when
+  # processing start/stop), but this template is the intended owner - it drives
+  # runStrategy from the Coder start_count. Without forcing, the start/stop apply
+  # fails with an SSA field-manager conflict on runStrategy.
+  force_conflicts = true
+  wait            = false
+  ignore_fields   = ["status"]
 
   timeouts {
     create = "10m"
