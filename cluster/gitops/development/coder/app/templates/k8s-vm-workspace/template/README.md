@@ -19,34 +19,40 @@ lighter standard container template.
 
 ## Image
 
-The VM boots a NixOS image built from [`./nix`](./nix) and pushed to Harbor
-(`harbor.<domain>/coder/nixos-workspace`). Tooling is declarative: add packages,
-kernel modules, and services to `nix/os-config/configuration.nix`, rebuild, and
-push a new image — the running system always matches the image.
+The VM boots a NixOS image built from the sibling
+[`../image`](../image) directory and pushed to
+Harbor (`harbor.<domain>/coder/nixos-workspace`). The image build lives outside
+this `template/` directory on purpose: Coder bundles the whole pushed directory
+(`template/`) on push, and a `nix/` subtree inside it breaks Coder's
+dynamic-parameter evaluation. Keeping it at `../image` (a sibling of `template/`,
+not under it) avoids that.
+Tooling is declarative: add packages, kernel modules, and services to
+`os-config/configuration.nix`, rebuild, and push a new image — the running system
+always matches the image.
 
 To build and publish the image:
 
 ```sh
-cd nix
+cd ../image
 make vm-image PUSH_ALL=true
 ```
 
 ## Persistence
 
 The system root is **ephemeral** — it is reset from the image on every boot, so
-updating the base image is just a tag bump (no in-place upgrades, no drift). All
-durable state lives on a **single persistent disk**:
+updating the base image is just a tag bump (no in-place upgrades, no drift).
+Durable state lives on a **single persistent disk**:
 
 - `/home/coder` and `/workspace` — persisted via bind mounts (impermanence).
-- `/nix/store` — a persistent overlay so packages installed at runtime
-  (`nix profile install`, `nix develop`) survive reboots and base-image updates.
+- `/var/lib/nixos`, `/var/lib/teleport` — stable system ids + Teleport identity.
 
-> [!WARNING]
-> The persistent `/nix/store` overlay keeps user-installed store paths at the
-> file level, but the nix database lives on the ephemeral root and resets each
-> boot. Do **not** run `nix-collect-garbage` in this workspace, and prefer adding
-> durable tooling declaratively in the image flake. (This overlay is the piece to
-> validate first when bringing the template up.)
+> [!NOTE]
+> `/nix` comes from the image, so packages installed *at runtime*
+> (`nix profile install`) do **not** persist across reboots — add durable tooling
+> declaratively in the image flake instead (the intended workflow). A persistent
+> `/nix/store` overlay was prototyped but disabled: the initrd
+> overlay-over-its-own-lowerdir dropped the VM to emergency mode, so it needs the
+> bind-the-lowerdir-first pattern before it can ship.
 
 ## Access
 

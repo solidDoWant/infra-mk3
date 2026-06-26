@@ -89,6 +89,8 @@ resource "kubectl_manifest" "vm" {
               ]
               filesystems = [
                 {
+                  # Cluster PKI root CA; the guest builds a combined trust bundle
+                  # from it at boot (see nix/.../modules/ca-trust).
                   name     = "root-ca"
                   virtiofs = {}
                 },
@@ -121,6 +123,9 @@ resource "kubectl_manifest" "vm" {
               containerDisk = {
                 image           = local.vm_root_image
                 imagePullPolicy = "Always"
+                # The image lives in a private Harbor project; KubeVirt pulls the
+                # containerDisk with this dockerconfigjson secret (development ns).
+                imagePullSecret = local.image_pull_secret
               }
             },
             {

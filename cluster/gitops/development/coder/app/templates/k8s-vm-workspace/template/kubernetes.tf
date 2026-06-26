@@ -38,12 +38,12 @@ locals {
   nfs_path       = "/mnt/bulk-pool-01"
   nfs_mount_path = "/mnt/bulk-pool-01"
 
-  # Cluster PKI root CA. The root-ca-pub-cert secret is replicated into every
-  # namespace by the extract-root-ca-certificate Kyverno ClusterPolicy. The VM
-  # mounts it via virtiofs at /mnt/root-ca (see vm.tf), and the NixOS image adds
-  # it to the system trust store declaratively (security.pki.certificateFiles).
-  cluster_ca_secret     = "root-ca-pub-cert"
-  cluster_ca_mount_path = "/mnt/root-ca/ca.crt"
+  # Cluster PKI root CA. Mounted into the VM via virtiofs (from this secret) at
+  # /mnt/root-ca; the NixOS image (see nix/.../modules/ca-trust) builds a combined
+  # system+cluster bundle at boot and points the system at it. NODE_EXTRA_CA_CERTS
+  # is additive for node tooling, so it points at the cluster cert directly.
+  cluster_ca_secret    = "root-ca-pub-cert"
+  cluster_ca_cert_path = "/mnt/root-ca/ca.crt"
 
   # Public domain (SECRET_PUBLIC_DOMAIN_NAME), read from the Flux-substituted
   # coder-workspace-cluster-info ConfigMap. The template files are pushed
@@ -57,6 +57,10 @@ locals {
   # The NixOS workspace base image, built and pushed to Harbor by ./nix (see the
   # Makefile there). Used as the VM's ephemeral containerDisk root.
   vm_root_image = "harbor.${local.public_domain}/coder/nixos-workspace:latest"
+
+  # dockerconfigjson secret (development ns) KubeVirt uses to pull the private
+  # containerDisk image from Harbor.
+  image_pull_secret = "coder-pull-credentials"
 
   # ServiceAccount projected into the VM for the Teleport kubernetes join. It is
   # Flux-managed (created once, see coder/app/teleport-vm-workspace.yaml) and
@@ -74,7 +78,7 @@ locals {
     CODER_DERP_SERVER_STUN_ADDRESSES = "disable"
     # Node does not consult the system trust store; point it at the mounted CA so
     # node-based tooling (e.g. Claude Code) also trusts the cluster PKI root.
-    NODE_EXTRA_CA_CERTS = local.cluster_ca_mount_path
+    NODE_EXTRA_CA_CERTS = local.cluster_ca_cert_path
     # Default the Teleport proxy so `tsh login` works with no flags.
     TELEPORT_PROXY = local.teleport_proxy
   }

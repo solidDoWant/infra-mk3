@@ -6,6 +6,7 @@
 }:
 {
   imports = [
+    ./modules/ca-trust
     ./modules/git
     ./modules/persistence
     ./modules/teleport-node
@@ -60,17 +61,8 @@
     ];
   };
 
-  # Mount the cluster root CA (virtiofs share from the root-ca-pub-cert secret)
-  # and trust it system-wide.
-  fileSystems."/mnt/root-ca" = {
-    device = "root-ca";
-    fsType = "virtiofs";
-    options = [
-      "ro"
-      "nofail"
-    ];
-  };
-  security.pki.certificateFiles = [ "/mnt/root-ca/ca.crt" ];
+  # Cluster PKI root CA trust is handled at runtime - see ./modules/ca-trust
+  # (mounts the CA via virtiofs and builds a combined system+cluster bundle).
 
   networking = {
     hostName = lib.mkDefault "coder-workspace"; # overridden by cloud-init

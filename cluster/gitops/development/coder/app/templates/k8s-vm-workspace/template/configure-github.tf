@@ -176,7 +176,7 @@ resource "coder_env" "git_commmiter_email" {
 }
 
 # NOTE: static system-wide git config (the former configure-git.sh) is now baked
-# into the NixOS image declaratively via programs.git (see nix/os-config/modules/git).
+# into the NixOS image declaratively via programs.git (see ../image/os-config/modules/git).
 # Only the per-user bits remain here as runtime scripts/env.
 
 resource "coder_script" "configure_github_cli" {
