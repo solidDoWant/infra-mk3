@@ -21,7 +21,7 @@ spec:
       permitBridgeInterfaceOnPodNetwork: false
     # Roll out changes right away via migrations where supported
     vmRolloutStrategy: LiveUpdate
-    vmStateStorageClass: ssd-replicated-3d
+    vmStateStorageClass: ssd-replicated-3x
   monitorNamespace: monitoring
   monitorAccount: vmagent-victoria-metrics-k8s-stack
   serviceMonitorNamespace: system-controllers
