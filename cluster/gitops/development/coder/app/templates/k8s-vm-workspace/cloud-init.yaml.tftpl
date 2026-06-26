@@ -1,0 +1,28 @@
+#cloud-config
+# Per-workspace boot config for the NixOS workspace VM. The image
+# (see ./nix) provides the coder-agent systemd service (running the baked-in
+# pkgs.coder binary), the persistent-disk impermanence setup, and the system CA
+# trust; this file supplies only the values that differ per workspace.
+hostname: ${HOSTNAME}
+preserve_hostname: false
+
+write_files:
+  # Coder agent environment (CODER_AGENT_TOKEN, CODER_AGENT_URL,
+  # NODE_EXTRA_CA_CERTS, etc.). Read by the coder-agent service via
+  # EnvironmentFile. base64 to avoid any YAML escaping of the values.
+  - path: /etc/coder/agent.env
+    encoding: b64
+    permissions: '0600'
+    owner: root:root
+    content: ${AGENT_ENV_B64}
+
+%{ if ENABLE_NFS ~}
+# Mount the bulk-pool NFS share. Written to /etc/fstab so it survives reboots;
+# nofail/_netdev keep boot resilient if the server is unreachable.
+mounts:
+  - [ "${NFS_ADDRESS}:${NFS_PATH}", "${NFS_MOUNT_PATH}", "nfs", "defaults,nofail,_netdev", "0", "0" ]
+%{ endif ~}
+
+runcmd:
+  # Files above are now in place; (re)start the agent.
+  - [ systemctl, restart, coder-agent.service ]

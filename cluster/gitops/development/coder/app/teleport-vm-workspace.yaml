@@ -1,0 +1,24 @@
+---
+# ServiceAccount projected into every k8s-vm-workspace VM (via a KubeVirt
+# serviceAccount volume) so the in-guest Teleport node can join the cluster with
+# the kubernetes join method. It has no RBAC permissions - it exists only as a
+# verifiable identity for the Teleport join below.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: coder-vm-workspace
+---
+# Authorizes the VM workspaces to join Teleport as SSH nodes. Teleport's auth
+# validates the projected ServiceAccount token against this token's allow list.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportprovisiontoken_v2.json
+apiVersion: resources.teleport.dev/v2
+kind: TeleportProvisionToken
+metadata:
+  name: coder-vm-workspace
+spec:
+  roles:
+    - Node
+  join_method: kubernetes
+  kubernetes:
+    allow:
+      - service_account: development:coder-vm-workspace

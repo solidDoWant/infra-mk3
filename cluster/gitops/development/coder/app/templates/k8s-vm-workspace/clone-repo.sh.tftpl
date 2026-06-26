@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# shellcheck disable=SC2269
+REPO_URL="${REPO_URL}"
+: "$${REPO_URL:?REPO_URL is not set}"
+
+# shellcheck disable=SC2269
+REPO_BRANCH="${REPO_BRANCH}"
+: "$${REPO_BRANCH?REPO_BRANCH is not set}"
+
+# shellcheck disable=SC2269
+REPO_DIR="${REPO_DIR}"
+: "$${REPO_DIR:?REPO_DIR is not set}"
+
+mkdir -p "$REPO_DIR"
+
+# Exit fast if the directory is not empty
+if [ -n "$(ls -A "$REPO_DIR")" ]; then
+  echo "Directory '$REPO_DIR' is not empty. Skipping clone."
+  exit 0
+fi
+
+# If REPO_BRANCH is set
+if [ -z "$REPO_BRANCH" ]; then
+  echo "Cloning repository '$REPO_URL' into '$REPO_DIR'..."
+  git clone --filter=blob:none -- "$REPO_URL" "$REPO_DIR"
+else
+  echo "Cloning repository '$REPO_URL' (branch: '$REPO_BRANCH') into '$REPO_DIR'..."
+  git clone --branch "$REPO_BRANCH" --filter=blob:none -- "$REPO_URL" "$REPO_DIR"
+fi
+
+git -C "$REPO_DIR" submodule update --init --recursive
+echo "Repository cloned successfully."

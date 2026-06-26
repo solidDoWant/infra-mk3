@@ -74,6 +74,14 @@ spec:
               - resourceclaimtemplates
             verbs:
               - "*"
+          # Rule to manage KubeVirt VirtualMachines for VM workspaces
+          # (k8s-vm-workspace template)
+          - apiGroups:
+              - kubevirt.io
+            resources:
+              - virtualmachines
+            verbs:
+              - "*"
       podSecurityContext:
         fsGroup: 1000
       volumes:
