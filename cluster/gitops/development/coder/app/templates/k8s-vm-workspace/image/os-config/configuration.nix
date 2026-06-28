@@ -61,6 +61,21 @@
     ];
   };
 
+  # Docker daemon for in-workspace container workflows (build/run images, compose,
+  # devcontainers). /var/lib/docker is persisted across reboots in
+  # ./modules/persistence - the root is ephemeral, so without that every image and
+  # container would be lost on each restart. The coder user is added to the docker
+  # group below so it can talk to the socket without sudo.
+  virtualisation.docker = {
+    enable = true;
+    # Reclaim space from dangling images/containers/networks on a schedule so the
+    # persistent disk's /var/lib/docker does not grow unbounded.
+    autoPrune = {
+      enable = true;
+      dates = "weekly";
+    };
+  };
+
   # Cluster PKI root CA trust is handled at runtime - see ./modules/ca-trust
   # (mounts the CA via virtiofs and builds a combined system+cluster bundle).
 
@@ -132,6 +147,7 @@
       shell = pkgs.bashInteractive;
       extraGroups = [
         "wheel" # passwordless sudo (below) - users need root for kernel modules
+        "docker" # talk to the Docker daemon socket without sudo
       ];
       # No password login; access is via the Coder agent (web terminal / SSH).
       hashedPassword = "";

@@ -174,6 +174,10 @@ in
       # GC roots for runtime-installed packages. Empty on first boot (the running
       # system is always rooted via /run, so shadowing this is harmless).
       "/nix/var/nix/gcroots"
+      # Docker daemon state (images, containers, volumes, overlay2). The root is
+      # ephemeral, so without persisting this every build/pull would be lost on
+      # each reboot. dockerd manages ownership/permissions inside this dir.
+      "/var/lib/docker"
       {
         directory = "/home/coder";
         user = "coder";
