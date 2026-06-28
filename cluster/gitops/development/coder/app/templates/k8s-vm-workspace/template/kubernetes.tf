@@ -73,8 +73,12 @@ locals {
     CODER_AGENT_TOKEN      = coder_agent.main.token
     # The agent is the nixpkgs `coder` binary baked into the image, run directly
     # by the coder-agent systemd unit, so it needs the server URL explicitly
-    # (the download-script flow embedded it instead).
-    CODER_AGENT_URL                  = data.coder_workspace.me.access_url
+    # (the download-script flow embedded it instead). The trailing slash is
+    # load-bearing: Coder's convention is CODER_AGENT_URL ending in "/", and
+    # modules build paths as "${CODER_AGENT_URL}api/v2/..." (e.g.
+    # git-commit-signing). access_url has no trailing slash, so without this the
+    # host becomes "...svc.cluster.localapi" and the request fails to resolve.
+    CODER_AGENT_URL                  = "${trimsuffix(data.coder_workspace.me.access_url, "/")}/"
     CODER_DERP_SERVER_STUN_ADDRESSES = "disable"
     # Node does not consult the system trust store; point it at the mounted CA so
     # node-based tooling (e.g. Claude Code) also trusts the cluster PKI root.
