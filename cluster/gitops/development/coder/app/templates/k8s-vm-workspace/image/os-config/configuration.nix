@@ -163,6 +163,12 @@
   };
 
   services = {
+    # QEMU guest agent. Gives KubeVirt a real in-guest health signal so the VMI
+    # reports Ready instead of a permanent GuestNotRunning (the agent channel is
+    # already wired by KubeVirt: org.qemu.guest_agent.0 virtio-serial port). Also
+    # lets virt-controller coordinate filesystem freeze/thaw on live-migration.
+    qemuGuest.enable = true;
+
     # Serve /bin and /usr/bin from PATH (FUSE). Non-Nix tooling that hard-codes
     # `#!/bin/bash` - notably the Coder Claude Code / AgentAPI install scripts -
     # otherwise fails instantly (NixOS has no /bin/bash), so Claude never starts
