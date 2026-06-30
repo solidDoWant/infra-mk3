@@ -22,6 +22,9 @@ creation_rules:
   - path_regex: ".*\\.sops\\.md$"
     encrypted_regex: .*
     key_groups: *personal_only_key_groups
+  - path_regex: ".*\\.sops\\.tar.gz$"
+    encrypted_regex: .*
+    key_groups: *personal_only_key_groups
 stores:
   yaml:
     indent: 2
