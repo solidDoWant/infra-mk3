@@ -181,3 +181,55 @@ specs:
       - *to_apiserver
     ingress:
       - *from_kubelet
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: cdi-importer
+specs:
+  # CDI importer pods are created by the CDI controller in whatever namespace a
+  # DataVolume lives (development coder workspaces, tug2 insurgency, ...). Their
+  # egress need (DNS + Harbor) is a property of CDI, not the tenant, so this is
+  # cluster-wide - like virt-launcher above - instead of duplicated per namespace.
+  # A namespace importing from a different registry would add a supplemental
+  # namespaced CNP (Cilium policy is additive).
+  - description: cdi-importer
+    endpointSelector:
+      matchLabels:
+        cdi.kubevirt.io: importer
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # To Harbor (via the internal ingress gateway) to pull base images
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # CDI controller coordinates / scrapes the importer
+      - fromEndpoints:
+          - matchLabels:
+              cdi.kubevirt.io: cdi-deployment
+              io.kubernetes.pod.namespace: system-controllers
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP

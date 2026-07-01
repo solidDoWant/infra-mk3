@@ -1,6 +1,10 @@
 # The per-workspace root disk. CDI imports the base image (local.vm_root_image)
-# into this block PVC; the guest grows root to fill it (boot.growPartition +
-# fileSystems."/".autoResize). RWX block keeps the VM live-migratable.
+# into this CephFS PVC (Filesystem mode); the guest grows root to fill it
+# (boot.growPartition + fileSystems."/".autoResize). RWX keeps the VM
+# live-migratable. CephFS (not RBD block) because the non-privileged CDI importer
+# (uid 107) can't open a raw RBD device, and RBD can't do RWX-filesystem - this
+# mirrors the tug2 insurgency VM pool. The persistent /persist disk stays RBD
+# block (kubernetes.tf).
 #
 # This is a STANDALONE Terraform resource - not a spec.dataVolumeTemplates entry -
 # on purpose: its name is keyed on the image version (local.root_dv_name), so a
@@ -36,17 +40,18 @@ resource "kubectl_manifest" "root_datavolume" {
       source = {
         registry = {
           url = "docker://${local.vm_root_image}"
-          # node pullMethod pulls via the node's container runtime, reusing the
-          # dockerconfigjson Harbor secret (the CDI importer pod is not otherwise
-          # authorized). Registry import reads the /disk/*.qcow2 from the image.
-          pullMethod = "node"
-          secretRef  = local.image_pull_secret
+          # Default (pod) pullMethod: the CDI importer authenticates to Harbor
+          # with the accessKeyId/secretKey keys on this secret (added alongside
+          # the dockerconfigjson - see coder-pull-credentials.sops.yaml). node
+          # pullMethod would skip pod-egress netpols but can't do this private-
+          # registry auth. Registry import reads the /disk/*.qcow2 from the image.
+          secretRef = local.image_pull_secret
         }
       }
       storage = {
         accessModes      = ["ReadWriteMany"]
-        volumeMode       = "Block"
-        storageClassName = local.storage_class
+        volumeMode       = "Filesystem"
+        storageClassName = local.root_storage_class
         resources = {
           requests = {
             storage = "${data.coder_parameter.root_disk_size.value}Gi"
@@ -64,8 +69,8 @@ resource "kubectl_manifest" "root_datavolume" {
 # PVC retained). Deleting the workspace destroys this resource (and the PVC).
 #
 # Storage: a per-workspace root DataVolume (CDI imports local.vm_root_image into
-# a block PVC sized by the root_disk_size parameter; the guest grows root to fill
-# it) plus the single persistent block PVC. The NixOS image formats the
+# a CephFS filesystem PVC sized by the root_disk_size parameter; the guest grows
+# root to fill it) plus the single persistent RBD-block PVC. The NixOS image formats the
 # persistent disk on first boot and uses it (via impermanence) to back
 # /home/coder, /workspace, and the /nix/store overlay. The root is disposable -
 # durable state lives on the persistent disk - so a base-image upgrade just

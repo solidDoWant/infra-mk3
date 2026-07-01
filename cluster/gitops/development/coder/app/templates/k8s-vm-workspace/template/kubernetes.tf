@@ -3,6 +3,13 @@ locals {
   namespace     = "development"
   storage_class = "ssd-replicated-3x"
 
+  # The root DataVolume lives on CephFS (Filesystem, RWX). The non-privileged CDI
+  # importer (uid 107) can't open a raw RBD block device, and RBD can't serve
+  # RWX-filesystem - CephFS gives an importable AND live-migratable root. The
+  # persistent disk stays on RBD block (storage_class above). Mirrors the tug2
+  # insurgency VM pool, which imports its OS disk the same way.
+  root_storage_class = "ssd-replicated-filesystem"
+
   labels = {
     # NOTE: app.kubernetes.io/name MUST be "coder-workspace": the
     # restrict-coder-netpol-access Kyverno ClusterPolicy only lets the Coder
@@ -84,11 +91,10 @@ locals {
   # (Normalize the version: dots are not RFC1123-safe in the name suffix.)
   root_dv_name = "${local.name}-root-${replace(local.image_version, ".", "-")}"
 
-  # dockerconfigjson secret (development ns) used to pull the private base image
-  # from Harbor. Consumed by CDI's node pullMethod for the root DataVolume import
-  # (see vm.tf); node pull runs the pull through the node's container runtime, so
-  # the standard dockerconfigjson works as-is (unlike CDI's default pod pull,
-  # which would need an accessKeyId/secretKey secret).
+  # Harbor pull secret (development ns). It is a dockerconfigjson (used by the
+  # coder deployment as an imagePullSecret) that ALSO carries accessKeyId/secretKey
+  # keys (see coder-pull-credentials.sops.yaml) so CDI's pod-pull importer can
+  # authenticate to Harbor for the root DataVolume import (see vm.tf).
   image_pull_secret = "coder-pull-credentials"
 
   # ServiceAccount projected into the VM for the Teleport kubernetes join. It is
