@@ -54,12 +54,41 @@ locals {
   public_domain  = data.kubernetes_config_map.cluster_info.data["public_domain_name"]
   teleport_proxy = "teleport.${local.public_domain}:443"
 
-  # The NixOS workspace base image, built and pushed to Harbor by ./nix (see the
-  # Makefile there). Used as the VM's ephemeral containerDisk root.
-  vm_root_image = "harbor.${local.public_domain}/coder/nixos-workspace:latest"
+  # Immutable base-image tag this template version deploys. The image build
+  # (./image) pushes every build under a unique timestamp tag AND :latest; we pin
+  # the timestamp here (run `make -C ../image print-container-image` to read the
+  # tag of a build) so the root is keyed to an exact image, not a moving tag.
+  #
+  # UPGRADE FLOW: build + push a new image, set this to its tag, republish the
+  # template. An existing workspace adopts it by being UPDATED to the new template
+  # version (a plain Stop/Start stays on the same version, so image_version - and
+  # thus root_dv_name below - would not change). On that Update, root_dv_name
+  # changes, so Terraform recreates the root DataVolume (CDI reimports the new
+  # image, the old root PVC is destroyed - no orphan), while durable /persist data
+  # survives. Do the Update while the workspace is STOPPED (Stop -> Update ->
+  # Start): KubeVirt won't swap a live VMI's disk, and Terraform can only destroy
+  # the old root PVC cleanly once it is unmounted.
+  image_version = "20260701054741" # tag pushed by ./image (see above)
 
-  # dockerconfigjson secret (development ns) KubeVirt uses to pull the private
-  # containerDisk image from Harbor.
+  # The NixOS workspace base image, built and pushed to Harbor by ./image. CDI
+  # imports it (source.registry) into the per-workspace root DataVolume; the guest
+  # then grows root to fill the PVC (boot.growPartition + fileSystems."/".autoResize,
+  # from the nixos-generators kubevirt module).
+  vm_root_image = "harbor.${local.public_domain}/coder/nixos-workspace:${local.image_version}"
+
+  # Root DataVolume name, keyed on the image version so a version bump yields a new
+  # DV and thus a CDI reimport. It is a STANDALONE Terraform-managed resource (not a
+  # dataVolumeTemplate), so Terraform owns its lifecycle: on a version bump the old
+  # DV is destroyed (no orphaned PVCs) and the new one imported; on workspace delete
+  # both the VM and this DV go away. See kubectl_manifest.root_datavolume in vm.tf.
+  # (Normalize the version: dots are not RFC1123-safe in the name suffix.)
+  root_dv_name = "${local.name}-root-${replace(local.image_version, ".", "-")}"
+
+  # dockerconfigjson secret (development ns) used to pull the private base image
+  # from Harbor. Consumed by CDI's node pullMethod for the root DataVolume import
+  # (see vm.tf); node pull runs the pull through the node's container runtime, so
+  # the standard dockerconfigjson works as-is (unlike CDI's default pod pull,
+  # which would need an accessKeyId/secretKey secret).
   image_pull_secret = "coder-pull-credentials"
 
   # ServiceAccount projected into the VM for the Teleport kubernetes join. It is
@@ -107,7 +136,7 @@ locals {
 # Parameters
 locals {
   workspace_resources_order_start = local.claude_order_start + local.claude_size
-  workspace_resources_size        = 4
+  workspace_resources_size        = 5
 }
 
 data "coder_parameter" "cpu" {
@@ -147,7 +176,7 @@ data "coder_parameter" "memory" {
 data "coder_parameter" "persistent_disk_size" {
   name         = "persistent_disk_size"
   display_name = "Persistent disk size"
-  description  = "Size of the single persistent disk (GB) backing /home/coder, /workspace, and the /nix/store overlay. The system root is ephemeral and reset from the image on every boot."
+  description  = "Size of the single persistent disk (GB) backing /home/coder, /workspace, and the /nix/store overlay. The system root is a separate, disposable disk (see Root disk size) reset only on a base-image upgrade, so keep durable data here."
   default      = "30"
   type         = "number"
   icon         = "/emojis/1f4be.png"
@@ -155,6 +184,25 @@ data "coder_parameter" "persistent_disk_size" {
   order        = local.workspace_resources_order_start + 2
 
   validation {
+    min       = 10
+    max       = 200
+    monotonic = "increasing"
+  }
+}
+
+data "coder_parameter" "root_disk_size" {
+  name         = "root_disk_size"
+  display_name = "Root disk size"
+  description  = "Size of the ephemeral root filesystem (GB). The base image is imported into this disk and grown to fill it on boot. It is disposable and reset on a base-image upgrade, so keep durable data on the persistent disk (/home/coder, /workspace). Must be at least the base image's virtual size (~6 GB)."
+  default      = "20"
+  type         = "number"
+  icon         = "/emojis/1f4bf.png"
+  mutable      = true
+  order        = local.workspace_resources_order_start + 3
+
+  validation {
+    # min must stay >= the base image's qcow2 virtual size; CDI fails the import
+    # if the target PVC is smaller than the source image.
     min       = 10
     max       = 200
     monotonic = "increasing"
@@ -169,7 +217,7 @@ data "coder_parameter" "enable_nfs" {
   default      = "false"
   mutable      = true
   icon         = "/emojis/1f4c1.png"
-  order        = local.workspace_resources_order_start + 3
+  order        = local.workspace_resources_order_start + 4
 }
 
 data "coder_workspace" "me" {}

@@ -82,6 +82,15 @@ spec:
               - virtualmachines
             verbs:
               - "*"
+          # Rule to manage CDI DataVolumes backing VM workspace root disks
+          # (k8s-vm-workspace template - the per-workspace root is a standalone
+          # DataVolume, not a dataVolumeTemplate; see the template's vm.tf)
+          - apiGroups:
+              - cdi.kubevirt.io
+            resources:
+              - datavolumes
+            verbs:
+              - "*"
       podSecurityContext:
         fsGroup: 1000
       volumes:
