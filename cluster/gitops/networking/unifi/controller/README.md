@@ -40,7 +40,15 @@ forgetting/re-adopting it from scratch.
    ssh ubnt@<ap-ip>
    ```
 
-3. **Point the AP at the controller and adopt it**, passing the `x_authkey` from
+3. **Set the AP's static IP** (needed so the controller/AP traffic matches the
+   network policies):
+
+   ```sh
+   ifconfig br0 10.1.0.160 netmask 255.255.255.0
+   route add -net default gw 10.1.0.254
+   ```
+
+4. **Point the AP at the controller and adopt it**, passing the `x_authkey` from
    step 1:
 
    ```sh
