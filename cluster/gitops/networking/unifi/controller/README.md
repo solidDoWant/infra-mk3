@@ -41,15 +41,28 @@ forgetting/re-adopting it from scratch.
    ```
 
 3. **Set the AP's static IP** (needed so the controller/AP traffic matches the
-   network policies):
+   network policies). Look up the AP's assigned address in
+   [`docs/network.yaml`](../../../../../docs/network.yaml) — e.g. `ap-01` is
+   `10.1.0.160`. The management network is `10.1.0.0/16`, so the netmask is
+   `255.255.0.0` (**not** `/24`), and the gateway is `10.1.0.254`:
 
    ```sh
-   ifconfig br0 10.1.0.160 netmask 255.255.255.0
-   route add -net default gw 10.1.0.254
+   ifconfig br0 10.1.0.160 netmask 255.255.0.0
+   route del default 2>/dev/null; route add -net default gw 10.1.0.254
    ```
 
+   > **Heads up:** the moment `br0` changes IP, your SSH session (still bound to
+   > the old IP) drops. Either run the IP change detached so it outlives the
+   > disconnect and then reconnect on the new IP:
+   >
+   > ```sh
+   > ssh ubnt@<old-ip> 'nohup sh -c "sleep 2; ifconfig br0 10.1.0.160 netmask 255.255.0.0; route del default 2>/dev/null; route add -net default gw 10.1.0.254" >/tmp/setip.log 2>&1 &'
+   > ```
+   >
+   > …or just SSH back in on the new static IP before doing step 4.
+
 4. **Point the AP at the controller and adopt it**, passing the `x_authkey` from
-   step 1:
+   step 1 (run this over a *fresh* SSH session to the new static IP):
 
    ```sh
    syswrapper.sh set-adopt http://10.34.0.4/inform abcdef0123456789abcdef0123456789
@@ -57,6 +70,16 @@ forgetting/re-adopting it from scratch.
 
    The AP should re-appear in the controller as adopted (rather than pending),
    keeping its previous identity/config.
+
+   **Verify from the controller, not the AP.** The AP's own status
+   (`mca-cli-op info`) stays stale/default for a while after `set-adopt`, so
+   don't trust it. Instead confirm the controller's device record flipped —
+   query Mongo the same way `get-device-authkey.sh` does and check for
+   `adopted: true` / `adoption_completed: true`, a fresh `provisioned_at`, and
+   an `inform_url` pointing at the controller. Note that once adoption
+   completes the controller pushes the managed config, so the default
+   `ubnt`/`ubnt` SSH login stops working (and the SSH host key changes) — that
+   lockout is itself a sign adoption succeeded.
 
 ### How `get-device-authkey.sh` works
 
