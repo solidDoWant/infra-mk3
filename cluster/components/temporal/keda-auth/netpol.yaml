@@ -3,13 +3,13 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: media-temporal-keda-auth
+  name: ${NAMESPACE}-temporal-keda-auth
 specs:
   - description: tbot
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: media-temporal-keda-auth
-        app.kubernetes.io/instance: media-temporal-keda-auth
+        app.kubernetes.io/name: ${NAMESPACE}-temporal-keda-auth
+        app.kubernetes.io/instance: ${NAMESPACE}-temporal-keda-auth
     egress:
       # DNS resolution — required for cluster DNS lookups (proxy hostname,
       # kubernetes.default).

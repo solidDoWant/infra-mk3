@@ -3,7 +3,7 @@
 apiVersion: resources.teleport.dev/v1
 kind: TeleportBotV1
 metadata:
-  name: media-temporal-keda-auth
+  name: ${NAMESPACE}-temporal-keda-auth
 spec:
   roles:
-    - media-temporal-keda-auth-bot
+    - ${NAMESPACE}-temporal-keda-auth-bot

@@ -1,0 +1,18 @@
+---
+# Namespace-scoped Temporal read credential for KEDA scalers: a standalone
+# tbot Deployment that continually renews a `${NAMESPACE}:read` JWT-SVID into
+# the Secret `${NAMESPACE}-temporal-keda-auth`, plus the Teleport bot/role/
+# token/workload-identity it authenticates with. One instance per
+# Temporal-consuming namespace; parameterized solely by the NAMESPACE
+# post-build substitution variable (set in the instance's Flux Kustomization,
+# same mechanism as the issuers component).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./hr.yaml
+  - ./netpol.yaml
+  - ./secret.yaml
+  - ./teleport-bot.yaml
+  - ./teleport-role.yaml
+  - ./teleport-token.yaml
+  - ./teleport-workload-identity.yaml

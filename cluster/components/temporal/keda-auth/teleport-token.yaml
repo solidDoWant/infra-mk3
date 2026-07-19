@@ -3,13 +3,13 @@
 apiVersion: resources.teleport.dev/v2
 kind: TeleportProvisionToken
 metadata:
-  name: media-temporal-keda-auth
+  name: ${NAMESPACE}-temporal-keda-auth
 spec:
   roles:
     - Bot
-  bot_name: media-temporal-keda-auth
+  bot_name: ${NAMESPACE}-temporal-keda-auth
   join_method: kubernetes
   kubernetes:
     type: in_cluster
     allow:
-      - service_account: media:media-temporal-keda-auth
+      - service_account: ${NAMESPACE}:${NAMESPACE}-temporal-keda-auth

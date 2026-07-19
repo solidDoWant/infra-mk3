@@ -3,14 +3,14 @@
 apiVersion: resources.teleport.dev/v1
 kind: TeleportRoleV7
 metadata:
-  name: media-temporal-keda-auth-bot
+  name: ${NAMESPACE}-temporal-keda-auth-bot
 spec:
   allow:
     # Limit issuance to the read-only WID below — keeps a compromise of this
-    # bot from minting the media-processor `media:write` JWT.
+    # bot from minting any of the namespace's `write`-scoped worker JWTs.
     workload_identity_labels:
       app:
-        - media-temporal-keda-auth
+        - ${NAMESPACE}-temporal-keda-auth
     rules:
       - resources:
           - workload_identity

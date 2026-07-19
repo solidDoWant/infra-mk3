@@ -1,14 +1,14 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
-# Standalone tbot deployment that issues a Temporal JWT-SVID for the `media`
-# Temporal namespace (permissions=["media:read"]) and writes it to the shared
-# Secret `media-temporal-keda-auth`. KEDA scalers in this namespace consume
-# the secret via TriggerAuthentication to authenticate to the Temporal
-# frontend.
+# Standalone tbot deployment that issues a Temporal JWT-SVID for the ${NAMESPACE}
+# Temporal namespace (permissions=["${NAMESPACE}:read"]) and writes it to the shared
+# Secret `${NAMESPACE}-temporal-keda-auth`. KEDA scalers in this namespace
+# consume the secret via TriggerAuthentication to authenticate to the
+# Temporal frontend.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: media-temporal-keda-auth
+  name: ${NAMESPACE}-temporal-keda-auth
 spec:
   interval: 5m
   chart:
@@ -22,7 +22,7 @@ spec:
       version: 4.6.2
   values:
     controllers:
-      media-temporal-keda-auth:
+      ${NAMESPACE}-temporal-keda-auth:
         replicas: 2
         # Both replicas write the same Secret. Available > Consistent: a
         # rolling restart would briefly leave only one pod running, but the
@@ -31,7 +31,7 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         serviceAccount:
-          identifier: media-temporal-keda-auth
+          identifier: ${NAMESPACE}-temporal-keda-auth
         pod:
           labels:
             # Picked up by the central teleport-cluster netpol, which allows
@@ -95,7 +95,7 @@ spec:
       # features incompatible with userns remapping.
       hostUsers: false
       securityContext:
-        # Distroless tbot image's nonroot user (65532).
+        # Distroless tbot image's non-root user (65532).
         runAsNonRoot: true
         runAsUser: 65532
         runAsGroup: 65532
@@ -107,30 +107,67 @@ spec:
             value: "1"
 
     service:
-      media-temporal-keda-auth:
-        controller: media-temporal-keda-auth
+      ${NAMESPACE}-temporal-keda-auth:
+        controller: ${NAMESPACE}-temporal-keda-auth
         ports:
           tbot-diag:
             port: 4444
             primary: true
 
     serviceMonitor:
-      media-temporal-keda-auth:
+      ${NAMESPACE}-temporal-keda-auth:
         enabled: true
-        serviceName: media-temporal-keda-auth
+        serviceName: ${NAMESPACE}-temporal-keda-auth
         endpoints:
           - port: tbot-diag
+
+    configMaps:
+      tbot-config:
+        data:
+          # Mounted at /etc/tbot/tbot.yaml in every tbot pod. Each pod joins
+          # the cluster via its in-cluster ServiceAccount token and
+          # continually renews a JWT-SVID (containing
+          # permissions=["${NAMESPACE}:read"]) into the shared k8s Secret
+          # `${NAMESPACE}-temporal-keda-auth`. TriggerAuthentications in this
+          # namespace then surface the `jwt_svid` key as the Temporal
+          # scaler's apiKey — KEDA re-reads the secret on each polling
+          # interval, so renewals propagate without any restarts.
+          tbot.yaml: |
+            version: v2
+            # In-cluster ClusterIP publicAddr of the proxy. tbot only joins and renews
+            # SVIDs (no reverse tunnel), so it honors the dialed address and reaches the
+            # proxy directly — bypassing the internal gateway. The proxy lists this name
+            # in publicAddr and serves a matching internal keypair, so TLS/SNI validate.
+            proxy_server: teleport-cluster.security.svc.cluster.local:443
+            onboarding:
+              token: ${NAMESPACE}-temporal-keda-auth
+              join_method: kubernetes
+            storage:
+              type: memory
+            services:
+              - type: workload-identity-jwt
+                selector:
+                  name: ${NAMESPACE}-temporal-keda-auth
+                audiences:
+                  - temporal.${SECRET_PUBLIC_DOMAIN_NAME}
+                destination:
+                  # Both replicas write to the same Secret. Last-write-wins is fine:
+                  # the JWTs are equivalent (same WID, same audience), and the
+                  # Temporal frontend validates against the JWKS regardless of which
+                  # tbot issued the token.
+                  type: kubernetes_secret
+                  name: ${NAMESPACE}-temporal-keda-auth
 
     persistence:
       tbot-config:
         type: configMap
-        name: media-temporal-keda-auth-tbot-config
+        identifier: tbot-config
         defaultMode: 0440
         items:
           - key: tbot.yaml
             path: tbot.yaml
         advancedMounts:
-          media-temporal-keda-auth:
+          ${NAMESPACE}-temporal-keda-auth:
             tbot:
               - path: /etc/tbot
                 readOnly: true
@@ -145,18 +182,18 @@ spec:
           - key: ca.pem
             path: root-ca.pem
         advancedMounts:
-          media-temporal-keda-auth:
+          ${NAMESPACE}-temporal-keda-auth:
             tbot:
               - path: /etc/ssl/certs/root-ca.pem
                 subPath: root-ca.pem
                 readOnly: true
 
     serviceAccount:
-      media-temporal-keda-auth: {}
+      ${NAMESPACE}-temporal-keda-auth: {}
 
     rbac:
       roles:
-        media-temporal-keda-auth:
+        ${NAMESPACE}-temporal-keda-auth:
           type: Role
           rules:
             # Tight: only the placeholder Secret created in secret.yaml.
@@ -168,15 +205,15 @@ spec:
               resources:
                 - secrets
               resourceNames:
-                - media-temporal-keda-auth
+                - ${NAMESPACE}-temporal-keda-auth
               verbs:
                 - get
                 - update
                 - patch
       bindings:
-        media-temporal-keda-auth:
+        ${NAMESPACE}-temporal-keda-auth:
           type: RoleBinding
           roleRef:
-            identifier: media-temporal-keda-auth
+            identifier: ${NAMESPACE}-temporal-keda-auth
           subjects:
-            - identifier: media-temporal-keda-auth
+            - identifier: ${NAMESPACE}-temporal-keda-auth

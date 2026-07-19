@@ -1,31 +1,32 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportworkloadidentityv1_v1.json
-# Read-only access to the `media` Temporal namespace. Consumed by KEDA scalers
-# (e.g. ScaledObjects targeting media-processor task queues) which only need
-# DescribeTaskQueue / ListWorkflowExecutions, never write operations.
+# Read-only access to the ${NAMESPACE} Temporal namespace. Consumed by KEDA
+# Temporal scalers in this namespace (e.g. the tape-archiver control worker's
+# ScaledJob), which only need DescribeTaskQueue backlog reads, never write
+# operations.
 apiVersion: resources.teleport.dev/v1
 kind: TeleportWorkloadIdentityV1
 metadata:
-  name: media-temporal-keda-auth
+  name: ${NAMESPACE}-temporal-keda-auth
   labels:
     # Selected by the bot's role (workload_identity_labels) and by tbot's
     # service.selector. Must stay in sync with both.
-    app: media-temporal-keda-auth
+    app: ${NAMESPACE}-temporal-keda-auth
 spec:
   spiffe:
     # Per-pod SPIFFE ID so audit logs identify the issuing pod. Templated by
     # Teleport at issuance time from kubernetes join attributes.
-    id: /svc/media-temporal-keda-auth/{{ join.kubernetes.pod.name }}
+    id: /svc/${NAMESPACE}-temporal-keda-auth/{{ join.kubernetes.pod.name }}
     jwt:
       extra_claims:
         permissions:
-          - media:read
+          - ${NAMESPACE}:read
   rules:
     allow:
       - conditions:
           - attribute: join.kubernetes.service_account.namespace
             eq:
-              value: media
+              value: ${NAMESPACE}
           - attribute: join.kubernetes.service_account.name
             eq:
-              value: media-temporal-keda-auth
+              value: ${NAMESPACE}-temporal-keda-auth
