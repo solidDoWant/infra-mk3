@@ -51,8 +51,9 @@ spec:
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportbotv1_v1.json
 # Machine-scoped bot: one identity for all of this host's cluster
 # credentials (tape-archiver Temporal JWT, log-shipping tunnel). Managed
-# host-side by ansible/remote/vms/storage/roles/setup_tbot. The
-# purpose-scoped roles live with the services they grant access to.
+# host-side by the shared setup_tbot role
+# (ansible/remote/servers/r730xd/proxmox/roles/setup_tbot; storage symlinks
+# it). The purpose-scoped roles live with the services they grant access to.
 apiVersion: resources.teleport.dev/v1
 kind: TeleportBotV1
 metadata:

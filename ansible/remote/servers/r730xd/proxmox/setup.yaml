@@ -295,6 +295,38 @@
       ansible.builtin.include_role:
         name: install_exporters
 
+    # Machine-scoped tbot (Teleport Machine ID): provides the mTLS identity
+    # this host uses to consume in-cluster apps. Unlike the storage host it
+    # serves ONLY the log-shipping application-tunnel (no tape-archiver
+    # Temporal JWT), so it takes the role's clean defaults — unit `tbot`,
+    # config /etc/tbot/tbot.yaml, token `{{ hostname }}-bot`
+    # (proxmox-vm-host-01-bot), storage /var/lib/tbot, no RuntimeDirectory.
+    # Bot + TPM token CRs live in
+    # cluster/gitops/security/teleport/configuration/proxmox.yaml. Runs after
+    # install_teleport/exporters; exports teleport_cluster_available.
+    - name: Setup machine tbot
+      vars:
+        tbot_services:
+          # Local forward listener; tbot wraps it in an mTLS session to the
+          # Teleport proxy, which hands it to the in-cluster app agent
+          # fronting fluentd-aggregator:24224 (TeleportAppV3 `fluentd-forward`,
+          # granted by the bot's `fluentd-forward-sender` role). Auth is the
+          # bot's TPM identity — no shared keys, nothing new on the LAN.
+          - type: application-tunnel
+            listen: tcp://127.0.0.1:24224
+            app_name: fluentd-forward
+      ansible.builtin.include_role:
+        name: setup_tbot
+
+    # Ships this host's journald to the in-cluster VictoriaLogs via fluent-bit
+    # → the machine tbot's application-tunnel → fluentd aggregator (fluent-bit
+    # buffers until the tunnel is up). Role defaults apply; host.name =
+    # proxmox-vm-host-01 (the `hostname` host var). Debian apt base is
+    # distro-derived, so the role works here as on the Ubuntu storage host.
+    - name: Setup host log shipping
+      ansible.builtin.include_role:
+        name: setup_fluent_bit
+
 - name: Storage VM setup tasks
   hosts: r730xd:&proxmox
   vars:

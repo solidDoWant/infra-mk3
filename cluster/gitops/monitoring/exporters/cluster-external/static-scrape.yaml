@@ -71,7 +71,8 @@ spec:
           replacement: ubuntu-storage-host-01
 ---
 # Host log shipper (journald → fluentd aggregator via Teleport tunnel, see
-# ansible/remote/vms/storage/roles/setup_fluent_bit). The storage metrics
+# the shared setup_fluent_bit role at
+# ansible/remote/servers/r730xd/proxmox/roles/setup_fluent_bit). The metrics
 # (fluentbit_storage_*, fluentbit_output_retries_total) are the delivery
 # health signal: a growing chunk backlog means logs are stalling locally.
 apiVersion: operator.victoriametrics.com/v1beta1
@@ -86,6 +87,7 @@ spec:
   jobName: fluent-bit
   targetEndpoints:
     - targets:
+        - 10.2.2.1:2020 # proxmox-vm-host-01
         - 10.2.3.1:2020 # ubuntu-storage-host-01
       path: /api/v2/metrics/prometheus
       interval: 1m
@@ -93,6 +95,10 @@ spec:
       # This is the only way to relabel the instances with hostname
       # until I setup DNS for non-k8s nodes.
       relabelConfigs:
+        - action: replace
+          if: '{__address__="10.2.2.1:2020"}'
+          target_label: instance
+          replacement: proxmox-vm-host-01
         - action: replace
           if: '{__address__="10.2.3.1:2020"}'
           target_label: instance
