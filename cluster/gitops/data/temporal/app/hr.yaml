@@ -253,6 +253,15 @@ spec:
 
       frontend:
         replicaCount: 2
+        # The chart's default appProtocol is `tcp`, and an explicit
+        # appProtocol OVERRIDES Istio's `grpc-` port-name inference — so the
+        # gateway's re-encrypt upstream got no h2 protocol options and spoke
+        # HTTP/1.1 into the gRPC-only frontend (gateway log: UC
+        # upstream_reset_before_response_started{protocol error}). `grpc`
+        # makes Istio configure h2 upstream. Metadata-only for non-mesh
+        # clients (kube-proxy/Cilium ignore appProtocol).
+        service:
+          appProtocol: grpc
         # grpc-go (server side) enforces TLS ALPN negotiation, but Istio's
         # BackendTLSPolicy re-encrypt (internal gateway → :7233 for the
         # temporal-grpc.<domain> route) omits alpn_protocols from the

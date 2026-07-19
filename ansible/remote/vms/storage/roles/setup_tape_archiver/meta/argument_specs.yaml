@@ -38,8 +38,8 @@ argument_specs:
           runs `zfs create`. Must NOT live under a dataset whose contents are
           themselves backed up to tape (e.g. `archive`) — staging scratch
           would be swept onto the tapes being written. The default expects a
-          dedicated `tape-staging` dataset (manually created, sync=disabled
-          recommended).
+          dedicated `tape-staging` dataset (manually created; keep
+          sync=standard).
       tape_archiver_k8s_dataset_parent:
         type: str
         default: bulk-pool-01/k8s/democratic-csi/nfs/pvcs

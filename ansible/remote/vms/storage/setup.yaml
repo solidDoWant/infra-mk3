@@ -115,7 +115,7 @@
     #     - name: media
     #       share_with_nfs: true
     #     - name: archive # non-k8s backups; contents are a tape-backup source; not NFS-exported
-    #     - name: tape-staging # tape-archiver Prepare-phase scratch (sync=disabled); NOT a tape-backup source; not NFS-exported
+    #     - name: tape-staging # tape-archiver Prepare-phase scratch (sync=standard); NOT a tape-backup source; not NFS-exported
     #     - name: k8s
     #     - name: k8s/democratic-csi
     #     - name: k8s/democratic-csi/nfs

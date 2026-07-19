@@ -9,10 +9,13 @@ tape_archiver_temporal_address: "{{ teleport_domain_name | regex_replace('^telep
 tape_archiver_temporal_namespace: backup
 tape_archiver_pool_mount: /mnt/bulk-pool-01
 # Staging lives in its own dedicated `tape-staging` dataset (create manually,
-# like the pool's other datasets; sync=disabled recommended — bulk scratch
-# writes). Deliberately NOT under `archive`: archive holds non-k8s backups
-# that are themselves a tape-backup source, so staging scratch there would be
-# swept onto the very tapes being written.
+# like the pool's other datasets; keep sync=standard — the worker currently
+# issues no fsyncs so the property is inert, but `disabled` would silently
+# defeat any future fsync-before-activity-complete hardening in the tool,
+# and the pool's idle Optane SLOG makes honored syncs cheap). Deliberately
+# NOT under `archive`: archive holds non-k8s backups that are themselves a
+# tape-backup source, so staging scratch there would be swept onto the very
+# tapes being written.
 tape_archiver_staging_dir: /mnt/bulk-pool-01/tape-staging/runs
 tape_archiver_k8s_dataset_parent: bulk-pool-01/k8s/democratic-csi/nfs/pvcs
 tape_archiver_tape_devices:
