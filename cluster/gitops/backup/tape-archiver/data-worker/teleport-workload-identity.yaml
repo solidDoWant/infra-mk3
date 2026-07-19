@@ -24,7 +24,12 @@ spec:
     allow:
       - conditions:
           # Only the storage host's TPM (same EK pinned by the provision
-          # token) may receive this credential.
-          - attribute: join.tpm.ek_public_hash
+          # token) may receive this credential. NOTE the attribute name:
+          # the provision token spec calls this field `ek_public_hash`, but
+          # the workload-identity join attribute is `ek_pub_hash`
+          # (api/.../workloadidentity/v1/join_attrs.pb.go) — using the token
+          # spelling fails evaluation with 'attribute "ek_public_hash" not
+          # found' and the SVID is never issued.
+          - attribute: join.tpm.ek_pub_hash
             eq:
               value: 078b92640cc40c3c798817f3188af3c40a5b854db237ac86f89b71044b6832c6
