@@ -1,0 +1,30 @@
+# {{ ansible_managed }}
+#
+# tbot instance dedicated to the tape-archiver data worker. TPM-joins the
+# Teleport cluster (same trust chain as this host's SSH node — the EK cert is
+# pinned by the `tape-archiver-data-worker` provision token in
+# cluster/gitops/backup/tape-archiver/data-worker/) and continually renews a
+# JWT-SVID carrying permissions=["backup:write"] into /run/tape-archiver/jwt
+# (tmpfs, managed by the unit's RuntimeDirectory — the credential never
+# touches persistent disk). The worker reads the JWT fresh on every Temporal
+# RPC (file:// API key), so renewals propagate without a restart.
+version: v2
+proxy_server: {{ teleport_domain_name }}:443
+onboarding:
+  token: tape-archiver-data-worker
+  join_method: tpm
+storage:
+  type: directory
+  path: /var/lib/tape-archiver-tbot
+services:
+  - type: workload-identity-jwt
+    selector:
+      name: tape-archiver-data-worker
+    audiences:
+      # The Temporal frontend accepts JWTs whose audience is the temporal
+      # hostname; derived from the teleport proxy hostname, which shares the
+      # public domain.
+      - {{ teleport_domain_name | regex_replace('^teleport\.', 'temporal.') }}
+    destination:
+      type: directory
+      path: /run/tape-archiver/jwt

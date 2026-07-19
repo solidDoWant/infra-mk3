@@ -1,0 +1,81 @@
+# {{ ansible_managed }}
+#
+# Runs the Nix-built data-worker OCI image directly via `docker run` with
+# systemd as the SOLE supervisor: foreground (no `-d`), Type=simple, `--rm`.
+# No docker-compose — a single container needs no orchestration, and a second
+# supervisor would fight systemd over restarts. Adapted from the reference
+# unit at deploy/data-worker/ in the tape-archiver repo, with one addition:
+# the tbot JWT directory is bind-mounted for Temporal auth.
+
+[Unit]
+Description=tape-archiver data worker
+Documentation=https://github.com/solidDoWant/tape-archiver/blob/master/docs/data-worker-image.md
+Requires=docker.service
+After=docker.service network-online.target tape-archiver-tbot.service
+# After= here is a true readiness gate, not just process ordering: the tbot
+# unit's ExecStartPost blocks its start job on tbot's /wait endpoint, which
+# reports healthy only after the first JWT is written — so by the time this
+# unit starts on a cold boot, /run/tape-archiver/jwt is populated.
+# Wants (not Requires) tbot: the worker keeps running through a tbot restart —
+# the JWT in /run/tape-archiver/jwt survives it (RuntimeDirectoryPreserve on
+# the tbot unit) and stays valid until its next renewal regardless.
+Wants=network-online.target tape-archiver-tbot.service
+
+[Service]
+Type=simple
+
+# Content-anchored image tag, pulled by ansible. --pull=never below means the
+# unit never reaches out to a registry on start.
+Environment=TAPE_ARCHIVER_IMAGE={{ tape_archiver_image }}
+
+# All run configuration lives in the env file, never hardcoded in this unit.
+EnvironmentFile=/etc/tape-archiver/data-worker.env
+
+# The pool bind mount only propagates the on-demand .zfs/snapshot/<snap>/
+# automounts into the container when the host mount is a shared mount. This is
+# THE silent-data-loss footgun: get it wrong and snapshot contents are simply
+# invisible inside the container — no error, just missing files. Make the pool
+# subtree rshared before every start so bind-propagation=rslave has effect.
+ExecStartPre=/bin/mount --make-rshared {{ tape_archiver_pool_mount }}
+# Clear any leftover container from an unclean stop (ignore failure if none).
+ExecStartPre=-/usr/bin/docker rm -f tape-archiver-data-worker
+
+# Device passthrough (SPEC §4.1): both drives' non-rewinding nodes, the
+# changer, and their generic SCSI (/dev/sg*) nodes for raw SG_IO — the sg*
+# list is discovered per-run by ansible via `lsscsi -g` since the numbers
+# depend on SCSI discovery order. /dev/zfs is read-only ioctls for `zfs get`;
+# /dev/fuse is required because LTFS is FUSE-based.
+#
+# Capabilities: SYS_ADMIN — LTFS/FUSE cannot mount without it. SYS_RAWIO —
+# the changer, `sg_raw`, and LTFS issue raw SCSI via SG_IO; without it library
+# moves fail with EPERM.
+ExecStart=/usr/bin/docker run --rm --name tape-archiver-data-worker \
+    --pull=never \
+    --env-file /etc/tape-archiver/data-worker.env \
+{% for device in tape_archiver_tape_devices %}
+    --device {{ device }} \
+{% endfor %}
+    --device {{ tape_archiver_changer_device }} \
+{% for device in tape_archiver_sg_discovery.stdout_lines %}
+    --device {{ device }} \
+{% endfor %}
+    --device /dev/zfs \
+    --device /dev/fuse \
+    --cap-add SYS_ADMIN \
+    --cap-add SYS_RAWIO \
+    --mount type=bind,source={{ tape_archiver_pool_mount }},target={{ tape_archiver_pool_mount }},bind-propagation=rslave \
+    --mount type=bind,source=/run/tape-archiver/jwt,target=/var/run/teleport/jwt,readonly \
+    ${TAPE_ARCHIVER_IMAGE}
+
+# Graceful shutdown: SIGTERM lets the worker stop polling and drain its
+# in-flight activity instead of being killed mid-write at Docker's 10s
+# default. TimeoutStopSec must exceed the `docker stop` timeout so systemd
+# does not SIGKILL the container first.
+ExecStop=/usr/bin/docker stop --time={{ tape_archiver_stop_timeout }} tape-archiver-data-worker
+TimeoutStopSec={{ tape_archiver_stop_timeout + 60 }}
+
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

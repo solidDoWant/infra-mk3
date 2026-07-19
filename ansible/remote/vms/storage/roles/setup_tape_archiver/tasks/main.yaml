@@ -1,0 +1,215 @@
+---
+# Docker CE from Docker's own repo — NOT Ubuntu's docker.io package, which
+# conflicts with the docker-ce install already present on the host.
+- name: Add the Docker GPG signing key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Add the Docker repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    state: present
+    filename: docker
+    update_cache: true
+
+- name: Install packages
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      # Needed by community.docker modules on the target
+      - python3-docker
+      # Device discovery/debugging (`lsscsi -g`); the worker's own SCSI tools
+      # are baked into the container image
+      - lsscsi
+      # The tbot unit's ExecStartPost readiness gate (`curl .../wait`)
+      - curl
+    state: latest
+    update_cache: true
+    cache_valid_time: 600
+    autoclean: true
+    autoremove: true
+
+# The medium changer node (/dev/sch0) only exists when the ch module is
+# loaded; tape (st) autoloads on device discovery but ch does not.
+- name: Load the SCSI medium changer kernel module
+  block:
+    - name: Load the ch module now
+      community.general.modprobe:
+        name: ch
+        state: present
+    - name: Load the ch module on boot
+      ansible.builtin.copy:
+        content: |
+          ch
+        dest: /etc/modules-load.d/tape-archiver.conf
+        owner: root
+        group: root
+        mode: 0644
+
+# Discovered rather than hardcoded: /dev/sg* numbers are assigned by SCSI
+# discovery order and change when hardware is added or removed. The unit
+# template passes each as a --device flag for raw SG_IO (library moves, LTFS).
+- name: Discover the tape drive and changer SCSI generic device nodes
+  ansible.builtin.shell: |
+    set -o pipefail
+    lsscsi -g | awk '/tape|mediumx/ {print $NF}'
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: tape_archiver_sg_discovery
+
+- name: Verify the tape library hardware is visible
+  ansible.builtin.assert:
+    that:
+      - tape_archiver_sg_discovery.stdout_lines | length >= 3
+    fail_msg: >-
+      Expected at least 3 SCSI generic nodes (2 tape drives + 1 changer) from
+      `lsscsi -g`, got: {{ tape_archiver_sg_discovery.stdout_lines }}. Check
+      the FC HBA passthrough and tape library connectivity.
+
+- name: Ensure Docker is running
+  ansible.builtin.service:
+    name: docker.service
+    enabled: true
+    state: started
+
+# The systemd unit runs with --pull=never so a start never reaches out to a
+# registry; the pinned image is pulled here instead, on change only.
+- name: Pull the data worker image
+  community.docker.docker_image:
+    name: "{{ tape_archiver_image }}"
+    source: pull
+  notify: Restart tape-archiver data worker
+
+- name: Create the config directory
+  ansible.builtin.file:
+    path: /etc/tape-archiver
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+
+# The JWT destination (/run/tape-archiver/jwt, tmpfs) is NOT created here:
+# the tbot unit's RuntimeDirectory owns it — created on service start,
+# preserved across restarts (RuntimeDirectoryPreserve), gone after reboot
+# until tbot starts again.
+
+# Migration cleanup: the JWT destination used to be /etc/tape-archiver/jwt
+# (persistent disk — exactly what a short-lived credential should not sit
+# on). Remove any leftover from a deploy of the earlier role version; safe
+# to delete this task once the role has run everywhere.
+- name: Remove the old on-disk JWT directory
+  ansible.builtin.file:
+    path: /etc/tape-archiver/jwt
+    state: absent
+
+- name: Verify the pool is mounted
+  ansible.builtin.command: mountpoint -q {{ tape_archiver_pool_mount }}
+  changed_when: false
+
+# Guard against the dedicated tape-staging dataset not existing/being
+# mounted: `file` creates missing parents, which would silently land the
+# staging tree on the pool's ROOT dataset instead. Expects the staging dir
+# to be a direct child of its dataset's mountpoint (the default layout).
+- name: Verify the staging dataset is mounted
+  ansible.builtin.command: mountpoint -q {{ tape_archiver_staging_dir | dirname }}
+  changed_when: false
+
+# A plain subdirectory of the dedicated tape-staging dataset — the worker
+# never runs `zfs create` (SPEC §4.3). NOT under `archive`: its contents are
+# a tape-backup source, so staging scratch there would end up on the tapes.
+- name: Create the staging directory
+  ansible.builtin.file:
+    path: "{{ tape_archiver_staging_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+
+- name: Install the tbot config
+  ansible.builtin.template:
+    src: tbot.yaml
+    dest: /etc/tape-archiver/tbot.yaml
+    owner: root
+    group: root
+    mode: 0640
+  notify: Restart tape-archiver tbot
+
+- name: Install the tbot systemd unit
+  ansible.builtin.template:
+    src: tape-archiver-tbot.service
+    dest: /etc/systemd/system/tape-archiver-tbot.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart tape-archiver tbot
+
+- name: Install the data worker environment file
+  ansible.builtin.template:
+    src: data-worker.env
+    dest: /etc/tape-archiver/data-worker.env
+    owner: root
+    group: root
+    mode: 0640
+  notify: Restart tape-archiver data worker
+
+- name: Install the data worker systemd unit
+  ansible.builtin.template:
+    src: tape-archiver-data-worker.service
+    dest: /etc/systemd/system/tape-archiver-data-worker.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart tape-archiver data worker
+
+# The Teleport proxy runs in the k8s cluster and is the one external
+# dependency of service startup: the tbot unit's start job now blocks on a
+# successful join (ExecStartPost readiness gate), so `state: started` FAILS
+# outright while the cluster is down. Probe the proxy's unauthenticated ping
+# endpoint — the same host:port the TPM join dials — and degrade to
+# enable-only when it's unreachable, so a later cluster recovery + reboot
+# (or rerun) still converges instead of leaving half-enabled units behind.
+- name: Check whether the Teleport proxy is reachable
+  ansible.builtin.uri:
+    url: https://{{ teleport_domain_name }}/webapi/ping
+    timeout: 5
+  register: tape_archiver_teleport_ping
+  failed_when: false
+
+- name: Record cluster availability
+  ansible.builtin.set_fact:
+    tape_archiver_cluster_available: "{{ tape_archiver_teleport_ping.status | default(0) == 200 }}"
+
+- name: Enable the services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    daemon_reload: true
+    enabled: true
+  loop:
+    - tape-archiver-tbot.service
+    - tape-archiver-data-worker.service
+
+- name: Start the services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - tape-archiver-tbot.service
+    - tape-archiver-data-worker.service
+  when: tape_archiver_cluster_available
+
+- name: Warn that service start was skipped
+  ansible.builtin.debug:
+    msg: >-
+      Teleport proxy at {{ teleport_domain_name }} is unreachable (k8s cluster
+      down?). Services were enabled but NOT started/restarted; they will start
+      on next boot, or rerun this role once the cluster is available.
+  when: not tape_archiver_cluster_available

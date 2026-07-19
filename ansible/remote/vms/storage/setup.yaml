@@ -114,6 +114,8 @@
     #   loop:
     #     - name: media
     #       share_with_nfs: true
+    #     - name: archive # non-k8s backups; contents are a tape-backup source; not NFS-exported
+    #     - name: tape-staging # tape-archiver Prepare-phase scratch (sync=disabled); NOT a tape-backup source; not NFS-exported
     #     - name: k8s
     #     - name: k8s/democratic-csi
     #     - name: k8s/democratic-csi/nfs
@@ -155,6 +157,14 @@
     - name: Install exporters
       ansible.builtin.include_role:
         name: install_exporters
+
+    # Runs the tape-archiver data worker (Docker container supervised by
+    # systemd, with tape library device passthrough) plus a dedicated tbot
+    # instance that renews its Temporal credential. Cluster-side counterparts
+    # live in cluster/gitops/backup/tape-archiver/.
+    - name: Setup tape archiver data worker
+      ansible.builtin.include_role:
+        name: setup_tape_archiver
 
     # - name: Reboot
     #   ansible.builtin.reboot:

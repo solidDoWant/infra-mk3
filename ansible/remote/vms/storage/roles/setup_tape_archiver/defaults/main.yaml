@@ -1,0 +1,22 @@
+---
+tape_archiver_image: ghcr.io/soliddowant/tape-archiver/data-worker:0.0.6
+# Temporal frontend gRPC via the internal gateway (terminate + re-encrypt, see
+# cluster/gitops/data/temporal/app/grpc-route.yaml). The gateway serves a
+# publicly-trusted cert, so no private CA needs to be distributed to this
+# host. Hostname derived from the teleport proxy hostname, which shares the
+# public domain.
+tape_archiver_temporal_address: "{{ teleport_domain_name | regex_replace('^teleport\\.', 'temporal-grpc.') }}:443"
+tape_archiver_temporal_namespace: backup
+tape_archiver_pool_mount: /mnt/bulk-pool-01
+# Staging lives in its own dedicated `tape-staging` dataset (create manually,
+# like the pool's other datasets; sync=disabled recommended — bulk scratch
+# writes). Deliberately NOT under `archive`: archive holds non-k8s backups
+# that are themselves a tape-backup source, so staging scratch there would be
+# swept onto the very tapes being written.
+tape_archiver_staging_dir: /mnt/bulk-pool-01/tape-staging/runs
+tape_archiver_k8s_dataset_parent: bulk-pool-01/k8s/democratic-csi/nfs/pvcs
+tape_archiver_tape_devices:
+  - /dev/nst0
+  - /dev/nst1
+tape_archiver_changer_device: /dev/sch0
+tape_archiver_stop_timeout: 300

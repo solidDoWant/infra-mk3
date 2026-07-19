@@ -1,0 +1,74 @@
+---
+argument_specs:
+  main:
+    short_description: Install and run the tape-archiver data worker
+    description:
+      - Installs Docker and the tape-archiver data worker OCI image, and runs
+        the worker as a systemd-supervised container with tape library device
+        passthrough (per SPEC §4.1 and deploy/data-worker in the
+        tape-archiver repo).
+      - Also installs a dedicated tbot instance (binary provided by the
+        already-installed teleport-ent package) that TPM-joins the Teleport
+        cluster and continually renews the Temporal JWT-SVID the worker
+        authenticates with.
+    options:
+      tape_archiver_image:
+        type: str
+        default: ghcr.io/soliddowant/tape-archiver/data-worker:0.0.6
+        description: Pinned data worker image reference. The systemd unit runs
+          with --pull=never; this role pulls the image explicitly on change.
+      tape_archiver_temporal_address:
+        type: str
+        default: temporal-grpc.<public domain>:443 (derived from teleport_domain_name)
+        description: Temporal frontend gRPC endpoint — the temporal-grpc
+          HTTPRoute on the internal gateway (terminate + re-encrypt; see
+          cluster/gitops/data/temporal/app/grpc-route.yaml). The gateway's
+          publicly-trusted cert means no custom CA is needed on this host.
+      tape_archiver_temporal_namespace:
+        type: str
+        default: backup
+      tape_archiver_pool_mount:
+        type: str
+        default: /mnt/bulk-pool-01
+      tape_archiver_staging_dir:
+        type: str
+        default: /mnt/bulk-pool-01/tape-staging/runs
+        description: Staging root for the Prepare phase. Must be a plain
+          subdirectory of an existing dataset on the pool; the worker never
+          runs `zfs create`. Must NOT live under a dataset whose contents are
+          themselves backed up to tape (e.g. `archive`) — staging scratch
+          would be swept onto the tapes being written. The default expects a
+          dedicated `tape-staging` dataset (manually created, sync=disabled
+          recommended).
+      tape_archiver_k8s_dataset_parent:
+        type: str
+        default: bulk-pool-01/k8s/democratic-csi/nfs/pvcs
+        description: democratic-csi datasetParentName, used to resolve
+          relative CSI snapshotHandles. Must match
+          cluster/gitops/storage/democratic-csi/zfs-generic-nfs/hr.yaml.
+      tape_archiver_tape_devices:
+        type: list
+        elements: str
+        default: [/dev/nst0, /dev/nst1]
+        description: Non-rewinding tape drive device nodes.
+      tape_archiver_changer_device:
+        type: str
+        default: /dev/sch0
+        description: SCSI medium changer device node (requires the ch kernel
+          module, loaded by this role).
+      tape_archiver_stop_timeout:
+        type: int
+        default: 300
+        description: Graceful-stop budget in seconds handed to `docker stop`
+          so an in-flight activity drains rather than being killed mid-write.
+      tape_archiver_discord_webhook_url:
+        type: str
+        required: false
+        description: Discord webhook for run-failure alerts and report
+          delivery. Comes from the SOPS-encrypted group vars; failure
+          alerting is disabled when unset.
+      teleport_domain_name:
+        type: str
+        required: true
+        description: Public hostname of the Teleport proxy (from the
+          SOPS-encrypted group vars, same var install_teleport uses).
