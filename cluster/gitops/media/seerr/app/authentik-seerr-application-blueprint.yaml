@@ -44,6 +44,16 @@ stringData:
           authorization_flow:
             !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
           client_type: confidential
+          # Required: the field's model default is an EMPTY list, and the authorize
+          # endpoint rejects any grant type not listed — a provider (re)created from
+          # this blueprint without it cannot log anyone in. The app runs the
+          # browser authorization-code flow; refresh_token covers server-side
+          # session renewal. (Also drops the unused legacy grants the pre-field
+          # migration back-filled: hybrid/implicit/password/client_credentials/
+          # device_code.)
+          grant_types:
+            - authorization_code
+            - refresh_token
           client_id: "${SECRET_SEERR_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_SEERR_AUTHENTIK_OIDC_CLIENT_SECRET}"
           # Redirect URIs from Seerr's OIDC implementation (PR #2715).
