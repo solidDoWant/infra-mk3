@@ -22,6 +22,15 @@ spec:
       podLabels:
         endpoints.netpols.home.arpa/time-series-querier: "true"
       extraArgs:
+        # The fairwinds vpa chart defaults recommender verbosity to --v=4, which
+        # floods logs with V(4) debug lines — most notably a per-recommendation
+        # "DEPRECATED: Converting raw value to humanized value" message emitted on
+        # every humanize-memory conversion (kubernetes/autoscaler types.go). That
+        # line is V(4)-gated in both our pinned 1.3.0 and upstream master, so no
+        # image bump silences it; dropping to v=2 stops it (and the rest of the
+        # V3/V4 debug noise) at the source. Warnings/errors are unaffected — klog
+        # -v only gates Info/V(n) output, not Warning/Error.
+        v: "2"
         pod-recommendation-min-memory-mb: 64
         humanize-memory: true
         leader-elect: true
