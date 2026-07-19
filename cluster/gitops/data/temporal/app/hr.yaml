@@ -253,6 +253,20 @@ spec:
 
       frontend:
         replicaCount: 2
+        # grpc-go (server side) enforces TLS ALPN negotiation, but Istio's
+        # BackendTLSPolicy re-encrypt (internal gateway → :7233 for the
+        # temporal-grpc.<domain> route) omits alpn_protocols from the
+        # upstream TLS context, so the frontend reset every gateway
+        # connection immediately after the handshake (UC
+        # connection_termination at the gateway; istio#60466, fix pending
+        # in istio#60925). Disable enforcement until the Istio fix ships —
+        # the gateway still speaks h2 on the wire, ALPN just goes
+        # unnegotiated. Direct in-cluster clients negotiate ALPN normally
+        # either way. Scoped to frontend pods (per-service additionalEnv
+        # overrides the global in this chart: `default global per-service`).
+        additionalEnv:
+          - name: GRPC_ENFORCE_ALPN_ENABLED
+            value: "false"
         resources:
           requests:
             cpu: 100m
