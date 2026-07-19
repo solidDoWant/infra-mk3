@@ -65,6 +65,14 @@ stringData:
           client_id: "${SECRET_<SERVICE>_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_<SERVICE>_AUTHENTIK_OIDC_CLIENT_SECRET}"
           client_type: confidential
+          # REQUIRED — the model default is an empty list, and the authorize
+          # endpoint rejects any grant type not listed ("Invalid grant_type
+          # for provider"): a provider created without this cannot log anyone
+          # in. authorization_code covers the standard web-app code flow;
+          # add refresh_token if the app renews sessions server-side.
+          grant_types:
+            - authorization_code
+            - refresh_token
           redirect_uris:
             - url: https://<service>.${SECRET_PUBLIC_DOMAIN_NAME}/auth/callback
               matching_mode: strict

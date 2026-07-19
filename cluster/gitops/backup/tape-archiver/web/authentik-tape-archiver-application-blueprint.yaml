@@ -52,6 +52,15 @@ stringData:
           client_type: confidential
           client_id: "${SECRET_TAPE_ARCHIVER_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_TAPE_ARCHIVER_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          # Explicitly required: the model's default is an EMPTY list, and the
+          # authorize endpoint rejects any request whose grant type is not
+          # listed ("Invalid grant_type for provider") — a blueprint-created
+          # provider without this cannot log anyone in. cmd/web runs the
+          # authorization-code flow; refresh_token lets its oauth2 client
+          # renew sessions without a re-auth round trip.
+          grant_types:
+            - authorization_code
+            - refresh_token
           redirect_uris:
             - url: https://tape-archiver.${SECRET_PUBLIC_DOMAIN_NAME}/auth/callback
               matching_mode: strict
