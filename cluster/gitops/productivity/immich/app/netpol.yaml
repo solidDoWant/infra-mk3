@@ -58,8 +58,11 @@ specs:
           - ports:
               - port: "3003"
                 protocol: TCP
-      # OIDC back-channel (api worker only): fetch the rewritten discovery doc
-      # from the openid-configuration-proxy over HTTPS...
+      # OIDC back-channel (api worker only): the openid-configuration-proxy is
+      # the canonical in-cluster OIDC origin — discovery, token exchange,
+      # JWKS, and userinfo all go through it over HTTPS (it forwards to
+      # authentik-server and stamps a consistent issuer; see
+      # security/authentik/openid-configuration-proxy).
       - toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: security
@@ -68,18 +71,6 @@ specs:
         toPorts:
           - ports:
               - port: "8443"
-                protocol: TCP
-      # ...then token / JWKS / userinfo directly from authentik-server (the
-      # discovery doc rewrites those endpoints to the in-cluster service).
-      - toEndpoints:
-          - matchLabels:
-              io.kubernetes.pod.namespace: security
-              app.kubernetes.io/name: authentik
-              app.kubernetes.io/instance: authentik
-              app.kubernetes.io/component: server
-        toPorts:
-          - ports:
-              - port: "9000"
                 protocol: TCP
     ingress:
       # Kubelet for the liveness/readiness probe

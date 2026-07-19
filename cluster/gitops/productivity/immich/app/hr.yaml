@@ -46,9 +46,9 @@ spec:
               # controller for the job processor.
               IMMICH_WORKERS_INCLUDE: api
               # Trust the cluster root CA so Immich validates the
-              # openid-configuration-proxy's serving cert over HTTPS during OIDC
-              # discovery (the proxy rewrites token/JWKS/userinfo to in-cluster
-              # authentik-server). Only the api worker runs the OIDC flow.
+              # openid-configuration-proxy's serving cert — the whole OIDC
+              # back-channel (discovery, token, JWKS, userinfo) runs over HTTPS
+              # through that proxy. Only the api worker runs the OIDC flow.
               NODE_EXTRA_CA_CERTS: /etc/immich/certs/root-ca/ca.crt
               # Shared DB/Redis/ML config (anchored so the microservices worker
               # reuses it without the api-only worker selector above).
@@ -131,8 +131,8 @@ spec:
               seccompProfile:
                 type: RuntimeDefault
         # The api worker runs the OIDC back-channel (discovery, token, JWKS,
-        # userinfo). This label lets it reach the openid-configuration-proxy and
-        # authentik-server, whose netpols admit oidc-querier pods.
+        # userinfo) through the openid-configuration-proxy, whose netpol
+        # admits oidc-querier pods.
         pod:
           labels:
             endpoints.netpols.home.arpa/oidc-querier: "true"
@@ -351,8 +351,8 @@ spec:
           server:
             envoy:
               - path: /etc/envoy/secrets/root-ca
-            # Mounted into the api worker for NODE_EXTRA_CA_CERTS (OIDC discovery
-            # over HTTPS to the openid-configuration-proxy).
+            # Mounted into the api worker for NODE_EXTRA_CA_CERTS (OIDC
+            # back-channel over HTTPS to the openid-configuration-proxy).
             main:
               - path: /etc/immich/certs/root-ca
           microservices:

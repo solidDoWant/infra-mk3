@@ -25,9 +25,10 @@ specs:
             rules:
               dns:
                 - matchPattern: "*"
-      # Upstream Authentik server pods. Plain HTTP on 9000; the Host header is
-      # rewritten by Envoy's host_rewrite_literal so Authentik picks the right
-      # Brand and stamps tokens with the public issuer.
+      # Upstream Authentik server pods. Plain HTTP on 9000; Envoy rewrites the
+      # Host header to this proxy's own canonical FQDN (and forces
+      # X-Forwarded-Proto: https) so Authentik stamps the discovery issuer and
+      # token iss with the proxy's https origin — see envoy-config/envoy.yaml.
       - toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: security
@@ -39,9 +40,9 @@ specs:
               - port: "9000"
                 protocol: TCP
     ingress:
-      # In-cluster OIDC consumers fetching the rewritten discovery doc / JWKS.
-      # Same oidc-querier label these clients already use to reach Authentik
-      # directly (see authentik/app/netpol.yaml).
+      # In-cluster OIDC consumers running the full back-channel here:
+      # discovery, token exchange, JWKS, userinfo. Same oidc-querier label
+      # other in-cluster OIDC clients use (see authentik/app/netpol.yaml).
       - fromEndpoints:
           - matchLabels:
               endpoints.netpols.home.arpa/oidc-querier: "true"
@@ -50,8 +51,6 @@ specs:
                 operator: Exists
         toPorts:
           - ports:
-              - port: "8080"
-                protocol: TCP
               - port: "8443"
                 protocol: TCP
       # Kubelet TCP probes.
@@ -59,7 +58,14 @@ specs:
           - host
         toPorts:
           - ports:
-              - port: "8080"
-                protocol: TCP
               - port: "8443"
+                protocol: TCP
+      # Victoria Metrics agent scrapes Envoy stats on the metrics listener.
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
                 protocol: TCP

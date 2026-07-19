@@ -1,23 +1,49 @@
 admin:
-  # Bound to loopback only — never reachable from outside the pod.
-  # Used for local debugging via `kubectl exec`.
+  # Loopback only; for `kubectl exec` debugging.
   address:
     socket_address:
       address: 127.0.0.1
       port_value: 9901
 static_resources:
   listeners:
-    - name: http
+    - name: https
       address:
         socket_address:
           address: 0.0.0.0
-          port_value: 8080
+          port_value: 8443
       filter_chains:
-        - filters: &http_filters
+        - filters:
             - name: envoy.filters.network.http_connection_manager
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: openid_configuration_proxy
+                # Authentik builds the issuer and token iss from each
+                # request's Host + X-Forwarded-Proto. host_rewrite_literal
+                # (below) pins the Host; edge mode here pins XFP — Envoy
+                # overwrites any client-supplied value with the listener's
+                # real scheme (https), keeping the stamped issuer
+                # deterministic. Edge mode also appends the caller's pod IP
+                # to X-Forwarded-For, so Authentik's audit log attributes
+                # back-channel calls to the calling app rather than this
+                # proxy's pod IP.
+                use_remote_address: true
+                # Per-request record of the OIDC back-channel (stdout → the
+                # cluster log pipeline). Authentik's event log only covers
+                # selected events, so this is the complete proxy-side trail
+                # (incl. failed token exchanges).
+                access_log:
+                  - name: envoy.access_loggers.stdout
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                      log_format:
+                        json_format:
+                          time: "%START_TIME%"
+                          client: "%DOWNSTREAM_REMOTE_ADDRESS%"
+                          method: "%REQ(:METHOD)%"
+                          path: "%REQ(:PATH)%"
+                          status: "%RESPONSE_CODE%"
+                          flags: "%RESPONSE_FLAGS%"
+                          duration_ms: "%DURATION%"
                 route_config:
                   name: local_route
                   virtual_hosts:
@@ -25,10 +51,9 @@ static_resources:
                       domains:
                         - "*"
                       routes:
-                        # Discovery doc: GET .../.well-known/openid-configuration.
-                        # The Lua filter rewrites the JSON body in the
-                        # response; routing is otherwise the same as the
-                        # passthrough route below.
+                        # Discovery doc. Same upstream as the passthrough
+                        # route, plus a Lua body rewrite that points the two
+                        # browser-facing endpoints at the public gateway.
                         - name: discovery
                           match:
                             safe_regex:
@@ -39,47 +64,27 @@ static_resources:
                                   exact: GET
                           route:
                             cluster: authentik_upstream
-                            # Rewrite the Host to the internal service name so the
-                            # discovery `issuer` (and token/jwks/userinfo URLs)
-                            # Authentik stamps here are identical to the `iss` it
-                            # stamps when an app calls authentik-server directly
-                            # for the token exchange. Strict OIDC clients (e.g.
-                            # Immich's openid-client) enforce token.iss ===
-                            # metadata.issuer, so the two MUST match. The Lua below
-                            # rewrites only the browser-facing endpoints back to
-                            # the public gateway.
-                            host_rewrite_literal: authentik-server.security.svc.cluster.local
-                          # Force the perceived scheme to http so the issuer scheme
-                          # also matches the plain-HTTP token call (apps reach
-                          # authentik-server over http). Authentik builds the
-                          # discovery URLs from this and trusts the pod CIDR
-                          # (AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.32.0.0/16 in
-                          # authentik/app/hr.yaml), so the header is honored.
-                          # OVERWRITE because Envoy otherwise sets https for the
-                          # 8443 (TLS) listener.
-                          request_headers_to_add:
-                            - header:
-                                key: X-Forwarded-Proto
-                                value: http
-                              append_action: OVERWRITE_IF_EXISTS_OR_ADD
-                          # Force the upstream response to be uncompressed so
-                          # the Lua filter can pattern-match the JSON body.
-                          # Authentik honors Accept-Encoding: gzip and returns
-                          # a gzipped body — Lua sees binary and silently
-                          # no-ops the rewrite. The discovery doc is ~1.5 KB
-                          # so dropping compression costs nothing.
+                            host_rewrite_literal: &canonical_host openid-configuration-proxy.security.svc.cluster.local
+                          # Without this, Authentik may gzip the response and
+                          # the Lua rewrite silently no-ops on the binary body.
                           request_headers_to_remove:
                             - accept-encoding
                           typed_per_filter_config:
                             envoy.filters.http.lua:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
                               name: rewrite_discovery
-                        # Catch-all: this proxy only exists to rewrite the
-                        # OIDC discovery doc. Any other path is operator
-                        # error — surface a clear 404 instead of silently
-                        # proxying to Authentik (which would also work but
-                        # masks misconfiguration and bypasses the Host
-                        # rewrite story we documented).
+                        # Back-channel endpoints (token, JWKS, userinfo,
+                        # revoke, introspect). The token exchange must flow
+                        # through here — Authentik stamps the token `iss` from
+                        # this request, and it has to match the doc issuer.
+                        - name: oauth-passthrough
+                          match:
+                            prefix: "/application/o/"
+                          route:
+                            cluster: authentik_upstream
+                            host_rewrite_literal: *canonical_host
+                        # Everything outside the OAuth2/OIDC provider tree
+                        # (admin UI, flows, outposts) is out of scope.
                         - name: not-found
                           match:
                             prefix: "/"
@@ -87,56 +92,40 @@ static_resources:
                             status: 404
                             body:
                               inline_string: |
-                                openid-configuration-proxy: this proxy only serves
-                                GET /application/o/<provider>/.well-known/openid-configuration.
-                                For all other Authentik endpoints, call
-                                authentik-server.security.svc.cluster.local directly.
+                                openid-configuration-proxy: this proxy only serves the
+                                OIDC provider tree under /application/o/ (discovery,
+                                token, JWKS, userinfo, revoke, introspect). All other
+                                Authentik functionality is out of scope.
                 http_filters:
                   - name: envoy.filters.http.lua
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-                      # No default_source_code: the filter is a no-op on any
-                      # route that doesn't opt in via LuaPerRoute.
+                      # No default_source_code: only the discovery route opts
+                      # in via LuaPerRoute.
                       source_codes:
                         rewrite_discovery:
                           inline_string: |
-                            -- The route is scoped to GET on the discovery
-                            -- URL, so Authentik always returns the discovery
-                            -- JSON here. If gsub finds no match it's a no-op,
-                            -- so unexpected error bodies pass through cleanly.
+                            -- Point the two endpoints the user's BROWSER visits
+                            -- at the public gateway; everything else in the doc
+                            -- (issuer, token, jwks, userinfo, revoke,
+                            -- introspect) keeps this proxy's origin so the
+                            -- back-channel stays in-cluster. gsub without a
+                            -- match is a no-op, so error bodies pass through.
                             function envoy_on_response(rh)
                               local body = rh:body():getBytes(0, rh:body():length())
                               local pub = "https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}"
-                              local int = "http://authentik-server.security.svc.cluster.local"
+                              -- pesc escapes the origin for use in a Lua pattern
+                              -- (`-` and `.` are pattern metacharacters).
                               local function pesc(s) return (s:gsub("(%W)", "%%%1")) end
-                              -- The Host rewrite makes Authentik emit every URL
-                              -- (incl. issuer) with the internal host, matching the
-                              -- direct token call's iss. Rewrite ONLY the two
-                              -- browser-facing endpoints to the public gateway; the
-                              -- issuer and the back-channel endpoints (token, jwks,
-                              -- userinfo, revoke, introspect) stay internal.
-                              for _, k in ipairs({
-                                "authorization_endpoint", "end_session_endpoint",
-                              }) do
-                                body = body:gsub('("' .. k .. '"%s*:%s*")' .. pesc(int), "%1" .. pub)
-                              end
+                              local int = pesc("https://openid-configuration-proxy.security.svc.cluster.local")
+                              body = body:gsub('("authorization_endpoint"%s*:%s*")' .. int, "%1" .. pub)
+                              body = body:gsub('("end_session_endpoint"%s*:%s*")' .. int, "%1" .. pub)
                               rh:body():setBytes(body)
                               rh:headers():remove("content-length")
                             end
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-    # HTTPS variant. Same filter chain as the HTTP listener (reused via the
-    # `&http_filters` anchor above) so the route table, Lua rewrite, and
-    # upstream cluster are identical. The only addition is a TLS transport
-    # socket terminating with the namespace-issued serving cert.
-    - name: https
-      address:
-        socket_address:
-          address: 0.0.0.0
-          port_value: 8443
-      filter_chains:
-        - filters: *http_filters
           transport_socket:
             name: envoy.transport_sockets.tls
             typed_config:
@@ -147,6 +136,36 @@ static_resources:
                       filename: /etc/openid-configuration-proxy/certs/serving/tls.crt
                     private_key:
                       filename: /etc/openid-configuration-proxy/certs/serving/tls.key
+    # Exposes ONLY /stats/prometheus from the loopback admin interface for
+    # scraping; the rest of the admin API (config dumps, /quitquitquit,
+    # runtime overrides) stays unreachable. Any other path 404s.
+    - name: metrics
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 9090
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: metrics
+                route_config:
+                  name: metrics_route
+                  virtual_hosts:
+                    - name: metrics
+                      domains:
+                        - "*"
+                      routes:
+                        - name: prometheus-stats
+                          match:
+                            path: /stats/prometheus
+                          route:
+                            cluster: admin_local
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
     - name: authentik_upstream
       connect_timeout: 5s
@@ -159,8 +178,19 @@ static_resources:
                   address:
                     socket_address:
                       address: authentik-server.security.svc.cluster.local
-                      # Service port, not container port. The Authentik Service
-                      # maps 80 → containerPort 9000. The CiliumNetworkPolicy
-                      # still authorizes port 9000 because it evaluates against
-                      # the destination pod port after Cilium service xlation.
+                      # Service port (maps to containerPort 9000). The netpol
+                      # authorizes 9000 — Cilium evaluates the pod port after
+                      # service translation.
                       port_value: 80
+    - name: admin_local
+      connect_timeout: 1s
+      type: STATIC
+      load_assignment:
+        cluster_name: admin_local
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 9901
