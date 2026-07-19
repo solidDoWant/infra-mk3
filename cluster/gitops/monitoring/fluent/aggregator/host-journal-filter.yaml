@@ -1,7 +1,10 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/clusterfilter_v1alpha1.json
-# Shapes journald records shipped by off-cluster hosts (tag host.**, e.g. the
-# storage host's fluent-bit via the fluentd-forward Teleport app). The host
+# Shapes journald records shipped by off-cluster hosts (tag forward.host.**,
+# e.g. the storage host's fluent-bit via the fluentd-forward Teleport app).
+# The `forward.` prefix is added by the aggregator's in_forward
+# (addTagPrefix: forward in fluentd.yaml); the host agent tags them
+# host.journal. The host
 # agent already sets `log`, `host.*`, `logging.type`, and
 # `_meta.stream_fields`; the two pieces that are easier done here:
 #
@@ -24,7 +27,7 @@ spec:
   filters:
     - customPlugin:
         config: |
-          <filter host.**>
+          <filter forward.host.**>
             @type record_transformer
             @id host_journal_time
             enable_ruby true
@@ -34,7 +37,7 @@ spec:
           </filter>
     - customPlugin:
         config: |
-          <filter host.**>
+          <filter forward.host.**>
             @type parser
             @id host_journal_log_fields
             key_name log

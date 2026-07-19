@@ -62,6 +62,10 @@
   args:
     executable: /bin/bash
   changed_when: false
+  # Read-only (lsscsi query); run it even under --check so the hardware-visible
+  # assert below has real data on patch/upgrade dry-runs instead of failing on
+  # an empty result (a skipped command task registers no stdout).
+  check_mode: false
   register: tape_archiver_sg_discovery
 
 - name: Verify the tape library hardware is visible

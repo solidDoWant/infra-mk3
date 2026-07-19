@@ -93,6 +93,13 @@
     # Ack per chunk: a connection severed mid-write (proxy restart, tunnel
     # re-establishment) is a retry, not a loss.
     require_ack_response       true
+    # fluent-bit v5.0.4 flipped this default to On, which embeds per-event
+    # metadata in an extended MessagePack the Fluentd aggregator (v1.19)
+    # cannot parse — it rejects every event ("skip invalid event"). Must be
+    # Off to stay wire-compatible. Mirrors the node agents'
+    # retainMetadataInForwardMode: false (cluster .../fluent/node-agent/
+    # forward-output.yaml).
+    retain_metadata_in_forward_mode false
     compress                   gzip
     storage.total_limit_size   {{ fluent_bit_buffer_limit }}
     # Recycle connections after a bounded number of uses so the Teleport
