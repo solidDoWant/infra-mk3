@@ -148,14 +148,24 @@ specs:
           - ports:
               - port: "7233"
                 protocol: TCP
-      # Any in-cluster service-worker that authenticates with a JWT (e.g.
-      # media-processor with a Teleport Workload Identity JWT-SVID).
       - fromEndpoints:
+          # Any in-cluster service-worker that authenticates with a JWT (e.g.
+          # media-processor with a Teleport Workload Identity JWT-SVID).
           - matchLabels:
               endpoints.netpols.home.arpa/temporal-frontend-client: "true"
             matchExpressions:
               - key: io.kubernetes.pod.namespace
                 operator: Exists
+      # Internal gateway — terminate + re-encrypt path for the tape-archiver
+      # data worker on ubuntu-storage-host-01 (temporal-grpc.<domain>, see
+      # grpc-route.yaml). It authenticates with a Teleport Workload Identity
+      # JWT-SVID like in-cluster workers — this rule only opens the network
+      # path.
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
         toPorts:
           - ports:
               - port: "7233"

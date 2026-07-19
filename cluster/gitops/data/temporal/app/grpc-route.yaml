@@ -1,0 +1,57 @@
+---
+# Exposes the Temporal frontend gRPC endpoint through the internal gateway so
+# the tape-archiver data worker on ubuntu-storage-host-01 (outside the
+# cluster) can reach it — same terminate + re-encrypt pattern as Teleport
+# (security/teleport/cluster/routes.yaml):
+#   1. The client dials temporal-grpc.<domain>:443; the gateway terminates TLS
+#      with the publicly-trusted wildcard cert (no private CA distribution to
+#      the storage host needed) and k8s-gateway CoreDNS publishes the
+#      hostname automatically.
+#   2. The gateway re-originates TLS to the frontend, which serves its
+#      internal cert (SNI = the in-cluster service name), validated against
+#      the root CA (BackendTLSPolicy below).
+# gRPC is plain HTTP/2, and Istio infers h2 upstream from the backend port
+# name (grpc-rpc). Client authorization is unchanged: the frontend still
+# requires a JWT with valid `permissions` on every RPC — this route only
+# opens a network path.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: temporal-grpc
+spec:
+  hostnames:
+    - temporal-grpc.${SECRET_PUBLIC_DOMAIN_NAME}
+  parentRefs:
+    - name: internal-gateway
+      namespace: networking
+      sectionName: https
+  rules:
+    - backendRefs:
+        - name: temporal-frontend
+          port: 7233
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+# Re-encrypt traffic from the gateway to the Temporal frontend. The frontend
+# serves its normal serving cert (temporal-frontend-tls), whose SANs cover the
+# in-cluster service name and which chains to the root CA — distributed to
+# every namespace as a ConfigMap by the Kyverno extract-root-ca-certificate
+# policy. No cert changes are needed for this route.
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: temporal-frontend
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: temporal-frontend
+  validation:
+    caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: root-ca-pub-cert
+    # Must match a SAN on the frontend's serving cert (see frontend-cert.yaml).
+    hostname: temporal-frontend.data.svc.cluster.local
