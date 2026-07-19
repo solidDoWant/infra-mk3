@@ -28,6 +28,18 @@ Type=simple
 # unit never reaches out to a registry on start.
 Environment=TAPE_ARCHIVER_IMAGE={{ tape_archiver_image }}
 
+# Dry-run support: pass the mhvtl virtual library's devices through WHEN
+# PRESENT, without making production depend on them. The generator resolves
+# the stable /dev/mhvtl/* udev symlinks to their kernel nodes and maps each
+# BOTH at its kernel path (so in-container sysfs walks stay consistent) and
+# at its /dev/mhvtl/* path (the stable names dry-run configs use). If mhvtl
+# is down/absent the env file is empty and the worker runs exactly as
+# before. systemd re-reads EnvironmentFile before each Exec* process, so
+# ExecStart sees what this pre-step wrote.
+RuntimeDirectory=tape-archiver-worker
+EnvironmentFile=-/run/tape-archiver-worker/mhvtl-devices.env
+ExecStartPre=/bin/sh -c 'F=/run/tape-archiver-worker/mhvtl-devices.env; : > "$F"; if [ -e /dev/mhvtl/changer ] && [ -e /dev/mhvtl/drive0 ] && [ -e /dev/mhvtl/drive1 ]; then FLAGS=""; for d in /dev/mhvtl/changer /dev/mhvtl/drive0 /dev/mhvtl/drive1 /dev/mhvtl/sg-changer /dev/mhvtl/sg-drive0 /dev/mhvtl/sg-drive1; do R=$(readlink -f "$d"); FLAGS="$FLAGS --device $R --device $R:$d"; done; echo "MHVTL_DEVICE_FLAGS=$FLAGS" > "$F"; fi'
+
 # All run configuration lives in the env file, never hardcoded in this unit.
 EnvironmentFile=/etc/tape-archiver/data-worker.env
 
@@ -61,6 +73,7 @@ ExecStart=/usr/bin/docker run --rm --name tape-archiver-data-worker \
 {% endfor %}
     --device /dev/zfs \
     --device /dev/fuse \
+    $MHVTL_DEVICE_FLAGS \
     --cap-add SYS_ADMIN \
     --cap-add SYS_RAWIO \
     --mount type=bind,source={{ tape_archiver_pool_mount }},target={{ tape_archiver_pool_mount }},bind-propagation=rslave \

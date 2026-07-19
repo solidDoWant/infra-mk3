@@ -1,0 +1,240 @@
+---
+# mhvtl virtual tape library — DRY-RUN support for tape-archiver only.
+# The real TS3200 stays on /dev/sch0 + /dev/nst0/1; the virtual library gets
+# stable /dev/mhvtl/* names via udev, and its kernel module is gated so it
+# can never load before the real FC devices claim their node numbers.
+
+- name: Install build and runtime dependencies
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - zlib1g-dev
+      - liblzo2-dev
+      - git
+      # Kernel headers for the out-of-tree module build.
+      - linux-headers-{{ ansible_kernel }}
+      # Provides restorecon, which mhvtl's `make install` calls
+      # unconditionally (no-op without SELinux, but exit 127 if absent).
+      - policycoreutils
+      # mokutil for Secure Boot MOK staging.
+      - mokutil
+      # DKMS owns the kernel-module lifecycle: the kernel package's hooks
+      # rebuild (and auto-sign) the module for every new kernel at install
+      # time, so kernel upgrades need no manual/ansible intervention.
+      - dkms
+    state: present
+    update_cache: true
+    cache_valid_time: 600
+
+- name: Clone the mhvtl source
+  ansible.builtin.git:
+    repo: "{{ mhvtl_repo }}"
+    dest: "{{ mhvtl_src_dir }}"
+    version: "{{ mhvtl_version }}"
+  register: mhvtl_src
+
+- name: Build the userland tools
+  community.general.make:
+    chdir: "{{ mhvtl_src_dir }}"
+  when: mhvtl_src.changed or ansible_check_mode
+  register: mhvtl_userland_build
+
+- name: Install the userland tools and systemd generator
+  community.general.make:
+    chdir: "{{ mhvtl_src_dir }}"
+    target: install
+  when: mhvtl_userland_build.changed | default(false)
+
+# The shipped units are NOT installed by `make install` (only the generator
+# is); install them explicitly. The generator fabricates
+# vtllibrary@<id>/vtltape@<id> instances from device.conf at daemon-reload,
+# wanted by mhvtl.target.
+- name: Install the shipped systemd units
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ mhvtl_src_dir }}/etc/{{ item }}"
+    dest: /lib/systemd/system/{{ item }}
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - vtllibrary@.service
+    - vtltape@.service
+    - mhvtl-load-modules.service
+    - mhvtl.target
+  notify: Reload systemd
+
+- name: Install the MOK signing key
+  ansible.builtin.copy:
+    content: "{{ mhvtl_mok_private_key }}"
+    dest: "{{ mhvtl_mok_dir }}/MOK.priv"
+    owner: root
+    group: root
+    mode: 0600
+  no_log: true
+
+- name: Install the MOK certificate
+  ansible.builtin.copy:
+    content: "{{ mhvtl_mok_certificate_der_base64 | b64decode }}"
+    dest: "{{ mhvtl_mok_dir }}/MOK.der"
+    owner: root
+    group: root
+    mode: 0644
+
+# Secure Boot: DKMS signs every module it builds. Point it at the host's
+# enrolled MOK (the public half was enrolled via MokManager once; new
+# signatures chain to it forever — no re-enrollment on kernel upgrades).
+# Without this dkms generates its OWN unenrolled key and signed modules
+# still fail to load.
+- name: Point DKMS at the enrolled MOK
+  ansible.builtin.copy:
+    content: |
+      mok_signing_key={{ mhvtl_mok_dir }}/MOK.priv
+      mok_certificate={{ mhvtl_mok_dir }}/MOK.der
+    dest: /etc/dkms/framework.conf.d/mok.conf
+    owner: root
+    group: root
+    mode: 0644
+
+# DKMS wants the source at /usr/src/<name>-<version>; symlink to the clone.
+# The kernel/ subdir references ../include, so the whole tree is needed.
+- name: Link the DKMS source tree
+  ansible.builtin.file:
+    src: "{{ mhvtl_src_dir }}"
+    dest: /usr/src/mhvtl-{{ mhvtl_pkg_version }}
+    state: link
+
+- name: Install the DKMS config
+  ansible.builtin.template:
+    src: dkms.conf.j2
+    dest: "{{ mhvtl_src_dir }}/dkms.conf"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Check DKMS module status for the running kernel
+  ansible.builtin.command: dkms status mhvtl/{{ mhvtl_pkg_version }} -k {{ ansible_kernel }}
+  register: mhvtl_dkms_status
+  changed_when: false
+  failed_when: false
+
+# `dkms install` implies add+build for the target kernel and signs with the
+# MOK per framework.conf.d/mok.conf. AUTOINSTALL=yes in dkms.conf makes the
+# kernel package hooks do the same automatically for every FUTURE kernel.
+- name: Build and install the module via DKMS
+  ansible.builtin.command: dkms install mhvtl/{{ mhvtl_pkg_version }} -k {{ ansible_kernel }}
+  when: "'installed' not in mhvtl_dkms_status.stdout"
+
+# The pre-DKMS manual install (kernel/drivers/scsi/mhvtl.ko) would shadow
+# confusion at best; DKMS installs to updates/dkms which depmod prefers, but
+# remove the stale copy outright.
+- name: Remove any manually-installed module copy
+  ansible.builtin.file:
+    path: /lib/modules/{{ ansible_kernel }}/kernel/drivers/scsi/mhvtl.ko
+    state: absent
+  register: mhvtl_manual_module
+
+- name: Refresh module dependencies after cleanup
+  ansible.builtin.command: depmod -a
+  when: mhvtl_manual_module.changed
+
+- name: Create the config directory
+  ansible.builtin.file:
+    path: /etc/mhvtl
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Install the mhvtl configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: /etc/mhvtl/{{ item.dest }}
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - { src: mhvtl.conf.j2, dest: mhvtl.conf }
+    - { src: device.conf.j2, dest: device.conf }
+    - {
+        src: library_contents.j2,
+        dest: "library_contents.{{ mhvtl_library_id }}",
+      }
+  notify:
+    - Reload systemd
+    - Restart mhvtl
+
+# LOAD-ORDER SAFETY: the real FC tape devices must claim their st/sch/sg
+# numbers before the virtual library's pseudo adapter registers — otherwise
+# a reboot could renumber PRODUCTION device nodes and a real run would
+# target virtual tapes. The drop-in blocks the module load until the real
+# nodes exist. Do NOT add mhvtl to modules-load.d for the same reason.
+- name: Create the module-load drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/mhvtl-load-modules.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Gate the module load on the real tape devices
+  ansible.builtin.template:
+    src: wait-for-real-tape.conf.j2
+    dest: /etc/systemd/system/mhvtl-load-modules.service.d/wait-for-real-tape.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: Reload systemd
+
+# Stable /dev/mhvtl/* names so dry-run device paths never depend on SCSI
+# discovery order. Matched on the mhvtl pseudo-adapter's proc_name — a
+# virtual IBM ULT3580-TD6 can never be confused with the real drives.
+- name: Install the udev rules
+  ansible.builtin.copy:
+    src: "{{ role_path }}/templates/90-mhvtl.rules"
+    dest: /etc/udev/rules.d/90-mhvtl.rules
+    owner: root
+    group: root
+    mode: 0644
+  notify: Reload udev
+
+- name: Create the virtual media home
+  ansible.builtin.file:
+    path: "{{ mhvtl_home }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+
+# NO -f: never wipe existing virtual media (a dry run's written data is
+# harmless to lose, but re-initializing mid-run would corrupt it).
+- name: Initialise the virtual tape media
+  ansible.builtin.command: >-
+    make_vtl_media -H {{ mhvtl_home }} -C /etc/mhvtl -c
+  args:
+    creates: "{{ mhvtl_home }}/TA0001L6"
+
+- name: Enable mhvtl.target
+  ansible.builtin.systemd:
+    name: mhvtl.target
+    daemon_reload: true
+    enabled: true
+
+# Start is best-effort: until the MOK is enrolled (one-time interactive
+# MokManager step at the console during a reboot), modprobe fails with
+# "Key was rejected by service".
+- name: Start mhvtl.target
+  ansible.builtin.systemd:
+    name: mhvtl.target
+    state: started
+  register: mhvtl_start
+  failed_when: false
+
+- name: Warn when the virtual library did not start
+  ansible.builtin.debug:
+    msg: >-
+      mhvtl.target failed to start — most likely the Secure Boot MOK is not
+      yet enrolled. Reboot the host and confirm enrollment in MokManager
+      (password: see group_vars/storage/mhvtl.sops.yaml provenance), then
+      rerun or `systemctl start mhvtl.target`.
+  when: mhvtl_start.failed | default(false)

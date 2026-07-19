@@ -1,0 +1,17 @@
+# Managed by ansible role setup_mhvtl.
+# Stable names for the mhvtl VIRTUAL tape library devices, so dry-run device
+# paths in run configs never depend on SCSI discovery order (the real FC
+# changer/drives own sch0/sch1 + nst0/nst1; virtual devices land wherever the
+# kernel numbers them). Matched on the mhvtl pseudo-adapter's devpath — a
+# virtual IBM ULT3580-TD6 can never be confused with the real ones (the
+# INQUIRY identity deliberately mirrors the real hardware, so vendor/model
+# CANNOT be used to tell them apart; only the adapter can). ATTRS{proc_name}
+# does NOT work here: the attribute lives on the scsi_host class object,
+# which udev's parent walk misses for these chains.
+# KERNELS matches the parent SCSI address: mhvtl library=target 0, drives=1,2.
+KERNEL=="sch*", DEVPATH=="*/mhvtl_pseudo/*", SYMLINK+="mhvtl/changer"
+KERNEL=="nst*", DEVPATH=="*/mhvtl_pseudo/*", KERNELS=="*:0:1:0", SYMLINK+="mhvtl/drive0"
+KERNEL=="nst*", DEVPATH=="*/mhvtl_pseudo/*", KERNELS=="*:0:2:0", SYMLINK+="mhvtl/drive1"
+KERNEL=="sg*",  DEVPATH=="*/mhvtl_pseudo/*", KERNELS=="*:0:0:0", SYMLINK+="mhvtl/sg-changer"
+KERNEL=="sg*",  DEVPATH=="*/mhvtl_pseudo/*", KERNELS=="*:0:1:0", SYMLINK+="mhvtl/sg-drive0"
+KERNEL=="sg*",  DEVPATH=="*/mhvtl_pseudo/*", KERNELS=="*:0:2:0", SYMLINK+="mhvtl/sg-drive1"

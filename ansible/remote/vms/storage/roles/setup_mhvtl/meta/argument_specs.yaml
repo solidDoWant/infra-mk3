@@ -1,0 +1,61 @@
+---
+argument_specs:
+  main:
+    short_description: Install the mhvtl virtual tape library (dry-run support)
+    description:
+      - Builds and installs mhvtl (kernel module + userland) from source,
+        signs the module with the host's Secure Boot MOK, and configures a
+        virtual library mirroring the real TS3200's INQUIRY identity for
+        tape-archiver dry runs.
+      - The module load is gated on the real FC tape devices existing so a
+        reboot can never renumber production device nodes; virtual devices
+        get stable /dev/mhvtl/* names via udev.
+      - First-time Secure Boot enrollment is manual - mokutil staging is
+        done out-of-band and confirmed interactively in MokManager during a
+        reboot. This role (re)signs the module on kernel-upgrade rebuilds.
+    options:
+      mhvtl_repo:
+        type: str
+        default: https://github.com/markh794/mhvtl.git
+      mhvtl_version:
+        type: str
+        default: 8e79aa8
+        description: Pinned upstream commit; bump deliberately.
+      mhvtl_src_dir:
+        type: str
+        default: /usr/local/src/mhvtl
+      mhvtl_home:
+        type: str
+        default: /mnt/bulk-pool-01/tape-staging/mhvtl
+        description: Virtual media home. On the bulk pool - dry runs write
+          real data volumes and would fill the root disk.
+      mhvtl_tape_capacity_mb:
+        type: int
+        default: 2500000
+        description: Per-tape capacity (MB), LTO6-realistic so dry-run
+          bin-packing validation is honest.
+      mhvtl_library_id:
+        type: int
+        default: 10
+      mhvtl_drive_ids:
+        type: list
+        elements: int
+        default: [11, 12]
+      mhvtl_slot_count:
+        type: int
+        default: 45
+      mhvtl_io_slot_count:
+        type: int
+        default: 3
+      mhvtl_mok_dir:
+        type: str
+        default: /var/lib/shim-signed/mok
+      mhvtl_mok_private_key:
+        type: str
+        required: true
+        description: PEM private key for module signing (SOPS group vars).
+      mhvtl_mok_certificate_der_base64:
+        type: str
+        required: true
+        description: Base64 DER certificate whose public key is enrolled as
+          a MOK in the host firmware (SOPS group vars).

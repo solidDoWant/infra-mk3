@@ -158,6 +158,16 @@
       ansible.builtin.include_role:
         name: install_exporters
 
+    # mhvtl virtual tape library — tape-archiver DRY-RUN support. Builds and
+    # signs (Secure Boot MOK) the kernel module, mirrors the real TS3200's
+    # INQUIRY identity, and gates module load on the real FC devices so a
+    # reboot can never renumber production tape nodes. Runs before
+    # setup_tape_archiver so the worker's dynamic /dev/mhvtl/* passthrough
+    # finds the devices.
+    - name: Setup mhvtl virtual tape library
+      ansible.builtin.include_role:
+        name: setup_mhvtl
+
     # Runs the tape-archiver data worker (Docker container supervised by
     # systemd, with tape library device passthrough) plus a dedicated tbot
     # instance that renews its Temporal credential. Cluster-side counterparts

@@ -122,6 +122,16 @@ spec:
           # so it is never committed in plaintext.
           webhookUrl: ${SECRET_TAPE_ARCHIVER_DISCORD_WEBHOOK_URL}
 
+        # Dry-run submissions redirect the run to the mhvtl virtual library
+        # on the storage host (ansible roles/setup_mhvtl): stable udev
+        # symlink paths, passed through into the data-worker container by
+        # its unit's dynamic device injection. All three must be set
+        # together; the worker fails a dry run cleanly if mhvtl is down.
+        dryRun:
+          mhvtlChangerDev: /dev/mhvtl/changer
+          mhvtlDrive0Dev: /dev/mhvtl/drive0
+          mhvtlDrive1Dev: /dev/mhvtl/drive1
+
     resources:
       defaultPodOptions:
         dnsConfig:

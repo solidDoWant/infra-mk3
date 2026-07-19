@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+{% for drive_id in mhvtl_drive_ids %}
+Drive {{ loop.index }}:
+{% endfor %}
+
+Picker 1:
+
+{% for i in range(1, mhvtl_io_slot_count + 1) %}
+MAP {{ i }}:
+{% endfor %}
+
+{% for i in range(1, mhvtl_slot_count + 1) %}
+Slot {{ i }}: TA{{ '%04d' | format(i) }}L6
+{% endfor %}

@@ -1,7 +1,9 @@
 ---
 creation_rules:
   - &local_apply_files_config
-    path_regex: ^ansible/.*/group_vars/[^/]*\.sops\.[^/]*$
+    # Matches both flat files (group_vars/<group>.sops.yaml) and the
+    # directory layout (group_vars/<group>/<name>.sops.yaml).
+    path_regex: ^ansible/.*/group_vars/.*\.sops\.[^/]*$
     key_groups: &personal_only_key_groups
       - age:
           - &personal_key age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh

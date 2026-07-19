@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+[Service]
+# The real FC tape devices must claim their st/sch/sg numbers BEFORE the
+# virtual library's pseudo adapter registers — otherwise a reboot could
+# renumber PRODUCTION device nodes and a real run would target virtual
+# tapes. Block the mhvtl module load until the real nodes exist.
+ExecStartPre=/usr/bin/timeout 120 /bin/sh -c 'until [ -e {{ tape_archiver_changer_device | default("/dev/sch0") }} ] && [ -e /dev/nst0 ] && [ -e /dev/nst1 ]; do sleep 1; done'

@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# The kernel Makefile takes V=<kernel version> (defaults to `uname -r`), so
+# DKMS can build for kernels that are not yet running — which is exactly
+# what the kernel package's postinst hooks do on upgrade.
+PACKAGE_NAME="mhvtl"
+PACKAGE_VERSION="{{ mhvtl_pkg_version }}"
+MAKE[0]="make -C kernel V=${kernelver}"
+CLEAN="make -C kernel clean"
+BUILT_MODULE_NAME[0]="mhvtl"
+BUILT_MODULE_LOCATION[0]="kernel/"
+DEST_MODULE_LOCATION[0]="/updates/dkms"
+AUTOINSTALL="yes"

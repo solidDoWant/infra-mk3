@@ -1,0 +1,24 @@
+---
+mhvtl_repo: https://github.com/markh794/mhvtl.git
+# Pin the exact commit that was built/validated; bump deliberately.
+mhvtl_version: 8e79aa8
+# DKMS package version (matches the source MHVTL_VERSION).
+mhvtl_pkg_version: "1.8.0"
+mhvtl_src_dir: /usr/local/src/mhvtl
+# Virtual media lives on the bulk pool: dry runs write real data volumes and
+# would fill the root disk. Under the tape-staging dataset (sync=standard).
+mhvtl_home: /mnt/bulk-pool-01/tape-staging/mhvtl
+# Per-tape capacity in MB. LTO6-realistic so dry-run bin-packing validation
+# is honest; media files grow on demand, so idle tapes cost ~nothing.
+mhvtl_tape_capacity_mb: 2500000
+# Library/drive IDs match device.conf.j2 and the generated
+# vtllibrary@/vtltape@ systemd instances.
+mhvtl_library_id: 10
+mhvtl_drive_ids: [11, 12]
+# Mirrors the real TS3200 element topology (dedicated-cleaning-slot feature
+# disabled): 48 SCSI-visible slots total = 45 storage + 3 I/O.
+mhvtl_slot_count: 45
+mhvtl_io_slot_count: 3
+# MOK signing material comes from group_vars/storage/mhvtl.sops.yaml:
+#   mhvtl_mok_private_key (PEM), mhvtl_mok_certificate_der_base64
+mhvtl_mok_dir: /var/lib/shim-signed/mok

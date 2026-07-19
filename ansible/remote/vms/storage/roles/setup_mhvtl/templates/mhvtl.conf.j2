@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+#
+# Virtual tape library for tape-archiver DRY RUNS ONLY — mirrors the real
+# TS3200's element topology: 1 library, 2 LTO-6 drives, {{ mhvtl_slot_count }} storage +
+# {{ mhvtl_io_slot_count }} I/O slots, tapes TA0001L6-TA{{ '%04d' | format(mhvtl_slot_count) }}L6.
+# Home lives on the bulk pool: dry runs write real data volumes; the root
+# disk would fill. CAPACITY is per-tape MB — LTO6-realistic so dry-run
+# bin-packing validation is honest (media files grow on demand).
+MHVTL_HOME_PATH={{ mhvtl_home }}
+CAPACITY={{ mhvtl_tape_capacity_mb }}
+VERBOSE=0
+VTL_DEBUG=0

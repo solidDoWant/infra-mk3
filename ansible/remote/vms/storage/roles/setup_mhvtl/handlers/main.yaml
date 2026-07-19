@@ -1,0 +1,16 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Reload udev
+  ansible.builtin.command: udevadm control --reload
+
+# Safe even mid-dry-run only in the sense that dry-run data is disposable;
+# still, restarts only fire on config changes.
+- name: Restart mhvtl
+  ansible.builtin.systemd:
+    name: mhvtl.target
+    state: restarted
+  register: mhvtl_restart
+  failed_when: false
