@@ -1,0 +1,24 @@
+---
+# Official fluent-bit apt repository (the distro archive does not package
+# fluent-bit). The repo only serves the current release series, so the
+# package tracks upstream rather than pinning a version. Distro-derived so
+# the role also works on Debian-based hosts (e.g. proxmox-vm-host-01).
+fluent_bit_apt_key_url: https://packages.fluentbit.io/fluentbit.key
+fluent_bit_apt_repo_base: https://packages.fluentbit.io/{{ ansible_distribution | lower }}
+# Where fluent-bit sends records: the machine tbot's application-tunnel
+# listener (roles/setup_tbot; service defined in the invoking playbook's
+# tbot_services), which fronts the in-cluster fluentd-aggregator:24224 over
+# an authenticated Teleport session.
+fluent_bit_forward_host: 127.0.0.1
+fluent_bit_forward_port: 24224
+# Filesystem buffer home (journal cursor + backlog chunks). On the root disk
+# deliberately: the buffer must survive pool problems, and the output cap
+# below bounds its size.
+fluent_bit_storage_dir: /var/lib/fluent-bit
+# Hard cap on buffered-but-undelivered records; oldest chunks are dropped
+# beyond this. Sized for multi-day cluster outages at this host's log rate.
+fluent_bit_buffer_limit: 2G
+# Stamped on every record as host.name (and used as a VL stream field).
+# NOT inventory_hostname: the inventory keys hosts by IP, with the friendly
+# name in the `hostname` host var.
+fluent_bit_host_name: "{{ hostname }}"

@@ -7,10 +7,10 @@ argument_specs:
         the worker as a systemd-supervised container with tape library device
         passthrough (per SPEC §4.1 and deploy/data-worker in the
         tape-archiver repo).
-      - Also installs a dedicated tbot instance (binary provided by the
-        already-installed teleport-ent package) that TPM-joins the Teleport
-        cluster and continually renews the Temporal JWT-SVID the worker
-        authenticates with.
+      - The worker's Temporal JWT-SVID comes from the host's machine tbot
+        (roles/setup_tbot, run before this role), which also exports the
+        teleport_cluster_available fact this role uses to gate service
+        starts.
     options:
       tape_archiver_image:
         type: str

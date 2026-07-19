@@ -51,6 +51,20 @@ specs:
           - ports:
               - port: "6379"
                 protocol: TCP
+      # To the fluentd aggregator's forward input: backend of the
+      # fluentd-forward Teleport TCP app (off-cluster hosts ship logs through
+      # a tbot application-tunnel; see
+      # cluster/gitops/monitoring/fluent/aggregator/teleport-app.yaml).
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              app.kubernetes.io/name: fluentd-aggregator
+              app.kubernetes.io/component: fluentd
+              app.kubernetes.io/instance: fluentd
+        toPorts:
+          - ports:
+              - port: "24224"
+                protocol: TCP
       # Access to the proxy server
       - toEndpoints:
           - matchLabels:

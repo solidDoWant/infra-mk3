@@ -1,0 +1,104 @@
+# {{ ansible_managed }}
+#
+# Ships this host's journald (which includes the tape-archiver data worker's
+# container output — the unit runs `docker run` in the foreground) to the
+# in-cluster fluentd aggregator via the tbot application-tunnel on
+# localhost. Records are shaped to the aggregator's contract (mirroring the
+# cluster's talos/kube filters): message in `log`, source metadata nested
+# under `host.*`/`logging.type`, and the VL stream-field list in
+# `_meta.stream_fields` — records without it are discarded by the
+# aggregator's validator. JSON log lines are parsed into `log_fields.*`
+# aggregator-side (ClusterFilter host-journal).
+
+[SERVICE]
+    flush                     5
+    grace                     30
+    log_level                 info
+    # Filesystem-backed buffering so an aggregator/tunnel outage stalls
+    # delivery instead of losing records.
+    storage.path              {{ fluent_bit_storage_dir }}/storage
+    storage.sync              normal
+    storage.backlog.mem_limit 16M
+    storage.metrics           on
+    # Metrics endpoint, scraped by VMStaticScrape external-hosts-fluent-bit
+    # (cluster/gitops/monitoring/exporters/cluster-external/).
+    http_server               on
+    http_listen               0.0.0.0
+    http_port                 2020
+
+[INPUT]
+    name              systemd
+    tag               host.journal
+    # The cursor DB persists progress across restarts; read_from_tail limits
+    # only the FIRST run to new entries (don't replay the host's entire
+    # retained journal into VictoriaLogs on install).
+    db                {{ fluent_bit_storage_dir }}/journal-cursor.db
+    read_from_tail    on
+    strip_underscores on
+    storage.type      filesystem
+
+# Journald attaches ~20 metadata fields per entry; keep only the useful ones.
+[FILTER]
+    name          record_modifier
+    match         host.journal
+    allowlist_key MESSAGE
+    allowlist_key PRIORITY
+    allowlist_key SYSLOG_IDENTIFIER
+    allowlist_key SYSTEMD_UNIT
+
+# Shape to the aggregator's record contract. The flat host_*/logging_*/
+# _meta_* names are nested by the filters below (`modify` cannot create
+# nested keys — same trick as the cluster's node-agent filters). Kernel
+# messages have no SYSTEMD_UNIT; host.unit is simply absent for them.
+[FILTER]
+    name   modify
+    match  host.journal
+    rename MESSAGE log
+    rename SYSTEMD_UNIT host_unit
+    rename SYSLOG_IDENTIFIER host_identifier
+    rename PRIORITY host_priority
+    add    host_name {{ fluent_bit_host_name }}
+    add    logging_type host.journal
+    add    _meta_stream_fields logging.type,host.name,host.unit
+
+[FILTER]
+    name          nest
+    match         host.journal
+    operation     nest
+    wildcard      host_*
+    remove_prefix host_
+    nest_under    host
+
+[FILTER]
+    name          nest
+    match         host.journal
+    operation     nest
+    wildcard      logging_*
+    remove_prefix logging_
+    nest_under    logging
+
+[FILTER]
+    name          nest
+    match         host.journal
+    operation     nest
+    wildcard      _meta_*
+    remove_prefix _meta_
+    nest_under    _meta
+
+[OUTPUT]
+    name                       forward
+    match                      host.journal
+    host                       {{ fluent_bit_forward_host }}
+    port                       {{ fluent_bit_forward_port }}
+    # Ack per chunk: a connection severed mid-write (proxy restart, tunnel
+    # re-establishment) is a retry, not a loss.
+    require_ack_response       true
+    compress                   gzip
+    storage.total_limit_size   {{ fluent_bit_buffer_limit }}
+    # Recycle connections after a bounded number of uses so the Teleport
+    # sessions behind the tunnel stay short-lived and small — long-running
+    # high-volume sessions are a known Teleport weak spot. At flush=5s this
+    # is a fresh connection every ~5 minutes.
+    net.keepalive              on
+    net.keepalive_idle_timeout 30
+    net.keepalive_max_recycle  60

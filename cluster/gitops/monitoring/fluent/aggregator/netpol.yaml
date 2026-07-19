@@ -49,6 +49,15 @@ specs:
       - fromEntities:
           - remote-node
         toPorts: *forward_port
+      # Records from off-cluster hosts, tunneled through the Teleport app
+      # agent (fluentd-forward app, see teleport-app.yaml). The tunnel
+      # authenticates the sender (TPM-backed bot identity), so this hop stays
+      # plaintext forward like the node agents.
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: security
+              app: teleport-agent
+        toPorts: *forward_port
       # Metrics
       - fromEndpoints:
           - matchLabels:

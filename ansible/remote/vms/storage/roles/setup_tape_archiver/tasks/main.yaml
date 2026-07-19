@@ -29,8 +29,6 @@
       # Device discovery/debugging (`lsscsi -g`); the worker's own SCSI tools
       # are baked into the container image
       - lsscsi
-      # The tbot unit's ExecStartPost readiness gate (`curl .../wait`)
-      - curl
     state: latest
     update_cache: true
     cache_valid_time: 600
@@ -134,24 +132,6 @@
     group: root
     mode: 0750
 
-- name: Install the tbot config
-  ansible.builtin.template:
-    src: tbot.yaml
-    dest: /etc/tape-archiver/tbot.yaml
-    owner: root
-    group: root
-    mode: 0640
-  notify: Restart tape-archiver tbot
-
-- name: Install the tbot systemd unit
-  ansible.builtin.template:
-    src: tape-archiver-tbot.service
-    dest: /etc/systemd/system/tape-archiver-tbot.service
-    owner: root
-    group: root
-    mode: 0644
-  notify: Restart tape-archiver tbot
-
 - name: Install the data worker environment file
   ansible.builtin.template:
     src: data-worker.env
@@ -170,46 +150,27 @@
     mode: 0644
   notify: Restart tape-archiver data worker
 
-# The Teleport proxy runs in the k8s cluster and is the one external
-# dependency of service startup: the tbot unit's start job now blocks on a
-# successful join (ExecStartPost readiness gate), so `state: started` FAILS
-# outright while the cluster is down. Probe the proxy's unauthenticated ping
-# endpoint — the same host:port the TPM join dials — and degrade to
-# enable-only when it's unreachable, so a later cluster recovery + reboot
-# (or rerun) still converges instead of leaving half-enabled units behind.
-- name: Check whether the Teleport proxy is reachable
-  ansible.builtin.uri:
-    url: https://{{ teleport_domain_name }}/webapi/ping
-    timeout: 5
-  register: tape_archiver_teleport_ping
-  failed_when: false
-
-- name: Record cluster availability
-  ansible.builtin.set_fact:
-    tape_archiver_cluster_available: "{{ tape_archiver_teleport_ping.status | default(0) == 200 }}"
-
-- name: Enable the services
+# The worker's Temporal credential comes from the machine tbot
+# (roles/setup_tbot, run before this role), whose start job blocks until the
+# first JWT is written. teleport_cluster_available is set by that role: the
+# worker cannot start usefully while the cluster is down, so degrade to
+# enable-only and let the next boot/rerun converge.
+- name: Enable the data worker
   ansible.builtin.systemd:
-    name: "{{ item }}"
+    name: tape-archiver-data-worker.service
     daemon_reload: true
     enabled: true
-  loop:
-    - tape-archiver-tbot.service
-    - tape-archiver-data-worker.service
 
-- name: Start the services
+- name: Start the data worker
   ansible.builtin.systemd:
-    name: "{{ item }}"
+    name: tape-archiver-data-worker.service
     state: started
-  loop:
-    - tape-archiver-tbot.service
-    - tape-archiver-data-worker.service
-  when: tape_archiver_cluster_available
+  when: teleport_cluster_available | default(false)
 
 - name: Warn that service start was skipped
   ansible.builtin.debug:
     msg: >-
       Teleport proxy at {{ teleport_domain_name }} is unreachable (k8s cluster
-      down?). Services were enabled but NOT started/restarted; they will start
-      on next boot, or rerun this role once the cluster is available.
-  when: not tape_archiver_cluster_available
+      down?). The data worker was enabled but NOT started/restarted; it will
+      start on next boot, or rerun this role once the cluster is available.
+  when: not (teleport_cluster_available | default(false))

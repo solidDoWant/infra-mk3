@@ -1,0 +1,29 @@
+---
+# Machine-scoped tbot (Teleport Machine ID): one bot identity per host,
+# consumed by whatever host services need cluster credentials or tunnels.
+# The role owns the unit, lifecycle, readiness gate, and the config
+# boilerplate (identity/join/storage); the host supplies only the `services`
+# list — the part that is actual host policy.
+
+# Systemd unit name (without .service). The storage host overrides this with
+# its legacy tape-archiver-tbot name to avoid churning the live deployment.
+tbot_unit_name: tbot
+# Rendered config destination.
+tbot_config_path: /etc/tbot/tbot.yaml
+# Provision token = the TeleportProvisionToken CR name. The -bot suffix
+# distinguishes it from the host's SSH node token, which claims the plain
+# hostname (e.g. security/teleport/configuration/ubuntu-storage.yaml).
+tbot_token: "{{ hostname }}-bot"
+tbot_join_method: tpm
+# Bot state (join artifacts, renewable identity).
+tbot_storage_dir: /var/lib/tbot
+# REQUIRED: the tbot `services` list (structured data, rendered verbatim
+# into the config). Define it in the invoking playbook, where per-service
+# commentary belongs.
+# tbot_services:
+# Diagnostics endpoint port (readiness gate; localhost only).
+tbot_diag_port: 4444
+# RuntimeDirectory entries (relative to /run) for tmpfs credential
+# destinations written by the config's services. Empty list omits the
+# RuntimeDirectory block entirely.
+tbot_runtime_directories: []

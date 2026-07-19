@@ -1,0 +1,13 @@
+---
+# Skipped when the Teleport proxy was unreachable during the run (see "Check
+# whether the Teleport proxy is reachable" in tasks): tbot's restart would
+# fail its readiness-gated start job outright. The trade-off is that a
+# config change rolled out during a cluster outage keeps the OLD config
+# running until the next boot or rerun — acceptable, since the bot cannot do
+# useful work without the cluster anyway.
+- name: Restart tbot
+  ansible.builtin.systemd:
+    name: "{{ tbot_unit_name }}.service"
+    daemon_reload: true
+    state: restarted
+  when: teleport_cluster_available

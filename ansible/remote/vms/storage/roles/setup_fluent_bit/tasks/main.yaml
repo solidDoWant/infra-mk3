@@ -1,0 +1,69 @@
+---
+# fluent-bit host log shipper — journald → in-cluster fluentd aggregator via
+# the machine tbot's application-tunnel (roles/setup_tbot, localhost
+# listener). Cluster counterparts: TeleportAppV3/role + host-journal
+# ClusterFilter + netpols in cluster/gitops/monitoring/fluent/aggregator/.
+
+- name: Create the apt keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Add the fluent-bit repository signing key
+  ansible.builtin.get_url:
+    url: "{{ fluent_bit_apt_key_url }}"
+    dest: /etc/apt/keyrings/fluentbit.asc
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Add the fluent-bit repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/fluentbit.asc]
+      {{ fluent_bit_apt_repo_base }}/{{ ansible_distribution_release }}
+      {{ ansible_distribution_release }} main
+    state: present
+    filename: fluent-bit
+    update_cache: true
+
+- name: Install fluent-bit
+  ansible.builtin.apt:
+    name: fluent-bit
+    state: latest
+    cache_valid_time: 600
+
+# The package does not create a state home; both the journald cursor DB and
+# the filesystem buffer live here.
+- name: Create the buffer directory
+  ansible.builtin.file:
+    path: "{{ fluent_bit_storage_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+
+# The packaged unit runs /opt/fluent-bit/bin/fluent-bit -c
+# /etc/fluent-bit/fluent-bit.conf, so replacing that file is the whole
+# configuration story.
+- name: Install the fluent-bit config
+  ansible.builtin.template:
+    src: fluent-bit.conf.j2
+    dest: /etc/fluent-bit/fluent-bit.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart fluent-bit
+
+# Unconditional start (no cluster-availability gate like the worker units):
+# fluent-bit buffers to disk while the tunnel/aggregator is unreachable and
+# delivers when it returns, so starting "too early" costs nothing.
+- name: Enable and start fluent-bit
+  ansible.builtin.systemd:
+    name: fluent-bit.service
+    daemon_reload: true
+    enabled: true
+    state: started

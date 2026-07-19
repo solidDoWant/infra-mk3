@@ -1,0 +1,7 @@
+---
+# Restart, not reload: fluent-bit only picks up config at start. The
+# filesystem buffer and journald cursor make this loss-free.
+- name: Restart fluent-bit
+  ansible.builtin.systemd:
+    name: fluent-bit.service
+    state: restarted

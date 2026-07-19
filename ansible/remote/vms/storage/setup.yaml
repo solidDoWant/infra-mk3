@@ -168,13 +168,68 @@
       ansible.builtin.include_role:
         name: setup_mhvtl
 
+    # Machine-scoped tbot (Teleport Machine ID): one bot identity for this
+    # host (TPM-joined as `ubuntu-storage-host-01`; bot/token CRs in
+    # cluster/gitops/security/teleport/configuration/ubuntu-storage.yaml),
+    # serving every consumer via the tbot_services list below. Runs before its consumers;
+    # exports the teleport_cluster_available fact they use to gate service
+    # starts. Only the unit name and config path keep their legacy
+    # tape-archiver-* values, to avoid churning the live worker unit's
+    # After= dependency — rename alongside the proxmox-vm-host-01 rollout.
+    - name: Setup machine tbot
+      vars:
+        tbot_unit_name: tape-archiver-tbot
+        tbot_config_path: /etc/tape-archiver/tbot.yaml
+        # The data worker's JWT destination (tmpfs; bind-mounted into the
+        # worker container). Preserved across tbot restarts by the unit.
+        tbot_runtime_directories:
+          - tape-archiver/jwt
+        tbot_services:
+          # The data worker's Temporal credential: continually renews a
+          # JWT-SVID carrying permissions=["backup:write"] into
+          # /run/tape-archiver/jwt — tmpfs, so the credential never touches
+          # persistent disk. The worker reads the JWT fresh on every
+          # Temporal RPC (file:// API key), so renewals propagate without a
+          # restart.
+          - type: workload-identity-jwt
+            selector:
+              name: tape-archiver-data-worker
+            audiences:
+              # The Temporal frontend accepts JWTs whose audience is the
+              # temporal hostname; derived from the teleport proxy hostname,
+              # which shares the public domain.
+              - "{{ teleport_domain_name | regex_replace('^teleport\\.', 'temporal.') }}"
+            destination:
+              type: directory
+              path: /run/tape-archiver/jwt
+          # Local listener for log shipping: fluent-bit speaks plain forward
+          # protocol to it, and tbot wraps that in an mTLS session to the
+          # Teleport proxy, which hands it to the in-cluster app agent
+          # fronting fluentd-aggregator:24224 (TeleportAppV3
+          # `fluentd-forward`, granted by the bot's `fluentd-forward-sender`
+          # role). Auth is the bot's TPM identity — no shared keys, and
+          # nothing new listening on the LAN.
+          - type: application-tunnel
+            listen: tcp://127.0.0.1:24224
+            app_name: fluentd-forward
+      ansible.builtin.include_role:
+        name: setup_tbot
+
     # Runs the tape-archiver data worker (Docker container supervised by
-    # systemd, with tape library device passthrough) plus a dedicated tbot
-    # instance that renews its Temporal credential. Cluster-side counterparts
-    # live in cluster/gitops/backup/tape-archiver/.
+    # systemd, with tape library device passthrough). Its Temporal credential
+    # comes from the machine tbot above. Cluster-side counterparts live in
+    # cluster/gitops/backup/tape-archiver/.
     - name: Setup tape archiver data worker
       ansible.builtin.include_role:
         name: setup_tape_archiver
+
+    # Ships journald (incl. the data worker's container output) to the
+    # in-cluster VictoriaLogs via fluent-bit → the machine tbot's
+    # application-tunnel → fluentd aggregator (fluent-bit itself just buffers
+    # until the tunnel is up).
+    - name: Setup host log shipping
+      ansible.builtin.include_role:
+        name: setup_fluent_bit
 
     # - name: Reboot
     #   ansible.builtin.reboot:

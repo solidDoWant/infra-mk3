@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportappv3_v1.json
+# Exposes the aggregator's forward input (24224) as a Teleport TCP app so
+# off-cluster hosts can ship logs through an authenticated tbot
+# application-tunnel instead of a LAN-exposed listener. The tunnel provides
+# mTLS + the sender's TPM-backed bot identity, so the in-cluster hop stays
+# plaintext forward — identical posture to the node agents — and the
+# aggregator config needs no TLS/shared_key input.
+#
+# Kyverno mirrors this CR into the security namespace for the operator
+# (copy-teleport-crs-to-security-namespace); the teleport-agent then serves
+# it via its dynamic app discovery (`appResources` label selector).
+apiVersion: resources.teleport.dev/v1
+kind: TeleportAppV3
+metadata:
+  name: fluentd-forward
+  labels:
+    # Matched by the teleport-agent's appResources selector.
+    teleport.home.arpa/app.enabled: "true"
+    # Matched by the sender role below — scoped so the role grants exactly
+    # this one app, not everything the agent serves.
+    app: fluentd-forward
+spec:
+  uri: tcp://fluentd-aggregator.monitoring.svc.cluster.local:24224
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportrolev7_v1.json
+# Grants access to the fluentd-forward app only. Attached to the
+# ubuntu-storage-host-01 machine bot (the storage host's tbot), whose
+# application-tunnel service dials this app; see
+# cluster/gitops/security/teleport/configuration/ubuntu-storage.yaml.
+apiVersion: resources.teleport.dev/v1
+kind: TeleportRoleV7
+metadata:
+  name: fluentd-forward-sender
+spec:
+  allow:
+    app_labels:
+      app:
+        - fluentd-forward

@@ -1,0 +1,59 @@
+---
+argument_specs:
+  main:
+    short_description: Install a machine-scoped tbot (Teleport Machine ID)
+    description:
+      - Installs and supervises one tbot instance for the host - a single
+        bot identity consumed by whatever host services need cluster
+        credentials or tunnels (e.g. the tape-archiver data worker's
+        Temporal JWT, the fluent-bit log-shipping tunnel).
+      - The role owns the systemd unit, its /wait readiness gate, the
+        cluster-availability start gating (exports the
+        teleport_cluster_available fact for dependent roles), and the config
+        boilerplate (identity/join/storage). The host supplies only the
+        tbot_services list - the part that is actual host policy.
+      - Expects the tbot binary to already be present (ships with the
+        teleport package installed by install_teleport), the hostname host
+        var, and teleport_domain_name.
+    options:
+      tbot_unit_name:
+        type: str
+        default: tbot
+        description: >-
+          Systemd unit name (without .service). The storage host keeps its
+          legacy tape-archiver-tbot name to avoid churning the live
+          deployment.
+      tbot_config_path:
+        type: str
+        default: /etc/tbot/tbot.yaml
+      tbot_token:
+        type: str
+        default: "{{ hostname }}-bot"
+        description: >-
+          Provision token (= TeleportProvisionToken CR name). The -bot
+          suffix avoids colliding with the host's SSH node token, which
+          claims the plain hostname.
+      tbot_join_method:
+        type: str
+        default: tpm
+      tbot_storage_dir:
+        type: str
+        default: /var/lib/tbot
+      tbot_services:
+        type: list
+        elements: dict
+        required: true
+        description: >-
+          The tbot `services` list, rendered verbatim into the config.
+          Define per-service commentary at the definition site in the
+          playbook.
+      tbot_diag_port:
+        type: int
+        default: 4444
+      tbot_runtime_directories:
+        type: list
+        elements: str
+        default: []
+        description: >-
+          RuntimeDirectory entries (relative to /run) for tmpfs credential
+          destinations written by the configured services.

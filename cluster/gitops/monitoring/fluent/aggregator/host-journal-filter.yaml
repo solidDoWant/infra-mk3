@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentd.fluent.io/clusterfilter_v1alpha1.json
+# Shapes journald records shipped by off-cluster hosts (tag host.**, e.g. the
+# storage host's fluent-bit via the fluentd-forward Teleport app). The host
+# agent already sets `log`, `host.*`, `logging.type`, and
+# `_meta.stream_fields`; the two pieces that are easier done here:
+#
+#   1. Inject a `time` record field from the forward-protocol event time
+#      (VL-Time-Field on the VL output reads it). Done aggregator-side so
+#      buffered/replayed records keep their original timestamps instead of
+#      falling back to VL ingestion time.
+#   2. Parse JSON log lines into `log_fields` — mirrors the node agents'
+#      kubernetes-filter mergeLog convention, so e.g. the tape-archiver web
+#      UI (logsFieldPrefix: log_fields.) sees identical field names for the
+#      data worker's logs as for the control worker's.
+apiVersion: fluentd.fluent.io/v1alpha1
+kind: ClusterFilter
+metadata:
+  name: host-journal
+  labels:
+    config.fluentd.fluent.io/enabled: "true"
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  filters:
+    - customPlugin:
+        config: |
+          <filter host.**>
+            @type record_transformer
+            @id host_journal_time
+            enable_ruby true
+            <record>
+              time ${Time.at(time).utc.strftime('%Y-%m-%dT%H:%M:%S.%NZ')}
+            </record>
+          </filter>
+    - customPlugin:
+        config: |
+          <filter host.**>
+            @type parser
+            @id host_journal_log_fields
+            key_name log
+            # Non-JSON lines fail the parse and pass through unchanged
+            # (reserve_data keeps the record; no error events are emitted).
+            reserve_data true
+            reserve_time true
+            remove_key_name_field false
+            emit_invalid_record_to_error false
+            hash_value_field log_fields
+            <parse>
+              @type json
+            </parse>
+          </filter>

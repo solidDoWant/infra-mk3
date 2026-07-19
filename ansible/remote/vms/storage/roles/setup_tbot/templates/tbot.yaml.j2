@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+#
+# Machine-bot config: one TPM-joined bot identity for this host, serving the
+# services listed below. The boilerplate here is role-owned
+# (roles/setup_tbot); the services list — the host-policy part — is composed
+# in the invoking playbook (see its tbot_services definition for the
+# per-service commentary this rendered file cannot carry).
+version: v2
+proxy_server: {{ teleport_domain_name }}:443
+onboarding:
+  token: {{ tbot_token }}
+  join_method: {{ tbot_join_method }}
+storage:
+  type: directory
+  path: {{ tbot_storage_dir }}
+services:
+{{ tbot_services | to_nice_yaml(indent=2) | indent(width=2, first=true) }}

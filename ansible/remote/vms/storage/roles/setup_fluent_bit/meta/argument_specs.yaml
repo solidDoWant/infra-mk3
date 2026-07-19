@@ -1,0 +1,47 @@
+---
+argument_specs:
+  main:
+    short_description: Ship host journald logs to the in-cluster VictoriaLogs
+    description:
+      - Installs fluent-bit from the official apt repository and configures
+        it to read journald (including the tape-archiver data worker's
+        container output) and forward records to the in-cluster fluentd
+        aggregator through the tape-archiver tbot's application-tunnel on
+        localhost.
+      - Records follow the aggregator's contract (log/host.*/logging.type/
+        _meta.stream_fields); JSON lines are parsed into log_fields.*
+        aggregator-side. Depends on the machine tbot's tunnel service
+        (roles/setup_tbot; defined in the invoking playbook's tbot_services)
+        and the Teleport app + netpol resources in
+        cluster/gitops/monitoring/fluent/aggregator/.
+    options:
+      fluent_bit_apt_key_url:
+        type: str
+        default: https://packages.fluentbit.io/fluentbit.key
+      fluent_bit_apt_repo_base:
+        type: str
+        default: https://packages.fluentbit.io/{{ ansible_distribution | lower }}
+      fluent_bit_forward_host:
+        type: str
+        default: 127.0.0.1
+        description: Forward-protocol destination (the tbot tunnel listener).
+      fluent_bit_forward_port:
+        type: int
+        default: 24224
+      fluent_bit_storage_dir:
+        type: str
+        default: /var/lib/fluent-bit
+        description: Journald cursor DB and filesystem buffer home.
+      fluent_bit_buffer_limit:
+        type: str
+        default: 2G
+        description: >-
+          Cap on buffered undelivered records; oldest chunks are dropped
+          beyond it.
+      fluent_bit_host_name:
+        type: str
+        default: "{{ hostname }}"
+        description: >-
+          Value of the host.name record field / VL stream field. Defaults to
+          the hostname host var (NOT inventory_hostname - the inventory keys
+          hosts by IP).

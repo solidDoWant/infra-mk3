@@ -69,3 +69,31 @@ spec:
           if: '{__address__="10.2.3.1:9633"}'
           target_label: instance
           replacement: ubuntu-storage-host-01
+---
+# Host log shipper (journald → fluentd aggregator via Teleport tunnel, see
+# ansible/remote/vms/storage/roles/setup_fluent_bit). The storage metrics
+# (fluentbit_storage_*, fluentbit_output_retries_total) are the delivery
+# health signal: a growing chunk backlog means logs are stalling locally.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: external-hosts-fluent-bit
+  labels:
+    app.kubernetes.io/name: fluent-bit
+    app.kubernetes.io/instance: external-hosts
+    app.kubernetes.io/component: monitoring
+spec:
+  jobName: fluent-bit
+  targetEndpoints:
+    - targets:
+        - 10.2.3.1:2020 # ubuntu-storage-host-01
+      path: /api/v2/metrics/prometheus
+      interval: 1m
+      scrapeTimeout: 10s
+      # This is the only way to relabel the instances with hostname
+      # until I setup DNS for non-k8s nodes.
+      relabelConfigs:
+        - action: replace
+          if: '{__address__="10.2.3.1:2020"}'
+          target_label: instance
+          replacement: ubuntu-storage-host-01

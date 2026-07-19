@@ -1,0 +1,44 @@
+# {{ ansible_managed }}
+[Unit]
+Description=tbot (Teleport Machine ID) machine bot
+Documentation=https://goteleport.com/docs/machine-workload-identity/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# tbot ships with the teleport-ent package already installed on this host.
+# Runs as root: the TPM join needs /dev/tpmrm0 and the credential
+# destinations are root-owned.
+ExecStart=/usr/local/bin/tbot start -c {{ tbot_config_path }} --diag-addr 127.0.0.1:{{ tbot_diag_port }}
+# Readiness gate: tbot's /wait blocks until every configured service has
+# reported its first status, and returns 200 only if all are healthy — e.g.
+# the workload-identity-jwt service reports healthy strictly AFTER writing
+# the JWT to disk. This makes the unit's start job complete only once every
+# service has produced its first output, so consumers get "ready", not just
+# "process started", from a plain After={{ tbot_unit_name }}.service. On
+# timeout/unhealthy the start fails and Restart=always retries the whole
+# join.
+# --retry-connrefused is load-bearing: ExecStartPost fires before tbot has
+# bound the diag socket, and a refused connection otherwise fails curl
+# INSTANTLY (exit 7) instead of waiting. --retry also treats an unhealthy
+# 503 first report as transient.
+ExecStartPost=/usr/bin/curl --silent --fail --output /dev/null --retry 30 --retry-connrefused --retry-delay 1 --retry-max-time 120 --max-time 120 http://127.0.0.1:{{ tbot_diag_port }}/wait
+# Headroom for the gate: the whole start job (join + first renewal + gate
+# retries) must fit inside the start timeout or systemd kills it.
+TimeoutStartSec=180
+Restart=always
+RestartSec=10
+{% if tbot_runtime_directories %}
+# Credential destinations on tmpfs — they never touch persistent disk.
+# Preserved across tbot restarts: consumers may bind-mount these directories
+# (a bind mount pins the directory inode) — if systemd removed and recreated
+# them on every tbot stop, renewals would land in a new directory a running
+# container could never see.
+RuntimeDirectory={{ tbot_runtime_directories | join(' ') }}
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target
