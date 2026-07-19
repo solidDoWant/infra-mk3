@@ -105,6 +105,43 @@ stringData:
           target: !KeyOf <service>-application
 ```
 
+### App-side wiring (issuer URL, netpol, CA trust)
+
+Configure the app's issuer/discovery URL to the **openid-configuration-proxy**, not the public Authentik hostname:
+
+```
+https://openid-configuration-proxy.security.svc.cluster.local/application/o/<service>/
+```
+
+This proxy is the canonical in-cluster OIDC origin: it stamps that exact origin into the discovery `issuer`, all back-channel endpoint URLs, and the token `iss` claim, so strict OIDC clients (go-oidc, openid-client) work without issuer-validation workarounds. The entire back-channel (discovery, token exchange, JWKS, userinfo) flows through it; the two browser-facing endpoints (authorize, end-session) are rewritten to the public gateway automatically. Do NOT route the back-channel through the internal gateway (hairpin) or directly to `authentik-server` — direct token calls get a mismatched `iss` and are blocked by netpol anyway.
+
+Three things every native-OIDC service needs:
+
+1. **Pod label** so the proxy's ingress netpol admits it:
+   ```yaml
+   pod:
+     labels:
+       endpoints.netpols.home.arpa/oidc-querier: "true"
+   ```
+2. **Netpol egress** to the proxy (server-side/back-channel container only, if the app splits workers):
+   ```yaml
+   # OIDC back-channel via the openid-configuration-proxy (the canonical
+   # in-cluster OIDC origin; see security/authentik/openid-configuration-proxy).
+   - toEndpoints:
+       - matchLabels:
+           io.kubernetes.pod.namespace: security
+           app.kubernetes.io/name: openid-configuration-proxy
+           app.kubernetes.io/instance: openid-configuration-proxy
+     toPorts:
+       - ports:
+           - port: "8443"
+             protocol: TCP
+   ```
+3. **Cluster root CA trust** — the proxy serves a cluster-CA-issued cert. Mount the `root-ca-pub-cert` Secret (present in every namespace) and point the app's runtime at it, without clobbering the image's public-CA bundle (usually still needed for other egress):
+   - Node.js: `NODE_EXTRA_CA_CERTS: /etc/<app>/certs/root-ca/ca.crt` (reference: immich hr.yaml)
+   - .NET / OpenSSL-based: `SSL_CERT_DIR: /etc/ssl/certs:/etc/<app>/extra-certs` (reference: jellyfin hr.yaml)
+   - Go: subPath-mount the CA as an extra file in `/etc/ssl/certs/` — Go unions every cert in the dir (reference: tape-archiver web hr.yaml)
+
 **Required secrets in `cluster-secrets.sops.yaml`:**
 ```yaml
 SECRET_<SERVICE>_AUTHENTIK_OIDC_CLIENT_ID: "<id from authentik>"

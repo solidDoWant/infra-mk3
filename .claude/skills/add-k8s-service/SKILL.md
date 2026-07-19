@@ -121,7 +121,7 @@ Note: Redis/Dragonfly mTLS via Envoy is currently broken upstream (envoyproxy/en
 
 Authentik handles **user authentication only** — not service-to-service auth.
 
-For web UIs, always prefer native **OIDC** integration if the app supports it. Configure the app to use Authentik as an OIDC provider directly. This is more reliable than proxy auth and avoids credential renewal issues.
+For web UIs, always prefer native **OIDC** integration if the app supports it. Configure the app to use Authentik as an OIDC provider directly. This is more reliable than proxy auth and avoids credential renewal issues. The app's issuer URL must point at the in-cluster **openid-configuration-proxy** (`https://openid-configuration-proxy.security.svc.cluster.local/application/o/<service>/`), NOT the public Authentik hostname — the whole back-channel runs through that proxy, and the app needs the `oidc-querier` pod label, proxy egress in its netpol, and cluster-root-CA trust. See the "App-side wiring" section of `references/file-patterns/auth.md`.
 
 Only use **Authentik proxy forward-auth** as an absolute last resort for apps with no OIDC support whatsoever — proxy forward-auth breaks many applications due to credential renewal behavior. Forward-auth is served by the **embedded outpost** inside `authentik-server` (Postgres-backed sessions, HA across replicas); the standalone `authentik-outpost-proxy` was retired (its per-pod `/dev/shm` sessions returned HTTP 400 on the OAuth callback under multiple replicas).
 
