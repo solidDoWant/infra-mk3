@@ -68,8 +68,11 @@ spec:
       bucket: grafana-notification-images
       region: dummy-region
     rendering:
-      server_url: http://grafana-image-renderer.monitoring.svc/render
-      callback_url: http://grafana-service.monitoring.svc:3000
+      # Absolute FQDNs (trailing dot) to skip ndots:5 search expansion, matching
+      # `ha_peers` above. The bare `.monitoring.svc` form only resolved via the
+      # third search suffix, costing 2 NXDOMAIN round trips per lookup.
+      server_url: http://grafana-image-renderer.monitoring.svc.cluster.local./render
+      callback_url: http://grafana-service.monitoring.svc.cluster.local.:3000
     analytics:
       reporting_enabled: "false"
       check_for_updates: "false"

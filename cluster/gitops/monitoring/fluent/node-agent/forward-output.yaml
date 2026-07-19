@@ -10,7 +10,12 @@ metadata:
 spec:
   matchRegex: ^((kube|talos\.service)\..+|talos\.kernel)$
   forward:
-    host: fluentd-aggregator.monitoring.svc
+    # Absolute FQDN (trailing dot). A bare `.monitoring.svc` is 2 dots, and the
+    # 4-dot `.svc.cluster.local` form is still under the default ndots:5, so
+    # either one makes the resolver walk all three search suffixes first --
+    # 2 NXDOMAIN round trips per lookup, x A/AAAA. The trailing dot marks the
+    # name absolute and skips search expansion entirely.
+    host: fluentd-aggregator.monitoring.svc.cluster.local.
     requireAckResponse: true
     # fluent-bit v5.0.4 flipped this default to true, which embeds event metadata
     # in an extended MessagePack that the Fluentd aggregator cannot parse (it

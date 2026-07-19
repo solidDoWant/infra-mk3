@@ -14,7 +14,7 @@ spec:
     #   copy:
     #     copyMode: no_copy
     # - http: &http_config
-    #     endpoint: http://vlogs-victoria-logs-1.monitoring.svc:9428/insert/jsonline
+    #     endpoint: http://vlogs-victoria-logs-1.monitoring.svc.cluster.local.:9428/insert/jsonline
     #     headersFromPlaceholders: >2-
     #       {
     #       "VL-Msg-Field": "log",
@@ -45,7 +45,7 @@ spec:
     #     path: output/cluster/victoria-logs/1
     # - http:
     #     <<: *http_config
-    #     endpoint: http://vlogs-victoria-logs-2.monitoring.svc:9428/insert/jsonline
+    #     endpoint: http://vlogs-victoria-logs-2.monitoring.svc.cluster.local.:9428/insert/jsonline
     #   buffer:
     #     <<: *buffer_config
     #     path: output/cluster/victoria-logs/2
@@ -59,7 +59,7 @@ spec:
             <store ignore_error>
               @type http
               @id victoria-logs-1
-              endpoint http://vlogs-victoria-logs-1.monitoring.svc:9428/insert/jsonline
+              endpoint http://vlogs-victoria-logs-1.monitoring.svc.cluster.local.:9428/insert/jsonline
               headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta*"}
               compress gzip
               <buffer tag,$._meta.stream_fields>
@@ -80,7 +80,7 @@ spec:
             <store ignore_error>
               @type http
               @id victoria-logs-2
-              endpoint http://vlogs-victoria-logs-2.monitoring.svc:9428/insert/jsonline
+              endpoint http://vlogs-victoria-logs-2.monitoring.svc.cluster.local.:9428/insert/jsonline
               headers_from_placeholders {"VL-Msg-Field": "log", "VL-Time-Field": "time", "VL-Stream-Fields": "${$._meta.stream_fields}", "VL-Ignore-Fields": "_meta*"}
               compress gzip
               <buffer tag,$._meta.stream_fields>
