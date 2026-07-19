@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportworkloadidentityv1_v1.json
+# Grants the data worker on ubuntu-storage-host-01 write access on the
+# `backup` Temporal namespace. It polls the data task queue and reports
+# activity progress for all bulk-data operations (tar/age/PAR2/LTFS/changer).
+apiVersion: resources.teleport.dev/v1
+kind: TeleportWorkloadIdentityV1
+metadata:
+  name: tape-archiver-data-worker
+  labels:
+    # Selected by the bot's role (workload_identity_labels) and by the host
+    # tbot's service.selector. Must stay in sync with both.
+    app: tape-archiver-data-worker
+spec:
+  spiffe:
+    # Static ID — the TPM join carries no pod attributes; there is exactly one
+    # data worker host.
+    id: /svc/tape-archiver-data-worker/ubuntu-storage-host-01
+    jwt:
+      extra_claims:
+        permissions:
+          - backup:write
+  rules:
+    allow:
+      - conditions:
+          # Only the storage host's TPM (same EK pinned by the provision
+          # token) may receive this credential.
+          - attribute: join.tpm.ek_public_hash
+            eq:
+              value: 078b92640cc40c3c798817f3188af3c40a5b854db237ac86f89b71044b6832c6

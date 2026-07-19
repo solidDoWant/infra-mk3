@@ -1,0 +1,26 @@
+---
+# Scrapes the data worker's Prometheus endpoint on the storage host. The
+# worker runs off-cluster (systemd-managed container, see
+# ansible/remote/vms/storage/roles/setup_tape_archiver), so this is a static
+# target rather than a PodMonitor — but it is app telemetry owned by this
+# service, not host infrastructure, so it lives here instead of
+# monitoring/exporters/cluster-external. These metrics also back the web UI's
+# live drive-metrics panels (VICTORIAMETRICS_URL).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: tape-archiver-data-worker
+spec:
+  jobName: tape-archiver-data-worker
+  targetEndpoints:
+    - targets:
+        - 10.2.3.1:9090 # ubuntu-storage-host-01
+      interval: 1m
+      scrapeTimeout: 10s
+      # This is the only way to relabel the instances with hostname
+      # until I setup DNS for non-k8s nodes.
+      relabelConfigs:
+        - action: replace
+          if: '{__address__="10.2.3.1:9090"}'
+          target_label: instance
+          replacement: ubuntu-storage-host-01
