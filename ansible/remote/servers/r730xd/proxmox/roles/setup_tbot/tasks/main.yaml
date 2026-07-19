@@ -56,17 +56,30 @@
   ansible.builtin.set_fact:
     teleport_cluster_available: "{{ tbot_teleport_ping.status | default(0) == 200 }}"
 
+# --check doesn't actually write the unit template above, so on a FIRST
+# install `systemctl enable/start` would fail ("unit not found") and abort the
+# dry-run. Gate on the unit already existing OR a real run: a real run always
+# writes the unit first (so it runs), a check run on an already-installed host
+# still previews these, and a first-install dry-run skips them cleanly.
+- name: Check whether the tbot unit is already installed
+  ansible.builtin.stat:
+    path: /etc/systemd/system/{{ tbot_unit_name }}.service
+  register: tbot_unit_file
+
 - name: Enable tbot
   ansible.builtin.systemd:
     name: "{{ tbot_unit_name }}.service"
     daemon_reload: true
     enabled: true
+  when: tbot_unit_file.stat.exists or not ansible_check_mode
 
 - name: Start tbot
   ansible.builtin.systemd:
     name: "{{ tbot_unit_name }}.service"
     state: started
-  when: teleport_cluster_available
+  when:
+    - teleport_cluster_available
+    - tbot_unit_file.stat.exists or not ansible_check_mode
 
 - name: Warn that tbot start was skipped
   ansible.builtin.debug:
