@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backup
+  labels:
+    # Deploy the "backup" Temporal namespace (created by
+    # temporal-namespace-manager, named after this k8s namespace).
+    # tape-archiver workers authorize with a `permissions: ["backup:write"]`
+    # JWT claim; KEDA scalers with `backup:read`.
+    temporal.home.arpa/enabled: "true"
