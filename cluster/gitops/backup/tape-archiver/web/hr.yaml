@@ -1,0 +1,315 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+# tape-archiver web UI: browser dashboard for submitting, monitoring, pausing,
+# and resuming tape backup runs. Talks to the same Temporal frontend as the
+# workers using its own service credential (tbot JWT-SVID); user access is
+# gated by native Authentik OIDC.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tape-archiver-web
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: tape-archiver-web
+      version: 0.0.6
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: soliddowant-charts
+  values:
+    config:
+      temporal:
+        # In-cluster gRPC over TLS; auth is JWT bearer (apiKey below).
+        # Frontend's serving cert SANs match this hostname, so SNI / cert
+        # verification works without a serverName override.
+        address: temporal-frontend.data.svc.cluster.local:7233
+        namespace: backup
+        # file:/// prefix tells cmd/web to re-read the JWT from disk on every
+        # RPC. tbot rotates the JWT well before expiry, so renewals propagate
+        # without restart.
+        apiKey:
+          value: file:///var/run/teleport/jwt/jwt_svid
+        # Trust the cluster root CA (distributed to every namespace as
+        # root-ca-pub-cert by the extract-root-ca-certificate Kyverno policy).
+        tls:
+          enabled: true
+          caCert:
+            secretKeyRef:
+              name: root-ca-pub-cert
+              key: ca.pem
+
+      web:
+        logLevel: info
+        # Deep links from a run's overview page to its workflow history in the
+        # Temporal Web UI (served on the internal gateway, Authentik SSO).
+        temporalUiUrl: https://temporal.${SECRET_PUBLIC_DOMAIN_NAME}
+        # Renders a PodMonitor for the :9090 /metrics endpoint.
+        metrics:
+          enabled: true
+
+        # Read-only observability backends for the run-detail page (chart
+        # 0.0.5+). Both are plain-HTTP in-cluster endpoints; the pod's
+        # time-series-querier / logs-querier labels and matching netpol
+        # egress rules open the paths.
+        observability:
+          # Live drive metrics for in-progress runs. The data worker's :9090
+          # endpoint is scraped into Victoria Metrics via the data-worker
+          # kustomization's VMStaticScrape. Same query balancer URL the
+          # Grafana datasource uses.
+          victoriaMetricsUrl: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/select/0/prometheus
+          # Run log panel, via the Victoria Logs vmauth. Note: the data
+          # worker's container logs on the storage host are not shipped to
+          # VictoriaLogs yet, so this only surfaces control-worker logs.
+          victoriaLogsUrl: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
+          # The log pipeline's fluentbit kubernetes filter (mergeLog,
+          # monitoring/fluent/node-agent/kubernetes-filter.yaml) parses the
+          # worker's slog JSON under this merge key, so RunID/level/msg
+          # arrive as log_fields.*-prefixed VL fields (0.0.6+ feature;
+          # without it the panel's RunID query matches nothing).
+          logsFieldPrefix: log_fields.
+
+        oidc:
+          # Canonical in-cluster OIDC origin: the openid-configuration-proxy
+          # stamps this exact origin into the discovery issuer, the
+          # back-channel endpoint URLs, and the token iss claim, so strict
+          # go-oidc discovery/verification passes with no hairpin through the
+          # public gateway. Browser-facing endpoints (authorize, end-session)
+          # are rewritten to https://authentik.<public domain> by the proxy.
+          # The proxy serves the cluster-CA-issued cert; the root CA is
+          # mounted into the container's trust dir below.
+          issuerUrl: https://openid-configuration-proxy.security.svc.cluster.local/application/o/tape-archiver/
+          redirectUrl: https://tape-archiver.${SECRET_PUBLIC_DOMAIN_NAME}/auth/callback
+          clientId: ${SECRET_TAPE_ARCHIVER_AUTHENTIK_OIDC_CLIENT_ID}
+          clientSecret:
+            secretKeyRef:
+              name: tape-archiver-web
+              key: oidc-client-secret
+        # sessionKey is intentionally NOT set: as of chart 0.0.4 the chart
+        # generates a random key into its own <release>-session-key Secret on
+        # first install and reuses it across upgrades (lookup-based), so no
+        # operator-supplied value is needed.
+
+        # Deploy-owned hardware config for the IBM TS3200 attached to
+        # ubuntu-storage-host-01 (docs/hardware.yaml). The guided run form
+        # sources these read-only; cmd/web also enforces them server-side on
+        # every submitted run config.
+        library:
+          changer: /dev/sch0
+          drives:
+            - /dev/nst0
+            - /dev/nst1
+          topology:
+            # Live SCSI element inventory (mtx via the changer sg node,
+            # 2026-07-19, after disabling the library's dedicated-cleaning-
+            # slot feature): 48 slots — 1-45 storage, 46-48 I/O station.
+            # With no hidden reserved slot, SCSI and physical numbering
+            # coincide. Slot 45 is a normal slot by convention holding the
+            # cleaning cartridge — excluded from the picker here so a run
+            # can never target it as a blank/write slot.
+            slotCount: 48
+            cleaningSlots:
+              - 45
+            ioStationSlots:
+              - 46
+              - 47
+              - 48
+
+        delivery:
+          # Discord webhook the report/recovery ISO is delivered to. Value
+          # comes from Flux variable substitution (cluster-secrets.sops.yaml),
+          # so it is never committed in plaintext.
+          webhookUrl: ${SECRET_TAPE_ARCHIVER_DISCORD_WEBHOOK_URL}
+
+    resources:
+      defaultPodOptions:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "1"
+
+      controllers:
+        main:
+          replicas: 2
+          podDisruptionBudget:
+            minAvailable: 1
+          serviceAccount:
+            identifier: tape-archiver-web
+          pod:
+            labels:
+              # Ingress allow into temporal-frontend:7233.
+              endpoints.netpols.home.arpa/temporal-frontend-client: "true"
+              # Egress allow to the teleport-cluster proxy TLS-routing port.
+              endpoints.netpols.home.arpa/teleport-bot-client: "true"
+              # Ingress allow into the Victoria Metrics query balancer (live
+              # drive metrics) and Victoria Logs vmauth (run log panel).
+              endpoints.netpols.home.arpa/time-series-querier: "true"
+              endpoints.netpols.home.arpa/logs-querier: "true"
+              # Ingress allow into the openid-configuration-proxy (OIDC
+              # discovery, token exchange, JWKS, userinfo).
+              endpoints.netpols.home.arpa/oidc-querier: "true"
+          # Native sidecar (initContainer with restartPolicy: Always) — k8s
+          # blocks the web container until tbot has started, guaranteeing the
+          # JWT exists before cmd/web's startup Temporal health check.
+          initContainers:
+            tbot:
+              restartPolicy: Always
+              image:
+                repository: public.ecr.aws/gravitational/tbot-distroless
+                tag: 18.8.2
+              args:
+                - start
+                - --config
+                - /etc/tbot/tbot.yaml
+                - --diag-addr
+                - :4444
+              env:
+                # Override tbot's hard-coded default
+                # (/var/run/secrets/kubernetes.io/serviceaccount/token) so the
+                # kubernetes join method reads the audience-scoped projected
+                # token mounted via the sa-token persistence entry.
+                KUBERNETES_TOKEN_PATH: /var/run/secrets/tokens/token
+                # Dial the configured proxy_server for the reverse tunnel too,
+                # instead of the proxy's advertised public_addr
+                # (teleport.<domain>, which resolves to the internal gateway
+                # in-cluster). Keeps all tbot traffic direct to the proxy
+                # ClusterIP. Requires the proxy's TLS routing/multiplex mode,
+                # which is enabled.
+                TBOT_USE_PROXY_ADDR: "yes"
+              ports:
+                - name: tbot-diag
+                  containerPort: 4444
+              probes:
+                liveness: &probe
+                  enabled: true
+                  type: HTTP
+                  port: tbot-diag
+                  path: /livez
+                readiness:
+                  <<: *probe
+                  path: /readyz
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  memory: 64Mi
+          containers:
+            main:
+              # VICTORIAMETRICS_URL / VICTORIALOGS_URL env vars are rendered
+              # by the chart from config.web.observability (0.0.5+) — no
+              # direct env entries needed.
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: &memory 256Mi
+                limits:
+                  memory: *memory
+
+      configMaps:
+        tbot-config:
+          data:
+            # Mounted at /etc/tbot/tbot.yaml in the tbot sidecar of every web
+            # pod. The sidecar joins the cluster via the in-cluster kubernetes
+            # ServiceAccount token, then continually renews a JWT-SVID
+            # (containing permissions=["backup:write"]) into a shared
+            # emptyDir. cmd/web reads the JWT file fresh on every RPC because
+            # apiKey is set to file:///var/run/teleport/jwt/jwt_svid — so
+            # renewals propagate without restarting the server.
+            tbot.yaml: |
+              version: v2
+              # In-cluster ClusterIP publicAddr of the proxy. tbot only joins and renews
+              # SVIDs (no reverse tunnel), so it honors the dialed address and reaches the
+              # proxy directly — bypassing the internal gateway. The proxy lists this name
+              # in publicAddr and serves a matching internal keypair, so TLS/SNI validate.
+              proxy_server: teleport-cluster.security.svc.cluster.local:443
+              onboarding:
+                token: tape-archiver-web
+                join_method: kubernetes
+              storage:
+                type: memory
+              services:
+                - type: workload-identity-jwt
+                  selector:
+                    name: tape-archiver-web
+                  audiences:
+                    - temporal.${SECRET_PUBLIC_DOMAIN_NAME}
+                  destination:
+                    type: directory
+                    path: /var/run/teleport/jwt
+
+      serviceAccount:
+        tape-archiver-web: {}
+
+      persistence:
+        # Shared between tbot and cmd/web: tbot writes the JWT, the app reads
+        # it on every Temporal RPC.
+        tbot-jwt:
+          type: emptyDir
+          advancedMounts:
+            main:
+              tbot:
+                - path: /var/run/teleport/jwt
+              main:
+                - path: /var/run/teleport/jwt
+                  readOnly: true
+        tbot-config:
+          type: configMap
+          identifier: tbot-config
+          defaultMode: 0444
+          items:
+            - key: tbot.yaml
+              path: tbot.yaml
+          advancedMounts:
+            main:
+              tbot:
+                - path: /etc/tbot
+                  readOnly: true
+        # Cluster intermediate-CA root, distributed to every namespace by the
+        # extract-root-ca-certificate Kyverno ClusterPolicy. tbot needs it to
+        # validate the Teleport proxy's serving cert; cmd/web needs it to
+        # validate the openid-configuration-proxy's serving cert during the
+        # OIDC back-channel. Mounted as a single extra file in the system
+        # trust dir (Go unions every cert found under /etc/ssl/certs), so the
+        # image's public-CA bundle stays intact for Discord webhook delivery.
+        root-ca:
+          type: secret
+          name: root-ca-pub-cert
+          defaultMode: 0444
+          items:
+            - key: ca.pem
+              path: root-ca.pem
+          advancedMounts:
+            main:
+              tbot:
+                - path: /etc/ssl/certs/root-ca.pem
+                  subPath: root-ca.pem
+                  readOnly: true
+              main:
+                - path: /etc/ssl/certs/root-ca.pem
+                  subPath: root-ca.pem
+                  readOnly: true
+        # Audience-scoped, short-lived projected SA token used by tbot's
+        # kubernetes (in_cluster) join method. The kubelet refreshes the file
+        # in place at 80% of TTL; tbot re-reads on every join/renewal.
+        sa-token:
+          type: custom
+          volumeSpec:
+            projected:
+              sources:
+                - serviceAccountToken:
+                    path: token
+                    expirationSeconds: 600
+                    audience: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+          advancedMounts:
+            main:
+              tbot:
+                - path: /var/run/secrets/tokens
+                  readOnly: true

@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportworkloadidentityv1_v1.json
+# Grants the web UI write access on the `backup` Temporal namespace. Required
+# for run submission, pause/resume/abort signals, and visibility queries
+# (Temporal's default authorizer does not recognize a narrower tier that can
+# both read and signal).
+apiVersion: resources.teleport.dev/v1
+kind: TeleportWorkloadIdentityV1
+metadata:
+  name: tape-archiver-web
+  labels:
+    # Selected by the bot's role (workload_identity_labels) and by tbot's
+    # service.selector. Must stay in sync with both.
+    app: tape-archiver-web
+spec:
+  spiffe:
+    # Per-pod SPIFFE ID so audit logs identify the issuing pod. Templated by
+    # Teleport at issuance time from kubernetes join attributes.
+    id: /svc/tape-archiver-web/{{ join.kubernetes.pod.name }}
+    jwt:
+      extra_claims:
+        permissions:
+          - backup:write
+  rules:
+    allow:
+      - conditions:
+          - attribute: join.kubernetes.service_account.namespace
+            eq:
+              value: backup
+          - attribute: join.kubernetes.service_account.name
+            eq:
+              value: tape-archiver-web
