@@ -25,3 +25,11 @@ spec:
     # indicate a real problem), plus [ERROR]/[WARNING]. Field is `log`.
     - grep:
         exclude: 'log " NOERROR '
+    # Also drop AAAA NXDOMAIN noise: dual-stack clients routinely probe AAAA for
+    # v4-only names, so NXDOMAIN on an `AAAA IN` query is expected and not
+    # actionable. The query type + name live in the quoted request field, e.g.
+    # `"AAAA IN example.com. udp 40 false 512" NXDOMAIN` — match AAAA inside the
+    # quotes followed by the NXDOMAIN rcode. Other rcodes and A/other-type
+    # NXDOMAINs are still kept.
+    - grep:
+        exclude: 'log "AAAA IN[^"]*" NXDOMAIN '
