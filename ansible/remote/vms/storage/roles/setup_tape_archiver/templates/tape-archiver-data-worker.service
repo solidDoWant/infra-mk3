@@ -64,6 +64,7 @@ ExecStartPre=-/usr/bin/docker rm -f tape-archiver-data-worker
 ExecStart=/usr/bin/docker run --rm --name tape-archiver-data-worker \
     --pull=never \
     --env-file /etc/tape-archiver/data-worker.env \
+    --publish {{ tape_archiver_metrics_port }}:{{ tape_archiver_metrics_port }} \
 {% for device in tape_archiver_tape_devices %}
     --device {{ device }} \
 {% endfor %}

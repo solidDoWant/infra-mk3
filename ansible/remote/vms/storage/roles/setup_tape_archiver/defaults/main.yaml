@@ -23,3 +23,9 @@ tape_archiver_tape_devices:
   - /dev/nst1
 tape_archiver_changer_device: /dev/sch0
 tape_archiver_stop_timeout: 300
+# Prometheus /metrics port. The worker binds this inside the container
+# (METRICS_ADDR in data-worker.env) AND the unit publishes it to the host so
+# the cluster's vmagent can scrape 10.2.3.1:<port> (see
+# cluster/gitops/backup/tape-archiver/data-worker/static-scrape.yaml). Single
+# source of truth for both.
+tape_archiver_metrics_port: 9090
