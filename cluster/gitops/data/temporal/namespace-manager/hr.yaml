@@ -63,6 +63,10 @@ spec:
               MANAGED_BY_TAG: temporal-namespace-manager
               SEARCH_ATTRIBUTE_ANNOTATION_PREFIX: temporal.home.arpa/search-attribute.
               TEMPORAL: /img/admin-tools/usr/local/bin/temporal
+              # Inherited by the `temporal` CLI (grpc-go). Skips the TXT lookup at
+              # `_grpc_config.<target>`, which CoreDNS cannot serve -- it NXDOMAINs and
+              # then walks the search list. No service config is obtainable here.
+              GRPC_ENABLE_TXT_SERVICE_CONFIG: "false"
             resources:
               requests:
                 cpu: 10m

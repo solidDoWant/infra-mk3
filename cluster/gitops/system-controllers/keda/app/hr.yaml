@@ -26,6 +26,16 @@ spec:
 
     priorityClassName: system-cluster-critical
 
+    # Applies to all KEDA components. grpc-go's DNS resolver does a TXT lookup at
+    # `_grpc_config.<target>` for service config before dialing; CoreDNS never serves
+    # those records, so it always NXDOMAINs and then walks the search list, turning one
+    # doomed query into four. Nothing is lost by skipping it -- no service config is
+    # obtainable here. The Temporal scaler runs in the operator pod, making this the
+    # largest single source of those queries.
+    env:
+      - name: GRPC_ENABLE_TXT_SERVICE_CONFIG
+        value: "false"
+
     operator:
       replicaCount: 2
       revisionHistoryLimit: 1

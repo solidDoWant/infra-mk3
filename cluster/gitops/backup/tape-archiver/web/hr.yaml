@@ -216,6 +216,11 @@ spec:
               # VICTORIAMETRICS_URL / VICTORIALOGS_URL env vars are rendered
               # by the chart from config.web.observability (0.0.5+) — no
               # direct env entries needed.
+              env:
+                # Skip grpc-go's TXT lookup at `_grpc_config.<target>`, which CoreDNS
+                # cannot serve — it NXDOMAINs and then walks the search list. No service
+                # config is obtainable here, so nothing is lost.
+                GRPC_ENABLE_TXT_SERVICE_CONFIG: "false"
               resources:
                 requests:
                   cpu: 100m
