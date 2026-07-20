@@ -7,6 +7,8 @@ metadata:
   labels:
     grafana.home.arpa/instance: grafana
 spec:
+  # Pinned so that operator upgrades do not implicitly bump Grafana itself.
+  version: 11.3.0
   config:
     auth:
       signout_redirect_url: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/grafana/end-session/
@@ -46,16 +48,9 @@ spec:
     remote_cache:
       type: database
     unified_alerting:
-      # TODO use this config and delete the manually-configured service after
-      # the next operator release. Non-standard values are used to prevent
-      # breakage when upgrading to the next release.
-      # See https://github.com/grafana/grafana-operator/pull/1840
-      # ha_listen_address: $${POD_IP}:9094
-      # ha_peers: grafana-alerting.monitoring.svc:9094
-      # ha_advertise_address: $${POD_IP}:9094
-      ha_listen_address: $${POD_IP_MANUAL}:9094
-      ha_peers: grafana-alerting-manual.monitoring.svc.cluster.local.:9094
-      ha_advertise_address: $${POD_IP_MANUAL}:9094
+      ha_listen_address: $${POD_IP}:9094
+      ha_peers: grafana-alerting.monitoring.svc.cluster.local.:9094
+      ha_advertise_address: $${POD_IP}:9094
       ha_peer_timeout: 15s
       ha_reconnect_timeout: 2m
     unified_alerting.screenshots:
@@ -154,15 +149,6 @@ spec:
                     secretKeyRef:
                       name: grafana-image-renderer-auth-token
                       key: authToken
-                - name: POD_IP_MANUAL
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: status.podIP
-              ports:
-                # TODO see above about removing this after next release
-                - name: grafana-alert-m
-                  containerPort: 9094
-                  protocol: TCP
               securityContext: &container_security_context
                 readOnlyRootFilesystem: true
                 runAsNonRoot: true

@@ -16,9 +16,28 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: grafana-charts
-      version: v5.16.0
+      version: 5.24.0
   values:
-    # HA not currently supported, but not really an issue since this is just the operator
-    # leaderElect: true
+    # Sets CLUSTER_DOMAIN, which makes the operator address the managed Grafana
+    # as `grafana-service.monitoring.svc.cluster.local` rather than the bare
+    # `grafana-service.monitoring.svc` it hardcoded before. Requires >= v5.17.0
+    # (grafana/grafana-operator#1874); the bare `.svc` was deliberate upstream,
+    # to match OpenShift service-serving-certificate SANs.
+    #
+    # This alone does NOT remove the wasted lookups: the resulting name has 4
+    # dots, still under the kubelet's default ndots:5, so the resolver would
+    # keep walking the search suffixes. It pairs with the set-pod-dns-ndots
+    # Kyverno policy, which gives this pod ndots:1 -- at which point the 4-dot
+    # name is tried absolute-first and resolves on the first query. Both halves
+    # are required; either on its own still costs NXDOMAIN round trips.
+    clusterDomain: cluster.local
+    # Hot standby only -- the leader-elected instance is the sole reconciler, so
+    # this buys failover, not throughput (that would be --max-concurrent-reconciles).
+    # Paired with pdb.yaml; minAvailable: 1 would block node drains at 1 replica.
+    replicas: 2
     serviceMonitor:
       enabled: true
+    dashboard:
+      enabled: true
+      labels:
+        grafana_dashboard: "1"
