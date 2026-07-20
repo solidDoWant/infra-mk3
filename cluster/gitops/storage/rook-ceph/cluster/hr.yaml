@@ -54,6 +54,41 @@ spec:
           mgr/crash/warn_recent_interval: "7200" # 2 hours
           mgr/dashboard/ALERTMANAGER_API_HOST: http://vmalertmanager-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:9093
           mgr/dashboard/PROMETHEUS_API_HOST: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/select/0/prometheus/
+        mon:
+          # Log volume control. Rook forces mon_cluster_log_to_stderr=true, so every
+          # cluster-log entry is duplicated onto container stderr and shipped. Measured
+          # over 3000 lines on the leader, that stream was 47.8% audit [DBG] and 25.6%
+          # cluster [DBG] -- and the cluster [DBG] tier was 99.7% the mgr's `pgmap vN:
+          # N pgs: active+clean` heartbeat, which Prometheus already records.
+          #
+          # This is a channel map, not a scalar (LogMonitor::update_log_channels parses
+          # it via get_conf_str_map_helper), so `default=` is the fallback for every
+          # channel. Levels: debug < info < sec < warn < error.
+          #
+          # `info` is the right cut because Ceph already splits the audit channel by
+          # mutation -- Monitor.cc logs read-only commands via audit_clog->debug() and
+          # every mutating command via audit_clog->info(). So this drops the mon_status
+          # liveness probe (every 10s), `osd blocklist ls` and `status` polling, while
+          # RETAINING pool create/delete, `osd out`, auth changes and `config set`.
+          # Health transitions (HEALTH_OK/WRN/ERR) are INF or above and also survive.
+          # Only scrub start/ok lines are genuinely lost; those are in `ceph pg dump`.
+          #
+          # This trims only the external stderr sink -- LogMonitor::log_external(). The
+          # entries are still committed to Paxos, so `ceph -w`, `ceph log last <n> debug
+          # audit`, and the dashboard audit view keep full DBG history.
+          #
+          # NOTE: a typo yields CLOG_UNKNOWN (-1), which fails OPEN and logs everything.
+          # Verify after rollout:
+          #   kubectl exec -n storage <mon-pod> -c mon -- \
+          #     ceph --admin-daemon /run/ceph/ceph-mon.<id>.asok config get mon_cluster_log_level
+          mon_cluster_log_level: "default=info"
+          # RocksDB's bridge maps rocksdb INFO->dout 4, WARN->3 (RocksDBStore.cc computes
+          # NUM_INFO_LOG_LEVELS - level - 1), so the 4/5 default emits its periodic
+          # `DUMPING STATS` blocks. 3/5 keeps WARN and above. On a peon these dumps plus
+          # their blank separator lines were ~44% of the container stream -- the blanks
+          # are also what arrive in VictoriaLogs as `missing _msg field` records, since
+          # they carry no content for a filter to match.
+          debug_rocksdb: "3/5"
       mgr:
         modules:
           - name: rook
