@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the two remaining high-rate mon log sources that Ceph config cannot gate.
+#
+# Most mon noise was removed at the source instead -- see the `mon:` section of
+# cephConfig in cluster/gitops/storage/rook-ceph/cluster/hr.yaml, which sets
+# `mon_cluster_log_level: default=info` and `debug_rocksdb: 3/5`. That took a mon
+# from ~14.5k lines/hour to ~2.1k. Prefer that lever: it stops the mon writing
+# the lines at all, rather than paying to write, read and ship them first.
+#
+# These two survive it because both are emitted at dout level 0, which no
+# `debug_*` setting can suppress (level 0 is unconditional):
+#
+#   1. log_channel(audit|cluster) log [DBG] : ...
+#      LogClient.cc do_log() uses ldout(cct, 0) for everything except CLOG_ERROR.
+#      This is the mon's LOCAL mirror of an entry it also submits to the cluster
+#      log, so it is already redundant with the (now info-filtered) `audit ...` /
+#      `cluster ...` lines.
+#   2. mon.<id>@N(role).osd eN _set_new_cache_sizes cache_size:N ...
+#      A routine cache-rebalance tick, measured at exactly one every 5s per mon.
+#      Pure bookkeeping; no state worth retaining.
+#
+# ClusterFilter (NOT a namespaced Filter) for the same reason as
+# coredns-drop-successful-queries: fluent-operator's namespaced-Filter isolation
+# rewrite silently matches nothing in this repo (fluent/fluent-operator#1211).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: rook-mon-drop-debug-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Container logs are tagged `kube.<namespace>.<pod>.<container>.<container_id>`
+  # by the tail input, so this anchors on namespace + the mon pod-name prefix and
+  # stays valid across the ReplicaSet hash changing on restart.
+  matchRegex: ^kube\.storage\.rook-ceph-mon-
+  filters:
+    # Scoped to [DBG] rather than all of log_channel, because the same logger
+    # emits levels that matter. Observed in one 6-minute window: 243 audit [DBG]
+    # and 33 cluster [DBG] -- but also 122 audit [INF] and 6 cluster [INF]. The
+    # INF entries are the mutating commands (osd pool set, auth get-or-create-key,
+    # config assimilate-conf, mgr module enable); Monitor.cc logs read-only
+    # commands via audit_clog->debug() and every mutating one via ->info(), which
+    # is the same split `mon_cluster_log_level: default=info` relies on. CLOG_ERROR
+    # takes the ldout(cct,-1) branch and renders as `log [ERR]`, so it is kept too.
+    - grep:
+        exclude: 'log log_channel\(\w+\) log \[DBG\]'
+    # No level qualifier needed -- this message only ever exists in this one form.
+    - grep:
+        exclude: 'log _set_new_cache_sizes'
