@@ -35,7 +35,7 @@ spec:
       root_url: https://grafana.${SECRET_PUBLIC_DOMAIN_NAME}
     database:
       type: postgres
-      host: grafana-postgres-rw.monitoring.svc:5432
+      host: grafana-postgres-rw.monitoring.svc.cluster.local.:5432
       name: grafana
       user: grafana
       ssl_mode: verify-full
