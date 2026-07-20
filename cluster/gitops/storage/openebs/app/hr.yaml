@@ -60,6 +60,12 @@ spec:
         replicas: 2
         resources: *resources
         nodeSelector: *node_selector
+        resizer:
+          extraArgs:
+            - --v=2
+        provisioner:
+          extraArgs:
+            - --v=2
       plugin:
         image:
           # ghcr.io mirrors docker.io/openebs; trailing slash required by the chart
