@@ -17,5 +17,8 @@ spec:
   values:
     profile: ambient
     caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
+    # Defaults to the bare `istiod.<istioNamespace>.svc:15012`, which cannot resolve
+    # absolutely and so burns three NXDOMAINs against the search list first.
+    xdsAddress: istiod.istio-system.svc.cluster.local.:15012
     env:
       IPV6_ENABLED: "false"
