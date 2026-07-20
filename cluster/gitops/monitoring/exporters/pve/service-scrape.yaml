@@ -27,6 +27,21 @@ spec:
           - "1"
         node:
           - "1"
+      relabelConfigs:
+        # `discoveryRole: service` (below) makes Kubernetes SD emit __address__ as the
+        # bare `<svc>.<ns>.svc:<port>`, which is hardcoded in the SD with no cluster-domain
+        # option -- VM_CLUSTERDOMAINNAME on the operator does not reach it. That name
+        # cannot resolve absolutely, so every lookup NXDOMAINs and then walks the search
+        # list, three failures before `cluster.local` reconstructs the real FQDN.
+        # Qualifying it here makes the first query the right one.
+        #
+        # Idempotent: relabel regexes are fully anchored, so an address that is already
+        # `...svc.cluster.local:9221` leaves `.cluster.local:9221` after `.svc`, fails the
+        # anchor, and is passed through untouched.
+        - sourceLabels: [__address__]
+          regex: '(.+)\.svc(:\d+)?'
+          targetLabel: __address__
+          replacement: '${1}.svc.cluster.local${2}'
   jobLabel: pve-exporter
   # Exports are HA, and will always contain the same data.
   # Only scrape one of them to prevent duplicate metrics.
