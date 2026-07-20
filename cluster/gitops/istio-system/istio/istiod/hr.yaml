@@ -31,15 +31,6 @@ spec:
       autoscaleMin: 2
       env:
         ENABLE_CA_SERVER: "false"
-        # Adds this name to istiod's serving-certificate SANs, which otherwise
-        # carry only `istiod.istio-system.svc`. Required before ztunnel's
-        # xdsAddress can be fully qualified -- without it the XDS TLS handshake
-        # fails hostname verification and ztunnel loses the control plane.
-        # APPENDS rather than replaces (pilot/pkg/bootstrap getDNSNames builds a
-        # set from the custom hosts plus the default host and the known
-        # istiod/istiod-remote/istio-pilot names), so existing clients that dial
-        # the bare `.svc` name keep validating. Comma-separated for multiple.
-        ISTIOD_CUSTOM_HOST: istiod.istio-system.svc.cluster.local
       deploymentLabels:
         patches.flux.home.arpa/deployment.ignore-replicas: "true"
       # Try to schedule on nodes that already have istio services running
