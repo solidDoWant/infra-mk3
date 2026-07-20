@@ -57,7 +57,14 @@ spec:
             command:
               - /script/manager.sh
             env:
-              TEMPORAL_ADDRESS: temporal-internal-frontend.data.svc.cluster.local:7236
+              # Trailing dot = absolute, so the resolver never walks the search list.
+              # grpc-go also does an SRV lookup at `_grpclb._tcp.<host>`, which k8s DNS
+              # cannot answer; without the dot that one NXDOMAIN becomes four. Unlike the
+              # TXT lookup below, SRV has no env toggle -- grpc-go's EnableSRVLookups is a
+              # package-level var ("must not be changed after init time") -- so qualifying
+              # the name is the only lever. Safe here: no TLS is configured, and Go strips
+              # a trailing dot from SNI regardless.
+              TEMPORAL_ADDRESS: temporal-internal-frontend.data.svc.cluster.local.:7236
               NAMESPACE_LABEL: temporal.home.arpa/enabled
               POLL_INTERVAL_SECONDS: "300"
               MANAGED_BY_TAG: temporal-namespace-manager
