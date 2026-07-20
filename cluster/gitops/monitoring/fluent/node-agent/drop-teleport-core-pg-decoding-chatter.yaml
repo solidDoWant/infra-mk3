@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  # Named to sort before "kubernetes" so the drop happens before the
+  # (kubelet-querying) kubernetes enrichment filter -- ~14.3k records/hour skip
+  # enrichment entirely. Same rationale as drop-leaderelection-spam.
+  name: drop-teleport-core-pg-decoding-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on the cluster name rather than a specific instance: only
+  # the CNPG *primary* runs the change feed, so the noise follows a failover
+  # from -1 to -2 and back. Matching the prefix covers whichever is primary.
+  matchRegex: ^kube\.security\.teleport-core-postgres-
+  filters:
+    # Teleport's postgres backend (lib/backend/pgbk) drives its cross-auth
+    # change feed by calling pg_logical_slot_get_changes() on a poll loop --
+    # the SQL function interface, not the streaming replication protocol. Each
+    # call therefore opens and closes a *new* logical decoding session, and
+    # Postgres emits these two LOG lines every time.
+    #
+    # One replication slot per Auth Service instance (2 pods here), polled at
+    # `change_feed_poll_interval` (default backend.DefaultPollStreamPeriod;
+    # measured at 1s). 2 messages x 2 slots x 3600s ~= 14.3k lines/hour, which
+    # matched the observed rate exactly. Pure per-poll bookkeeping: the LSNs
+    # advance but nothing actionable is ever conveyed.
+    #
+    # Why filter instead of reconfiguring at the source (the lever we preferred
+    # for talos machined and the Ceph mons):
+    #
+    #   1. `change_feed_poll_interval` IS settable under teleport.storage, but
+    #      it is undocumented, and the change feed is Teleport's backend
+    #      *watcher* -- it is how one Auth pod observes writes made through
+    #      another. Raising it to 5s buys a 5x reduction while permanently
+    #      adding up to 5s of propagation delay to inter-auth cache freshness
+    #      and lock enforcement. Not a trade worth making for log volume.
+    #   2. Postgres cannot suppress these itself. Both are LOG severity, and in
+    #      `log_min_messages` the ordering is ... WARNING, ERROR, LOG, FATAL,
+    #      PANIC -- LOG outranks ERROR. Any setting that hides LOG also hides
+    #      ERROR and WARNING. The Postgres docs flag this ranking quirk
+    #      explicitly and point at external filtering, which is this file.
+    #
+    # Both patterns are anchored on the `"message":` field specifically, not
+    # loose substrings. Every one of these records also carries the decoding
+    # SQL in its `query` field, so an unanchored match would additionally drop
+    # genuine ERRORs raised *during* a decoding poll. Anchoring keeps those.
+    #
+    # Verified against a 30-minute window: with both excludes applied the only
+    # surviving records were 3 checkpoint lines and one
+    # `ERROR could not serialize access due to read/write dependencies among
+    # transactions` (SQLSTATE 40001, a SERIALIZABLE conflict that Teleport
+    # retries). That ERROR is exactly the signal worth keeping, and it passes.
+    #
+    # Field is `log` (CRI parser body key) -- the CNPG JSON envelope is an
+    # unparsed string there, so these match inside it.
+    - grep:
+        exclude: 'log "message":"starting logical decoding for slot'
+    - grep:
+        exclude: 'log "message":"logical decoding found consistent point at'
