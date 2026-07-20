@@ -1,0 +1,107 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
+# Injects `ndots: 1` into pods that do not already declare DNS options.
+#
+# The kubelet default of ndots:5 means any name with fewer than 5 dots is tried
+# against all three search suffixes (`<ns>.svc.cluster.local`,
+# `svc.cluster.local`, `cluster.local`) BEFORE being tried as-is. A 4-dot name
+# like `authentik-postgres-rw.security.svc.cluster.local` therefore burns three
+# NXDOMAIN round trips (x2, A and AAAA) before the real answer. Measured over a
+# 10 minute window that accounted for ~61% of all cluster DNS queries.
+#
+# This policy is the safety net for THIRD-PARTY charts whose pod specs we do not
+# control (grafana-operator, flux source-controller, vmclusterlb, ...). For
+# first-party services the primary mechanism remains an explicit
+# `defaultPodOptions.dnsConfig` in the HelmRelease -- see
+# .claude/skills/add-k8s-service. The overlap is intentional: keeping it in Git
+# for our own services keeps the setting greppable and reviewable, and the
+# precondition below makes this policy a no-op wherever it is already declared.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: set-pod-dns-ndots
+spec:
+  # Ignore rather than the `Fail` default: this rule intercepts EVERY pod
+  # creation in the matched namespaces. If the admission webhook is unreachable
+  # we want pods created unmutated rather than not created at all -- a slow DNS
+  # path is vastly preferable to a cluster that cannot schedule.
+  failurePolicy: Ignore
+  # This rule only ever applies at pod CREATE and deliberately does not use
+  # `mutateExistingOnPolicyUpdate`, so background scanning has nothing to do.
+  background: false
+  rules:
+    - name: set-pod-dns-ndots
+      # Mutate rules have no Audit mode (validationFailureAction governs only
+      # validate rules), so the staged rollout is done by namespace. These three
+      # hold every workload currently generating search-path NXDOMAIN storms:
+      # flux-system (source-controller), monitoring (grafana-operator,
+      # vmclusterlb), security (authentik-server, teleport-agent). Widen this
+      # list once the behavior is confirmed in the cluster.
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      # Avoid a deadlock
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+      preconditions:
+        all:
+          # Only pods owned by a standard workload controller.
+          #
+          # NOTE: pods created by a Deployment are owned by its ReplicaSet, NOT
+          # by the Deployment -- listing `Deployment` here would silently match
+          # nothing at all.
+          #
+          # This is an allowlist rather than a CNPG-shaped denylist so that it
+          # fails closed: any operator that pins and reconciles its own pod specs
+          # is excluded by default instead of having to be remembered. Today that
+          # covers CNPG (owner kind `Cluster`, which stores an expected spec in a
+          # `cnpg.io/podSpec` annotation and could roll instances if it read an
+          # injected field as drift), Talos static control-plane pods (owner
+          # `Node`, where the kubelet owns the real spec and a mutation would not
+          # take effect anyway), and KubeVirt launchers
+          # (`VirtualMachineInstance`).
+          - key: "{{ request.object.metadata.ownerReferences[?controller].kind | [0] || '' }}"
+            operator: AnyIn
+            value:
+              - ReplicaSet
+              - StatefulSet
+              - DaemonSet
+              - Job
+          # Never touch a pod that already declares DNS options. Besides making
+          # this a no-op for the ~44 pods already setting ndots:1, it protects
+          # the VPN gateway/router pods, which carry custom `nameservers` plus
+          # `timeout: 1`: dnsConfig.options is a list with no strategic-merge
+          # key, so patching it can replace the list wholesale and silently drop
+          # their timeout.
+          - key: "{{ request.object.spec.dnsConfig.options || `[]` | length(@) }}"
+            operator: Equals
+            value: 0
+        # ANDed with `all` above. hostNetwork pods only reach CoreDNS under
+        # ClusterFirstWithHostNet; with plain ClusterFirst, hostNetwork silently
+        # degrades to the node's resolv.conf, so mutating those (cilium,
+        # node-exporter, CSI node plugins) would alter host-network system pods
+        # to no benefit.
+        any:
+          - key: "{{ request.object.spec.hostNetwork || `false` }}"
+            operator: Equals
+            value: false
+          - key: "{{ request.object.spec.dnsPolicy || '' }}"
+            operator: Equals
+            value: ClusterFirstWithHostNet
+      mutate:
+        # Deliberately NOT `mutateExistingOnPolicyUpdate`: resolv.conf is written
+        # by the kubelet at pod creation, so patching live pods would change the
+        # spec without changing the running resolver -- all churn, no effect.
+        # Pods pick this up as they cycle normally.
+        patchStrategicMerge:
+          spec:
+            dnsConfig:
+              options:
+                - name: ndots
+                  value: "1"
