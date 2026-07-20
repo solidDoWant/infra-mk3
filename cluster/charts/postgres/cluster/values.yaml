@@ -108,6 +108,15 @@ bootstrap:
       name: "" # volume snapshot recovery: name of the VolumeSnapshot to restore from
 additionalClusterConfig: {}
 bucket:
+  # Do NOT add a trailing dot here to dodge ndots search expansion. It breaks
+  # WAL archiving: barman-cloud is Python, which sends the dot in the TLS SNI
+  # verbatim (Go strips it), and the gateway rejects that per RFC 6066 s3 --
+  # failing at the handshake, after DNS and cert checks pass.
+  #
+  # The real fix is ndots on the pod, which the Cluster CRD cannot express yet.
+  # Set dnsConfig in cluster.yaml and drop this note once one of these lands:
+  #   https://github.com/cloudnative-pg/cloudnative-pg/issues/11037
+  #   https://github.com/cloudnative-pg/cloudnative-pg/pull/11066
   endpoint: ""
   storageClassName: ssd-replicated-object
   additionalConfig:
