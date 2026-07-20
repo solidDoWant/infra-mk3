@@ -482,6 +482,24 @@ spec:
             subPath: ca.crt
     defaultDatasources:
       grafanaOperator: *grafana_operator
+      victoriametrics:
+        # TODO remove this after updating this chart f ar e nough
+        # Replicates the chart default list purely to override the plugin
+        # version -- the chart pins 0.15.1, which predates the Grafana 13 React
+        # 19 work. 0.23.4 is the first release declaring Grafana 13 support;
+        # 0.25.2 additionally fixes a Grafana 13 variable-editor crash.
+        # Keep in sync with the chart default when bumping the chart.
+        # See https://github.com/VictoriaMetrics/victoriametrics-datasource/issues/532
+        datasources:
+          - name: VictoriaMetrics
+            type: prometheus
+            access: proxy
+            isDefault: true
+          - name: VictoriaMetrics (DS)
+            isDefault: false
+            access: proxy
+            type: victoriametrics-metrics-datasource
+            version: "0.25.2"
     grafana:
       enabled: false
       forceDeployDatasource: true
