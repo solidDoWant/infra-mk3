@@ -245,6 +245,7 @@ spec:
         # cert provider still loads the file when its HTTP API listener inits.
         # requireClientAuth=false because authn is JWT bearer, not client cert.
         tls:
+          refreshInterval: 5m
           frontend:
             server:
               certFile: /etc/temporal/certs/frontend/tls.crt
