@@ -36,6 +36,21 @@ spec:
       env:
         - name: VM_VMALERTDEFAULT_USEDEFAULTRESOURCES
           value: "false"
+        # Without this the operator generates in-cluster addresses as the bare
+        # `<svc>.<ns>.svc` (e.g. the `srv+vmselectinternal-...monitoring.svc` backends in
+        # the vmclusterlb config), which cannot resolve absolutely -- the zone is
+        # cluster.local, so `<svc>.<ns>.svc` is a dead end. It only ever resolves via the
+        # LAST search path, where `.svc` + `cluster.local` happens to reconstruct the real
+        # FQDN, after burning an NXDOMAIN on each earlier suffix. ndots cannot fix that; it
+        # only reorders the attempts (at ndots:1 the futile absolute try goes first, adding
+        # one more NXDOMAIN). The truncation is deliberate upstream -- it lets the search
+        # list supply whatever cluster domain you run, per VictoriaMetrics/operator#354 --
+        # so the domain has to be declared here to get fully-qualified names.
+        #
+        # Must match the cluster's actual DNS domain: the operator appends this blindly, so
+        # a wrong value breaks every generated address rather than merely slowing it.
+        - name: VM_CLUSTERDOMAINNAME
+          value: cluster.local
       replicaCount: 2
       podDisruptionBudget:
         enabled: true
