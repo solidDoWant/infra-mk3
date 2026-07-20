@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - ./authentik-grafana-application-blueprint.yaml
   - ./configmap-dashboard-provider-rbac.yaml
+  - ./datasources.yaml
   - ./grafana-admin-password.sops.yaml
   - ./grafana.yaml
   - ./httproute.yaml
