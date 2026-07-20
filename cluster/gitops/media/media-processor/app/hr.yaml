@@ -117,13 +117,13 @@ spec:
         metrics:
           enabled: true
         radarr:
-          url: "http://radarr.media.svc:7878"
+          url: "http://radarr.media.svc.cluster.local:7878"
           apiKey:
             secretKeyRef:
               name: radarr-api-key
               key: API_KEY
         sonarr:
-          url: "http://sonarr.media.svc:8989"
+          url: "http://sonarr.media.svc.cluster.local:8989"
           apiKey:
             secretKeyRef:
               name: sonarr-api-key

@@ -27,7 +27,7 @@ spec:
               tag: 009705f@sha256:22549c2196e20bbfc66ef8d68fd1a242da6cf104003c833aacd0d152b29efd14
             env:
               DATABASE_URL: "\
-                postgresql://vaultwarden-metrics@vaultwarden-postgres-rw.security.svc:5432/vaultwarden?\
+                postgresql://vaultwarden-metrics@vaultwarden-postgres-rw.security.svc.cluster.local:5432/vaultwarden?\
                 sslrootcert=/certs/postgres/serving/ca.crt&\
                 sslcert=/certs/postgres/user/tls.crt&\
                 sslkey=/certs/postgres/user/tls.key&\

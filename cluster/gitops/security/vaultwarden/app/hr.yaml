@@ -32,7 +32,7 @@ spec:
               IP_HEADER: X-Forwarded-For
               # Database config
               DATABASE_URL: "\
-                postgresql://vaultwarden@vaultwarden-postgres-rw.security.svc:5432/vaultwarden?\
+                postgresql://vaultwarden@vaultwarden-postgres-rw.security.svc.cluster.local:5432/vaultwarden?\
                 sslrootcert=/certs/postgres/serving/ca.crt&\
                 sslcert=/certs/postgres/user/tls.crt&\
                 sslkey=/certs/postgres/user/tls.key&\
