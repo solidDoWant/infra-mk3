@@ -20,7 +20,6 @@ spec:
     createNamespace: false
     timezone: ${SECRET_TIMEZONE}
     cronJobTimeZone: true
-    verbose: true
     topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
