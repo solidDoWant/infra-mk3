@@ -9,9 +9,11 @@ spec:
     type: victoriametrics-logs-datasource
     name: VictoriaLogs
     url: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
+    jsonData:
+      maxLines: 1000
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
   plugins:
     - name: victoriametrics-logs-datasource
-      version: 0.16.2
+      version: 0.29.0
