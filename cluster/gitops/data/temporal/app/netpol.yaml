@@ -383,6 +383,10 @@ specs:
               app.kubernetes.io/name: temporal
               app.kubernetes.io/instance: temporal
               app.kubernetes.io/component: history
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: worker
         toPorts:
           - ports:
               - port: "7234"
@@ -491,6 +495,22 @@ specs:
         toPorts:
           - ports:
               - port: "7236"
+                protocol: TCP
+      # History gRPC. The history scavenger (temporal-sys-history-scanner)
+      # calls DescribeMutableState on the history service directly, not via a
+      # frontend, so it needs its own egress rule. Without it every scavenger
+      # task blocks for the full 20s dial timeout and then logs an error —
+      # ~40k lines/hour of "encounter error when describing the mutable state"
+      # from whichever worker pod holds the scanner, and the scavenger never
+      # reclaims orphaned history branches.
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: temporal
+              app.kubernetes.io/component: history
+        toPorts:
+          - ports:
+              - port: "7234"
                 protocol: TCP
       - *jwks_egress
       - *ringpop_egress
