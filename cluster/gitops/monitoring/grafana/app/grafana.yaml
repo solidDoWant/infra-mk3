@@ -8,7 +8,7 @@ metadata:
     grafana.home.arpa/instance: grafana
 spec:
   # Pinned so that operator upgrades do not implicitly bump Grafana itself.
-  version: 12.3.0
+  version: 13.0.1
   config:
     auth:
       signout_redirect_url: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/grafana/end-session/
