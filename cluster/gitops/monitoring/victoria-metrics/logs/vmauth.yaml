@@ -49,5 +49,8 @@ spec:
     url_map:
       - src_paths:
           - ".*"
-        url_prefix: "http://srv+victoria-logs.monitoring.svc:9428"
+        # Fully qualified on purpose: a literal url_prefix is passed through verbatim, so
+        # VM_CLUSTERDOMAINNAME (set on the operator) does not reach it. Bare `.svc` cannot
+        # resolve absolutely and only works via search-path fallback, costing NXDOMAINs.
+        url_prefix: "http://srv+victoria-logs.monitoring.svc.cluster.local:9428"
         discover_backend_ips: true
