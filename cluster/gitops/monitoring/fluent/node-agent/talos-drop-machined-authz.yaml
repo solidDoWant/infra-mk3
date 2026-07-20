@@ -1,0 +1,87 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops machined's authorization audit lines, which carry no diagnostic value.
+#
+# Every gRPC call into machined emits exactly three lines -- two authz lines and
+# one access log:
+#
+#   machined/authz/unix/authorizer authorized based on PID (N) match with service "dashboard" (allowed roles [...])
+#   machined/authz/authorizer authorized ([os:admin os:operator os:reader] includes [...])
+#   machined OK [/machine.MachineService/CPUFreqStats] N.Nms unary Success (...)
+#
+# The caller is the Talos console dashboard, which polls nine MachineService
+# methods (LoadAvg, Memory, SystemStat, CPUFreqStats, CPUInfo,
+# NetworkDeviceStats, DiskStats, Processes, ServiceList) on a 5s ticker --
+# ~19.4k lines/hour/node. machined alone was 54% of all Talos service logs
+# (52k/hour cluster-wide), and measured over a 20k-line sample the split was an
+# exact 66.7% authz / 33.3% access log. Note these are NOT duplicate ingestion:
+# a same-node exact-match check found 0.0% true duplicates, so this is genuine
+# repeat polling rather than a pipeline bug.
+#
+# This cannot be silenced at the source. In Talos machined.go the authz
+# *injector* logger is gated behind the build-time `debug.Enabled` flag, but the
+# authorizer and pidAuthorizer loggers are constructed unconditionally with no
+# gate at all, and machined exposes no log level or verbosity setting. Nor can
+# it be filtered on the way out: `machine.logging.destinations` accepts only
+# endpoint/format/extraTags -- no level filter, no service allowlist, no
+# sampling. Upstream declined to add a verbosity knob (siderolabs/talos#9917,
+# closed as not planned) and pointed at collector-side dropping as the intended
+# workaround. So this filter is the only available lever.
+#
+# ClusterFilter (NOT a namespaced Filter) for the same reason as
+# coredns-drop-successful-queries: fluent-operator's namespaced-Filter isolation
+# rewrite is keyed on a field this repo nests differently, so namespaced Filters
+# silently match nothing (fluent/fluent-operator#1211, #1096).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: talos-drop-machined-authz
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # The talos-service filter chain ends in a rewrite_tag
+  # (`$talos['service'] ^(.+)$ $TAG.$0`), so records re-enter the pipeline tagged
+  # `talos.service.<service>`. Match the post-rewrite tag; the `msg` -> `log`
+  # rename happens earlier in that same chain, so `log` is populated by the time
+  # the record reaches this filter.
+  match: talos.service.machined
+  filters:
+    # Drops ONLY the two success variants -- 66.7% of machined volume:
+    #
+    #   machined/authz/authorizer authorized (%v includes %v)
+    #   machined/authz/unix/authorizer authorized based on PID (%d) match with service %q ...
+    #
+    # A bare `machined/authz/` match would be wrong: the same two loggers also
+    # emit lines that are worth keeping (talos v1.13.2,
+    # pkg/grpc/middleware/authz/authorizer.go and .../auth/unix/authorizer.go):
+    #
+    #   :55  not authorized (%v doesn't include %v)          <-- DENIAL, security signal
+    #   :44  no explicit rule found for %q, falling back to %v
+    #   :81  no peer credentials found in context
+    #   :118 timed out waiting for runner state to be populated with PID
+    #
+    # Note the trap: matching on `authorized` alone would ALSO swallow the
+    # denial, since "not authorized" contains "authorized". Requiring
+    # `authorizer authorized ` -- the word immediately after the logger prefix --
+    # is what separates them, because the denial reads `authorizer not
+    # authorized `. The `(unix/)?` group covers both loggers.
+    - grep:
+        exclude: 'log machined/authz/(unix/)?authorizer authorized '
+    # The remaining third is the gRPC access log for the same dashboard polling.
+    # Scoped to the nine methods the dashboard actually polls rather than a
+    # blanket `machined OK`, for two reasons:
+    #
+    #   1. Other callers use this same access log. A 30m sample was 741 hits on
+    #      EACH of the nine below, plus a single /machine.ImageService/Verify --
+    #      the image-verification audit trail, which matters here given
+    #      module.sig_enforce=1. A blanket rule would silently eat it.
+    #   2. Mutating calls (Reboot, Shutdown, Reset, Upgrade, ApplyConfiguration,
+    #      EtcdLeaveCluster) share the format. None appeared in the sample only
+    #      because nothing happened -- they are precisely the lines wanted when
+    #      answering "why did this node reboot?" or during a security review.
+    #
+    # Requiring the OK status also means a FAILING stat call still gets through,
+    # since that would indicate a real problem rather than routine polling.
+    - grep:
+        exclude: 'log machined OK \[/machine\.MachineService/(LoadAvg|DiskStats|SystemStat|ServiceList|Memory|CPUInfo|NetworkDeviceStats|CPUFreqStats|Processes)\]'
