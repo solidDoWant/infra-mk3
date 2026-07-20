@@ -25,7 +25,7 @@ spec:
         # In-cluster gRPC over TLS; auth is JWT bearer (apiKey below).
         # Frontend's serving cert SANs match this hostname, so SNI / cert
         # verification works without a serverName override.
-        address: temporal-frontend.data.svc.cluster.local:7233
+        address: temporal-frontend.data.svc.cluster.local.:7233
         # Maps to the Temporal namespace auto-created by temporal-namespace-manager
         # (k8s namespace "backup" carries temporal.home.arpa/enabled=true).
         namespace: backup
