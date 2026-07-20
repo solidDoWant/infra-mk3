@@ -63,6 +63,9 @@ spec:
       externalHealthMonitorController:
         extraArgs:
           - --enable-node-watcher=true
+      externalSnapshotter:
+        extraArgs:
+          - --v=2
       driver:
         image: &dcsi_image docker.io/democraticcsi/democratic-csi:v1.9.3
       topologySpreadConstraints:
