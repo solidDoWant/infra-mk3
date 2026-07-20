@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops search-path NXDOMAIN noise from the CNPG barman-cloud S3 endpoint
+# (~1.9k queries/hour across the 15 postgres clusters).
+#
+# `s3.<public domain>` is a 2-dot name, so it is tried against every search
+# suffix before/alongside the absolute form, and each miss is logged. The two
+# obvious fixes are both unavailable:
+#
+#   1. ndots on the pod -- the CNPG Cluster CRD has no dnsConfig/dnsPolicy/
+#      podTemplate field (unlike Pooler, whose spec.template.spec has both).
+#      Tracked upstream, with an open PR labelled backport-requested:
+#        https://github.com/cloudnative-pg/cloudnative-pg/issues/11037
+#        https://github.com/cloudnative-pg/cloudnative-pg/pull/11066
+#   2. A trailing dot on the endpoint URL -- resolves absolutely, but breaks
+#      WAL archiving. barman-cloud is Python (distroless/python3 + boto3), and
+#      Python passes `server_hostname` through verbatim where Go strips it, so
+#      the dot reaches the TLS SNI and the gateway drops the connection before
+#      offering a certificate (correctly -- RFC 6066 s3 says SNI HostName MUST
+#      NOT end in a dot). See the note at bucket.endpoint in
+#      cluster/charts/postgres/cluster/values.yaml.
+#
+# So the queries are unavoidable until #11066 lands; this only stops paying to
+# ship and store them. Delete this file when the ndots fix is in place.
+#
+# ClusterFilter (NOT a namespaced Filter) for the same reason as
+# coredns-drop-successful-queries -- see that file's header.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: coredns-drop-s3-search-expansion
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.networking\.coredns
+  filters:
+    # Matches only the search-EXPANDED forms, all of which end in cluster.local:
+    #   s3.<domain>.cluster.local.
+    #   s3.<domain>.svc.cluster.local.
+    #   s3.<domain>.<namespace>.svc.cluster.local.
+    # The bare `s3.<domain>.` absolute query has no cluster.local suffix, so it
+    # does not match and is still shipped -- that one is the real lookup, and
+    # losing it would hide a genuine S3 resolution failure.
+    #
+    # ${SECRET_PUBLIC_DOMAIN_NAME} is substituted by Flux (the node-agent
+    # Kustomization sets substituteFrom cluster-secrets/cluster-config), so the
+    # domain is not committed here. Its dots stay unescaped in the resulting
+    # regex and therefore match any character -- harmless at this specificity.
+    # Field is `log`.
+    - grep:
+        exclude: 'log IN s3\.${SECRET_PUBLIC_DOMAIN_NAME}\.([a-z0-9-]+\.)?(svc\.)?cluster\.local'
