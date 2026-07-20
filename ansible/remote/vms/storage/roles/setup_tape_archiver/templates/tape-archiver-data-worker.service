@@ -61,6 +61,15 @@ ExecStartPre=-/usr/bin/docker rm -f tape-archiver-data-worker
 # Capabilities: SYS_ADMIN — LTFS/FUSE cannot mount without it. SYS_RAWIO —
 # the changer, `sg_raw`, and LTFS issue raw SCSI via SG_IO; without it library
 # moves fail with EPERM.
+#
+# apparmor=unconfined: SYS_ADMIN satisfies seccomp for mount(), but Docker's
+# default AppArmor profile ALSO carries an unconditional `deny mount,` that
+# vetoes the FUSE mount regardless of capabilities. Without lifting it LTFS
+# opens the drive, loads the cartridge and reads the volume, then dies at the
+# final step with `fuse: mount failed: Permission denied`. This container
+# already runs with SYS_ADMIN + SYS_RAWIO and raw SCSI/FUSE device
+# passthrough, so the docker-default profile was providing no meaningful
+# confinement for it anyway.
 ExecStart=/usr/bin/docker run --rm --name tape-archiver-data-worker \
     --pull=never \
     --env-file /etc/tape-archiver/data-worker.env \
@@ -77,6 +86,7 @@ ExecStart=/usr/bin/docker run --rm --name tape-archiver-data-worker \
     $MHVTL_DEVICE_FLAGS \
     --cap-add SYS_ADMIN \
     --cap-add SYS_RAWIO \
+    --security-opt apparmor=unconfined \
     --mount type=bind,source={{ tape_archiver_pool_mount }},target={{ tape_archiver_pool_mount }},bind-propagation=rslave \
     --mount type=bind,source=/run/tape-archiver/jwt,target=/var/run/teleport/jwt,readonly \
     ${TAPE_ARCHIVER_IMAGE}
