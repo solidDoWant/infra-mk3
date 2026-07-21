@@ -41,7 +41,7 @@ spec:
         - sourceLabels: [__address__]
           regex: '(.+)\.svc(:\d+)?'
           targetLabel: __address__
-          replacement: '${1}.svc.cluster.local${2}'
+          replacement: "$${1}.svc.cluster.local$${2}"
   jobLabel: pve-exporter
   # Exports are HA, and will always contain the same data.
   # Only scrape one of them to prevent duplicate metrics.
