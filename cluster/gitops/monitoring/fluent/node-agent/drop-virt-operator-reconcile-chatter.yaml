@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops virt-operator's steady-state reconcile heartbeat (~206k lines/day,
+# measured at 143 lines/60s from the leader pod).
+#
+# virt-operator re-enqueues its own KubeVirt resource every 5s unconditionally
+# -- `defaultAddDelay = 5 * time.Second` in pkg/virt-operator/kubevirt.go, a
+# hardcoded constant fed to queue.AddAfter() after every reconcile. Each cycle
+# emits ~13 identical lines even when nothing changed (verified: the patched
+# services' resourceVersion never moves -- the "patched" apply is a no-op that
+# logs unconditionally). Not object churn; a fixed timer.
+#
+# Neither of the obvious source-side levers works here:
+#
+#   1. A newer operator. The 5s constant and the V0 log calls are byte-for-byte
+#      identical through v1.9.0-rc.1 (we run v1.6.2). Upgrading changes nothing.
+#   2. Lowering verbosity (-v 1). Only ~6 of the ~13 lines/cycle are V(2)-gated
+#      (`service X patched` x4, `validatingAdmissionPolicy(Binding) X patched`
+#      x2). The other ~7 are unconditional V0 -- `Handling KubeVirt resource`,
+#      `Handling deployment`, `Kubevirt namespace (...) labels are in sync`,
+#      `All KubeVirt resources created`, `All KubeVirt components ready`, and
+#      2x `Kept old CA certificates ... dropping them now` -- and no verbosity
+#      setting can suppress V0. So -v 1 buys <50% *and* discards the patch
+#      audit trail exactly when a real change makes it worth having.
+#
+# So this is the teleport-core-pg / rook-mon situation: the source can't gate
+# it cleanly, so gate it here. Each pattern is anchored on the specific
+# steady-state `"msg"` value, and the mutation forms are deliberately left out
+# of the exclude -- `service X created`/`deleted`, `Patching namespace ...`,
+# and anything at `"level":"error"`/`"warning"` do not match and still ship.
+# Only the no-op `patched` and the ready/handling heartbeat are dropped.
+#
+# Field is `log` (CRI parser body key) -- virt-operator's JSON envelope is an
+# unparsed string there, so `"msg":"..."` matches inside it (same as the CNPG
+# envelope in drop-teleport-core-pg-decoding-chatter).
+#
+# ClusterFilter (NOT a namespaced Filter) for the same reason as
+# coredns-drop-successful-queries: fluent-operator's namespaced-Filter isolation
+# rewrite silently matches nothing in this repo (fluent/fluent-operator#1211).
+#
+# Named `drop-*` so it sorts before the `kubernetes` enrichment filter and the
+# dropped records skip the (kubelet-querying) enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-virt-operator-reconcile-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the
+  # ReplicaSet hash changing on restart, and covers both operator replicas.
+  matchRegex: ^kube\.system-controllers\.virt-operator-
+  filters:
+    - grep:
+        exclude: 'log "msg":"(Handling KubeVirt resource|Handling deployment|All KubeVirt resources created|All KubeVirt components ready|service [^"]*patched"|validatingAdmissionPolicy[^"]*patched"|Kept old CA certificates|Kubevirt namespace [^"]*labels are in sync")'
