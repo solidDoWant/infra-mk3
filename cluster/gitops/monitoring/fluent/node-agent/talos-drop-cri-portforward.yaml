@@ -1,0 +1,56 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops containerd's (the Talos `cri` service) port-forward lifecycle narration.
+# On mixed-01 this was ~96% of the cri stream (~177k lines/day/node): 99.2% info,
+# and the only real signal is RemoveContainer failures.
+#
+# containerd emits ~14 info lines for EVERY CRI PortForward call -- the SPDY
+# stream setup/teardown (`Connection request received new type of stream`,
+# `... creating/found stream pair`, `Connection upgraded connection closed`, ...)
+# plus the forward itself (`Executing port forwarding in network namespace`,
+# `invoking forwarder.PortForward`, `Finish port forwarding for <sandbox> port N`,
+# `Portforward for <sandbox> returns URL`). None of it carries diagnostic value.
+#
+# The caller was identified from the kube-apiserver audit log (the authoritative
+# record of every portforward subresource call): 100% `system:serviceaccount:
+# istio-system:kiali` port-forwarding the local istiod replica on 15014 (istiod
+# monitoring) and 8080 (istiod debug registry API). That is Kiali's normal, steady
+# polling of istiod's registry/sync state to render the mesh graph -- not a fault,
+# and it targets istiod, NOT the insurgency VM (an early read of the sandbox id
+# against `talosctl ps` false-matched the qemu command line, whose args merely
+# contain the sandbox hex in a netns path; audit + the istiod-only ports 15014/
+# 8080 are conclusive). Because it is legitimate control-plane polling and cannot
+# be gated in containerd (Talos exposes no per-subsystem CRI log level, and the
+# messages are unconditional info), it is dropped here.
+#
+# Two excludes cover the whole family without touching the survivors:
+#   - `[Pp]ort ?[Ff]orward`  -- every explicit port-forward line ("port forward",
+#     "port forwarding", "forwarder.PortForward", "Portforward for ...").
+#   - `Connection (request|upgraded|setting|waiting) ` -- the SPDY stream-lifecycle
+#     lines, several of which never say "port". Scoped to these four leading verbs
+#     so a `Connection` ERROR (e.g. a reset/refused) would NOT match and still
+#     ships. Validated over 4000 lines: 3838 dropped, 0 at error level.
+# Deliberately KEPT: `container event discarded` (can indicate CRI event-buffer
+# backpressure -- a real signal, ~2%) and `RemoveContainer`/`... failed` (the only
+# errors in the stream).
+#
+# Same mechanics as talos-drop-machined-authz: the talos-service filter chain ends
+# in a rewrite_tag (`$talos['service'] ^(.+)$ $TAG.$0`), so records re-enter tagged
+# `talos.service.<service>` and the `msg` -> `log` rename has already happened.
+# ClusterFilter (NOT namespaced) for the fluent/fluent-operator#1211 reason.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: talos-drop-cri-portforward
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: talos.service.cri
+  filters:
+    # Explicit port-forward lines (both "port forward[ing]" and *PortForward).
+    - grep:
+        exclude: 'log [Pp]ort ?[Ff]orward'
+    # SPDY stream-lifecycle lines; leading verbs scoped so a Connection ERROR ships.
+    - grep:
+        exclude: 'log Connection (request|upgraded|setting|waiting) '
