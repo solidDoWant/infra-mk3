@@ -5,6 +5,11 @@ admin:
       address: 127.0.0.1
       port_value: 8000
 
+# Required by file-based SDS (TlsCertificateSdsApi needs node id + cluster).
+node:
+  id: envoy-harbor-postgres-proxy
+  cluster: development
+
 static_resources:
   clusters:
     - name: postgres_cluster
