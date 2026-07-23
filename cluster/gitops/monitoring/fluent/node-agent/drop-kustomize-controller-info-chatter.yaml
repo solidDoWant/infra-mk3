@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Ships only error-level records from Flux's kustomize-controller and drops all
+# info/debug (~160k lines/day, ~95% metronome). This is an allowlist, not a
+# denylist: 182 Kustomizations on a shared 5m interval produce a steady heartbeat
+# -- per reconcile, `All dependencies are ready`, `server-side apply completed`
+# (output almost always all-`unchanged`), and `Reconciliation finished in ...,
+# next run in 5m0s`, plus a `Dependencies do not meet ready condition, retrying
+# in 5s` storm as the herd catches dependencies mid-reconcile. None of it is
+# actionable; a genuinely stuck Kustomization surfaces in its `.status`, the Flux
+# reconcile metrics, and at `"level":"error"` here.
+#
+# Keeping only errors deliberately sacrifices the historical change trail
+# (`server-side apply completed` with `configured`/`created`/`deleted` output is
+# the one durable "what did Flux apply, and when" record -- k8s Events are NOT
+# ingested here, they TTL out of etcd in ~1h). Accepted: real-time logs remain
+# available via `kubectl -n flux-system logs deploy/kustomize-controller` when a
+# change is actively being chased; only long-term retention of non-errors is lost.
+#
+# Not done at the source (`--log-level`): Flux's zap logger has no `warn` level
+# (debug/info/error only), so "warnings and errors" collapses to `error` anyway;
+# and --log-level is a change to a self-critical controller (Flux applying Flux)
+# that silences at emission, whereas gating here stays reversible in git and can
+# grow an exception (e.g. re-admit `server-side apply completed`) without a Flux
+# self-apply.
+#
+# An allowlist (grep `regex`, keep-only) rather than an enumerated exclude so new
+# heartbeat lines in future Flux versions are dropped automatically instead of
+# leaking until a pattern is added. The `"level":"error"` JSON token does not
+# appear in the `output` map of a healthy SSA line, so info records are not
+# falsely retained.
+#
+# Field is `log` (CRI parser body key) -- the zap JSON envelope is an unparsed
+# string there, so `"level":"error"` matches inside it (same as the virt-operator
+# envelope in drop-virt-operator-reconcile-chatter).
+#
+# ClusterFilter (NOT a namespaced Filter) for the same reason as
+# coredns-drop-successful-queries: fluent-operator's namespaced-Filter isolation
+# rewrite silently matches nothing in this repo (fluent/fluent-operator#1211).
+#
+# Named `drop-*` so it sorts before the `kubernetes` enrichment filter and the
+# dropped records skip the (kubelet-querying) enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-kustomize-controller-info-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing on restart. `kustomize-controller-` is a unique prefix (the
+  # helm/source/notification controllers do not share it).
+  matchRegex: ^kube\.flux-system\.kustomize-controller-
+  filters:
+    - grep:
+        regex: 'log "level":"error"'
