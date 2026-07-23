@@ -6,6 +6,8 @@ configMapGenerator:
   - name: harbor-envoy-pg-only-config
     files:
       - envoy.yaml=./pg-only.yaml
+      - postgres-client-cert-sds.yaml=./postgres-client-cert-sds.yaml
+      - postgres-validation-context-sds.yaml=./postgres-validation-context-sds.yaml
     options:
       labels:
         kyverno.home.arpa/reload: "true"
@@ -13,6 +15,8 @@ configMapGenerator:
   - name: harbor-envoy-pg-redis-config
     files:
       - envoy.yaml=./pg-redis.yaml
+      - postgres-client-cert-sds.yaml=./postgres-client-cert-sds.yaml
+      - postgres-validation-context-sds.yaml=./postgres-validation-context-sds.yaml
     options:
       labels:
         kyverno.home.arpa/reload: "true"

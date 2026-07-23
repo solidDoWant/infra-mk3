@@ -33,6 +33,12 @@ spec:
     users:
       harbor:
         username: harbor
+        # Harbor's envoy sidecars consume this client cert via file-based SDS
+        # (watched_directory), so cert-manager rotations hot-reload without a
+        # restart -- the Kyverno workload-reloader restart is unnecessary and was
+        # the source of ~45-min pod churn. Drops the cnpg.io/reload label so the
+        # reloader no longer matches this cert secret.
+        disableReloading: true
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:

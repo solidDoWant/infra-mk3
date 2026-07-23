@@ -38,14 +38,25 @@ static_resources:
                 signature_algorithms:
                   - ed25519
                   - rsa_pss_rsae_sha512
-              tls_certificates:
-                - certificate_chain:
-                    filename: /etc/envoy/secrets/postgres/tls.crt
-                  private_key:
-                    filename: /etc/envoy/secrets/postgres/tls.key
-              validation_context:
-                trusted_ca:
-                  filename: /etc/envoy/secrets/root-ca/ca.crt
+              # File-based SDS (watched_directory) so cert-manager rotations of
+              # the postgres client cert hot-reload without a pod restart. See
+              # postgres-client-cert-sds.yaml / postgres-validation-context-sds.yaml.
+              tls_certificate_sds_secret_configs:
+                - name: postgres_client_cert
+                  sds_config:
+                    resource_api_version: V3
+                    path_config_source:
+                      path: /etc/envoy/postgres-client-cert-sds.yaml
+                      watched_directory:
+                        path: /etc/envoy/secrets/postgres
+              validation_context_sds_secret_config:
+                name: postgres_serving_cert
+                sds_config:
+                  resource_api_version: V3
+                  path_config_source:
+                    path: /etc/envoy/postgres-validation-context-sds.yaml
+                    watched_directory:
+                      path: /etc/envoy/secrets/root-ca
             auto_host_sni: true
             auto_sni_san_validation: true
       close_connections_on_host_health_failure: true
