@@ -227,6 +227,7 @@ devices:
           max_lease_time: 604800
         firewall:
           block_outbound_wan_traffic: true
+          allow_firewall_ntp_access: true
       lan: &opnsense_lan
         physical_name: vtnet2
         ip_address: 10.2.0.1
@@ -242,6 +243,8 @@ devices:
             to: 10.2.5.254
           default_lease_time: 21600
           max_lease_time: 86400
+        firewall:
+          allow_firewall_ntp_access: true
       opt2: &opnsense_opt2
         physical_name: vtnet3
         ip_address: 10.3.0.1
@@ -272,6 +275,7 @@ devices:
         firewall:
           enable_firewall_access: true
           enable_access_all: true
+          allow_firewall_ntp_access: true
       opt4: &opnsense_opt4
         physical_name: vtnet5
         ip_address: 10.5.0.1
@@ -293,6 +297,8 @@ devices:
             - 9.9.9.9
             - 1.1.1.1
           no_resolver_queries: true
+        firewall:
+          allow_firewall_ntp_access: true
       opt5: &opnsense_opt5
         physical_name: vtnet6
         ip_address: 10.6.0.1
@@ -304,6 +310,7 @@ devices:
         dns:
           no_resolver_queries: true
         firewall:
+          allow_firewall_ntp_access: true
           block_outbound_wan_traffic: true
   router-02:
     physical:
