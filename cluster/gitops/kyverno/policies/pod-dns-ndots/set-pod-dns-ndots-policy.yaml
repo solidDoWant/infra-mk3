@@ -26,8 +26,11 @@ spec:
   # we want pods created unmutated rather than not created at all -- a slow DNS
   # path is vastly preferable to a cluster that cannot schedule.
   failurePolicy: Ignore
-  # This rule only ever applies at pod CREATE and deliberately does not use
-  # `mutateExistingOnPolicyUpdate`, so background scanning has nothing to do.
+  # `background: false` + no `mutateExistingOnPolicyUpdate` disables Kyverno's
+  # BACKGROUND controller (scanning/mutating pre-existing pods on policy change).
+  # It does NOT scope the ADMISSION webhook -- that is done by
+  # `resources.operations` below. The two are independent axes; conflating them
+  # is what let this rule fire on pod UPDATE (see the operations comment).
   background: false
   rules:
     - name: set-pod-dns-ndots
@@ -42,6 +45,21 @@ spec:
           - resources:
               kinds:
                 - Pod
+              # CREATE only. Kyverno registers a mutate webhook for CREATE *and*
+              # UPDATE by default, but resolv.conf is written by the kubelet at
+              # pod creation, so mutating on UPDATE is pointless -- and actively
+              # harmful: a pod's spec is immutable after creation, so injecting
+              # dnsConfig into an UPDATE of a pod that lacks it (one created
+              # before this policy matched it) makes the API server reject the
+              # ENTIRE update. That deadlocked the kube-controller-manager GC/job
+              # controllers removing finalizers from completed Rook detect-version
+              # Job pods: the finalizer-removal update carried the injected
+              # dnsConfig, was rejected as an immutable-field change, and the pods
+              # hung Terminating forever in a retry storm. Scoping to CREATE
+              # matches this rule's documented intent and stops the webhook from
+              # ever touching a pod update.
+              operations:
+                - CREATE
       # Avoid a deadlock
       exclude:
         any:
