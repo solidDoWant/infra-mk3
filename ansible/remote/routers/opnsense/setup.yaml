@@ -39,6 +39,8 @@
 # * Firewall rules from management VLAN to UniFi Controller (see unifi-controller netpol)
 # * prometheus-node-exporter plugin added
 # * Firewall rules for k8s VLAN to nodes running prometheus-node-exporter
+# * NTP: enable iburst on all pool servers (Services > Network Time > General)
+#   so ntpd syncs in <1min on boot instead of ~8-10min
 
 # This was a PITA to get working. It needs a lot of cleanup and refactoring,
 # some other time.
