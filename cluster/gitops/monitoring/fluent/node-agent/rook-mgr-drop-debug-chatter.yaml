@@ -1,0 +1,100 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the active ceph-mgr's steady-state housekeeping chatter (~92% of its
+# stream; validated over 4000 lines: 3681 dropped, 0 at WARNING/ERROR/CRITICAL).
+# The ACTIVE mgr ran ~1837 lines/10m (~264k/day); the standby ~207 -- the active
+# mgr owns pgmap accounting plus every enabled Python module, so whichever of
+# mgr-a/mgr-b holds the active lock is the loud one. This matches on the pod-name
+# prefix, not a/b, so it follows the active role across failover. Ceph was
+# HEALTH_OK throughout; real WARN/ERR is ~0 in steady state.
+#
+# Sibling of rook-mon-drop-debug-chatter, but the mgr leans on the FILTER far more
+# than the mon did. The mon's noise was mostly gateable at the source
+# (mon_cluster_log_level, debug_rocksdb in the cluster HelmRelease cephConfig); the
+# mgr's is not:
+#   - the pgmap `log [DBG]` line is the same level-0 clog mirror the mon filter
+#     documents (LogClient ldout(cct,0)) -- no debug_* can suppress it;
+#   - the bulk is Python-module INFO, reducible only via a fistful of fragile
+#     per-module `mgr/<module>/log_level` keys; and
+#   - the biggest single source (the prometheus /metrics access log) is not a
+#     module logger and honors no such key -- and cherrypy emits it in TWO forms,
+#     a wrapped `[prometheus INFO cherrypy.access]` line AND a bare Apache-common
+#     line with no ceph prefix at all.
+# So we gate it here. Everything renders at dout level `0` (module INFO and
+# level-0 clog alike), so the numeric is useless as a discriminator -- the level
+# words ([DBG]/INFO/WARNING/ERROR) and sub-logger names are the only signal.
+#
+# Two tiers of rule. WHOLESALE drops for modules whose INFO is 100% periodic
+# telemetry with nothing actionable ever logged there -- verified against a full
+# message census:
+#   - insights       : health_history flush/apply bookkeeping, nothing else.
+#   - pg_autoscaler  : per-cycle `effective_target_ratio` / `_maybe_adjust` /
+#                      per-pool `... pg target ... quantized to N (current N)`
+#                      evaluation. A real pg_num change is committed via the audit
+#                      clog (kept) and `ceph osd pool autoscale-status`.
+#   - balancer       : continuous upmap `Optimize plan` / `do_upmap` / `prepared
+#                      N upmap changes` churn. Actual PG movement lives in pg
+#                      state, clog and `ceph balancer status`.
+#   - dashboard      : UI access/activity; no operational signal worth retaining.
+# SCOPED drops for modules that DO emit real actions at INFO -- pinned to the
+# specific housekeeping message so the actions still ship:
+#   - volumes  : idle-connection reaper tick only (real subvolumegroup create /
+#                `queuing job for volume` / cephfs connect-disconnect are kept).
+#   - rbd_support : periodic `... load_schedules` only (real mirror-snapshot and
+#                trash-purge actions are kept).
+#   - rook     : k8s watch `ADDED/MODIFIED/DELETED event` spam only (real
+#                rook_cluster reconcile INFO, and `[rook ERROR]`, are kept).
+#   - prometheus : `/metrics` scrape access log only, both cherrypy-wrapped and
+#                bare forms (`[prometheus ERROR root] failed to collect metrics`
+#                and engine lifecycle INFO are kept).
+#   - cluster clog : `[DBG]` only -- pgmap heartbeat. [INF]/[WRN]/[ERR] clog kept.
+# Every WARNING/ERROR/CRITICAL from ANY module falls through untouched (confirmed:
+# `[rook ERROR] unable to list storage classes` and `[restful WARNING] server not
+# running` both survive).
+#
+# Field is `log` (CRI parser body key); the mgr writes plain (non-JSON) lines so
+# the tokens match directly.
+#
+# ClusterFilter (NOT a namespaced Filter) for the same reason as
+# coredns-drop-successful-queries: fluent-operator's namespaced-Filter isolation
+# rewrite silently matches nothing in this repo (fluent/fluent-operator#1211).
+#
+# Named to sort before the `kubernetes` enrichment filter so dropped records skip
+# the (kubelet-querying) enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: rook-mgr-drop-debug-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Container logs are tagged `kube.<namespace>.<pod>.<container>.<container_id>`
+  # by the tail input; anchor on namespace + mgr pod-name prefix so it survives the
+  # ReplicaSet hash changing on restart and covers both mgr-a and mgr-b.
+  matchRegex: ^kube\.storage\.rook-ceph-mgr-
+  filters:
+    # -- level-0 cluster-log mirror (pgmap heartbeat); [INF]/[WRN]/[ERR] kept.
+    - grep:
+        exclude: 'log log_channel\(\w+\) log \[DBG\]'
+    # -- wholesale: pure-telemetry modules (no actionable INFO ever).
+    - grep:
+        exclude: 'log \[insights INFO '
+    - grep:
+        exclude: 'log \[pg_autoscaler INFO'
+    - grep:
+        exclude: 'log \[balancer INFO'
+    - grep:
+        exclude: 'log \[dashboard INFO'
+    # -- scoped: modules with real INFO actions; drop only the housekeeping tick.
+    - grep:
+        exclude: 'log \[volumes INFO mgr_util\] (scanning for idle|cleaning up) connections'
+    - grep:
+        exclude: 'log \[rbd_support INFO[^]]*\].*load_schedules'
+    - grep:
+        exclude: 'log \[rook INFO[^]]*\] (ADDED|MODIFIED|DELETED) event'
+    # -- prometheus /metrics scrape access, both wrapped and bare forms.
+    - grep:
+        exclude: 'log \[prometheus INFO cherrypy\.access'
+    - grep:
+        exclude: 'log "GET /metrics HTTP/'
