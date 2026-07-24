@@ -58,7 +58,32 @@ spec:
             template: &template
               metadata:
                 annotations:
-                  kyverno.home.arpa/reload-tag: "{{ random('[0-9a-z]{8}') }}"
+                  # This MUST be deterministic (a pure function of the trigger
+                  # object), not random.
+                  #
+                  # Kyverno creates one UpdateRequest per rule that matches the
+                  # trigger, and every UR evaluates the WHOLE policy. So a
+                  # single secret rotation produces 5 URs (the 5 secret rules
+                  # all have identical match blocks), and each of those 5
+                  # evaluations independently re-applies whichever rule actually
+                  # matched the target. With random() that meant 5 different
+                  # annotation values racing to write the same workload:
+                  # "the object has been modified" 409 storms in the background
+                  # controller, and 2-4 back-to-back rollouts of the same
+                  # Deployment per rotation (each new random value = a new pod
+                  # template hash = another ReplicaSet).
+                  #
+                  # Hashing the trigger's contents instead makes every one of
+                  # those evaluations compute the same value, so the first write
+                  # wins and the rest are no-ops the API server discards. The
+                  # preconditions above already guarantee the contents changed,
+                  # so the tag still changes exactly when a reload is needed.
+                  # The name prefix keeps two different objects that happen to
+                  # hold identical data from colliding.
+                  kyverno.home.arpa/reload-tag: >-
+                    {{ request.object.metadata.name }}-{{ truncate(sha256(join('',
+                    [to_string(request.object.data || `{}`),
+                    to_string(request.object.binaryData || `{}`)])), `16`) }}
               spec:
                 volumes:
                   - configMap:
