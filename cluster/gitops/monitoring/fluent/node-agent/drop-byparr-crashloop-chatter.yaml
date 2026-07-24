@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops byparr's crash-loop chatter: ~6,700 lines/day (~977 KiB) that is the
+# same failure repeated, from a pod that has served zero real requests.
+#
+# Byparr is deployed but not working and not used. Over the full 7-day log
+# retention it answered 17,609 `/health` probes and **zero** requests to `/v1`
+# (the FlareSolverr API its only permitted client, jackett, would call). It sits
+# at 0/1 Ready with its Service endpoint `ready=false`, restarting every ~4.5h,
+# because:
+#   * camoufox downloads a 66 MB GeoLite2-City.mmdb on first request at
+#     ~150 kiB/s, and probes arriving during those 5-7 minutes read the
+#     half-written file -> `maxminddb.errors.InvalidDatabaseError`, and
+#   * `/health` launches a real browser, which does not reliably fit the 15s
+#     liveness timeout, so a healthy instance still gets SIGTERMed periodically.
+# Both are left alone deliberately; this filter only stops paying for the noise
+# in log storage. It is written so that if byparr is ever fixed or actually
+# used, the errors that matter still ship.
+#
+# Composition of the 6,970 lines sampled over 24h:
+#   59.3% python traceback frames (249 KiB) - the same stack, over and over
+#   37.2% uvicorn `GET /health` access logs, of which 2,576 are 200 and 14 are 500
+#    0.7% GeoIP download progress bar - only 48 lines but 574 KiB, i.e. 59% of
+#         ALL bytes, because each is a ~12 KiB tqdm line full of \r updates
+#
+# The third rule (`^\s`) is deliberately blunt: it drops every indented line,
+# which for a Python service means all traceback frames, the `^^^`/`~~~` caret
+# markers and the echoed source lines. Enumerating those is impractical (dozens
+# of distinct source lines across starlette/anyio/uvicorn/camoufox). It is safe
+# here because Python prints the exception identity at column 0 as well -- the
+# `maxminddb.errors.InvalidDatabaseError: ...` and
+# `playwright._impl._errors.TimeoutError: ...` lines survive. The one thing lost
+# is `ExceptionGroup: unhandled errors in a TaskGroup`, which only ever appears
+# indented inside the group; the underlying cause it wraps still ships.
+#
+# Deliberately KEPT -- verified by enumerating all 230 survivors of a 6,970-line
+# sample: every exception identity (InvalidDatabaseError, playwright
+# TimeoutError, requests ChunkedEncodingError), all 14 `/health` **500**
+# responses, `ERROR: Exception in ASGI application`, `Traceback (most recent
+# call last):` banners, and the full uvicorn lifecycle (startup / shutdown /
+# `Started server process`) so restarts stay visible in the log stream.
+#
+# Field is `log` (CRI parser body key); byparr logs plain text, not JSON. The
+# CRI parser preserves leading whitespace, which is what makes `^\s` work --
+# confirmed against real shipped records, not assumed.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-byparr-crashloop-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing on restart, and on the container so nothing else can match.
+  matchRegex: ^kube\.downloads\.byparr-.*\.byparr\.
+  filters:
+    # 66 MB tqdm progress bar re-downloaded on every restart. 59% of all bytes.
+    - grep:
+        exclude: 'log Downloading GeoIP database'
+    # Kubelet probe access log. Only the 200s -- 500s are kept as the signal
+    # that the instance has gone bad.
+    - grep:
+        exclude: 'log GET /health HTTP/1\.1" 200'
+    # Traceback frames, caret markers and echoed source lines. See the note
+    # above: the exception identity is also printed unindented and survives.
+    - grep:
+        exclude: 'log ^\s'
