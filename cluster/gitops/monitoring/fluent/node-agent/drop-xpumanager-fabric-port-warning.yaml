@@ -9,11 +9,18 @@
 # hours, 100.000% of records are this exact line, every one at `warning` level.
 # The container emits nothing else.
 #
-# Cause: xpumd polls the GPUs for Xe Link fabric ports, and the call fails
-# because the container drops ALL capabilities (see the securityContext in
-# system-controllers/xpumanager/app/hr.yaml, which already carries a note about
-# this). Each failed poll logs a warning. It is not a fault -- these are Iris Xe
-# and Arc Pro cards, which have no fabric ports to find, and nothing degrades.
+# Cause: xpumd polls the GPUs for Xe Link fabric ports and logs a warning every
+# time the poll comes back empty. It comes back empty because the hardware has
+# no Xe Link -- that is a Data Center GPU Max feature, and these are Iris Xe and
+# Arc Pro A40/A50 cards. xpumd's own exporter says so directly:
+#
+#   xpum_xelink_port_status{description="The device lacks Xe Link capability.",
+#                           dev_name="Intel(R) Arc(TM) Pro A40/A50 Graphics"} -1.0
+#
+# So this is a permanent property of the hardware, not a fault and not something
+# a config change can satisfy. (It is NOT caused by the container dropping ALL
+# capabilities -- that securityContext is unrelated to this particular warning,
+# whatever else it may restrict.)
 #
 # No source fix exists. intel/xpumanager#101, "Add option to disable
 # `[warning] getFabricPorts result false` notice", has been open since
