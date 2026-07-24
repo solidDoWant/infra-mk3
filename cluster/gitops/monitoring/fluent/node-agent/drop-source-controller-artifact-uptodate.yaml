@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops `artifact up-to-date with remote revision: '<rev>'` from Flux's
+# source-controller -- 90% of that pod's output (~1.95k lines/hour, ~47k/day).
+#
+# It is emitted once per HelmChart reconcile, and the HelmChart inherits the
+# interval of the HelmRelease that owns it: 125 HelmCharts, 103 of the 123
+# HelmReleases on a 5m interval, so this is a fixed ~1.75k/hour heartbeat that
+# says nothing except "the chart version I already have is still the current
+# one". The revision is already in `.status.artifact.revision` on the object.
+#
+# Deliberately KEPT -- these are the lines that record an actual change, and
+# none of them match the exclude:
+#   * `stored artifact for commit '<sha>'` / `stored artifact for revision`
+#     -- the GitRepository advancing, i.e. the durable "what did Flux pull" trail
+#   * `packaged '<chart>' chart with version '<ver>'` -- a chart actually rebuilt
+#   * `garbage collected N artifacts`
+#   * every error/warning path (fetch failures, auth, checksum mismatches)
+#
+# A targeted exclude rather than the error-only allowlist used for
+# kustomize-controller: source-controller's info lines are the record of what
+# artifacts entered the cluster and when, which is worth retaining. Only the
+# "nothing changed" poll result is dropped.
+#
+# Field is `log` (CRI parser body key) -- the zap JSON envelope is an unparsed
+# string there, so `"msg":"..."` matches inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-source-controller-artifact-uptodate
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing on restart.
+  matchRegex: ^kube\.flux-system\.source-controller-
+  filters:
+    - grep:
+        exclude: 'log "msg":"artifact up-to-date with remote revision'

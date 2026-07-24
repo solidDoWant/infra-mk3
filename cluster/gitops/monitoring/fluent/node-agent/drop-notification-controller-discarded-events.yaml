@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops `discarding event, no alerts found for the involved object` from Flux's
+# notification-controller. It is 99.9% of that pod's output on its own
+# (~2.3k lines/hour, ~56k/day); the entire rest of the pod is one
+# `Reconciliation finished, next run in 10m0s` every 10 minutes.
+#
+# Every Flux controller is started with
+# `--events-addr=http://notification-controller...`, so all four POST every
+# reconcile event to the event-server. The event-server then looks for an Alert
+# whose eventSources match the involved object -- and this cluster has NO Alert
+# or Provider objects at all (only a `github-receiver` Receiver, which is the
+# inbound webhook path and unrelated). So every single event is matched against
+# an empty Alert list and discarded, and says so at info level.
+#
+# Not fixed at the source by dropping `--events-addr`: that would stop the POSTs
+# entirely, but it silently breaks notifications the moment an Alert is ever
+# added, with no error to point at the cause. Gating here keeps the plumbing
+# intact and reversible in git. (Kubernetes Events are recorded separately by
+# each controller's own recorder and are unaffected either way -- `flux events`
+# and `kubectl events` keep working.)
+#
+# Deliberately KEPT: everything else, including the `event-server` logger's
+# error paths (dispatch failures, malformed events) and the Receiver's own
+# reconcile lines. This is a single-message exclude rather than an error-only
+# allowlist (as used for kustomize-controller) precisely because one message is
+# the whole problem here -- there is no heartbeat family to future-proof against.
+#
+# Field is `log` (CRI parser body key) -- the zap JSON envelope is an unparsed
+# string there, so `"msg":"..."` matches inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-notification-controller-discarded-events
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing on restart.
+  matchRegex: ^kube\.flux-system\.notification-controller-
+  filters:
+    - grep:
+        exclude: 'log "msg":"discarding event, no alerts found for the involved object"'

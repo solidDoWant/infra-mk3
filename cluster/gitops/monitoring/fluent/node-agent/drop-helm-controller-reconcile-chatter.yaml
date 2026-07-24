@@ -1,0 +1,79 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the per-reconcile heartbeat from Flux's helm-controller. The pod is a
+# steady ~4.6k lines/hour (~110k/day), and three message families account for
+# ~68% of it, each emitted exactly once per HelmRelease reconcile:
+#
+#   * `HelmChart/<ns>-<name> with SourceRef '<repo>' is in-sync`   (~26%)
+#   * `release in-sync with desired state`                          (~26%)
+#   * `would violate PodSecurity "restricted:latest": ...`          (~16%)
+#
+# 103 of the 123 HelmReleases are on a 5m interval, so the first two are a fixed
+# ~1.2k/hour each that only ever say "nothing to do". Both facts are already on
+# the object (`.status.conditions` Ready/Released, `.status.history`).
+#
+# The PodSecurity lines are API-server admission warnings echoed back through
+# helm's apply. They are a closed set of 53 (release, warning) pairs across 8
+# HelmReleases -- all long-standing, intentionally privileged workloads
+# (temporal, immich, vpn-router, intel-resource-drivers-gpu, authentik, radarr,
+# bazarr, victoria-metrics-k8s-stack) -- repeated verbatim every 5 minutes
+# forever. This is the one judgement call in this filter: a NEW violation would
+# also be dropped. Accepted because the same warnings already come back on any
+# interactive `kubectl apply`, PodSecurity itself still enforces/audits at
+# admission regardless of what is logged, and kustomize-controller's
+# error-only allowlist already discards the identical warnings on its side.
+# Reverting is deleting the third `grep` below.
+#
+# A fourth family, `warning: the .spec.rollback.recreate field is deprecated and
+# has no effect` (another ~26%), is deliberately NOT filtered here -- it was a
+# real dead field injected into every HelmRelease by the meta-patch in
+# flux-system/flux/cluster/ks.yaml and was removed at the source instead.
+#
+# Deliberately KEPT -- everything that records helm actually doing something, or
+# a genuine problem:
+#   * `release out-of-sync with desired state: <reason>`
+#   * `running 'upgrade'/'install'/'rollback'/'uninstall' action with timeout`
+#   * `detected changes in cluster state` / `running 'correct cluster drift'`
+#     (drift detection is enabled cluster-wide, this is its audit trail)
+#   * chart/API deprecation notices such as `resource.k8s.io/v1beta1 DeviceClass
+#     is deprecated in v1.35+` -- low volume and actually actionable
+#   * every error/warning path
+#
+# Targeted excludes rather than the error-only allowlist used for
+# kustomize-controller: helm-controller's info lines are the record of what Helm
+# upgraded and when, which is worth retaining. Only the "nothing changed" and
+# fixed-set-of-warnings families are dropped.
+#
+# Field is `log` (CRI parser body key) -- the zap JSON envelope is an unparsed
+# string there, so `"msg":"..."` matches inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-helm-controller-reconcile-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing on restart. `helm-controller-` is a unique prefix (the
+  # kustomize/source/notification controllers do not share it).
+  matchRegex: ^kube\.flux-system\.helm-controller-
+  filters:
+    # The owned HelmChart already matches the HelmRelease's chart spec. Note
+    # this is a different message from `release in-sync with desired state`
+    # below, and the pattern is anchored on the `HelmChart/` prefix so it cannot
+    # collide with it.
+    - grep:
+        exclude: 'log "msg":"HelmChart/.* is in-sync"'
+    # The deployed release already matches the desired state -- no helm action.
+    - grep:
+        exclude: 'log "msg":"release in-sync with desired state"'
+    # Fixed set of 53 admission warnings for known-privileged workloads. See the
+    # judgement-call note above; delete this rule to restore them.
+    - grep:
+        exclude: 'log "msg":"would violate PodSecurity'

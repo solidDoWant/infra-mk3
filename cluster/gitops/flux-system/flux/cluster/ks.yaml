@@ -102,8 +102,6 @@ spec:
                       retries: 5
                       strategy: rollback
                     cleanupOnFail: true
-                  rollback:
-                    recreate: true
                   uninstall:
                     deletionPropagation: foreground
                   driftDetection:
