@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops virt-api's HTTP access log for the API-aggregation discovery polls:
+# 170,930 lines/day across the 2 pods (~7,117/hour, flat). Over a 40,000-record
+# sample spanning 23 hours, 99.75% is this, and it is only ever five URLs:
+#
+#   14555  /apis/subresources.kubevirt.io/v1alpha3
+#   14454  /apis/subresources.kubevirt.io/v1
+#    4459  /openapi/v2
+#    4030  /apis/subresources.kubevirt.io/v1/healthz
+#    2402  /apis
+#
+# All 39,900 are `GET` with `statusCode: 200`, all with `username: "-"`, and the
+# `remoteAddress` is always 10.3.1.1/.2/.3 -- the three control-plane nodes. It
+# is kube-apiserver polling the aggregated APIService (subresources.kubevirt.io)
+# for discovery and OpenAPI on a fixed interval. Nothing is wrong; this is the
+# aggregation layer working.
+#
+# No source fix exists. The emitter is RequestLoggingFilter in
+# pkg/rest/filter/filter.go, and at v1.6.2 it is hard-coded:
+#
+#   log.Log.Level(log.INFO).With("remoteAddress", ...).With("statusCode", ...)
+#
+# `.Level(log.INFO)` is not `.V(n)`, so the KubeVirt CR's
+# `developerConfiguration.logVerbosity` does not gate it -- that setting only
+# affects V-levelled calls. The only lever that would silence it is raising the
+# logger's minimum level above INFO, which would also discard virt-api's
+# certificate-rotation and cluster-config lines. Not worth it.
+#
+# The rule deliberately requires BOTH `statusCode: 200` and one of the five
+# exact discovery URLs, so it cannot swallow:
+#   * any non-200 (a failing aggregated API is exactly what you want to see), or
+#   * a real subresource invocation -- console, vnc, restart etc. arrive as
+#     /apis/subresources.kubevirt.io/v1/namespaces/<ns>/virtualmachineinstances/
+#     <name>/<verb>, which the trailing `",` in the pattern excludes because the
+#     URL does not end there. Verified: 0 non-200 and 0 `/namespaces/` records
+#     matched across the 40,000-record sample. (There were no real subresource
+#     calls in that window at all, so the rule is written to protect them rather
+#     than because any were observed.)
+#
+# Deliberately KEPT -- all 100 survivors of the sample were inspected: the 92
+# `warnings.go` VirtualMachineInstancePresets deprecation notices, plus
+# virt-api's own info lines (certificate common-name rotation, "Updating cluster
+# config from KubeVirt to resource", API/webhook rate-limiter settings, log
+# verbosity), and every error path.
+#
+# The pattern depends on `statusCode` appearing before `url` in the JSON, which
+# holds because the log formatter marshals a map and Go sorts map keys
+# alphabetically. If that ever changes the regex simply stops matching and the
+# records come back -- it fails noisy, not silent.
+#
+# Field is `log` (CRI parser body key) -- the JSON envelope is an unparsed
+# string there, so the `"key":value` pairs match inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-virt-api-aggregation-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing, and on the container so virt-controller/virt-handler/
+  # virt-operator are untouched.
+  matchRegex: ^kube\.system-controllers\.virt-api-[^.]*\.virt-api\.
+  filters:
+    - grep:
+        exclude: 'log "statusCode":200,.*"url":"(/apis|/openapi/v2|/apis/subresources\.kubevirt\.io/v1(alpha3)?(/healthz)?)",'
