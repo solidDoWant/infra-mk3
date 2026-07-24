@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the infrastructure-machinery bulk of the Talos `auditd` (Linux kernel
+# audit) stream. auditd is the #1 talos.service source by volume: ~19.4k
+# lines/hour/active-node (~465k/day), of which ~99.9% is three automated actors
+# (cilium-agent, runc, iptables) plus structural filler, and ~25 lines/hour are
+# the actual security signal.
+#
+# Measured composition over 1h (talos-k8s-mixed-01):
+#   type=BPF            5696  cilium-agent loading/unloading BPF programs (op=LOAD)
+#   type=SYSCALL        4366  2692 cilium-agent + 1130 runc + 540 iptables + ~4 real
+#   type=PROCTITLE      4366  hex-encoded argv, one per event group (redundant)
+#   type=EOE            4366  pure "end-of-event" delimiter, zero content
+#   type=NETFILTER_CFG   540  iptables/kube-proxy rule churn
+#   AVC/USER_*/CRED_*/PATH/CWD  ~25  <-- the security signal (auth + SELinux denials)
+#
+# What we KEEP (validated: 25/hr survive, 0 security events dropped):
+#   - type=AVC       SELinux denials from ANY process (dropped only by comm on
+#                    SYSCALL, never on AVC -- a denial from cilium/runc still ships).
+#                    Currently: immich-api / libuv-worker denials on the NFS media
+#                    mount (network_fs_t, permissive=1).
+#   - type=USER_*/CRED_*  PAM auth/session/credential events (e.g. root cron logins).
+#   - type=PATH/CWD  file-access context for the kept events.
+#   - type=SYSCALL from any comm OTHER than the three infra actors -- i.e. an
+#                    unexpected process making syscalls is exactly what surfaces.
+#
+# What we DROP:
+#   - type=EOE          delimiter, no value.
+#   - type=BPF          cilium BPF program loads -- constant operational churn.
+#   - type=PROCTITLE    redundant argv; the kept SYSCALL already carries comm+exe.
+#   - type=NETFILTER_CFG  iptables rule config churn.
+#   - type=SYSCALL from comm cilium-agent|iptables|runc -- the three infra actors.
+#     comm is matched with a trailing quote so it's scoped to type=SYSCALL lines
+#     (each audit record has exactly one type=); AVC/PATH/etc. never match.
+# Dropping SYSCALL by comm (not wholesale) is the load-bearing choice: it removes
+# the infra noise while preserving syscalls from every other process AND all AVC
+# denials regardless of who caused them. To retain runc's container-runtime
+# syscall trail instead (~93% cut rather than ~99.9%), drop `runc` from the last
+# exclude's alternation.
+#
+# Same mechanics as talos-drop-cri-portforward / talos-drop-machined-authz: the
+# talos-service filter chain ends in a rewrite_tag (`$talos['service'] ^(.+)$
+# $TAG.$0`), so records re-enter tagged `talos.service.<service>` with `msg`
+# already renamed to `log`. ClusterFilter (NOT namespaced) for the
+# fluent/fluent-operator#1211 reason.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: talos-drop-auditd-infra-noise
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: talos.service.auditd
+  filters:
+    # Structural filler: end-of-event delimiter (no content) and redundant argv.
+    - grep:
+        exclude: 'log type=EOE '
+    - grep:
+        exclude: 'log type=PROCTITLE '
+    # cilium BPF program loads and iptables netfilter rule churn.
+    - grep:
+        exclude: 'log type=BPF '
+    - grep:
+        exclude: 'log type=NETFILTER_CFG '
+    # Syscalls from the three infrastructure actors only; every other comm ships,
+    # and AVC denials are never touched (this matches type=SYSCALL lines only).
+    - grep:
+        exclude: 'log type=SYSCALL .* comm="(cilium-agent|iptables|runc)"'
