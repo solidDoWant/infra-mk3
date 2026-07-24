@@ -30,9 +30,16 @@
 #     lines, several of which never say "port". Scoped to these four leading verbs
 #     so a `Connection` ERROR (e.g. a reset/refused) would NOT match and still
 #     ships. Validated over 4000 lines: 3838 dropped, 0 at error level.
-# Deliberately KEPT: `container event discarded` (can indicate CRI event-buffer
-# backpressure -- a real signal, ~2%) and `RemoveContainer`/`... failed` (the only
-# errors in the stream).
+# `container event discarded` is ALSO dropped (added later). It is containerd's
+# CRI event-buffer (GetContainerEvents) overflow line. Originally KEPT as a rare
+# (~2%) backpressure signal, but under sustained pod churn -- the hourly Kyverno
+# workload-reloader restarts, concentrated on mixed-03 -- it became the single
+# largest line in the stream (~19-38%, ~1-2k/hr), so its constant presence no
+# longer signals anything. It is benign (Evented PLEG is off here, so nothing
+# drains the event stream) and only loosely tracks churn; the churn itself is the
+# thing to watch (Kyverno reloader / restart counts), not this line.
+# Deliberately KEPT: `RemoveContainer`/`... failed` (the errors in the stream) and
+# the normal container lifecycle (Start/Stop/Remove/TearDown) narration.
 #
 # Same mechanics as talos-drop-machined-authz: the talos-service filter chain ends
 # in a rewrite_tag (`$talos['service'] ^(.+)$ $TAG.$0`), so records re-enter tagged
@@ -54,3 +61,7 @@ spec:
     # SPDY stream-lifecycle lines; leading verbs scoped so a Connection ERROR ships.
     - grep:
         exclude: 'log Connection (request|upgraded|setting|waiting) '
+    # containerd CRI event-buffer overflow -- benign, and the stream's top line
+    # under pod churn (see header). Genuine RemoveContainer errors still ship.
+    - grep:
+        exclude: 'log container event discarded'
