@@ -108,11 +108,11 @@ spec:
               "CacheEnabled": true,
               "CacheTtl": 2100,
               "CacheMaxResultsPerIndexer": 1000,
-              "FlareSolverrUrl": "http://byparr.downloads.svc.cluster.local:8191/",
               "FlareSolverrMaxTimeout": 65000,
               "OmdbApiKey": $$OMDB_API_KEY,
               "ProxyType": -1
             }
+          # "FlareSolverrUrl": "http://byparr.downloads.svc.cluster.local:8191/",
     persistence:
       config:
         type: persistentVolumeClaim

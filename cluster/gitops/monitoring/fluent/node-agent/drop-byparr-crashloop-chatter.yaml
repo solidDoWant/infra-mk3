@@ -47,27 +47,27 @@
 # ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
 # reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
 # filter and the dropped records skip the kubelet-querying enrichment entirely.
-apiVersion: fluentbit.fluent.io/v1alpha2
-kind: ClusterFilter
-metadata:
-  name: drop-byparr-crashloop-chatter
-  labels:
-    config.fluentbit.fluent.io/enabled: "true"
-    config.fluentbit.fluent.io/agent: node
-spec:
-  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
-  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
-  # hash changing on restart, and on the container so nothing else can match.
-  matchRegex: ^kube\.downloads\.byparr-.*\.byparr\.
-  filters:
-    # 66 MB tqdm progress bar re-downloaded on every restart. 59% of all bytes.
-    - grep:
-        exclude: 'log Downloading GeoIP database'
-    # Kubelet probe access log. Only the 200s -- 500s are kept as the signal
-    # that the instance has gone bad.
-    - grep:
-        exclude: 'log GET /health HTTP/1\.1" 200'
-    # Traceback frames, caret markers and echoed source lines. See the note
-    # above: the exception identity is also printed unindented and survives.
-    - grep:
-        exclude: 'log ^\s'
+# apiVersion: fluentbit.fluent.io/v1alpha2
+# kind: ClusterFilter
+# metadata:
+#   name: drop-byparr-crashloop-chatter
+#   labels:
+#     config.fluentbit.fluent.io/enabled: "true"
+#     config.fluentbit.fluent.io/agent: node
+# spec:
+#   # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+#   # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+#   # hash changing on restart, and on the container so nothing else can match.
+#   matchRegex: ^kube\.downloads\.byparr-.*\.byparr\.
+#   filters:
+#     # 66 MB tqdm progress bar re-downloaded on every restart. 59% of all bytes.
+#     - grep:
+#         exclude: 'log Downloading GeoIP database'
+#     # Kubelet probe access log. Only the 200s -- 500s are kept as the signal
+#     # that the instance has gone bad.
+#     - grep:
+#         exclude: 'log GET /health HTTP/1\.1" 200'
+#     # Traceback frames, caret markers and echoed source lines. See the note
+#     # above: the exception identity is also printed unindented and survives.
+#     - grep:
+#         exclude: 'log ^\s'

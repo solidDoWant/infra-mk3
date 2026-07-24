@@ -11,17 +11,17 @@ specs:
         app.kubernetes.io/name: jackett
         app.kubernetes.io/controller: jackett
         app.kubernetes.io/instance: jackett
-    egress:
-      # To Byparr to bypass cloudflare captchas
-      - toEndpoints:
-          - matchLabels:
-              app.kubernetes.io/name: byparr
-              app.kubernetes.io/controller: byparr
-              app.kubernetes.io/instance: byparr
-        toPorts:
-          - ports:
-              - port: "8191"
-                protocol: TCP
+    # egress:
+    #   # To Byparr to bypass cloudflare captchas
+    #   - toEndpoints:
+    #       - matchLabels:
+    #           app.kubernetes.io/name: byparr
+    #           app.kubernetes.io/controller: byparr
+    #           app.kubernetes.io/instance: byparr
+    #     toPorts:
+    #       - ports:
+    #           - port: "8191"
+    #             protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
