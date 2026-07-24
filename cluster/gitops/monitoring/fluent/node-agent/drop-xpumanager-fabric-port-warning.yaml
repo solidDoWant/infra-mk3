@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops `[warning] getFabricPorts result false` from xpumanager's `app`
+# container. This is the largest single workload log source in the cluster:
+# 207,354 lines/day across the 3 DaemonSet pods (~8,640/hour), and it is one
+# message repeated at ~1Hz per pod.
+#
+# Not "mostly" one message -- ALL of it. Over a 30,000-line sample spanning 23
+# hours, 100.000% of records are this exact line, every one at `warning` level.
+# The container emits nothing else.
+#
+# Cause: xpumd polls the GPUs for Xe Link fabric ports, and the call fails
+# because the container drops ALL capabilities (see the securityContext in
+# system-controllers/xpumanager/app/hr.yaml, which already carries a note about
+# this). Each failed poll logs a warning. It is not a fault -- these are Iris Xe
+# and Arc Pro cards, which have no fabric ports to find, and nothing degrades.
+#
+# No source fix exists. intel/xpumanager#101, "Add option to disable
+# `[warning] getFabricPorts result false` notice", has been open since
+# 2025-06-14 with zero comments and no activity since. There is no log-level or
+# feature flag that silences this without silencing everything. The alternative
+# -- granting the capability back so the call succeeds -- trades a deliberate
+# security posture for log volume and is explicitly not taken.
+#
+# This is an exclude on the exact message, NOT an allowlist, so a genuine xpumd
+# error or startup failure would still ship. The stream going completely silent
+# is a property of the application (it logs nothing else today), not of this
+# filter -- if that changes, the new records arrive unfiltered.
+#
+# Scoped to the `app` container. The sibling `metrics` container (gunicorn
+# serving the Prometheus exporter) is untouched; it currently logs nothing, and
+# its access/error output should keep shipping if it ever does.
+#
+# Field is `log` (CRI parser body key); xpumd logs plain text, not JSON.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-xpumanager-fabric-port-warning
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives DaemonSet pod
+  # churn, and on the `app` container so the `metrics` sidecar is not matched.
+  matchRegex: ^kube\.system-controllers\.xpumanager-[^.]*\.app\.
+  filters:
+    - grep:
+        exclude: 'log getFabricPorts result false'
