@@ -20,6 +20,15 @@ spec:
       # current once # https://github.com/kyverno/kyverno/pull/16047 is released.
       version: 3.6.2
   values:
+    # Global logging for all controllers. The chart default verbosity is 2
+    # (trace): the background controller alone emits ~1900 TRC lines (per-UR
+    # mutate/generate reconcile traces) on top of startup. 1 keeps INF/WARN/ERR
+    # (leader election, deprecation warnings, and the real mutate-conflict
+    # errors) while dropping the v=2 trace. Does NOT affect the ERR volume --
+    # errors are not verbosity-gated.
+    features:
+      logging:
+        verbosity: 1
     admissionController: &controller_config
       replicas: 2
       revisionHistoryLimit: 1
