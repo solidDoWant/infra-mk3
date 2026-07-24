@@ -59,7 +59,16 @@ spec:
     global:
       caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
       istiod:
-        enableAnalysis: true
+        # Continuous in-cluster config analysis. Disabled: it emitted ~1600
+        # error + 450 warn lines/istiod that are mostly FALSE POSITIVES here
+        # (the working, cert-manager-Ready wildcard cert flagged IST0101
+        # "credentialName not found"; the intentional external/internal
+        # dual-gateways for *.<domain> flagged IST0145 "conflict"), and it
+        # drove the known ~990-line `nil status ... on updateStatus()` retry
+        # spam writing analysis status back to the Gateway-API auto-generated
+        # gateways. The gateways are Programmed=True and serving fine; on-demand
+        # `istioctl analyze` covers the real need without the runtime noise.
+        enableAnalysis: false
       priorityClassName: system-cluster-critical
     meshConfig:
       trustDomain: istio.cluster.local
