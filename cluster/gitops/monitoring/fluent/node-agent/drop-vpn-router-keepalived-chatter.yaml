@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the two benign high-volume chatter patterns from the vpn-router
+# keepalived container (~58k lines/pod, 4 pods → ~180k/day), keeping every real
+# VRRP/IPVS event. Validated over a full pod log: 58398/58404 dropped (99.99%),
+# and the 6 survivors are all genuine signal (a TCP_CHECK flap + quorum
+# lost/gained + service add/remove on :35838).
+#
+# NOT an availability issue -- this was checked: keepalived shows zero FAULT
+# states and zero MASTER/BACKUP transitions; the VIPs are held stably. The volume
+# is two self-inflicted sources:
+#
+#   1. `Unknown VRID(NN) received on interface(vpn-r-veth0). ignoring...` (~62%).
+#      Two keepalived deployments share the vpn-r-veth0 L2: the multi-router uses
+#      virtual_router_id 51, the "single" router uses 52. VRRP advertisements are
+#      multicast, so each deployment receives the OTHER's adverts and logs every
+#      one as an unknown VRID (51 sees 52, 52 sees 51 -- bidirectional). The VRIDs
+#      are distinct, so there is no collision/split-brain; it is pure cross-talk.
+#      A source fix (VRRP unicast_peer, or separate L2s) is deliberately NOT taken
+#      -- it would rework a healthy failover setup purely to quiet logs.
+#
+#   2. `Printing VRRP|parent|checker data for process(N) on signal` (~38%). The
+#      startup/liveness probes (keepalived-liveness-probe.sh) send `kill -USR1` to
+#      dump /tmp/keepalived.data and grep it for `State = FAULT`; keepalived logs
+#      3 lines per dump. Inherent to the probe's FAULT-check design; the probe is
+#      working as intended, so it is gated here rather than changed.
+#
+# Deliberately KEPT (neither pattern matches them): VRRP state transitions
+# (`Entering {MASTER,BACKUP,FAULT} STATE`), TCP_CHECK failures, quorum changes,
+# and IPVS service Add/Remove -- the lines that actually indicate a problem.
+#
+# Field is `log` (CRI parser body key; keepalived logs are plain text, not JSON).
+# ClusterFilter (NOT namespaced) for the fluent/fluent-operator#1211 reason, and
+# named `drop-*` so it sorts before the `kubernetes` enrichment filter and the
+# dropped records skip the kubelet-querying enrichment entirely (same as
+# drop-kustomize-controller-info-chatter).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-vpn-router-keepalived-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>`. Scoped to the
+  # keepalived container of both vpn-router deployments (the multi `vpn-router-*`
+  # and the `vpn-router-vpn-router-single-*` variant both share the vpn-router-
+  # pod prefix). Anchored on the container so the sibling gateway-route-manager
+  # container is untouched.
+  matchRegex: ^kube\.networking\.vpn-router-.*\.keepalived\.
+  filters:
+    # Foreign-VRID cross-talk between the VRID 51 and VRID 52 deployments.
+    - grep:
+        exclude: 'log Unknown VRID'
+    # keepalived state dumps triggered by the probes' SIGUSR1.
+    - grep:
+        exclude: 'log Printing .* data for process'
