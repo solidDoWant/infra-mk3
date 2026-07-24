@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the metrics-scrape chatter from CNPG Pooler (pgbouncer) pods. The single
+# `insurgency-postgres-pooler-ro` Pooler is ~7,960 lines/hour across its 2 pods
+# (~191k/day) -- the largest single log source in the cluster, and 99.6% of it
+# is monitoring watching itself.
+#
+# Where it comes from: the `insurgency-postgres` VMPodScrape selects on
+# `cnpg.io/cluster`, which the Pooler pods also carry, so their :9127 metrics
+# port is scraped -- by 2 vmagent replicas at the 20s global scrapeInterval,
+# i.e. every ~10s per pod. CNPG's pgbouncer-manager answers each scrape by
+# opening 3 short-lived admin-console connections over the unix socket, and
+# pgbouncer logs 3 lines for every one of them:
+#
+#   (nodb)/pgbouncer@unix(1):5432 pgbouncer access from unix socket
+#   pgbouncer/pgbouncer@unix(1):5432 login attempt: db=pgbouncer user=pgbouncer
+#   pgbouncer/pgbouncer@unix(1):5432 closing because: client close request (age=0s)
+#
+# That is ~156k lines/day. The remaining ~35k/day is `Missing metric` for
+# `peers`/`peer_pools`: CNPG's exporter looks for those rows in `SHOW LISTS` and
+# logs at info level when absent, which is always here (no pgbouncer peering
+# configured). Nothing to fix -- a CNPG exporter quirk, not a misconfiguration.
+#
+# Both source-side fixes were considered and rejected:
+#   * `log_connections=0` / `log_disconnections=0` via the Pooler's
+#     `spec.pgbouncer.parameters` WOULD kill all three lines -- pgbouncer gates
+#     even the unix-socket line on cf_log_connections (admin.c:1815). But those
+#     settings are global to the instance, so it would also discard the ~48
+#     real client logins/day, which are the only record of who actually reached
+#     the database. Not worth trading real audit signal for noise.
+#   * Raising the scrape interval only divides the volume by the factor it is
+#     raised, and degrades metric resolution to fix a logging problem.
+#
+# Matching on `/pgbouncer@unix` is what makes this safe: the admin console is
+# the only thing that connects over the unix socket as the `pgbouncer` user, and
+# real clients always appear as `<db>/<user>@<ip>:<port>`. No regex
+# metacharacters, so nothing can over-match.
+#
+# Deliberately KEPT -- verified against 40,000 real lines, all 158 survivors:
+# every `stats-api` client connection (new connection / SSL established / login
+# attempt / closing), every backend `cnpg_pooler_pgbouncer` server connection,
+# `registered new auto-database`, pgbouncer WARNINGs (`dropping database ... as
+# it does not exist anymore`), `RELOAD command issued`, and `updated
+# configuration file`. Zero non-LOG-level records are dropped.
+#
+# Field is `log` (CRI parser body key) -- the pgbouncer-manager JSON envelope is
+# an unparsed string there, so both the nested `record.msg` and the outer
+# `"msg":"Missing metric"` match inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-pgbouncer-admin-console-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on the container name rather than this one Pooler's pod
+  # prefix, so any future CNPG Pooler is covered without another file --
+  # `pgbouncer` is the container name CNPG always gives them, and the two
+  # `[^.]+` segments pin it to the container position in the tag.
+  matchRegex: ^kube\.[^.]+\.[^.]+\.pgbouncer\.
+  filters:
+    # The 3-line admin-console triple, once per connection, 3 connections per
+    # metrics scrape, every ~10s per pod.
+    - grep:
+        exclude: 'log /pgbouncer@unix'
+    # CNPG exporter looking for peers/peer_pools rows that only exist when
+    # pgbouncer peering is configured.
+    - grep:
+        exclude: 'log "msg":"Missing metric"'
