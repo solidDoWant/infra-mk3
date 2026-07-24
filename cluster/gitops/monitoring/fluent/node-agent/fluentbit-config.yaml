@@ -30,4 +30,10 @@ spec:
       # of completed chunks without an fsync per chunk write.
       sync: normal
       metrics: "on"
-    # logLevel: trace
+    # Default (info) makes every restart dump a line PER watched container log
+    # file (`[input:tail] inotify_fs_add ...`, ~440/node) plus a line per stale
+    # buffer chunk (`[storage] invalid crc32 ...`) -- ~900 lines/restart/node of
+    # pure init narration. warning keeps genuine warn/error (output retries,
+    # backpressure, the `format check failed` corrupt-chunk errors) while
+    # silencing the info storms.
+    logLevel: warning
