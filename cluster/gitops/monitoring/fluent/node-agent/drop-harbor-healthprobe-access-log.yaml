@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the health-probe access logs from Harbor's registry, registryctl and
+# portal containers -- 156,428 lines/day between them, and it is 100% probes.
+#
+#   registry      52,158/day
+#   registryctl   52,134/day
+#   portal        52,136/day
+#
+# Sampled 12,000 lines from each over an 11-hour window. Every one of the 36,000
+# records is a health probe, in only three shapes:
+#
+#   registry     8234  "GET / HTTP/1.1" 200 0 "" "kube-probe/1.36"
+#                3766  "GET / HTTP/1.1" 200 0 "" "Go-http-client/1.1"
+#   registryctl 12000  "GET /api/health HTTP/1.1" 200 9
+#   portal       7944  "GET / HTTP/1.1" 200 785 "-" "kube-probe/1.36"
+#                4056  "GET / HTTP/1.1" 200 785 "-" "Go-http-client/1.1"
+#
+# `kube-probe` is the kubelet's liveness/readiness probe; `Go-http-client` is
+# Harbor's own internal health checking plus the exporter. Both fire on a fixed
+# interval against 2 replicas each, which is the entire volume.
+#
+# No source fix taken. The registry is distribution, whose access log can only
+# be turned off wholesale, and the portal is nginx behind the chart with no
+# exposed `access_log` value -- in both cases the only lever also discards real
+# request logging, which is the part worth keeping.
+#
+# The rules are anchored on the exact probe request line so real traffic still
+# ships. In particular the registry container serves the Docker registry API at
+# `/v2/...`, and anchoring on `"GET / HTTP/1.1"` (the bare root path, with the
+# closing quote) means image pulls and pushes are untouched. Non-200 responses
+# are untouched too -- a probe that starts failing is exactly what you want to
+# see. Verified against the 36,000-record sample: 0 non-200 and 0 non-root-path
+# records matched.
+#
+# Content-length is matched as `[0-9]+` rather than the observed 0/785 so a
+# portal asset change does not silently un-filter it.
+#
+# Field is `log` (CRI parser body key); these are plain combined-format access
+# logs, not JSON.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-harbor-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. registryctl shares the harbor-registry pod, so the pod alternation is
+  # (registry|portal) while the container alternation carries all three. The
+  # envoy sidecars in those pods are deliberately not matched.
+  matchRegex: ^kube\.development\.harbor-(registry|portal)-[^.]*\.(registry|registryctl|portal)\.
+  filters:
+    # registry: user-agent field is `""` (no referer quoting).
+    - grep:
+        exclude: 'log "GET / HTTP/1\.1" 200 [0-9]+ "" "(kube-probe|Go-http-client)/'
+    # portal: user-agent field is `"-"`.
+    - grep:
+        exclude: 'log "GET / HTTP/1\.1" 200 [0-9]+ "-" "(kube-probe|Go-http-client)/'
+    # registryctl: dedicated health endpoint, no user-agent logged at all.
+    - grep:
+        exclude: 'log "GET /api/health HTTP/1\.1" 200 [0-9]+'
