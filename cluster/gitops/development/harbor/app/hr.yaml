@@ -107,8 +107,16 @@ spec:
               mountPath: /etc/envoy
             - name: postgres-cert
               mountPath: /etc/envoy/secrets/postgres
-            - name: redis-cert
-              mountPath: /etc/envoy/secrets/redis
+            # Not mounted while the redis proxy is disabled by
+            # https://github.com/envoyproxy/envoy/issues/41659. Nothing reads
+            # this cert -- Harbor is on `redis: type: internal` and talks to
+            # harbor-redis directly -- but the mount alone made the
+            # restart-workload-on-config-changes kyverno policy restart every
+            # harbor pod on each hourly rotation of harbor-dragonfly-harbor-user.
+            # Restore this together with the redis listener/cluster in the envoy
+            # configs.
+            # - name: redis-cert
+            #   mountPath: /etc/envoy/secrets/redis
             - name: root-ca
               mountPath: /etc/envoy/secrets/root-ca
           restartPolicy: Always
@@ -140,8 +148,16 @@ spec:
           volumeMounts:
             - name: envoy-config
               mountPath: /etc/envoy
-            - name: redis-cert
-              mountPath: /etc/envoy/secrets/redis
+            # Not mounted while the redis proxy is disabled by
+            # https://github.com/envoyproxy/envoy/issues/41659. Nothing reads
+            # this cert -- Harbor is on `redis: type: internal` and talks to
+            # harbor-redis directly -- but the mount alone made the
+            # restart-workload-on-config-changes kyverno policy restart every
+            # harbor pod on each hourly rotation of harbor-dragonfly-harbor-user.
+            # Restore this together with the redis listener/cluster in the envoy
+            # configs.
+            # - name: redis-cert
+            #   mountPath: /etc/envoy/secrets/redis
             - name: root-ca
               mountPath: /etc/envoy/secrets/root-ca
     database:
@@ -184,19 +200,21 @@ spec:
                       - key: tls.key
                         path: tls.key
                     defaultMode: 0440
-              # Add the redis user cert volume
-              - op: add
-                path: /spec/template/spec/volumes/-
-                value:
-                  name: redis-cert
-                  secret:
-                    secretName: harbor-dragonfly-harbor-user
-                    items:
-                      - key: tls.crt
-                        path: tls.crt
-                      - key: tls.key
-                        path: tls.key
-                    defaultMode: 0440
+              # The redis user cert volume is not added while the redis proxy is
+              # disabled by https://github.com/envoyproxy/envoy/issues/41659.
+              # See the note on the sidecar volumeMount above.
+              # - op: add
+              #   path: /spec/template/spec/volumes/-
+              #   value:
+              #     name: redis-cert
+              #     secret:
+              #       secretName: harbor-dragonfly-harbor-user
+              #       items:
+              #         - key: tls.crt
+              #           path: tls.crt
+              #         - key: tls.key
+              #           path: tls.key
+              #       defaultMode: 0440
               # Add the root CA cert volume
               - op: add
                 path: /spec/template/spec/volumes/-
@@ -237,19 +255,21 @@ spec:
                       - key: tls.key
                         path: tls.key
                     defaultMode: 0440
-              # Add the redis user cert volume
-              - op: add
-                path: /spec/template/spec/volumes/-
-                value:
-                  name: redis-cert
-                  secret:
-                    secretName: harbor-dragonfly-harbor-user
-                    items:
-                      - key: tls.crt
-                        path: tls.crt
-                      - key: tls.key
-                        path: tls.key
-                    defaultMode: 0440
+              # The redis user cert volume is not added while the redis proxy is
+              # disabled by https://github.com/envoyproxy/envoy/issues/41659.
+              # See the note on the sidecar volumeMount above.
+              # - op: add
+              #   path: /spec/template/spec/volumes/-
+              #   value:
+              #     name: redis-cert
+              #     secret:
+              #       secretName: harbor-dragonfly-harbor-user
+              #       items:
+              #         - key: tls.crt
+              #           path: tls.crt
+              #         - key: tls.key
+              #           path: tls.key
+              #       defaultMode: 0440
               # Add the root CA cert volume
               - op: add
                 path: /spec/template/spec/volumes/-
@@ -281,19 +301,21 @@ spec:
               - op: add
                 path: /spec/template/spec/volumes
                 value: []
-              # Add the redis user cert volume
-              - op: add
-                path: /spec/template/spec/volumes/-
-                value:
-                  name: redis-cert
-                  secret:
-                    secretName: harbor-dragonfly-harbor-user
-                    items:
-                      - key: tls.crt
-                        path: tls.crt
-                      - key: tls.key
-                        path: tls.key
-                    defaultMode: 0440
+              # The redis user cert volume is not added while the redis proxy is
+              # disabled by https://github.com/envoyproxy/envoy/issues/41659.
+              # See the note on the sidecar volumeMount above.
+              # - op: add
+              #   path: /spec/template/spec/volumes/-
+              #   value:
+              #     name: redis-cert
+              #     secret:
+              #       secretName: harbor-dragonfly-harbor-user
+              #       items:
+              #         - key: tls.crt
+              #           path: tls.crt
+              #         - key: tls.key
+              #           path: tls.key
+              #       defaultMode: 0440
               # Add the root CA cert volume
               - op: add
                 path: /spec/template/spec/volumes/-
@@ -335,19 +357,21 @@ spec:
                       - key: tls.key
                         path: tls.key
                     defaultMode: 0440
-              # Add the redis user cert volume
-              - op: add
-                path: /spec/template/spec/volumes/-
-                value:
-                  name: redis-cert
-                  secret:
-                    secretName: harbor-dragonfly-harbor-user
-                    items:
-                      - key: tls.crt
-                        path: tls.crt
-                      - key: tls.key
-                        path: tls.key
-                    defaultMode: 0440
+              # The redis user cert volume is not added while the redis proxy is
+              # disabled by https://github.com/envoyproxy/envoy/issues/41659.
+              # See the note on the sidecar volumeMount above.
+              # - op: add
+              #   path: /spec/template/spec/volumes/-
+              #   value:
+              #     name: redis-cert
+              #     secret:
+              #       secretName: harbor-dragonfly-harbor-user
+              #       items:
+              #         - key: tls.crt
+              #           path: tls.crt
+              #         - key: tls.key
+              #           path: tls.key
+              #       defaultMode: 0440
               # Add the root CA cert volume
               - op: add
                 path: /spec/template/spec/volumes/-
@@ -391,8 +415,10 @@ spec:
                         mountPath: /etc/envoy
                       - name: postgres-cert
                         mountPath: /etc/envoy/secrets/postgres
-                      - name: redis-cert
-                        mountPath: /etc/envoy/secrets/redis
+                      # redis-cert not mounted while the redis proxy is disabled
+                      # by https://github.com/envoyproxy/envoy/issues/41659.
+                      # - name: redis-cert
+                      #   mountPath: /etc/envoy/secrets/redis
                       - name: root-ca
                         mountPath: /etc/envoy/secrets/root-ca
                     restartPolicy: Always
