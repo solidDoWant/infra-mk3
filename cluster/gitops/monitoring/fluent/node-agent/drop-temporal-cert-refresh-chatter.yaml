@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the frontend-cert refresh loop on the three Temporal services that
+# structurally cannot have that cert: 3,454 lines/day, half of them at ERROR.
+#
+# `server.config.tls.frontend.server.certFile` in the HelmRelease is rendered
+# into ONE config template that every Temporal service mounts, but the chart
+# only mounts the cert Secret onto the frontend-class pods:
+#
+#   temporal-frontend           mounts /etc/temporal/certs/frontend  -> loads OK
+#   temporal-internal-frontend  mounts /etc/temporal/certs/frontend  -> loads OK
+#   temporal-history            no mount                             -> ERROR
+#   temporal-matching           no mount                             -> ERROR
+#   temporal-worker             no mount                             -> ERROR
+#
+# localStoreCertProvider.refreshCerts runs on a timer in every service
+# regardless of whether that service serves the frontend listener, so on the
+# bottom three it emits a matched pair every `tls.refreshInterval` (5m):
+#
+#   {"level":"info", ...,"msg":"loading certificate from file",
+#    "tls-cert-file":"/etc/temporal/certs/frontend/tls.crt", ...}
+#   {"level":"error",...,"msg":"failed to load certificates",
+#    "error":"open /etc/temporal/certs/frontend/tls.crt: no such file or directory",
+#    ...,"stacktrace":"...refreshCerts\n\tlocal_store_cert_provider.go:510..."}
+#
+# 288 pairs/day/service x 3 services x 2 = 3,454 lines, and the error carries a
+# stacktrace, which is why it averages ~420 bytes.
+#
+# It is cosmetic. History, matching and worker never serve the frontend gRPC or
+# HTTP listener, so the cert they fail to load is one they would never present.
+# Everything they do talk to is covered elsewhere: the Postgres client certs
+# mount fine and load through a different path (they produce no
+# "loading certificate from file" line at all -- verified over 24h, that message
+# only ever names the frontend cert), and the worker -> internal-frontend hop is
+# plaintext Internode by design, as documented on the `tls:` block in
+# data/temporal/app/hr.yaml.
+#
+# Two fixes were rejected in favour of filtering:
+#   1. Mounting the frontend Secret onto history/matching/worker would silence
+#      it, but that copies a TLS private key into three services that never
+#      present it -- worse than the log line it removes.
+#   2. Scoping the TLS config to frontend pods only is not possible in this
+#      chart: `server.config` renders a single ConfigMap shared by all services,
+#      with no per-service override.
+#
+# Deliberately NOT dropped: the identical `loading certificate from file` line
+# on temporal-frontend and temporal-internal-frontend (1,152/day). Those two DO
+# serve the listener, so the filter stays off them entirely -- if their mount
+# ever breaks, the same ERROR pair appears there and ships normally. That is the
+# signal this filter is shaped to preserve.
+#
+# The error rule is anchored on the full error string including
+# `no such file or directory`, so a DIFFERENT failure on the same path
+# (permission denied, truncated file, bad key pair) is not swallowed. The info
+# rule is anchored on the frontend cert path specifically, so it cannot swallow
+# a load of some other cert.
+#
+# Field is `log` (CRI parser body key) -- Temporal's zap JSON envelope is an
+# unparsed string there, so the `"key":"value"` pairs match inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-temporal-cert-refresh-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing, and on the container so istio sidecars are untouched.
+  # frontend and internal-frontend are deliberately NOT in either alternation.
+  matchRegex: ^kube\.data\.temporal-(history|matching|worker)-[^.]*\.temporal-(history|matching|worker)\.
+  filters:
+    - grep:
+        exclude: 'log "msg":"failed to load certificates","error":"open /etc/temporal/certs/frontend/tls\.crt: no such file or directory"'
+    - grep:
+        exclude: 'log "msg":"loading certificate from file","tls-cert-file":"/etc/temporal/certs/frontend/tls\.crt"'

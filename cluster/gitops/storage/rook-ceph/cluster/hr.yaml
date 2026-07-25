@@ -89,6 +89,48 @@ spec:
           # are also what arrive in VictoriaLogs as `missing _msg field` records, since
           # they carry no content for a filter to match.
           debug_rocksdb: "3/5"
+        # Applies to every radosgw daemon (the section is matched by entity
+        # prefix, so it covers client.rgw.ssd.replicated.a and any future store).
+        client.rgw:
+          # The two RGW pods were 202k lines/day (~48 MB), and over a full 24h
+          # window that stream was three message shapes and nothing else:
+          #
+          #   ====== starting new request req=0x... =====        subsys rgw,        lvl 1
+          #   beast: 0x...: <ip> - <user> [<t>] "PUT ..." 200 ... subsys rgw_access, lvl 1
+          #   ====== req done req=0x... op status=0 ... ======    subsys rgw,        lvl 1
+          #
+          # i.e. three lines per S3 operation. The traffic driving it is the
+          # temporal-archival bucket (obc-data-temporal-archival-*), which is
+          # also what fills the internal-gateway Envoy access log -- the same
+          # requests get logged twice, once at the gateway and once here.
+          #
+          # Dropping the stderr level from 1 to 0 removes all three. Nothing else
+          # is lost: censused against 24h of the rgw container with those three
+          # patterns excluded, the ENTIRE remainder was 244 lines, all at dout
+          # level 0 or -1 (RGWLC lifecycle-processing warnings and SIGHUP
+          # notices), so they still ship. The `/5` keeps five levels in the
+          # in-memory ring buffer, which is what a crash dump reads.
+          #
+          # `beast:` needs its own key: Ceph moved the access log onto a
+          # dedicated subsystem (rgw_asio_frontend.cc logs it via
+          # `lsubdout(cct, rgw_access, 1)`), so debug_rgw alone does not gate it.
+          #
+          # To get per-request tracing back for a debugging session, without
+          # touching git:
+          #   ceph config set client.rgw debug_rgw 1/5
+          #   ceph config set client.rgw debug_rgw_access 1/5
+          # Both are runtime-settable; the daemons pick them up without a
+          # restart (verified in both directions).
+          #
+          # NOTE: a stale per-daemon override `client.rgw.ssd.replicated.a
+          # debug_rgw = 1/1` was shadowing this section -- leftover from an
+          # earlier hand-run `20/20` debug session (visible in `ceph config
+          # log`), not something Rook sets. It was removed with
+          # `ceph config rm client.rgw.ssd.replicated.a debug_rgw`. If RGW is
+          # ever loud again despite these values, check for a daemon-specific
+          # entry first: `ceph config dump | grep rgw`.
+          debug_rgw: "0/5"
+          debug_rgw_access: "0/5"
       mgr:
         modules:
           - name: rook

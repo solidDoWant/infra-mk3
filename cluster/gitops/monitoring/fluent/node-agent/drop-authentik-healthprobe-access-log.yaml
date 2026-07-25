@@ -1,0 +1,78 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops authentik's access-log records for its own health and metrics
+# endpoints: 80,854 lines/day and 41.6 MB across the four pods.
+#
+#   server  /-/health/live/    17,398/day    7.7 MB
+#   server  /-/health/ready/   17,314/day    7.3 MB
+#   server  /-/metrics/        11,508/day    4.9 MB
+#   worker  /-/health/live/    34,634/day   21.7 MB
+#
+# Three callers, none of them a user:
+#   * /-/health/live/  -- authentik's own in-container healthcheck loop,
+#                         user agent `goauthentik.io/healthcheck`, from ::1.
+#   * /-/health/ready/ -- the kubelet, user agent `kube-probe/1.36`.
+#   * /-/metrics/      -- the metrics scrape, user agent `Go-http-client/1.1`.
+#
+# The worker's share is the biggest and also the fattest per line (~630 bytes),
+# because it comes from the Rust side rather than Django: the worker logs
+# through `authentik_axum::tracing` (packages/ak-axum/src/tracing.rs), whose
+# records carry filename, line_number, thread_id, thread_name and a nested
+# `spans` array that repeats the request fields a second time.
+#
+# No source lever. authentik/root/middleware.py LoggingMiddleware.log is an
+# unconditional `LOGGER.info(request.get_full_path(), ...)` on every request --
+# there is no ignore-path list and nothing in CONFIG gates it (the only related
+# setting, `log.http_headers`, chooses which headers to ADD to the record). The
+# ASGI websocket logger above it is the same shape. The Rust tracing layer is
+# likewise unconditional. That leaves only AUTHENTIK_LOG_LEVEL, which is global
+# -- raising it to `warning` would discard every info line authentik emits,
+# including flow execution, outpost lifecycle and policy engine output, which is
+# the part actually worth having.
+#
+# Two log formats have to be matched, so the rule tolerates both spacings:
+#   * server: Python structlog, keys alphabetical, `": "` with a space --
+#     {"auth_via": "unauthenticated", ..., "event": "/-/health/ready/", ...,
+#      "status": 200, "timestamp": "...", "user": "", "user_agent": "kube-probe/1.36"}
+#   * worker: Rust serde_json, compact, no spaces --
+#     {"filename":"packages/ak-axum/src/tracing.rs",...,"event":"/-/health/live/",
+#      "runtime":"0","status":200,"host":"localhost",...}
+# `": ?"` and `": ?200` cover both. Anchoring on `"event":` rather than the bare
+# path matters for the worker records, where the same path also appears inside
+# the `spans` array earlier in the line.
+#
+# Requiring `"status": 200` is the safety property: a health endpoint that
+# starts FAILING still ships. That is the whole reason to keep probing, and a
+# 500 from /-/health/ready/ is the line you want when authentik cannot reach
+# Postgres. Verified across 24h that every record matched by this rule is
+# status 200 -- there were no non-200s in the window to accidentally retain,
+# so the guard is written to protect the case rather than because it fired.
+# The trailing `[,}]` stops `200` matching the front of a 2003-style code.
+#
+# Real requests are untouched: no user-facing path is `/-/health/*` or
+# `/-/metrics/`, and the closing quote in the pattern means a path that merely
+# starts with one of them cannot match either.
+#
+# Field is `log` (CRI parser body key) -- both JSON envelopes are unparsed
+# strings there, so the `"key":value` pairs match inside them.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-authentik-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing, and on the container so the worker's k8s-sidecar and any
+  # istio sidecar are untouched. authentik-postgres and the backup Job pods do
+  # not match either alternation.
+  matchRegex: ^kube\.security\.authentik-(server|worker)-[^.]*\.(server|worker)\.
+  filters:
+    - grep:
+        exclude: 'log "event": ?"/-/(health/(live|ready)|metrics)/".*"status": ?200[,}]'

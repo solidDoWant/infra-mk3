@@ -56,6 +56,35 @@ spec:
         encrKeysDir: /var/zfs/encryption-keys
         nodeSelector: &node_selector
           zfs.home.arpa/node.local-storage-deployed: "true"
+        # Which node labels the node agent publishes as CSI topology keys
+        # (rendered as the ALLOWED_TOPOLOGIES env var on the node DaemonSet).
+        #
+        # The chart default is "All", which publishes EVERY node label. On these
+        # nodes that is 401 labels -- 296 of them KubeVirt node-labeller output
+        # (cpu-feature.node.kubevirt.io/*, cpu-model*, hyperv, machine-type) and
+        # 73 more from NFD. That set then propagates into:
+        #
+        #   * CSINode.spec.drivers[zfs.csi.openebs.io].topologyKeys (401 entries)
+        #   * every CSIStorageCapacity object's nodeTopology.matchLabels, and
+        #   * the accessible_topology segment of every GetCapacity gRPC request.
+        #
+        # The last one is the expensive part. zfs-driver logs every gRPC call
+        # unconditionally (pkg/driver/grpc.go logGRPC -> klog.Infof, NOT gated on
+        # klog -v, and GetCapacity is not in its skip list), so each capacity
+        # poll wrote a ~21 KB log line. external-provisioner polls capacity for
+        # 6 storage classes x 3 segments on a 1m interval, which came to
+        # 589 MB/day out of 1.40 GB/day of total cluster log ingest -- 42% of
+        # everything VictoriaLogs stored, from one log line.
+        #
+        # Restricting the list is safe here because nothing consumes the extra
+        # keys: none of the six zfs.csi.openebs.io StorageClasses sets
+        # allowedTopologies, and every existing PV's nodeAffinity is pinned on
+        # `openebs.io/nodeid` alone. openebs.io/nodeid and openebs.io/nodename
+        # are appended by the driver regardless of this setting (agent.go adds
+        # ZFSTopologyKey and ZFSTopoNodenameKey unconditionally), so those keep
+        # working. kubernetes.io/hostname is listed so a StorageClass can still
+        # constrain by host without needing this value changed first.
+        allowedTopologyKeys: kubernetes.io/hostname
       zfsController:
         replicas: 2
         resources: *resources
@@ -66,6 +95,46 @@ spec:
         provisioner:
           extraArgs:
             - --v=2
+            # Own CSIStorageCapacity objects from the DEPLOYMENT, not the
+            # ReplicaSet. The flag counts hops up from the provisioner's own pod
+            # (0 = pod, 1 = ReplicaSet, 2 = Deployment) and the chart leaves it
+            # at the upstream default of 1, which is actively broken for a
+            # Deployment-managed controller:
+            #
+            # external-provisioner APPENDS its owner when it updates an object
+            # it does not already own (pkg/capacity/capacity.go:
+            # `if c.owner != nil && !c.isOwnedByUs(capacity) {
+            #    capacity.OwnerReferences = append(capacity.OwnerReferences, *c.owner) }`).
+            # Every rollout mints a new ReplicaSet, so the new provisioner
+            # appends its own ref to objects still owned by the previous one --
+            # and the apiserver rejects any object with two `controller: true`
+            # refs ("Only one reference can have Controller set to true").
+            #
+            # The rejection is retried forever with no backoff ceiling and no
+            # self-heal. It had been running since the 2026-07-20 rollout, at
+            # ~4,400 failures per storage class and climbing, and cost roughly
+            # 80k log lines/day across two components:
+            #   * csi-provisioner: paired capacity.go "Unhandled Error" +
+            #     "Retrying capacity.workItem" (~55k lines/day), and
+            #   * kube-apiserver: validate.go "Found duplicate validation error"
+            #     kind=CSIStorageCapacity (~24k lines/day).
+            # Each retry also re-issued the GetCapacity gRPC call whose logging
+            # the zfsNode.allowedTopologyKeys comment above deals with.
+            #
+            # Level 2 pins ownership to the Deployment, whose UID never changes,
+            # so a rollout no longer changes the owner and there is nothing to
+            # append. -1 (no owner) would also work but would leak the objects
+            # if the driver were ever uninstalled.
+            #
+            # NOTE: the pre-existing CSIStorageCapacity objects are still owned
+            # by a ReplicaSet, and this flag does not rewrite them -- the new
+            # provisioner would just append the Deployment ref and hit the same
+            # rejection. They have to be deleted ONCE after this rolls out:
+            #   kubectl delete csistoragecapacity -n storage --all
+            # The provisioner recreates all 18 within a poll interval, owned by
+            # the Deployment. They are derived scheduling hints only; no volume
+            # or PVC state lives in them.
+            - --capacity-ownerref-level=2
       plugin:
         image:
           # ghcr.io mirrors docker.io/openebs; trailing slash required by the chart

@@ -149,7 +149,30 @@ spec:
               log_format request_data escape=json '$remote_addr - $remote_user [$time_local] '
                                 '"$request" $status $bytes_sent '
                                 '"$http_referrer" "$http_user_agent" "$request_body"';
-              
+
+              # The two pods were 74,874 lines/day and 100% of it was this
+              # cluster talking to itself: 40,317 metrics scrapes of
+              # /stub_status and 34,557 kubelet probes of /api/v1/verify.
+              # Actual license verifications are rare -- the VM components
+              # (vmagent/vmalert/vmauth) POST here only at startup, which came
+              # to 147 requests over a 7-day window.
+              #
+              # Probes are suppressed by user agent rather than by moving them
+              # to a dedicated /healthz location, so the kubelet keeps
+              # exercising the real application endpoint instead of a stand-in.
+              # The map is keyed on user agent AND status, so a probe that
+              # starts FAILING is still logged -- that is the case worth
+              # seeing, and it is the same line the pod's readiness transition
+              # would otherwise be the only record of.
+              #
+              # `$status` resolves at log time, so it is populated by the time
+              # access_log evaluates this. Real verifications are POSTs from a
+              # `vm*-prod/...` user agent and are never matched.
+              map "$http_user_agent:$status" $log_request {
+                default              1;
+                "~^kube-probe/.*:200$" 0;
+              }
+
               # Application
               server {
                 listen 443 ssl;
@@ -162,7 +185,7 @@ spec:
                 location /api/v1/verify {
                   client_max_body_size 1M;
                   client_body_buffer_size 1M;
-                  access_log /dev/stdout request_data;
+                  access_log /dev/stdout request_data if=$log_request;
 
                   return 200;
                 }
@@ -171,6 +194,15 @@ spec:
               # Info for metrics sidecar
               server {
                 listen 8080;
+
+                # This block had no access_log directive, so it inherited
+                # nginx's built-in default (`access_log logs/access.log
+                # combined`), and in the nginx image that path is a symlink to
+                # /dev/stdout -- which is how a purely internal scrape endpoint
+                # ended up shipping 40,317 lines/day. The exporter reaching or
+                # not reaching this endpoint is already reported by the
+                # nginx_up metric it exposes, so nothing is lost.
+                access_log off;
 
                 location /stub_status {
                   stub_status;

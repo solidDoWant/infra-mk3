@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the Temporal history scavenger's per-branch deletion receipt: 315,364
+# lines/day and 174 MB across the two temporal-worker pods -- 10.4% of the
+# cluster's log lines and 12.4% of its bytes, second only to the openebs CSI
+# GetCapacity dump.
+#
+# One line per deleted history branch, from
+# service/worker/scanner/history/scavenger.go:286:
+#
+#   {"level":"info","ts":"...","msg":"deleted history garbage","service":"worker",
+#    "wf-namespace-id":"...","wf-id":"bittorrent-shows-<filename>-<hash>",
+#    "wf-run-id":"...","wf-branch-token":"<base64>", ...}
+#
+# It is ~550 bytes because the workflow id embeds the media filename and the
+# branch token is base64. Not a loop: the scavenger runs in two bursts a day
+# (roughly 00:00-02:00 and 12:00-14:00 UTC), and sampling 5 minutes out of each
+# burst gave 11,188 and 4,191 distinct wf-run-ids with ZERO overlap between
+# them, so every line is a distinct branch being reclaimed exactly once. The
+# volume is just what media-processor's workflow churn produces.
+#
+# No source lever. At v1.31.0 the call is a bare `s.logger.Info("deleted history
+# garbage", getTaskLoggingTags(nil, task)...)` -- no sampling, no verbosity gate,
+# and none of the scavenger's three dynamic-config knobs (historyDataMinAge,
+# executionDataDurationBuffer, enableRetentionVerification) affect logging. The
+# only other lever is the chart's `server.config.logLevel`, which is global to
+# every Temporal service, so raising it to `warn` would also discard frontend,
+# history and matching info lines. Disabling the scanner itself is not on the
+# table -- it is what stops orphaned history branches accumulating in Postgres.
+#
+# Scoped to the exact message. Everything else the worker emits still ships: over
+# the same 24h the container produced only 1,589 non-scavenger lines, and those
+# include the errors worth keeping ("encounter error when describing the mutable
+# state", "history client encountered error") plus the scavenger's own
+# per-run summary, `"msg":"scavenger.deleteHandler processed."`, which is the
+# line to look at if you want to know the scavenger ran and what it did.
+#
+# Field is `log` (CRI parser body key) -- Temporal's zap JSON envelope is an
+# unparsed string there, so the `"key":"value"` pair matches inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-temporal-history-scavenger-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on namespace + pod-name prefix so it survives the ReplicaSet
+  # hash changing, and on the container so the istio sidecar is untouched. The
+  # scanner only ever runs in the `worker` service, so history/matching/frontend
+  # are deliberately out of scope. Note this is Temporal's OWN worker service,
+  # not an application worker -- media-processor's workers live in `media`.
+  matchRegex: ^kube\.data\.temporal-worker-[^.]*\.temporal-worker\.
+  filters:
+    - grep:
+        exclude: 'log "msg":"deleted history garbage"'
