@@ -266,7 +266,7 @@ locals {
   enable_gpu       = data.coder_parameter.enable_gpu.value == "true"
   enable_nfs       = data.coder_parameter.enable_nfs.value == "true"
   gpu_admin_access = data.coder_parameter.gpu_admin_access.value == "true"
-  gpu_cel_selector = data.coder_parameter.gpu_type.value == "arc-pro" ? "device.attributes[\"gpu.intel.com\"].family == 'Arc Pro'" : "device.attributes[\"gpu.intel.com\"].family == 'Iris Xe'"
+  gpu_cel_selector = data.coder_parameter.gpu_type.value == "arc-pro" ? "device.attributes[\"gpu.intel.com\"].family == 'Arc Pro A-Series'" : "device.attributes[\"gpu.intel.com\"].family == 'Iris Xe'"
 }
 
 provider "kubectl" {

@@ -17,3 +17,14 @@ specs:
           - ports:
               - port: "6443"
                 protocol: TCP
+    ingress:
+      # Kubelet for healthcheck. The chart renders the startup/liveness gRPC
+      # probes whenever kubeletPlugin.healthcheckPort > 0, independently of
+      # healthMonitoring -- without this rule the startupProbe fails closed and
+      # the kubelet kills every plugin pod.
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "51516"
+                protocol: TCP

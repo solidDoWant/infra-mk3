@@ -23,7 +23,7 @@ spec:
             deviceClassName: gpu.intel.com
             selectors:
               - cel:
-                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro'
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro A-Series'
 ---
 # Intel GPU for the immich microservices worker's video transcoding (ffmpeg
 # QSV/VAAPI), via DRA.

@@ -13,7 +13,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: intel-resource-drivers-charts
-      version: 0.8.0
+      version: 0.11.0
   values:
     image:
       repository: ghcr.io/intel/intel-resource-drivers-for-kubernetes
@@ -21,7 +21,43 @@ spec:
       staticPath: /var/cdi/static
       dynamicPath: /var/cdi/dynamic
     kubeletPlugin:
-      nodeSelector:
-        intel.feature.node.kubernetes.io/gpu: "true"
+      # Health monitoring requires Intel's xpumd daemon on a gRPC socket at
+      # /run/xpumd. The cluster does not run it -- note that the xpumanager
+      # deployment in this repo is the REST metrics exporter, a different thing
+      # on a different (emptyDir) socket, and is currently disabled anyway. With
+      # monitoring enabled and no xpumd, the plugin panics after ~5m and every
+      # GPU claim in the cluster becomes unsatisfiable.
+      healthMonitoring:
+        enabled: false
+      # Required when healthMonitoring is disabled: hardware details (VRAM size)
+      # are then queried directly from the devices instead of via xpumd.
+      privileged: true
+      # Default is true, which lets the driver rebind GPUs between i915/xe and
+      # vfio-pci on demand for the gpu-vfio.intel.com DeviceClass. Nothing here
+      # claims that class, and KubeVirt runs on these same nodes, so an
+      # unattended rebind would tear a GPU away from the container workloads.
+      #
+      # This value only half-works: the chart nests --manage-binding=false
+      # inside its `if healthMonitoring.enabled` block, so with monitoring off
+      # the flag is never passed and the binary default (true) wins. What the
+      # value DOES still do is add a selector to the gpu-vfio.intel.com
+      # DeviceClass restricting it to already-vfio-bound GPUs -- which matches
+      # nothing here, so no claim can reach the rebind path. The postRenderer
+      # below closes the daemon-side gap. Drop it if upstream unnests the flag.
+      manageBinding:
+        enabled: false
     nodeFeatureRules:
       enabled: true
+  postRenderers:
+    - kustomize:
+        patches:
+          # See the manageBinding note above.
+          - patch: |
+              - op: add
+                path: /spec/template/spec/containers/0/args/-
+                value: --manage-binding=false
+            target:
+              group: apps
+              version: v1
+              kind: DaemonSet
+              name: intel-gpu-resource-driver-kubelet-plugin
