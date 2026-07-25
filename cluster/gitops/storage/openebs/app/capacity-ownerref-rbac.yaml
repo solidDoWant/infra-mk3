@@ -1,0 +1,58 @@
+---
+# Lets csi-provisioner resolve the Deployment that owns its ReplicaSet.
+#
+# Required by `--capacity-ownerref-level=2` in the HelmRelease (see the long
+# comment there for why that level is needed). external-provisioner's
+# pkg/owner.Lookup walks up from its own pod, and the walk is short-circuited at
+# the LAST hop: for level N it GETs the first N-1 objects in the chain and then
+# returns the final controller ownerReference straight off the object it already
+# has, without fetching it.
+#
+# So the RBAC requirement changes at exactly the level this repo just moved to:
+#
+#   level 1 (chart default)  pod -> [RS ref]              get pods
+#   level 2 (what we set)    pod -> RS -> [Deployment ref] get pods, get replicasets
+#
+# The chart's openebs-zfs-provisioner-role grants no `apps` access at all, which
+# is why level 1 worked and level 2 crash-looped the provisioner container on
+# first rollout with:
+#
+#   F csi-provisioner.go:476] look up owner(s) of pod: get object:
+#   replicasets.apps "openebs-zfs-localpv-controller-<hash>" is forbidden:
+#   User "system:serviceaccount:storage:openebs-zfs-controller-sa" cannot get
+#   resource "replicasets" in API group "apps" in the namespace "storage"
+#
+# `deployments` is deliberately NOT granted -- the Deployment is the final hop
+# and is only ever read as an ownerReference, never fetched. `list`/`watch` are
+# not granted either; Lookup does single GETs by name.
+#
+# Namespaced Role rather than a ClusterRole: the only ReplicaSet it ever reads
+# is its own, in this namespace. The chart's own provisioner rules stay a
+# ClusterRole because they cover cluster-scoped CSI objects; this is additive
+# and does not touch them.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openebs-zfs-capacity-ownerref
+  namespace: storage
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - replicasets
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openebs-zfs-capacity-ownerref
+  namespace: storage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: openebs-zfs-capacity-ownerref
+subjects:
+  - kind: ServiceAccount
+    namespace: storage
+    name: openebs-zfs-controller-sa
