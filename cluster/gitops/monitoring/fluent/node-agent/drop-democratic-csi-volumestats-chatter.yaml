@@ -1,0 +1,84 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the kubelet volume-stats polling loop out of democratic-csi's own driver
+# and its grpc proxy sidecar -- ~96,700 lines/day:
+#
+#   csi-driver (node DaemonSet, 2 nodes)   70,854/day
+#   csi-driver (controller Deployment)      5,752/day
+#   csi-proxy  (both)                      19,144/day
+#
+# The kubelet calls NodeGetVolumeStats once per mounted volume per node every
+# 60s, plus NodeGetCapabilities and Identity/Probe on their own timers. Each
+# NodeGetVolumeStats fans out into a fixed set of shell invocations that the
+# driver traces individually (findmnt, df -i, realpath, lsblk), so a single poll
+# costs ~8 log lines. Nothing in it varies except the pod UID and PVC name.
+#
+# Over 12h the node driver logged 35,427 lines and 100% of them were this loop
+# -- zero survivors. Verified against a 7-day window (536,344 lines) that the
+# rules leave the real volume lifecycle intact; these all still ship:
+#
+#   NodeStageVolume / NodeUnstageVolume / NodePublishVolume / NodeUnpublishVolume
+#     request+response pairs
+#   mount -t nfs -o timeo=...,nconnect=8 <host>:/mnt/bulk-pool-01/... (the actual
+#     mount, with the negotiated options)
+#   mount --bind, umount, mkdir -p, rmdir
+#   findmnt --source <host>:/... --mountpoint ...   (the STAGE-time probe -- it
+#     leads with --source, so the --mountpoint-anchored rule below misses it)
+#   retry - failed condition, not trying again
+#   every {"level":"error"} / {"level":"warn"} record
+#
+# No source fix taken. `--log-level` (node.driver.logLevel / controller.driver
+# .logLevel) is the only knob and its next step down is `warn`, which would also
+# discard the volume lifecycle above -- the part actually worth archiving. The
+# csi-proxy sidecar exposes no logging configuration at all.
+#
+# Cost of the trade: during a REAL mount the low-level shell trace is dropped
+# along with the periodic one, since those lines carry no method context to
+# discriminate on. The method-level request/response pair and any error line
+# survive, which is enough to tell what happened and whether it worked.
+#
+# Field is `log` (CRI parser body key). The driver emits JSON records; csi-proxy
+# emits plain Go `log` lines. Both are matched as raw text.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-democratic-csi-volumestats-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>`. Covers both the
+  # controller Deployment and the node DaemonSet; the container alternation
+  # keeps this off the external-* sidecars, whose verbosity is handled at the
+  # source instead (--v=2 in the HelmRelease).
+  matchRegex: ^kube\.storage\.democratic-csi-zfs-generic-nfs-[^.]*\.(csi-driver|csi-proxy)\.
+  filters:
+    # -- driver: the three idle-loop methods, request and response alike. Scoped
+    #    by method name so every other CSI call still ships.
+    - grep:
+        exclude: 'log "message":"new (request|response) - driver: [A-Za-z]+ method: (Probe|NodeGetCapabilities|NodeGetVolumeStats) '
+    # -- driver: the shell trace NodeGetVolumeStats fans out into. The findmnt
+    #    rule is anchored on `--mountpoint` as the FIRST argument so the
+    #    stage-time `findmnt --source ...` probe is not swept up with it.
+    - grep:
+        exclude: 'log ^executing mount command: findmnt --mountpoint '
+    - grep:
+        exclude: 'log ^executing filesystem command: (df -i|realpath) /var/lib/kubelet/pods/'
+    - grep:
+        exclude: 'log ^executing filesystem command: lsblk -a -b -l -J -O'
+    - grep:
+        exclude: 'log ^executing filesystem command: realpath /dev/loop[0-9]+'
+    # -- csi-proxy: the same three idle methods at the proxy layer.
+    - grep:
+        exclude: 'log ^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:]{8} request \(://localhost\) POST /csi\.v1\.(Node/NodeGetCapabilities|Node/NodeGetVolumeStats|Identity/Probe) HTTP/'
+    # -- csi-proxy: every request is followed by a dump of its grpc headers,
+    #    which are byte-identical boilerplate on every call (content-type,
+    #    accept-encoding, te, grpc-go user-agent) apart from the countdown in
+    #    Grpc-Timeout. Dropped for real calls too -- the request line above it
+    #    carries the method, and the headers add nothing.
+    - grep:
+        exclude: 'log ^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:]{8} request headers map\['

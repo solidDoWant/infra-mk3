@@ -63,6 +63,40 @@ spec:
       externalHealthMonitorController:
         extraArgs:
           - --enable-node-watcher=true
+      # The chart hardcodes `--v=5` in each sidecar's `args`, and `extraArgs` is
+      # appended after it -- klog takes the LAST `--v`, so this overrides without
+      # having to restate the whole arg list.
+      #
+      # `--v=5` is a debugging level, and on these sidecars it is almost entirely
+      # client-go leader-election bookkeeping: every renewal of a lease the pod
+      # already holds is logged (`successfully renewed lease storage/...`), once
+      # every ~2s, forever. Measured over 24h before this change:
+      #
+      #   external-resizer      46,018 lines   (--v=5)
+      #   external-attacher     27,142          (--v=5)
+      #   external-provisioner  22,808          (--v=5)
+      #   external-snapshotter       28          (--v=2, set below since before)
+      #
+      # The snapshotter is the control: same chart, same sidecar family, same
+      # `--leader-election`, three orders of magnitude quieter purely because of
+      # the verbosity. Everything the other three emit in steady state is at
+      # V>=3 -- lease renewals plus per-resync `Started PVC processing` /
+      # `No need to resize PVC` for every PVC in the cluster. Real events
+      # (volume create/delete/attach/resize, leadership transitions, errors) are
+      # V<=2 or Error and still ship.
+      #
+      # `--v=2` (not 0/1) matches the level already used on the openebs
+      # zfs-localpv sidecars in this repo and is the usual production default for
+      # kubernetes-csi sidecars.
+      externalAttacher:
+        extraArgs:
+          - --v=2
+      externalProvisioner:
+        extraArgs:
+          - --v=2
+      externalResizer:
+        extraArgs:
+          - --v=2
       externalSnapshotter:
         extraArgs:
           - --v=2
