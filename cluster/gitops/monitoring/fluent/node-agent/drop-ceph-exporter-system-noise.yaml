@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the ceph-exporter's `system:0` stdout noise -- ~51,350 lines/day across
+# the three per-node exporters, and it is the ENTIRE output of the container.
+#
+# Over a 7-day window the ceph-exporter containers logged 356,359 records. Every
+# single one is the byte-identical 8-character string:
+#
+#   system:0
+#
+# Not a subset, not a dominant pattern -- 356,359 of 356,359, with no second
+# distinct message anywhere in the window. It carries no timestamp, no level, no
+# daemon name and no value that ever changes.
+#
+# It is a stray write on the exporter's successful-poll path, not a log record:
+# `system` is the boost error category and `0` the "no error" code, printed to
+# stdout instead of being swallowed. The rate confirms the origin -- the DaemonSet
+# runs with `--stats-period 5`, and each exporter emits ~12 lines/minute, exactly
+# one per 5s poll.
+#
+# No source fix taken. The only knob that changes the rate is `--stats-period`,
+# which is the metrics collection interval -- slowing it to quiet a stdout bug
+# would degrade Ceph metric resolution cluster-wide. Rook does not expose an
+# exporter log level that reaches this write, and the string never passes through
+# the ceph logging subsystem, so `cephConfig` cannot gate it either.
+#
+# The rule is anchored `^system:0$` rather than a substring, so if the exporter
+# ever emits a genuine message -- including a non-zero error code such as
+# `system:5` -- it ships. Given the container currently produces nothing else,
+# that anchor is the entire safety margin, which is why it is exact.
+#
+# Field is `log` (CRI parser body key).
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-ceph-exporter-system-noise
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>`. One exporter
+  # Deployment per node (rook-ceph-exporter-<node>-<hash>-<suffix>); the
+  # container name keeps this off the log-collector sidecar in the same pod.
+  matchRegex: ^kube\.storage\.rook-ceph-exporter-[^.]*\.ceph-exporter\.
+  filters:
+    - grep:
+        exclude: 'log ^system:0$'
