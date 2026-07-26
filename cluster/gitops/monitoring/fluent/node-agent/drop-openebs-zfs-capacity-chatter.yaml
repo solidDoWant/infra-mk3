@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the openebs zfs-localpv capacity-polling loop -- ~69,900 lines/day:
+#
+#   openebs-zfs-localpv-controller   52,116/day   (GetCapacity call+response)
+#   openebs-zfs-localpv-node (x3)    17,776/day   (ZFSNode object refresh)
+#
+# Two independent timers, neither carrying anything that is not already a metric
+# or a field on a CR:
+#
+#   CONTROLLER. external-provisioner runs with `--enable-capacity=true`, so it
+#   polls Controller/GetCapacity once per topology segment on a fixed interval.
+#   The driver traces both sides of every call, and the response body is a
+#   single integer: `GRPC response: {"available_capacity":123456789}`. Over 12h
+#   that was 13,029 calls and 13,029 responses -- exactly half the controller's
+#   entire log output each. The same number is published as a
+#   CSIStorageCapacity object and is scrapeable from the pool metrics.
+#
+#   NODE. The ZFSNode controller re-reads pool free/used every 60s and writes it
+#   back to the node's ZFSNode CR, tracing four lines per cycle: `node pools
+#   updated current=[...] required=[...]`, `updating node object with &{...}`
+#   (a full ObjectMeta+ManagedFields dump, ~1.5KB of it), `Got update event for
+#   zfs node`, and `updated node object`. Current capacity is on the CR itself.
+#
+# No source fix available. zfs-driver v2.9.0 registers no klog flags at all --
+# `zfs-driver --help` lists only --endpoint, --kubeconfig, --name, --nodename,
+# --plugin and --version, so there is no verbosity to turn down and no way to
+# gate the grpc tracer. (The sidecars around it are a different story and are
+# already pinned to `--v=2` in the openebs HelmRelease.)
+#
+# Deliberately NOT dropped, because it is the tell for a real and recurring
+# failure mode in this cluster -- the zfs-localpv stuck/orphaned ZFSVolume
+# destroy loop (see the openebs-zfs-cleanup skill):
+#
+#   E... zfs_util.go:...] zfs: could not destroy volume/snapshot ... cmd [destroy ...]
+#   use '-R' to destroy the following datasets:
+#   E... "Unhandled Error" err="error syncing 'storage/pvc-...': exit status 1"
+#
+# Those are klog Error records and none of the rules below can match them: the
+# GetCapacity rules are pinned to that one method name, and the ZFSNode rules to
+# four specific `zfsnode.go` info messages. Confirmed against the 2026-07-19/20
+# occurrence (29,810 such lines still present in the 7-day window) -- all of them
+# survive the filter.
+#
+# Field is `log` (CRI parser body key); klog writes plain lines.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-openebs-zfs-capacity-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>`. Matches both the
+  # controller Deployment and the node DaemonSet; the container name keeps this
+  # off the csi-provisioner/csi-resizer/csi-snapshotter sidecars in the same pod.
+  matchRegex: ^kube\.storage\.openebs-zfs-localpv-[^.]*\.openebs-zfs-plugin\.
+  filters:
+    # -- controller: the GetCapacity poll, both directions. Pinned to the method
+    #    name and to the single-key response body so every other GRPC call
+    #    (CreateVolume, DeleteVolume, NodePublishVolume, ...) still ships.
+    - grep:
+        exclude: 'log grpc\.go:[0-9]+\] GRPC call: /csi\.v1\.Controller/GetCapacity requests '
+    - grep:
+        exclude: 'log grpc\.go:[0-9]+\] GRPC response: \{"available_capacity":[0-9]+\}'
+    # -- node: the 60s ZFSNode capacity refresh, all four lines of the cycle.
+    - grep:
+        exclude: 'log zfsnode\.go:[0-9]+\] zfs node controller: (node pools updated|updating node object with|updated node object)'
+    - grep:
+        exclude: 'log zfsnode\.go:[0-9]+\] Got update event for zfs node'
