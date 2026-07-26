@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the Coder workspace agent's debug stream -- ~116,700 lines/day from a
+# SINGLE running workspace, 6.8% of everything VictoriaLogs ingests and the
+# largest steady-state producer in the cluster.
+#
+# The agent logs at debug unconditionally. Measured over a 12-hour window on
+# coder-workspace-bc68cba9...:
+#
+#   58,372  total lines from the `dev` container
+#   58,371  at [debu]
+#        1  at [info]   ("stdlib: [WARN] yamux: Discarding data for stream")
+#
+# A full message census of those 58,371 lines shows every one is periodic
+# telemetry on a fixed timer, with nothing actionable anywhere in it:
+#
+#   14,399  apphealth: workspace app healthy  slug=ccw          (every 3s)
+#   14,399  apphealth: workspace app healthy  slug=code-server  (every 3s)
+#    7,901  batch updating metadata                             (every ~5s)
+#    7,901  batch update metadata complete
+#    1,876  net.tailnet...netcheck: measuring ICMP latency of coder
+#    1,737  net.tailnet...netcheck: empty probe plan
+#    1,440  starting peer latency measurement for stats          (every 30s)
+#    1,440  collecting agent metrics for stats
+#    1,440  computing stats report
+#    1,440  got stats callback
+#    1,440  net.tailnet...sending disco ping
+#    1,875  net.tailnet...netcheck report / wg keepalive+handshake
+# A case-insensitive search for error|fail|panic|fatal across the same 12h
+# window returns ZERO records, so nothing of diagnostic value is being dropped.
+#
+# No source fix taken, because the agent does not expose one. `coder agent`
+# (v2.28.3) is started from the server-generated init_script as a bare
+# `exec ./coder agent` -- the template cannot add flags -- and `coder agent
+# --help` lists no log-level or log-filter option at all. The only related knob
+# is `--log-human` / $CODER_AGENT_LOGGING_HUMAN (default /dev/stderr), which
+# redirects the WHOLE human log to a file. Pointing it at a path would also take
+# the [info]/[warn]/[erro] levels off the container stream, which is the part
+# worth keeping -- same trade-off documented in drop-harbor-healthprobe-access-log.
+#
+# Filtering here rather than at the source also means `kubectl logs` still shows
+# the complete debug stream for live troubleshooting of a misbehaving workspace;
+# only the archival copy in VictoriaLogs is suppressed.
+#
+# The rule is anchored on the agent's slog human-format prefix
+# (`YYYY-MM-DD HH:MM:SS.mmm [debu]`) rather than a bare `[debu]` token, so a user
+# process that happens to print "[debu]" mid-line to the container stdout is not
+# swept up. Validated against the 12h sample: the anchored regex matches 58,371
+# records and leaves exactly the 1 [info] line standing.
+#
+# Field is `log` (CRI parser body key); the agent writes plain, non-JSON lines.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-coder-agent-debug-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Workspace pods are `coder-workspace-<workspace-uuid>-<suffix>`; the
+  # agent runs in the `dev` container. Anchoring on the container name keeps the
+  # rule off any sidecar in the same pod. The VM-backed workspaces
+  # (virt-launcher-coder-vm-workspace-*) run their agent inside the guest, not in
+  # a container, so they are unaffected by this filter.
+  matchRegex: ^kube\.development\.coder-workspace-[^.]*\.dev\.
+  filters:
+    - grep:
+        exclude: 'log ^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \[debu\]'
