@@ -100,3 +100,9 @@ spec:
         exclude: 'log ^ +log .* does not exist -- skipping$'
     - grep:
         exclude: 'log ^not running postrotate script, since no logs were rotated$'
+    # logrotate's setuid/setgid trace around each candidate file. Added after
+    # the first rollout, when it turned out to be the only shape still shipping
+    # -- 20,113 records over 7 days (2,873/day), always in matched pairs
+    # (0->167 then 167->0), and never carrying an outcome.
+    - grep:
+        exclude: 'log ^switching euid from [0-9]+ to [0-9]+ and egid from [0-9]+ to [0-9]+ \(pid [0-9]+\)$'
