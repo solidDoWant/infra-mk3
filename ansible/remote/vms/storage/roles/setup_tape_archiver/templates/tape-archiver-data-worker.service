@@ -51,16 +51,20 @@ Environment=TAPE_ARCHIVER_IMAGE={{ tape_archiver_image }}
 #     re-read library_contents.10 IN PLACE. The daemon is not restarted and
 #     the module is not reloaded, so /dev/sch*, /dev/nst*, /dev/sg* keep their
 #     numbers and the --device passthrough above stays valid.
-#   * /etc/mhvtl bind-mounted rw, so make_vtl_media (bundled in the image, not
-#     required on the host) can rewrite library_contents.10 and regenerate
-#     media. The media home (MHVTL_HOME_PATH in /etc/mhvtl/mhvtl.conf) needs
-#     NO extra mount here: on this host it lives under {{ tape_archiver_pool_mount }}
-#     (/mnt/bulk-pool-01/tape-staging/mhvtl), already bind-mounted rw below at
-#     the same path — unlike the upstream reference unit's conventional
-#     /opt/mhvtl, which is unused on this host.
+#   * /etc/mhvtl AND the media home bind-mounted rw, so make_vtl_media (bundled
+#     in the image, not required on the host) can rewrite library_contents.10
+#     and regenerate media. The media home is NOT hardcoded: the generator
+#     sources MHVTL_HOME_PATH out of /etc/mhvtl/mhvtl.conf the same way mhvtl's
+#     own tooling does, and mounts it at the same path the worker resolves it to
+#     (tape-archiver >= 0.0.11, "honor mhvtl.conf"). Guessing a path instead
+#     made the worker write a full media set into its own ephemeral filesystem
+#     and report success (upstream #335). On THIS host the home lives under
+#     {{ tape_archiver_pool_mount }} (/mnt/bulk-pool-01/tape-staging/mhvtl), already
+#     covered by the pool bind-mount below, so this extra mount is redundant but
+#     harmless — and keeps the unit correct if the home ever moves off-pool.
 RuntimeDirectory=tape-archiver-worker
 EnvironmentFile=-/run/tape-archiver-worker/mhvtl-devices.env
-ExecStartPre=/bin/sh -c 'F=/run/tape-archiver-worker/mhvtl-devices.env; : > "$F"; if [ -e /dev/mhvtl/changer ] && [ -e /dev/mhvtl/drive0 ] && [ -e /dev/mhvtl/drive1 ]; then FLAGS=""; for d in /dev/mhvtl/changer /dev/mhvtl/drive0 /dev/mhvtl/drive1 /dev/mhvtl/sg-changer /dev/mhvtl/sg-drive0 /dev/mhvtl/sg-drive1; do R=$(readlink -f "$d"); FLAGS="$FLAGS --device $R --device $R:$d"; done; for c in /dev/mhvtl10 /dev/mhvtl11 /dev/mhvtl12; do [ -e "$c" ] && FLAGS="$FLAGS --device $c"; done; FLAGS="$FLAGS --pid=host --mount type=bind,source=/etc/mhvtl,target=/etc/mhvtl"; echo "MHVTL_DEVICE_FLAGS=$FLAGS" > "$F"; fi'
+ExecStartPre=/bin/sh -c 'F=/run/tape-archiver-worker/mhvtl-devices.env; : > "$F"; if [ -e /dev/mhvtl/changer ] && [ -e /dev/mhvtl/drive0 ] && [ -e /dev/mhvtl/drive1 ]; then FLAGS=""; for d in /dev/mhvtl/changer /dev/mhvtl/drive0 /dev/mhvtl/drive1 /dev/mhvtl/sg-changer /dev/mhvtl/sg-drive0 /dev/mhvtl/sg-drive1; do R=$(readlink -f "$d"); FLAGS="$FLAGS --device $R --device $R:$d"; done; for c in /dev/mhvtl10 /dev/mhvtl11 /dev/mhvtl12; do [ -e "$c" ] && FLAGS="$FLAGS --device $c"; done; FLAGS="$FLAGS --pid=host --mount type=bind,source=/etc/mhvtl,target=/etc/mhvtl"; H=$(. /etc/mhvtl/mhvtl.conf >/dev/null 2>&1; echo "$MHVTL_HOME_PATH"); [ -d "$H" ] && FLAGS="$FLAGS --mount type=bind,source=$H,target=$H"; echo "MHVTL_DEVICE_FLAGS=$FLAGS" > "$F"; fi'
 
 # All run configuration lives in the env file, never hardcoded in this unit.
 EnvironmentFile=/etc/tape-archiver/data-worker.env
