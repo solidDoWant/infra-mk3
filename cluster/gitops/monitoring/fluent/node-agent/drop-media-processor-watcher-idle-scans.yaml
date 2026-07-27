@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the media-processor watcher's idle scan-loop records -- 59,400
+# lines/day, and 99.5% of everything the container emits.
+#
+# The watcher polls each configured watch directory on a fixed 5s timer and
+# logs one line per watch per tick:
+#
+#   time=2026-07-26T21:21:20.594-05:00 level=INFO msg="scan complete" \
+#     watch=bittorrent-shows files_discovered=0 jobs_submitted=0
+#
+# Four watches (bittorrent-movies, bittorrent-shows, usenet-movies,
+# usenet-shows) x 718 ticks/hour each = 68,980 "scan complete" lines/day. The
+# 5s cadence is deliberate -- it is the latency between a download finishing
+# and a transcode workflow being dispatched -- so slowing the loop to quiet the
+# log would make imports visibly laggier.
+#
+# Split over 7 days by outcome:
+#
+#   jobs_submitted=0    416,025   (59,400/day)   nothing happened
+#   jobs_submitted>0     12,953    (1,850/day)   work was dispatched
+#
+# The rule keys on `jobs_submitted=0` and nothing else, so every tick that
+# actually queued a workflow still ships, including the `files_discovered=N
+# jobs_submitted=1` sequences that trace a file being picked up. Anchoring on
+# `$` matters: `files_discovered=0` contains the same `=0`, and the counter is
+# the last field on the line.
+#
+# No source fix taken. The container reads LOG_LEVEL (currently `info`, the
+# chart default) but the only step up is `warn`, which would also discard
+# `msg="dispatched workflow"` -- 373 lines/day that record every workflow the
+# watcher hands to Temporal, and the one part of this container's output worth
+# keeping. There is no per-message or per-logger gate below that.
+#
+# The remaining non-scan output is tiny and untouched: over 24h, 373
+# "dispatched workflow", 1 "loaded watch mappings", 1 "connected to Temporal,
+# starting scan loop", 1 "scrape-on-shutdown gate did not observe a scrape
+# before timeout", and 1 WARN.
+#
+# Field is `log` (CRI parser body key) -- these are logfmt lines, not JSON.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-media-processor-watcher-idle-scans
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on the pod-name prefix so it survives the ReplicaSet hash
+  # changing, and on the container so the tbot native sidecar in the same pod
+  # is untouched. The media-processor worker Deployments do not match.
+  matchRegex: ^kube\.media\.media-processor-watcher-[^.]*\.watcher\.
+  filters:
+    - grep:
+        exclude: 'log msg="scan complete" .*jobs_submitted=0$'

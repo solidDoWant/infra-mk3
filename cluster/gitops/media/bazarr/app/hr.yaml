@@ -122,6 +122,8 @@ spec:
               tag: v2.3.0
             args:
               - bazarr
+              # See the radarr HelmRelease for the rationale.
+              - --log-level=warn
             env:
               PORT: &metrics_port 80
               URL: http://bazarr.media.svc.cluster.local:6767

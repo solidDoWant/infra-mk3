@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the Temporal UI's access-log record for the kubelet's /healthz probe --
+# 17,124 lines/day, 91.4% of everything the two temporal-web pods emit.
+#
+# temporal-web fronts the UI with an echo HTTP server whose access logger fires
+# on every request, including the probe:
+#
+#   {"time":"2026-07-26T21:01:21.353954241-05:00","id":"","remote_ip":"10.3.1.1",
+#    "host":"10.32.1.235:8080","method":"GET","uri":"/healthz",
+#    "user_agent":"kube-probe/1.36","status":200,"error":"","latency":...}
+#
+# Over 7 days: 131,090 records total, 119,865 of them /healthz. Every one of
+# those 119,865 was status 200 and user_agent kube-probe/1.36 -- no other
+# caller ever hits the path, and it never failed in the window.
+#
+# No source fix taken. The UI server's access logging is wired unconditionally
+# in temporal's server bootstrap; the chart exposes no access-log toggle and no
+# path skipper, and the only global lever (LOG_LEVEL) would also discard the
+# API-error lines that explain a broken workflow page.
+#
+# The rule requires all three of the probe path, the kube-probe user agent and
+# status 200, so a probe that starts failing still ships -- a 503 on /healthz
+# is the line that says the UI lost the frontend. Real UI and API traffic
+# (/api/v1/namespaces/..., /_app/immutable/...) is untouched.
+#
+# Field ordering in the JSON is stable (echo writes it from a fixed template),
+# so the rule matches `uri` then `user_agent` then `status` in one pass rather
+# than needing three separate rules.
+#
+# Field is `log` (CRI parser body key) -- the JSON envelope is an unparsed
+# string there, so the `"key":value` pairs match inside it.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-temporal-web-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on the pod-name prefix so it survives the ReplicaSet hash
+  # changing, and on the container so any sidecar in the pod is untouched.
+  matchRegex: ^kube\.data\.temporal-web-[^.]*\.temporal-web\.
+  filters:
+    - grep:
+        exclude: 'log "uri":"/healthz","user_agent":"kube-probe/[^"]*","status":200,'

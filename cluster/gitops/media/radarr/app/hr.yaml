@@ -85,6 +85,20 @@ spec:
               tag: v2.3.0
             args:
               - radarr
+              # exportarr logs one INFO line per outbound *arr API call
+              # ("Sending HTTP request", with the full URL). Across the three
+              # exporters that was 97,209 lines/day, against 4 ERROR lines in
+              # the same window -- the INFO stream is 100% request tracing and
+              # carries nothing the metrics themselves do not.
+              #
+              # `warn` keeps every collector failure, which is the part worth
+              # having: when an *arr instance is unreachable, exportarr logs an
+              # `Error getting <collector>` line per collector, and those are
+              # what explain a gap in the dashboards.
+              #
+              # `--log-level` is a global (persistent) flag, so it is valid
+              # after the subcommand.
+              - --log-level=warn
             env:
               PORT: &metrics_port 80
               URL: http://radarr.media.svc.cluster.local:7878

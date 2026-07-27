@@ -14,6 +14,14 @@
 #   * /-/health/ready/ -- the kubelet, user agent `kube-probe/1.36`.
 #   * /-/metrics/      -- the metrics scrape, user agent `Go-http-client/1.1`.
 #
+# A fourth endpoint was missed on the first pass and added later: the worker's
+# `/metrics` on :9300 -- 11,632 lines/day, user agent `vm_promscrape`. It is a
+# SEPARATE endpoint from Django's `/-/metrics/`, served by the Rust side
+# directly (authentik_axum), with no `/-/` prefix and no trailing slash, so the
+# original alternation could not reach it. Once the three Django paths above
+# stopped shipping it was the entire remaining ak-axum access log. Its records
+# are the same fat ~630-byte tracing.rs shape.
+#
 # The worker's share is the biggest and also the fattest per line (~630 bytes),
 # because it comes from the Rust side rather than Django: the worker logs
 # through `authentik_axum::tracing` (packages/ak-axum/src/tracing.rs), whose
@@ -49,6 +57,10 @@
 # so the guard is written to protect the case rather than because it fired.
 # The trailing `[,}]` stops `200` matching the front of a 2003-style code.
 #
+# On the worker's `/metrics` the guard is not hypothetical: 128 of the 80,549
+# records in a 7-day window were status 500. Those are the scrapes that failed,
+# and they still ship.
+#
 # Real requests are untouched: no user-facing path is `/-/health/*` or
 # `/-/metrics/`, and the closing quote in the pattern means a path that merely
 # starts with one of them cannot match either.
@@ -74,5 +86,11 @@ spec:
   # not match either alternation.
   matchRegex: ^kube\.security\.authentik-(server|worker)-[^.]*\.(server|worker)\.
   filters:
+    # The alternation carries both endpoint families: the Django paths, which
+    # are `/-/`-prefixed and trailing-slashed, and the Rust worker's bare
+    # `/metrics` on :9300. Keeping them in one rule means one pass over the
+    # record; keeping them as separate branches (rather than making `/-/` and
+    # the trailing slash optional) means `/metrics/` and `/-/metrics` -- neither
+    # of which authentik serves -- cannot match by accident.
     - grep:
-        exclude: 'log "event": ?"/-/(health/(live|ready)|metrics)/".*"status": ?200[,}]'
+        exclude: 'log "event": ?"(/-/(health/(live|ready)|metrics)/|/metrics)".*"status": ?200[,}]'

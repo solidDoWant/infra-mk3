@@ -1,0 +1,76 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the internal gateway's Envoy access-log entries for machine keepalive
+# traffic -- ~23,800 lines/day of the ~52,800 the two internal-gateway pods
+# produce.
+#
+# Nothing here is a user request. Per day, by path:
+#
+#   8,473  POST /grpc.health.v1.Health/Check                   grpc-go health probe
+#   7,195  POST .../WorkflowService/PollActivityTaskQueue      60s long-poll, no work
+#   3,825  GET  /derp/latency-check                            Coder/Tailscale DERP probe
+#   2,878  POST .../WorkflowService/PollWorkflowTaskQueue      60s long-poll, no work
+#   1,440  POST .../WorkflowService/RecordWorkerHeartbeat      worker liveness
+#
+# The two Poll* paths are Temporal's long-poll protocol: a worker asks for work
+# and the frontend holds the request open for 60s before answering "nothing"
+# (visible in the log as duration 60004/60002). They fire continuously for as
+# long as any worker is connected, and say only that the worker fleet is idle.
+# RecordWorkerHeartbeat is once per worker per minute. Health/Check and
+# /derp/latency-check are probes in the ordinary sense.
+#
+# No source fix taken. The lever would be a `filter.expression` on the
+# `ingress-gateways` Telemetry CR, which is the right layer -- it would stop
+# Envoy writing the bytes at all rather than dropping them a hop later. It was
+# NOT used because the internal gateway also serves TCP and TLS listeners
+# (teleport ssh/k8s/mysql/postgres/mongo passthrough, minecraft), where the
+# HTTP attributes a CEL expression needs do not exist. Envoy's CEL access-log
+# filter treats an evaluation error as "do not log", so a expression written
+# for the HTTP listeners would silently suppress access logging for the
+# teleport passthrough listeners -- a security-relevant blind spot traded for
+# a logging optimisation. If that is ever revisited, guard every attribute
+# reference with `has()` and verify TCP access logs survive before trusting it.
+#
+# Each rule pins the exact request line plus `200 - via_upstream - "-"`, which
+# is response code 200, NO response flags, a normal upstream response and no
+# transport failure. Anything that goes wrong at the connection level -- an
+# upstream failure (UF), overflow (UO), reset, timeout, 5xx -- fails at least
+# one of those and still ships.
+#
+# One honest limitation: Istio's default access-log format does not include
+# the gRPC status, so a gRPC call that fails at the application layer is still
+# HTTP 200 and is still dropped by the Health/Check and Poll* rules. That is
+# acceptable for these five paths -- a health check reporting NOT_SERVING is
+# visible in the Temporal frontend's own logs and in its metrics -- but it is
+# the reason this filter is scoped to exactly these paths rather than to
+# "successful gRPC" in general.
+#
+# Real traffic is untouched, including the rest of the Temporal API, the
+# Jellyfin/Coder/*arr web paths, the barman-cloud S3 calls and the teleport
+# audit uploads that share this gateway.
+#
+# Field is `log` (CRI parser body key) -- Envoy's access log is a plain line.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-internal-gateway-keepalive-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Pods are internal-gateway-internal-gateways-<hash>-<suffix>. The
+  # external gateway is deliberately not matched -- its access log is the
+  # record of inbound traffic from the internet.
+  matchRegex: ^kube\.networking\.internal-gateway-[^.]*\.istio-proxy\.
+  filters:
+    - grep:
+        exclude: 'log "POST /grpc\.health\.v1\.Health/Check HTTP/2" 200 - via_upstream - "-" '
+    - grep:
+        exclude: 'log "GET /derp/latency-check HTTP/1\.1" 200 - via_upstream - "-" '
+    - grep:
+        exclude: 'log "POST /temporal\.api\.workflowservice\.v1\.WorkflowService/(PollActivityTaskQueue|PollWorkflowTaskQueue|RecordWorkerHeartbeat) HTTP/2" 200 - via_upstream - "-" '

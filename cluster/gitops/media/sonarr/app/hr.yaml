@@ -86,6 +86,10 @@ spec:
               tag: v2.3.0
             args:
               - sonarr
+              # See the radarr HelmRelease for the rationale. Sonarr's exporter
+              # is the loudest of the three because ENABLE_ADDITIONAL_METRICS
+              # fans out to a per-series /episode and /episodefile call.
+              - --log-level=warn
             env:
               PORT: &metrics_port 80
               URL: http://sonarr.media.svc.cluster.local:8989

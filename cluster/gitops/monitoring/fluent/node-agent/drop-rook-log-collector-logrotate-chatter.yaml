@@ -1,0 +1,102 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the rook log-collector sidecar's shell trace and logrotate bookkeeping
+# -- ~27,500 lines/day across the 15 Ceph daemon pods that carry the sidecar.
+#
+# Rook generates the sidecar's command as a shell script that runs under
+# `set -x` and calls `logrotate --verbose` on a 15-minute loop. Both choices
+# are baked into the generated script, so every cycle prints its own trace plus
+# logrotate's full internal narration, whether or not anything rotates:
+#
+#   + true
+#   + logrotate --verbose /etc/logrotate.d/ceph
+#   reading config file /etc/logrotate.d/ceph
+#   Reading state from file: /var/lib/logrotate/logrotate.status
+#   Allocating hash table for state file, size 64 entries
+#   Handling 1 logs
+#   rotating pattern: /var/log/ceph/ceph-osd.0.log   after 1 days (7 rotations)
+#   empty log files are not rotated, log files >= 524288000 are rotated earlier, ...
+#   considering log /var/log/ceph/ceph-osd.0.log
+#     Now: 2026-07-26 00:08
+#     Last rotated at 2026-07-26 00:08
+#     log does not need rotating (log has been rotated at 2026-07-26 00:08, ...)
+#   not running postrotate script, since no logs were rotated
+#   + sleep 15m
+#
+# 15 pods x 96 cycles/day. Over 7 days the container produced 192,829 records
+# and not one of them was an error or a warning -- the whole output is the loop
+# describing itself. 20,022 of those records were blank lines (logrotate's
+# --verbose separators), which arrive with an empty body and show up in
+# VictoriaLogs as "missing _msg field".
+#
+# No source fix taken, but there is a bigger lever worth knowing about:
+# `cephCluster.spec.logCollector.enabled: false` removes the sidecar from all
+# 15 pods and deletes this output at the source. It was left enabled because it
+# also stops Ceph daemons writing their logs to files under /var/log/ceph,
+# which is what `ceph-post-file` and most upstream triage instructions expect
+# to find. Within the sidecar there is no knob at all: `set -x` and
+# `--verbose` are literals in rook's generated script, and logCollector's only
+# fields are `enabled`, `periodicity` and `maxLogSize`.
+#
+# The rules enumerate the recurring benign shapes rather than blanket-dropping
+# the container, so anything unexpected still ships -- including logrotate's
+# `error:`/`warning:` output, which has no rule here, and the lines that record
+# an actual rotation happening (`log needs rotating`, `renaming ... to ...`,
+# `running postrotate script`, `compressing log with`, `removing old log`),
+# which are deliberately left alone at ~115 lines/day.
+#
+# Field is `log` (CRI parser body key).
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-rook-log-collector-logrotate-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. The sidecar rides in the mon, mgr, mds, osd, rgw and exporter pods,
+  # so the pod segment is left open past the shared `rook-ceph-` prefix and the
+  # container name does the selecting -- which is also what keeps every Ceph
+  # daemon's own output untouched. `[^.]*` is safe here because no rook daemon
+  # pod name contains a dot (unlike the storage.*.csi.ceph.com plugin pods,
+  # which do, and which carry no log-collector).
+  matchRegex: ^kube\.storage\.rook-ceph-[^.]*\.log-collector\.
+  filters:
+    # `set -x` trace. Covers the steady-state loop (`+ true`, `+ logrotate
+    # --verbose ...`, `+ sleep 15m`) and the one-time startup block that
+    # rewrites /etc/logrotate.d/ceph with sed.
+    - grep:
+        exclude: 'log ^\+ '
+    # logrotate --verbose separator lines.
+    - grep:
+        exclude: 'log ^$'
+    # logrotate --verbose per-cycle bookkeeping.
+    - grep:
+        exclude: 'log ^reading config file '
+    - grep:
+        exclude: 'log ^Reading state from file: '
+    - grep:
+        exclude: 'log ^Creating (new state|stub state file: )'
+    - grep:
+        exclude: 'log ^Allocating hash table for state file, size [0-9]+ entries$'
+    - grep:
+        exclude: 'log ^Handling [0-9]+ logs$'
+    - grep:
+        exclude: 'log ^rotating pattern: '
+    - grep:
+        exclude: 'log ^empty log files are not rotated, '
+    - grep:
+        exclude: 'log ^considering log '
+    - grep:
+        exclude: 'log ^ +(Now: |Last rotated at )[0-9]{4}-'
+    - grep:
+        exclude: 'log ^ +log does not need rotating \(log has '
+    - grep:
+        exclude: 'log ^ +log .* does not exist -- skipping$'
+    - grep:
+        exclude: 'log ^not running postrotate script, since no logs were rotated$'

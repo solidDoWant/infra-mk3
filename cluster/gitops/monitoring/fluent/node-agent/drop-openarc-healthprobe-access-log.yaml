@@ -1,0 +1,65 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops openarc's access-log pair for its own liveness probe -- 34,558
+# lines/day, which is 97.7% of everything the container emits.
+#
+# The liveness probe runs check-models-loaded against /openarc/status every 5s
+# (periodSeconds: 5, deliberately fast so a silent model unload is caught in
+# ~15s). openarc logs the request twice, on receipt and on completion:
+#
+#   2026-07-27 02:01:19,591 - INFO - Request received: GET /openarc/status from 127.0.0.1
+#   2026-07-27 02:01:19,591 - INFO - Request completed: GET /openarc/status status=200 duration=0.001s
+#
+# 17,280 probes/day x 2 lines = 34,560, against ~800 lines/day of real work
+# (transcription requests and per-chunk ASR progress).
+#
+# No source fix taken. OPENARC_LOG_FILE is already /dev/null, but that is the
+# file sink -- the access log goes to stdout unconditionally, with no path
+# exclusion list and no per-logger level. The other lever, probe periodSeconds,
+# is the silent-unload detection window and is set fast on purpose; slowing it
+# to quiet the log would trade a real safety property for bytes.
+#
+# Both rules require a probe-shaped line, so failures still ship:
+#   * The `received` rule is anchored on `from 127.0.0.1` (the in-container
+#     probe). Over 7 days exactly 7 /openarc/status requests came from any
+#     other address; those still ship.
+#   * The `completed` rule requires `status=200`. Over 7 days all 119,814
+#     completed /openarc/status responses were 200 -- there were no non-200s
+#     in the window to accidentally retain, so the guard is written to protect
+#     the case rather than because it fired. A probe that starts failing, or
+#     starts taking seconds, is exactly the line worth keeping.
+#
+# The `completed` line does not carry the source address, so the 7 non-local
+# requests above lose their completion half while keeping their receipt half.
+# That is accepted: 1 line/day, and the receipt line is the one that names the
+# caller.
+#
+# Real traffic is untouched. The transcription API is /v1/audio/transcriptions
+# and the model API is /openarc/load; neither matches, and the rules pin the
+# full path with no trailing wildcard so a path merely starting with
+# /openarc/status cannot match either.
+#
+# Field is `log` (CRI parser body key) -- plain Python logging lines, not JSON.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-openarc-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Anchored on the pod-name prefix so it survives the ReplicaSet hash
+  # changing. The pre-upgrade setup Job's pods (openarc-subtitles-setup-*) are
+  # matched by the prefix too, but they run register-*/warm containers rather
+  # than `openarc`, so the container anchor keeps their output intact.
+  matchRegex: ^kube\.media\.openarc-subtitles-[^.]*\.openarc\.
+  filters:
+    - grep:
+        exclude: 'log - INFO - Request received: GET /openarc/status from 127\.0\.0\.1$'
+    - grep:
+        exclude: 'log - INFO - Request completed: GET /openarc/status status=200 duration='

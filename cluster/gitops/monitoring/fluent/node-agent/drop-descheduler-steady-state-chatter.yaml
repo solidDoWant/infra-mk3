@@ -1,0 +1,97 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the descheduler's per-cycle "nothing changed" narration -- ~52,000
+# lines/day of the container's ~55,000, including a permanent 8,000/day error
+# loop against pods that can never be evicted.
+#
+# The descheduler wakes every 5 minutes (--descheduling-interval=5m, 288
+# cycles/day) and re-evaluates every pod against both profiles. In a cluster
+# that is already at its best reachable placement, each cycle re-derives and
+# re-logs the identical conclusions. Per day:
+#
+#   15,840  "pod does not fit on any other node because of nodeSelector(s), ..."
+#   14,214  "Pod matches inter-pod anti-affinity rule of assigned pod on node"
+#    8,066  "Error evicting pod" err=... disruption budget            (E level)
+#    8,064  "eviction failed: ... disruption budget"                  (E level)
+#    2,880  "Total number of pods evicted" ... evictedPods=0
+#    1,728  "Processing node"
+#    1,152  "Warning: Evict{SystemCriticalPods,FailedBarePods} is set to True"
+#
+# The two error lines are the same event reported twice, once by the eviction
+# helper and once by the calling plugin. They are the descheduler repeatedly
+# trying to move CNPG Postgres replicas that their PodDisruptionBudgets will
+# never release -- ~14 pods, retried every cycle, forever. Over 7 days there
+# were 49,806 such errors and exactly 15 eviction errors of any other kind.
+# Both rules require the disruption-budget wording, so those 15 -- and any new
+# failure mode -- still ship.
+#
+# No source fix taken, and the obvious ones do not work:
+#   * `--v` is already 1. These are not V-gated: defaultevictor.go, node.go and
+#     node_taint.go call klog.InfoS/ErrorS unconditionally (V(0)), so no
+#     verbosity short of silencing the binary reaches them.
+#   * Lengthening --descheduling-interval would scale all of it down, but the
+#     interval is a cluster-behaviour choice (how fast placement drift gets
+#     corrected), not a logging one, and 5m is deliberate.
+#   * There is no "ignore pods with a blocking PDB" option in v0.31 that would
+#     stop the retry loop at its source; `ignorePodsWithoutPDB` is the
+#     opposite knob.
+#
+# What still ships is everything that reports a change or a problem:
+#   * "Evicted pod" -- every actual eviction, with pod, strategy and node
+#     (244 over 7 days).
+#   * "Total number of pods evicted" whenever the count is non-zero; only the
+#     `evictedPods=0` case is dropped (103 non-zero out of 20,160 over 7 days).
+#   * "Node is overutilized", with the usage/usagePercentage payload.
+#   * Every eviction error that is not a disruption-budget refusal.
+#   * Leader election, startup and policy-parsing output.
+#
+# The dropped counts are also all exported as metrics -- the HelmRelease has
+# serviceMonitor enabled -- so the steady-state signal these lines carry is
+# still queryable without re-printing it 288 times a day.
+#
+# Rules are anchored on the klog source-file prefix where one exists, so a
+# same-worded message from a different call site would still ship. The
+# apostrophe in "the pod's disruption budget" is written as `.` to keep these
+# single-quoted YAML scalars free of escaping.
+#
+# Field is `log` (CRI parser body key) -- klog text format, not JSON.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-descheduler-steady-state-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Two replicas behind leader election; only the leader logs, but both
+  # are matched.
+  matchRegex: ^kube\.system-controllers\.descheduler-[^.]*\.descheduler\.
+  filters:
+    # nodeFit rejection: the candidate has nowhere to go. Re-derived per pod
+    # per cycle.
+    - grep:
+        exclude: 'log defaultevictor\.go:[0-9]+\] "pod does not fit on any other node because of '
+    # Anti-affinity evaluation trace, one line per candidate/assigned pair.
+    - grep:
+        exclude: 'log node\.go:[0-9]+\] "Pod matches inter-pod anti-affinity rule of assigned pod on node"'
+    # Per-node taint-strategy iteration marker.
+    - grep:
+        exclude: 'log node_taint\.go:[0-9]+\] "Processing node" node='
+    # Per-extension-point summary, only when it evicted nothing.
+    - grep:
+        exclude: 'log "Total number of pods evicted" extension point="[^"]*" evictedPods=0$'
+    # The PDB refusal, as reported by the eviction helper...
+    - grep:
+        exclude: 'log "Error evicting pod" err="error when evicting pod \(ignoring\) .*: Cannot evict pod as it would violate the pod.s disruption budget\."'
+    # ...and again by the plugin that asked for it.
+    - grep:
+        exclude: 'log \] eviction failed: error when evicting pod \(ignoring\) .*: Cannot evict pod as it would violate the pod.s disruption budget\.$'
+    # Static config warnings, re-printed once per profile per cycle. Both
+    # settings are set on purpose in the HelmRelease.
+    - grep:
+        exclude: 'log \] "Warning: Evict(SystemCriticalPods|FailedBarePods) is set to True\.'

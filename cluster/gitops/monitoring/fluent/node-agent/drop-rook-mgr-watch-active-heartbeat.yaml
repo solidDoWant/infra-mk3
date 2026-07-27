@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the rook mgr sidecar's mgr_role polling heartbeat -- 33,640 lines/day,
+# and 99.99% of everything the container emits.
+#
+# `rook ceph mgr watch-active` runs in each rook-ceph-mgr pod and re-checks
+# which mgr is active every 15s so it can keep the `mgr_role` label on the
+# daemon Pod in sync with reality. Each poll writes three lines, whether or not
+# anything changed:
+#
+#   ... I | cephcmd: Checking mgr_role label value of daemon a (prev active mgr was b)
+#   ... I | cephcmd: active mgr is still the same (b). No need to update mgr_role label on daemon a.
+#   ... I | cephcmd: successfully checked mgr_role label. checking again in 15s
+#
+# Over 7 days, across the two mgr pods:
+#
+#   Checking mgr_role label value of daemon        78,491
+#   active mgr is still the same / No need to ...  78,477
+#   successfully checked mgr_role label            78,485
+#   -------------------------------------------  -------
+#   everything else                                    30
+#   TOTAL                                         235,483
+#
+# So 235,453 of 235,483 records are the idle poll. The 30 remaining are pod
+# startup (rookcmd version banner, mon endpoint parsing, admin config
+# generation) and the events that actually matter.
+#
+# No source fix taken. The 15s cadence is hard-coded in rook's mgr controller,
+# not a CephCluster field, and rook's `logLevel` does not reach cephcmd's
+# InfoS calls -- there is no verbosity below `I` that keeps the failover line
+# while dropping the poll.
+#
+# The three rules are pinned to the no-change wording, so a real mgr failover
+# still ships. That event is logged by a DIFFERENT logger -- `op-mgr`, not
+# `cephcmd` -- in the form:
+#
+#   ... I | op-mgr: [storage] updating mgr_role label value of daemon a to 'standby'. New active mgr is a.
+#
+# which no rule here can match. The `Checking ...` rule is deliberately the
+# loosest of the three (the daemon letters vary), but it is still anchored on
+# the `cephcmd:` logger prefix and the fixed phrase, and it only ever precedes
+# one of the two outcomes -- the outcome line is what carries the information.
+#
+# Field is `log` (CRI parser body key) -- these are rook's plain glog-ish
+# lines, not JSON.
+#
+# ClusterFilter (NOT a namespaced Filter) for the fluent/fluent-operator#1211
+# reason, and named `drop-*` so it sorts before the `kubernetes` enrichment
+# filter and the dropped records skip the kubelet-querying enrichment entirely.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-rook-mgr-watch-active-heartbeat
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Tag is `kube.<namespace>.<pod>.<container>.<container_id>` from the tail
+  # input. Pods are rook-ceph-mgr-<a|b>-<hash>-<suffix>; the container anchor
+  # keeps this off the `mgr` container and the log-collector sidecar that share
+  # the pod.
+  matchRegex: ^kube\.storage\.rook-ceph-mgr-[^.]*\.watch-active\.
+  filters:
+    - grep:
+        exclude: 'log I \| cephcmd: Checking mgr_role label value of daemon '
+    - grep:
+        exclude: 'log I \| cephcmd: active mgr is still the same \(.\)\. No need to update mgr_role label on daemon .\.$'
+    - grep:
+        exclude: 'log I \| cephcmd: successfully checked mgr_role label\. checking again in '
