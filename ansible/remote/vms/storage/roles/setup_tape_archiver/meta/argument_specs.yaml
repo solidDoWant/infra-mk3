@@ -14,7 +14,7 @@ argument_specs:
     options:
       tape_archiver_image:
         type: str
-        default: ghcr.io/soliddowant/tape-archiver/data-worker:0.0.11
+        default: ghcr.io/soliddowant/tape-archiver/data-worker:0.0.12
         description: Pinned data worker image reference. The systemd unit runs
           with --pull=never; this role pulls the image explicitly on change.
       tape_archiver_temporal_address:
