@@ -6,9 +6,13 @@
 }:
 # Single-persistent-disk impermanence + persistent /nix/store overlay.
 #
-# The system root is an ephemeral containerDisk overlay (reset from the image on
-# every boot), so updating the base image is just a tag bump. Durable state lives
-# on ONE persistent block disk (the RWX-block PVC attached by vm.tf, surfaced in
+# The system root is a per-workspace CDI DataVolume imported from the base image
+# (see ../../../template/vm.tf). It is treated as DISPOSABLE - a base-image bump
+# recreates it from the new image - but note it is not ephemeral: it is a real
+# read-write disk that keeps whatever the running system wrote to it (including
+# /var/lib/cloud, which is why cloud-init's once-per-instance modules only ever
+# fire on the first boot of a root disk). Durable state lives on ONE persistent
+# block disk (the RWX-block PVC attached by vm.tf, surfaced in
 # the guest as /dev/disk/by-id/virtio-persistent). It is formatted on first boot
 # (systemd-makefs) and mounted at /persist:
 #
@@ -50,9 +54,9 @@
 # --- the validity DB ---------------------------------------------------------
 # /nix/var/nix/db decides which paths nix treats as real; a path present on disk
 # but absent from the DB gets re-realized (re-downloaded / rebuilt), which would
-# defeat the persistent upper. The DB lives on the ephemeral root, so on every
-# boot it is the image's own DB - correct for the image's paths, and always fresh
-# across image bumps. We do NOT bind-persist it: an empty persisted DB would
+# defeat the persistent upper. The DB lives on the disposable root, so after every
+# image bump it is the image's own DB - correct for the image's paths. We do NOT
+# bind-persist it: an empty persisted DB would
 # shadow the image paths (forcing nix to re-fetch the whole system) and a stale
 # one would break image bumps. Instead the nix-db-* units below persist a *dump*
 # of the registrations and merge it back into the image DB on boot.
@@ -167,16 +171,16 @@ in
   environment.persistence."/persist" = {
     hideMounts = true;
     directories = [
-      # Stable dynamic uid/gid allocations across reboots (the root is
-      # ephemeral). Without this, system users without static ids are reassigned
-      # on every boot.
+      # Stable dynamic uid/gid allocations across base-image bumps (which reset
+      # the root). Without this, system users without static ids are reassigned
+      # when the root is recreated.
       "/var/lib/nixos"
       # GC roots for runtime-installed packages. Empty on first boot (the running
       # system is always rooted via /run, so shadowing this is harmless).
       "/nix/var/nix/gcroots"
       # Docker daemon state (images, containers, volumes, overlay2). The root is
-      # ephemeral, so without persisting this every build/pull would be lost on
-      # each reboot. dockerd manages ownership/permissions inside this dir.
+      # reset on every base-image bump, so without persisting this every build/pull
+      # would be lost there. dockerd manages ownership/permissions inside this dir.
       "/var/lib/docker"
       {
         directory = "/home/coder";

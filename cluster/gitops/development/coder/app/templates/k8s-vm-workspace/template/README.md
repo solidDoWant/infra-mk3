@@ -28,10 +28,12 @@ Stopping and starting the workspace (or restarting it) keeps:
   `nix-shell`) — these are cached on a persistent disk, so a restart doesn't
   re-download or rebuild them.
 
-Everything else is **rebuilt from the base image on each boot**, so anything
-outside the list above resets — system packages installed outside Nix, edits to
-`/etc`, and so on. To keep a tool around permanently, install it with Nix (it
-persists) or ask the template maintainer to add it to the base image.
+Everything else lives on a **disposable root disk**. It survives an ordinary
+restart, but it is **rebuilt from the base image whenever the template picks up a
+new one**, so anything outside the list above — system packages installed outside
+Nix, edits to `/etc`, and so on — is not durable. To keep a tool around
+permanently, install it with Nix (it persists) or ask the template maintainer to
+add it to the base image.
 
 A nice consequence: base-image updates are seamless. You pick up the new system on
 your next restart with your home directory, workspace, and Nix packages intact.

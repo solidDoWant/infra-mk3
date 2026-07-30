@@ -1,20 +1,33 @@
 #cloud-config
 # Per-workspace boot config for the NixOS workspace VM. The image
-# (see ./nix) provides the coder-agent systemd service (running the baked-in
+# (see ../image) provides the coder-agent systemd service (running the baked-in
 # pkgs.coder binary), the persistent-disk impermanence setup, and the system CA
 # trust; this file supplies only the values that differ per workspace.
+#
+# EVERYTHING HERE RUNS VIA `bootcmd`, NOT `write_files`/`runcmd`. bootcmd is one
+# of the few cloud-init modules with frequency "always"; the rest are
+# once-per-instance. That distinction is load-bearing now that the root disk is a
+# per-workspace CDI DataVolume that survives restarts (see vm.tf): /var/lib/cloud
+# persists with it, and KubeVirt derives the NoCloud instance-id from the VM's
+# UID, so it never changes. Once-per-instance modules therefore run only on the
+# very FIRST boot of a root disk - every later boot logs "already ran
+# (freq=once-per-instance)" and does nothing. Coder issues a new agent token on
+# every workspace build, so a once-only write would strand the guest on a dead
+# token; and the old `runcmd` that started the agent simply never fired again,
+# leaving restarted workspaces with no agent at all.
+#
+# The agent itself is no longer started from here: the coder-agent unit in the
+# image is enabled at boot and ordered after cloud-init.service (the stage that
+# runs bootcmd), so the env file below is always in place before it starts.
 hostname: ${HOSTNAME}
 preserve_hostname: false
 
-write_files:
+bootcmd:
   # Coder agent environment (CODER_AGENT_TOKEN, CODER_AGENT_URL,
   # NODE_EXTRA_CA_CERTS, etc.). Read by the coder-agent service via
-  # EnvironmentFile. base64 to avoid any YAML escaping of the values.
-  - path: /etc/coder/agent.env
-    encoding: b64
-    permissions: '0600'
-    owner: root:root
-    content: ${AGENT_ENV_B64}
+  # EnvironmentFile. base64 to avoid any YAML escaping of the values; umask
+  # keeps the token file 0600 (it is written as root).
+  - [ sh, -c, 'umask 077; mkdir -p /etc/coder; printf %s "${AGENT_ENV_B64}" | base64 -d > /etc/coder/agent.env' ]
 
   # The Coder workspace name. The coder-set-hostname service (in the image) reads
   # this and sets the guest hostname to it, so the VM, the shell prompt, and the
@@ -22,10 +35,7 @@ write_files:
   # id (or the DHCP/NixOS default). Set here as the authoritative source applied
   # before Teleport and the agent start; the `hostname:` directive above is a
   # best-effort early hint.
-  - path: /etc/coder/hostname
-    permissions: '0644'
-    owner: root:root
-    content: ${HOSTNAME}
+  - [ sh, -c, 'mkdir -p /etc/coder; printf %s "${HOSTNAME}" > /etc/coder/hostname; chmod 0644 /etc/coder/hostname' ]
 
 %{ if ENABLE_NFS ~}
 # Mount the bulk-pool NFS share. Written to /etc/fstab so it survives reboots;
@@ -33,7 +43,3 @@ write_files:
 mounts:
   - [ "${NFS_ADDRESS}:${NFS_PATH}", "${NFS_MOUNT_PATH}", "nfs", "defaults,nofail,_netdev", "0", "0" ]
 %{ endif ~}
-
-runcmd:
-  # Files above are now in place; (re)start the agent.
-  - [ systemctl, restart, coder-agent.service ]

@@ -63,9 +63,9 @@
 
   # Docker daemon for in-workspace container workflows (build/run images, compose,
   # devcontainers). /var/lib/docker is persisted across reboots in
-  # ./modules/persistence - the root is ephemeral, so without that every image and
-  # container would be lost on each restart. The coder user is added to the docker
-  # group below so it can talk to the socket without sudo.
+  # ./modules/persistence - the root is reset on every base-image bump, so without
+  # that every image and container would be lost. The coder user is added to the
+  # docker group below so it can talk to the socket without sudo.
   virtualisation.docker = {
     enable = true;
     # Reclaim space from dangling images/containers/networks on a schedule so the
@@ -133,8 +133,8 @@
   };
 
   # /usr/local/bin doesn't exist on NixOS; the AgentAPI installer does
-  # `mv agentapi /usr/local/bin/` and fails without it. Create it (ephemeral root,
-  # recreated each boot - the module reinstalls on start anyway).
+  # `mv agentapi /usr/local/bin/` and fails without it. Create it (tmpfiles is
+  # idempotent, and the module reinstalls on start anyway).
   systemd.tmpfiles.rules = [ "d /usr/local/bin 0755 root root -" ];
 
   users = {
@@ -229,15 +229,33 @@
     };
 
     # The Coder agent. cloud-init writes /etc/coder/agent.env (token, server URL,
-    # etc.) on boot, then starts this unit (see cloud-init.yaml.tftpl). Runs the
+    # etc.) on every boot via bootcmd (see cloud-init.yaml.tftpl). Runs the
     # baked-in `coder agent` as the coder user; the agent then drives the
     # coder_script resources (clone repo, Claude Code, etc.).
     coder-agent = {
       description = "Coder Agent";
-      # Not wantedBy multi-user.target: started by cloud-init once the env file
-      # has been written, avoiding a boot-time race.
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
+      # Started automatically as part of the normal boot transaction. It used to
+      # be left out of multi-user.target and started by a cloud-init `runcmd`
+      # instead, which broke once the root became a persistent per-workspace CDI
+      # DataVolume: cloud-init's once-per-instance modules (runcmd among them) run
+      # only on the first boot of a root disk - KubeVirt's NoCloud instance-id is
+      # the stable VM UID - so every restart afterwards came up with no agent and
+      # an unreachable workspace.
+      wantedBy = [ "multi-user.target" ];
+      # cloud-init.service is the stage that runs bootcmd, so the env file (and
+      # /etc/coder/hostname) is written by the time this starts. Ordering against
+      # cluster-ca-bundle / nix-db-restore / coder-set-hostname is declared by
+      # those units themselves (modules/ca-trust, modules/persistence, above).
+      after = [
+        "network-online.target"
+        "cloud-init.service"
+      ];
+      wants = [
+        "network-online.target"
+        "cloud-init.service"
+      ];
+      # Belt and braces: if cloud-init failed outright, skip rather than crash-loop
+      # on a missing token.
       unitConfig.ConditionPathExists = "/etc/coder/agent.env";
       serviceConfig = {
         Type = "simple";
