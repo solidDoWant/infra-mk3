@@ -29,5 +29,157 @@ spec:
       # TODO figure out whether I should encrypt volumes (tradeoffs)
       # enableCSIEncryption: true
       enableLiveness: true
+      # Right-sized 2026-08-01 from 14d of metrics. The chart defaults are sized
+      # for large clusters: the plugin containers ask for 250m/512Mi each and were
+      # measured at p95 <2m CPU with peak working sets of 38-123Mi. Across the
+      # node plugins (3 nodes) and control plugins (2 replicas) these defaults
+      # alone reserved ~2.4 cores and ~4Gi that were never used.
+      #
+      # NOTE: each of these values REPLACES the whole per-container list, so every
+      # container from the chart default is listed here even when unchanged -
+      # omitting one would leave it with no resources at all.
+      #
+      # Memory request == limit throughout (incompressible: a request below the
+      # limit lets the node fill to 100% of requests while pods grow into their
+      # limits, and the OOM killer's victim is not necessarily the overcommitter).
+      # Values are ~2x the observed peak rather than a tight fit, since there is
+      # no longer any headroom above the request.
+      csiRBDPluginResource: |
+        - name : driver-registrar
+          resource:
+            requests:
+              memory: 64Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+        - name : csi-rbdplugin
+          resource:
+            requests:
+              memory: 256Mi
+              cpu: 10m
+            limits:
+              memory: 256Mi
+        - name : liveness-prometheus
+          resource:
+            requests:
+              memory: 64Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+      csiCephFSPluginResource: |
+        - name : driver-registrar
+          resource:
+            requests:
+              memory: 64Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+        - name : csi-cephfsplugin
+          resource:
+            requests:
+              memory: 192Mi
+              cpu: 10m
+            limits:
+              memory: 192Mi
+        - name : liveness-prometheus
+          resource:
+            requests:
+              memory: 64Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+      csiRBDProvisionerResource: |
+        - name : csi-provisioner
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-resizer
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-attacher
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-snapshotter
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-rbdplugin
+          resource:
+            requests:
+              memory: 128Mi
+              cpu: 10m
+            limits:
+              memory: 128Mi
+        - name : csi-omap-generator
+          resource:
+            requests:
+              memory: 128Mi
+              cpu: 10m
+            limits:
+              memory: 128Mi
+        - name : liveness-prometheus
+          resource:
+            requests:
+              memory: 64Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+      csiCephFSProvisionerResource: |
+        - name : csi-provisioner
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-resizer
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-attacher
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-snapshotter
+          resource:
+            requests:
+              memory: 96Mi
+              cpu: 10m
+            limits:
+              memory: 96Mi
+        - name : csi-cephfsplugin
+          resource:
+            requests:
+              memory: 192Mi
+              cpu: 10m
+            limits:
+              memory: 192Mi
+        - name : liveness-prometheus
+          resource:
+            requests:
+              memory: 64Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
     monitoring:
       enabled: true

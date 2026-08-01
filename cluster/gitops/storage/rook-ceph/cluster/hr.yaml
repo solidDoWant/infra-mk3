@@ -201,16 +201,68 @@ spec:
           enabled: true
           crushLocationLabels:
             - topology.rook.io/chassis
+      # Right-sized 2026-08-01 from 14d of metrics. Ceph daemons at this scale are
+      # far quieter than the chart defaults assume, so CPU requests come down.
+      # Memory is deliberately NOT reduced on the OSDs, and is RAISED on the mgr.
+      # Memory request == limit everywhere (incompressible: a request below the
+      # limit lets the node fill to 100% of requests while pods grow into their
+      # limits, and the OOM killer's victim is not necessarily the overcommitter).
+      # CPU keeps request < limit -- it only throttles, and Ceph needs burst
+      # headroom for recovery and scrub.
       resources:
         osd:
           requests:
-            cpu: 500m
+            # p95 35m, p99 74m, max 258m. The window includes the current
+            # degraded backfill, so this already covers recovery load.
+            cpu: 150m
+            # memory intentionally left at the chart default 4Gi to match
+            # osd_memory_target (4GiB). Note the chart also sets limits.memory=4Gi,
+            # i.e. the hard limit equals the bluestore cache target, which leaves
+            # no room for the ~20% RSS overshoot Ceph can exhibit. Observed peak is
+            # 2.9Gi so it is fine today, but that pairing is worth revisiting.
         mon:
           requests:
-            cpu: 100m
+            cpu: 75m # p95 24-45m, max 47m
+            memory: &mon_memory 1Gi # peak 507Mi; == limit (was limit 2Gi)
+          limits:
+            memory: *mon_memory
+        mgr:
+          requests:
+            cpu: 100m # p95 42m, max 102m (chart default 500m)
+            # INCREASE: peak working set 704Mi exceeded the 512Mi default request.
+            memory: &mgr_memory 1Gi
+          limits:
+            memory: *mgr_memory
+        crashcollector:
+          requests:
+            cpu: 10m # p95 0m
         logcollector:
           requests:
             cpu: 10m
+            memory: &logcollector_memory 64Mi # peak 2Mi (chart default 100Mi/1Gi)
+          limits:
+            memory: *logcollector_memory
+        exporter:
+          requests:
+            cpu: 25m # p95 8m
+            memory: &exporter_memory 64Mi # peak 36Mi (chart default 50Mi/128Mi)
+          limits:
+            memory: *exporter_memory
+        # watch-active sidecar: peak 79Mi was ABOVE its 40Mi chart-default request
+        # and close to the 100Mi limit.
+        mgr-sidecar:
+          requests:
+            cpu: 25m # p95 18-20m, max 38m
+            memory: &mgr_sidecar_memory 128Mi
+          limits:
+            memory: *mgr_sidecar_memory
+        # Only runs on cluster teardown, but kept consistent with the policy.
+        cleanup:
+          requests:
+            cpu: 100m
+            memory: &cleanup_memory 128Mi
+          limits:
+            memory: *cleanup_memory
     cephBlockPools:
       - name: ssd-replicated-3x
         spec:
@@ -262,12 +314,15 @@ spec:
             # Active/passive
             activeCount: 1
             activeStandby: true
+            # Right-sized 2026-08-01 from 14d: p95 CPU 12-14m (max 71m), peak
+            # working set 220Mi. Limit left at 1Gi — the MDS metadata cache can
+            # grow with the filesystem, so only the reservation is reduced.
             resources:
               limits:
-                memory: 1Gi
+                memory: &mds_memory 512Mi
               requests:
-                cpu: 100m
-                memory: 1Gi
+                cpu: 50m
+                memory: *mds_memory
             placement:
               topologySpreadConstraints:
                 - maxSkew: 1
@@ -318,12 +373,14 @@ spec:
             # Required until https://github.com/rook/rook/issues/15048 is fixed
             securePort: 443
             sslCertificateRef: s3-public-domain-name-cert
+            # Right-sized 2026-08-01 from 14d: p95 CPU 10m (max 29m), peak
+            # working set 294Mi across both instances.
             resources:
               limits:
-                memory: 1Gi
+                memory: &rgw_memory 512Mi
               requests:
-                cpu: 100m
-                memory: 1Gi
+                cpu: 25m
+                memory: *rgw_memory
             instances: 2
             placement:
               topologySpreadConstraints:

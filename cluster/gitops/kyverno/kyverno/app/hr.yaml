@@ -32,14 +32,28 @@ spec:
     admissionController: &controller_config
       replicas: 2
       revisionHistoryLimit: 1
-      # TODO tune this, setting because kyverno is choking
-      resources:
-        requests:
-          cpu: 100m
-          memory: 1Gi
-        limits:
-          cpu: 2000m
-          memory: 1Gi
+      # NOTE: resources are deliberately NOT in this anchor. The four controllers
+      # have very different profiles (see per-controller blocks below), and the
+      # key differs: the admission controller reads `container.resources`, while
+      # the other three read `resources` at the controller level. The previous
+      # `admissionController.resources` here was the wrong key and was silently
+      # ignored for admission (it ran chart defaults 128Mi/384Mi) while the `<<:`
+      # merge happened to land it on the correct key for the other three.
+      container:
+        # Right-sized 2026-08-01 from 14d: p95 CPU 52m (max 125m), peak working
+        # set 214Mi — which was ABOVE the 128Mi chart-default request.
+        # Memory request == limit throughout (incompressible: a request below
+        # the limit lets the node fill to 100% of requests while pods grow into
+        # their limits, and the OOM killer's victim is not necessarily the pod
+        # that overcommitted). CPU keeps request < limit -- it only throttles.
+        resources:
+          requests:
+            cpu: 75m
+            memory: &admission_memory 384Mi
+          limits:
+            # No CPU limit: CPU is compressible, so the request sets the baseline
+            # and a limit only adds throttling.
+            memory: *admission_memory
       rbac:
         clusterRole:
           extraResources:
@@ -98,6 +112,21 @@ spec:
         enabled: true
     backgroundController:
       <<: *controller_config
+      # Right-sized 2026-08-01 from 14d. This is an INCREASE and the busiest
+      # kyverno controller — likely the "kyverno is choking" this config was
+      # originally written for. It is leader-elected, so only ONE of the two
+      # replicas does work: the active leader averages ~100m with p95 316m and
+      # bursts to 1867m, while the standby sits at ~1m. The old 100m request was
+      # roughly the leader's *average*, so it was under-reserved most of the time.
+      # 300m covers the leader's sustained p95; bursts ride the 2000m limit.
+      # Sizing to the leader's p95 rather than its max keeps the idle standby from
+      # reserving a core it never uses. Peak working set 274Mi.
+      resources:
+        requests:
+          cpu: 300m
+          memory: &background_memory 512Mi
+        limits:
+          memory: *background_memory
       backgroundScan:
         # TODO this may be too high... default value has changed upstream from 1h to 30s to 1h, back and forth.
         # Shorter duration = more CPU usage, but changes are picked up faster.
@@ -112,6 +141,14 @@ spec:
           whenUnsatisfiable: DoNotSchedule
     cleanupController:
       <<: *controller_config
+      # Right-sized 2026-08-01 from 14d: p95 CPU 6m (max 8m), peak working set
+      # 127Mi. Effectively idle — it only acts on cleanup policy intervals.
+      resources:
+        requests:
+          cpu: 10m
+          memory: &cleanup_memory 256Mi
+        limits:
+          memory: *cleanup_memory
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -122,6 +159,14 @@ spec:
           whenUnsatisfiable: DoNotSchedule
     reportsController:
       <<: *controller_config
+      # Right-sized 2026-08-01 from 14d: p95 CPU 40m (p99 43m, max 74m), peak
+      # working set 165Mi.
+      resources:
+        requests:
+          cpu: 75m
+          memory: &reports_memory 320Mi
+        limits:
+          memory: *reports_memory
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname

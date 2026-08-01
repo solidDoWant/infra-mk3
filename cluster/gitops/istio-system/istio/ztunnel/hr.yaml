@@ -22,3 +22,14 @@ spec:
     xdsAddress: istiod.istio-system.svc.cluster.local.:15012
     env:
       IPV6_ENABLED: "false"
+    # Right-sized 2026-08-01 from 14d of metrics. Chart default is 200m/512Mi per
+    # node; measured p95 CPU <1m and peak working set 22Mi across all three nodes.
+    # ztunnel memory scales with the number of enrolled workloads and open
+    # connections, so 128Mi is deliberately ~6x the observed peak rather than a
+    # tight fit. Memory request == limit (incompressible).
+    resources:
+      requests:
+        cpu: 10m
+        memory: &ztunnel_memory 128Mi
+      limits:
+        memory: *ztunnel_memory

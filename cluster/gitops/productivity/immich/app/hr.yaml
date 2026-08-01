@@ -238,9 +238,15 @@ spec:
                   periodSeconds: 10
                   failureThreshold: 60
             resources:
+              # Right-sized 2026-08-01 from 14d of metrics: p95 CPU 1m (p99 20m,
+              # max 227m) and peak working set 1.9Gi. Inference is bursty and
+              # mostly idle, so the CPU request drops sharply while there is
+              # deliberately no CPU limit, leaving bursts unconstrained. Memory
+              # request == limit is kept (incompressible) at 3Gi, ~1.6x peak, to
+              # leave room for a larger model being loaded.
               requests:
-                cpu: 500m
-                memory: &ml_memory 4Gi
+                cpu: 25m
+                memory: &ml_memory 3Gi
               limits:
                 memory: *ml_memory
               # GPU is attached via the DRA ResourceClaimTemplate referenced in

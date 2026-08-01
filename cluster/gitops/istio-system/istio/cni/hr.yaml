@@ -22,3 +22,13 @@ spec:
         repairPods: false
     ambient:
       ipv6: false
+    # Right-sized 2026-08-01 from 14d of metrics. Chart default is 100m/100Mi per
+    # node; measured p95 CPU <1m (max 4m) but peak working set 111Mi, i.e. memory
+    # was slightly UNDER the request. CPU down, memory up.
+    # Memory request == limit (incompressible).
+    resources:
+      requests:
+        cpu: 10m
+        memory: &cni_memory 192Mi
+      limits:
+        memory: *cni_memory

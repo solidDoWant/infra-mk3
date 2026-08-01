@@ -16,6 +16,16 @@ spec:
   values:
     kind: Deployment
     replicas: 2
+    # Right-sized 2026-08-01 from 14d of metrics. Chart default is 500m/256Mi;
+    # measured p95 CPU 5m (p99 7m, max 19m) and peak working set 109Mi. The
+    # descheduler only does work on its interval, so it is idle almost always.
+    # Memory request == limit (incompressible).
+    resources:
+      requests:
+        cpu: 10m
+        memory: &descheduler_memory 256Mi
+      limits:
+        memory: *descheduler_memory
     leaderElection:
       enabled: true
     deschedulerPolicy:

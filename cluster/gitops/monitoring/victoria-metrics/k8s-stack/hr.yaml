@@ -36,6 +36,19 @@ spec:
       env:
         - name: VM_VMALERTDEFAULT_USEDEFAULTRESOURCES
           value: "false"
+        # Same reason, for vmselect and vmagent: the operator fills in any resource
+        # field left unset, so simply deleting `limits.cpu` from the values below
+        # would be a silent no-op -- it would be re-injected as 500m (vmselect) /
+        # 200m (vmagent), tighter than the limits being removed.
+        #
+        # These are the PER-COMPONENT variants deliberately. The cluster-wide
+        # VM_VMCLUSTERDEFAULT_USEDEFAULTRESOURCES would also strip defaults from
+        # requestsLoadBalancer (vmclusterlb), which has no explicit resources here
+        # and would silently drop to BestEffort.
+        - name: VM_VMCLUSTERDEFAULT_VMSELECTDEFAULT_USEDEFAULTRESOURCES
+          value: "false"
+        - name: VM_VMAGENTDEFAULT_USEDEFAULTRESOURCES
+          value: "false"
         # Without this the operator generates in-cluster addresses as the bare
         # `<svc>.<ns>.svc` (e.g. the `srv+vmselectinternal-...monitoring.svc` backends in
         # the vmclusterlb config), which cannot resolve absolutely -- the zone is
@@ -150,12 +163,27 @@ spec:
         vmselect:
           revisionHistoryLimitCount: 1
           resources:
+            # Right-sized 2026-08-01 from 14d of metrics: p95 CPU 378m / peak
+            # working set 526Mi (was 1 core / 8Gi).
+            # Memory request == limit deliberately: memory is incompressible, so
+            # a request below the limit lets the node be scheduled to 100% of
+            # requests while pods grow into their limits, and the kernel OOM
+            # killer's victim is not necessarily the pod that overcommitted.
+            # 3Gi is ~6x the observed peak. Note memory.allowedPercent below is
+            # computed against the cgroup limit, so vmselect will size its caches
+            # to 90% of 3Gi rather than 90% of 8Gi -- 14d shows the cache never
+            # came close to filling even the old limit, so this is headroom, not
+            # a regression. CPU keeps request < limit: CPU is compressible, so
+            # over-committing it costs throttling rather than an OOM kill.
             requests:
-              memory: 8Gi
-              cpu: 1000m
+              memory: &vmselect_memory 3Gi
+              cpu: 500m
             limits:
-              memory: 8Gi
-              cpu: 8000m
+              # No CPU limit: CPU is compressible, so the request already sets a
+              # fair-share baseline and a limit only adds throttling. Requires the
+              # VM_VMCLUSTERDEFAULT_VMSELECTDEFAULT_USEDEFAULTRESOURCES=false above,
+              # or the operator re-injects one.
+              memory: *vmselect_memory
           extraArgs:
             # Metrics from the last few weeks show a very low average memory usage (~5%). Increasing this
             # from the default of 60% should not increase the cache eviction rate, while allowing for
@@ -436,12 +464,16 @@ spec:
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
         resources:
+          # Right-sized 2026-08-01 from 14d of metrics: p95 CPU 244m (p99 325m,
+          # max 396m) / peak working set 273Mi. Limits left with headroom for
+          # scrape bursts; only the reservation is reduced.
           requests:
-            memory: 2Gi
-            cpu: 1000m
+            memory: &vmagent_memory 512Mi
+            cpu: 400m
           limits:
-            memory: 2Gi
-            cpu: 2000m
+            # No CPU limit -- see the vmselect block. Requires
+            # VM_VMAGENTDEFAULT_USEDEFAULTRESOURCES=false above.
+            memory: *vmagent_memory
         extraArgs:
           # This is because cilium is exporting a ton of metrics, largely due to some pods making IPv6 requests which are unsupported on my network.
           # TODO find the pods and fix them

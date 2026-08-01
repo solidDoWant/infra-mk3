@@ -29,6 +29,17 @@ spec:
     profile: ambient
     pilot:
       autoscaleMin: 2
+      # Right-sized 2026-08-01 from 14d of metrics. Chart default is 500m/2048Mi;
+      # measured p95 CPU 13m (p99 17m, max 60m) and peak working set 435Mi. This
+      # is a small mesh, so pilot never approaches the upstream defaults, which
+      # are sized for a large one. Memory request == limit (incompressible;
+      # see the vmselect block for the reasoning).
+      resources:
+        requests:
+          cpu: 25m
+          memory: &istiod_memory 768Mi
+        limits:
+          memory: *istiod_memory
       env:
         ENABLE_CA_SERVER: "false"
       deploymentLabels:
