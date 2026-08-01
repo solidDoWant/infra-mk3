@@ -57,15 +57,6 @@ spec:
             runAsGroup: 101
             seccompProfile:
               type: RuntimeDefault
-          topologySpreadConstraints:
-            - maxSkew: 1 # Skew of 1 allows for rolling updates
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: pve-exporter
-                  app.kubernetes.io/component: pve-exporter
-                  app.kubernetes.io/instance: pve-exporter
-              whenUnsatisfiable: DoNotSchedule
     persistence:
       # Make /tmp RW for HTTP webserver (gunicorn) heartbeat file
       tmp:

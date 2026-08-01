@@ -59,15 +59,6 @@ spec:
             fsGroupChangePolicy: OnRootMismatch
             seccompProfile:
               type: RuntimeDefault
-          topologySpreadConstraints:
-            - maxSkew: 1 # Skew of 1 allows for rolling updates
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: vaultwarden-metrics
-                  app.kubernetes.io/component: vaultwarden-metrics
-                  app.kubernetes.io/instance: vaultwarden-metrics
-              whenUnsatisfiable: DoNotSchedule
     persistence:
       postgres-serving-cert:
         type: secret

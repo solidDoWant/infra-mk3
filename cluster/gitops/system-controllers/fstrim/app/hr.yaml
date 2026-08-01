@@ -40,10 +40,21 @@ spec:
                   - SYS_ADMIN
     defaultPodOptions:
       hostPID: true
+      # Note this is not an HA spread -- it is a per-node fan-out. The job runs
+      # `parallelism: 3` pods against a hostPath mount of `/`, so the intent is
+      # exactly one pod per node, each trimming that node's disks. maxSkew 1 with
+      # a hard constraint is what enforces that. Relaxing it to ScheduleAnyway
+      # would let all three pods land on one node, trimming it three times and
+      # silently never trimming the other two.
+      #
+      # A node outage leaves this job unable to complete, which is acceptable:
+      # it is monthly maintenance, so an incomplete run costs nothing and
+      # self-corrects on the next schedule.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: *app_name

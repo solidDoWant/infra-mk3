@@ -41,10 +41,3 @@ spec:
                 matchLabels:
                   app.kubernetes.io/instance: cert-manager
               topologyKey: kubernetes.io/hostname
-    topologySpreadConstraints:
-      - maxSkew: 1 # Skew of 1 allows for rolling updates
-        topologyKey: kubernetes.io/hostname
-        labelSelector:
-          matchLabels:
-            app.kubernetes.io/instance: *app_name
-        whenUnsatisfiable: DoNotSchedule

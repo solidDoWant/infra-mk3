@@ -57,16 +57,6 @@ spec:
             runAsGroup: 65534
             seccompProfile:
               type: RuntimeDefault
-          topologySpreadConstraints:
-            - &router_tsc
-              maxSkew: 1 # Skew of 1 allows for rolling updates
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels: &router_labels
-                  app.kubernetes.io/name: opnsense-exporter
-                  app.kubernetes.io/component: router-01
-                  app.kubernetes.io/instance: opnsense-exporter
-              whenUnsatisfiable: DoNotSchedule
       router-02:
         <<: *router_controller
         containers:
@@ -79,12 +69,6 @@ spec:
                   identifier: opnsense-config-router-02
         pod:
           <<: *router_pod
-          topologySpreadConstraints:
-            - <<: *router_tsc
-              labelSelector:
-                matchLabels:
-                  <<: *router_labels
-                  app.kubernetes.io/component: router-02
       # This can be removed if https://github.com/AthennaMind/opnsense-exporter/pull/57 is merged
       firmware-update-check-router-01: &firmware_update_check_controller
         type: cronjob

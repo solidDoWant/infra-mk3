@@ -155,14 +155,6 @@ spec:
       pdb:
         enabled: true
         minAvailable: 1
-      topologySpreadConstraints:
-        - maxSkew: 1 # Skew of 1 allows for rolling updates
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/instance: *app_name
-              app.kubernetes.io/component: server
-          whenUnsatisfiable: DoNotSchedule
       metrics: &metrics
         enabled: true
         serviceMonitor:
@@ -172,14 +164,6 @@ spec:
       pdb:
         enabled: true
         minAvailable: 1
-      topologySpreadConstraints:
-        - maxSkew: 1 # Skew of 1 allows for rolling updates
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/instance: *app_name
-              app.kubernetes.io/component: worker
-          whenUnsatisfiable: DoNotSchedule
       volumes:
         - name: sidecar-blueprints
           emptyDir: {}

@@ -98,14 +98,6 @@ spec:
                 - "*"
               verbs: *all_common_verbs
       priorityClassName: system-cluster-critical
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: admission-controller
-              app.kubernetes.io/instance: *app_name
-          whenUnsatisfiable: DoNotSchedule
       podDisruptionBudget:
         enabled: true
       serviceMonitor:
@@ -131,14 +123,6 @@ spec:
         # TODO this may be too high... default value has changed upstream from 1h to 30s to 1h, back and forth.
         # Shorter duration = more CPU usage, but changes are picked up faster.
         backgroundScanInterval: 1m
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: background-controller
-              app.kubernetes.io/instance: *app_name
-          whenUnsatisfiable: DoNotSchedule
     cleanupController:
       <<: *controller_config
       # Right-sized 2026-08-01 from 14d: p95 CPU 6m (max 8m), peak working set
@@ -149,14 +133,6 @@ spec:
           memory: &cleanup_memory 256Mi
         limits:
           memory: *cleanup_memory
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: cleanup-controller
-              app.kubernetes.io/instance: *app_name
-          whenUnsatisfiable: DoNotSchedule
     reportsController:
       <<: *controller_config
       # Right-sized 2026-08-01 from 14d: p95 CPU 40m (p99 43m, max 74m), peak
@@ -167,11 +143,3 @@ spec:
           memory: &reports_memory 320Mi
         limits:
           memory: *reports_memory
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: reports-controller
-              app.kubernetes.io/instance: *app_name
-          whenUnsatisfiable: DoNotSchedule

@@ -60,13 +60,6 @@ spec:
                   matchLabels:
                     app.kubernetes.io/instance: istio-istiod
                 topologyKey: kubernetes.io/hostname
-      topologySpreadConstraints:
-        - maxSkew: 1 # Skew of 1 allows for rolling updates
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/instance: istio-istiod
-          whenUnsatisfiable: DoNotSchedule
     global:
       caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
       istiod:

@@ -364,7 +364,40 @@ patches:
   - |-
     cluster:
       scheduler:
-        # Enable cluster-level topology spread constraints for supported controllers
+        # Enable cluster-level topology spread constraints for supported controllers.
+        #
+        # `defaultingType: List` means these constraints are applied by the
+        # scheduler to every pod that does NOT declare its own
+        # topologySpreadConstraints -- 234 of 363 running pods at the time of
+        # writing. That makes this block, not the per-workload TSCs, the widest
+        # -reaching spread policy in the cluster.
+        #
+        # `nodeTaintsPolicy: Honor` is load-bearing and must not be dropped.
+        #
+        # It defaults to `Ignore`, which counts EVERY node as a topology domain
+        # when computing skew -- including nodes the pod could never be placed on.
+        # An unreachable node therefore contributes a domain holding 0 pods, which
+        # drags `min` to zero and inflates the skew of every candidate placement:
+        #
+        #   3 nodes, one unreachable, a 2-replica workload already spread 1+1
+        #     Ignore : domains {01:1, 02:0, 03:1}, surge -> {01:2, 02:0, 03:1}
+        #              skew = 2 - 0 = 2 > maxSkew 1  -> REJECTED
+        #     Honor  : node 02 excluded (untolerated NoSchedule taint)
+        #              domains {01:1, 03:1}, surge -> {01:2, 03:1}
+        #              skew = 2 - 1 = 1 <= maxSkew 1 -> admitted
+        #
+        # With the default `Ignore` this was the primary cause of the failed
+        # failover during the talos-k8s-mixed-02 outage (2026-07-31): pods sat
+        # Pending reporting "didn't match pod topology spread constraints" rather
+        # than any resource message, on surviving nodes that were largely idle. It
+        # also deadlocks rolling updates while a node is down, because the surge
+        # pod has nowhere to land.
+        #
+        # DoNotSchedule is deliberate and correct once taints are honored: the
+        # intent is a hard guarantee that replicas occupy separate nodes whenever
+        # 2+ nodes are actually available. Honor makes "available" mean what it
+        # says. When only one node remains, a second replica on it buys nothing,
+        # so refusing to place it is the desired outcome rather than a bug.
         config:
           profiles:
             - schedulerName: default-scheduler
@@ -375,6 +408,9 @@ patches:
                       - maxSkew: 1 # Skew of 1 allows for rolling updates
                         topologyKey: kubernetes.io/hostname
                         whenUnsatisfiable: DoNotSchedule
+                        # See the note above -- without this, an unreachable node
+                        # still counts as an empty domain and vetoes placements.
+                        nodeTaintsPolicy: Honor
                     defaultingType: List
         extraArgs:
           # Feature enablement

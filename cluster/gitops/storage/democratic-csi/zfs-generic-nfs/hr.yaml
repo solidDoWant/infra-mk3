@@ -102,14 +102,6 @@ spec:
           - --v=2
       driver:
         image: &dcsi_image docker.io/democraticcsi/democratic-csi:v1.9.3
-      topologySpreadConstraints:
-        - maxSkew: 1 # Skew of 1 allows for rolling updates
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: controller-linux
-              app.kubernetes.io/instance: *app_name
-          whenUnsatisfiable: DoNotSchedule
     node:
       priorityClassName: system-cluster-critical
       driver:

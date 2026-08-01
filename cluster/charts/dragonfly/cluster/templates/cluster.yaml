@@ -25,4 +25,5 @@ spec:
       labelSelector:
         matchLabels: {{ include "pod-selector-labels" . | nindent 10 }}
       whenUnsatisfiable: DoNotSchedule
+      nodeTaintsPolicy: Honor
   resources: {{ .Values.resources | toYaml | nindent 4 }}

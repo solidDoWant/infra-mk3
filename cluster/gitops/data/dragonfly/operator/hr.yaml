@@ -20,13 +20,6 @@ spec:
     manager:
       extraArgs:
         - --metrics-bind-address=0.0.0.0:8080
-      topologySpreadConstraints:
-        - maxSkew: 1 # Skew of 1 allows for rolling updates
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/instance: *app_name
-          whenUnsatisfiable: DoNotSchedule
     serviceMonitor:
       enabled: true
     grafanaDashboard:

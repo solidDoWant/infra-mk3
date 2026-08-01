@@ -334,6 +334,7 @@ spec:
                       app.kubernetes.io/name: ceph-mds
                       app.kubernetes.io/part-of: ssd-replicated
                   whenUnsatisfiable: DoNotSchedule
+                  nodeTaintsPolicy: Honor
             priorityClassName: system-cluster-critical
         storageClass:
           enabled: true
@@ -383,16 +384,6 @@ spec:
                 memory: *rgw_memory
             instances: 2
             placement:
-              topologySpreadConstraints:
-                - maxSkew: 1
-                  topologyKey: kubernetes.io/hostname
-                  labelSelector:
-                    matchLabels:
-                      # cspell:words cephobjectstores
-                      app.kubernetes.io/component: cephobjectstores.ceph.rook.io
-                      app.kubernetes.io/name: ceph-rgw
-                      app.kubernetes.io/instance: ssd-replicated
-                  whenUnsatisfiable: DoNotSchedule
             priorityClassName: system-cluster-critical
           hosting:
             advertiseEndpoint:

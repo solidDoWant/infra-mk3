@@ -44,6 +44,7 @@ spec:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
               cnpg.io/poolerName: {{ include "pooler-rw-name" . }}
@@ -90,6 +91,9 @@ spec:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
+          # Exclude nodes the pod cannot be placed on (e.g. an unreachable
+          # node) from the skew calculation; see talos/talconfig.yaml.
+          nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
               cnpg.io/poolerName: {{ include "pooler-ro-name" . }}

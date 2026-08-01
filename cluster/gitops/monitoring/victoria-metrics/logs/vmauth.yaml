@@ -23,14 +23,6 @@ spec:
       app.kubernetes.io/part-of: victoria-logs
       endpoints.netpols.home.arpa/victoriametrics-enterprise-component: "true"
       endpoints.netpols.home.arpa/logs-supplier: "true"
-  topologySpreadConstraints:
-    - labelSelector:
-        matchLabels:
-          app.kubernetes.io/name: vmauth
-          app.kubernetes.io/part-of: victoria-logs
-      maxSkew: 1
-      topologyKey: kubernetes.io/hostname
-      whenUnsatisfiable: DoNotSchedule
   useStrictSecurity: true
   volumeMounts:
     - mountPath: /etc/ssl/certs/ca.crt
