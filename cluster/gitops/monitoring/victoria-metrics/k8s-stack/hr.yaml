@@ -418,8 +418,15 @@ spec:
           # Right-sized 2026-08-01 from 14d of metrics: p95 CPU 244m (p99 325m,
           # max 396m) / peak working set 273Mi. Limits left with headroom for
           # scrape bursts; only the reservation is reduced.
+          #
+          # 2026-08-28: 512Mi was too tight and OOMKilled continuously (60+
+          # restarts, deployment stuck 1/2). Steady working set had grown to
+          # ~396Mi -- the 273Mi figure above was measured before the scrape set
+          # reached its current size (132 SD routines / 290 targets), and the
+          # startup burst while all service discovery loads pushes past the cap
+          # before the process ever goes Ready. Raised to 1Gi (~2.5x steady).
           requests:
-            memory: &vmagent_memory 512Mi
+            memory: &vmagent_memory 1Gi
             cpu: 400m
           limits:
             # No CPU limit -- see the vmselect block. Requires
