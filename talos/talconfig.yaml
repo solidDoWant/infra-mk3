@@ -104,7 +104,7 @@ nodes:
         # src: https://cdrdv2-public.intel.com/332464/332464_710_Series_Datasheet_v_4_1.pdf
         # - intel_iommu=on
         # - iommu=pt
-        extraKernelArgs:
+        extraKernelArgs: &common_kernel_args
           # Make ZFS flush to disk more frequently on async writes:
           # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#controversial-zfs_txg_timeout1--synchronous_commitoff--logbiasthroughput
           - zfs.zfs_txg_timeout=1
@@ -122,27 +122,137 @@ nodes:
           - &halt_if_installed -talos.halt_if_installed # Negate this option to allow the installer to run. Needed for recovery
     kernelModules:
       - name: zfs
+  # ---------------------------------------------------------------------------
+  # talos-k8s-mixed-02 is a Minisforum MS-A2, NOT an MS-01 like 01 and 03.
+  #
+  # The original MS-01 died in the 2026-07-31 outage and was replaced in-place
+  # with different hardware, so this node can no longer inherit the MS-01
+  # hardware anchors (`*10g_1`, `*10g_2`, `*1g_1`, `*1g_2`, the install disk
+  # busPath, or `*schematic_customization`). It keeps the same hostname, IP,
+  # addresses, bond topology and role -- only the hardware bindings differ.
+  #
+  # Differences that drive the overrides below:
+  #   * NICs enumerate under different names (different PCI topology).
+  #   * AMD Ryzen 9, not Intel Core i9: no intel-ucode, no Intel ME (mei), and
+  #     no Raptor Lake-P Iris Xe iGPU. Only the discrete Arc Pro A40/A50 card
+  #     that was moved over from the dead MS-01 provides gpu.intel.com devices
+  #     on this node now, so it exposes 1 GPU to DRA where 01/03 expose 2.
+  #   * All three NVMe drives sit on different PCI paths, so the install disk
+  #     busPath is this node's own.
+  #
+  # The Ceph OSD (Samsung U.2) and the ZFS local-storage pool (Kingston KC3000)
+  # were moved over from the dead MS-01 with their data intact, and the
+  # installer only ever touches the disk matched by `installDiskSelector`, so
+  # those two are safe from a reinstall.
+  #
+  # ⚠ The boot drive is NOT safe, and re-installing this node is destructive
+  # beyond the OS. EPHEMERAL lives on the install disk and holds
+  # /var/lib/rook -- the CephCluster's `dataDirHostPath`, including the mon-u
+  # store (mon-u is pinned to this node) -- plus /var/lib/etcd. Recover this
+  # node by applying config to the running system over the network, not by
+  # booting the ISO: `-talos.halt_if_installed` is negated above, so the ISO
+  # runs the installer and wipes EPHEMERAL. `talosctl apply-config` never
+  # reinstalls, and `talosctl upgrade` preserves EPHEMERAL (Talos dropped
+  # `--preserve`; wiping now requires an explicit `talosctl reset`).
+  # ---------------------------------------------------------------------------
   - <<: *talos-k8s-mixed
     hostname: talos-k8s-mixed-02
     ipAddress: 10.3.1.2
+    installDiskSelector:
+      # The MS-A2 hangs all three NVMe drives off separate root ports under
+      # 0000:00:01.x, so none of the MS-01 busPaths apply. For reference, the
+      # other two drives in this chassis are:
+      #   /pci0000:00/0000:00:01.2/0000:0b:00.0/nvme  SAMSUNG MZQL21T9HCJR (Ceph OSD)
+      #   /pci0000:00/0000:00:01.4/0000:0d:00.0/nvme  KINGSTON SKC3000D2048G (ZFS pool)
+      # `/*` suffix per the note on talos-k8s-mixed-01 above.
+      busPath: /pci0000:00/0000:00:01.3/0000:0c:00.0/nvme/* # "PCIe SSD" boot drive
     nodeLabels:
       <<: *node_labels
       topology.rook.io/chassis: chassis-talos-k8s-mixed-02
     networkInterfaces:
-      - *1g_1
-      - *1g_2
-      - *10g_1
-      - *10g_2
+      # These are the MS-A2's own names and share nothing with the MS-01's
+      # enp91s0/enp94s0 + enp6s0f0np0/enp6s0f1np1. If they ever shift again,
+      # the rename-proof alternative is a hardware selector rather than a name:
+      #
+      #   - interface: bond0
+      #     bond:
+      #       deviceSelectors:
+      #         - driver: i40e
+      #           physical: true
+      #       mode: 802.3ad
+      #       ...
+      #
+      # Copper RJ45 ports, cabled to the management VLAN. `ignore` keeps Talos
+      # from DHCPing on them, which would install a competing default route.
+      - interface: enp3s0
+        ignore: true
+      - interface: enp4s0
+        ignore: true
+      # SFP+ cages -> the LACP bond, same as the other two nodes
+      - interface: &ms_a2_10g_1_name enp5s0f0np0
+        mtu: *jumbo_mtu
+      - interface: &ms_a2_10g_2_name enp5s0f1np1
+        mtu: *jumbo_mtu
+      # Same bond topology, addresses, VIP, MTU and default route as the other
+      # nodes -- only the member interface names change.
       - <<: *bond_0
+        bond:
+          interfaces:
+            - *ms_a2_10g_1_name
+            - *ms_a2_10g_2_name
+          mode: 802.3ad
+          lacpRate: fast
+          xmitHashPolicy: layer3+4
+          miimon: 100
         addresses:
           - 10.3.1.2/16
           - 10.3.2.2/32
       - *loopback
+    schematic:
+      customization: &ms_a2_schematic_customization
+        systemExtensions:
+          officialExtensions:
+            # AMD CPU: amd-ucode replaces intel-ucode, and `mei` (Intel
+            # Management Engine) has no AMD equivalent and is dropped. This also
+            # means there is no vPro/AMT OOBM on this node -- the
+            # vpro-talos-k8s-mixed-02 entry at 10.1.1.2 in docs/network.yaml is
+            # now dead and needs replacing with the MS-A2's own BMC/KVM path.
+            - siderolabs/amd-ucode
+            # Kept despite the AMD CPU: this is also the firmware/driver
+            # extension for the discrete Intel Arc Pro A40/A50 card moved over
+            # from the dead MS-01. Without it that card does not come up and
+            # this node contributes zero gpu.intel.com devices.
+            - siderolabs/i915
+            # Kept on the assumption the MS-A2's USB4 ports use the same kernel
+            # driver as Thunderbolt. Not yet confirmed on this box -- if the
+            # hardware isn't there the extension is inert (the module loads and
+            # binds nothing), so keeping it is the cheap side of the bet.
+            # Confirm with `talosctl -n 10.3.1.2 read /proc/modules | grep thunderbolt`
+            # or by checking for a 0c03/0d04-class controller in `lspci`, and
+            # drop this line if absent.
+            - siderolabs/thunderbolt
+            # For virtualization/isolation
+            - siderolabs/kata-containers
+            # Local storage
+            - siderolabs/zfs
+        # TODO the IOMMU args noted on the MS-01 schematic are Intel-specific.
+        # The AMD equivalents are `amd_iommu=on iommu=pt`.
+        extraKernelArgs: *common_kernel_args
     imageSchematic:
       customization:
-        <<: *schematic_customization
+        <<: *ms_a2_schematic_customization
         extraKernelArgs:
-          - *bond
+          # A kernel command line cannot reference the anchors above, so these
+          # names have to be kept in sync with `networkInterfaces` by hand.
+          # Deliberately NOT the shared `*bond` anchor: that one still names the
+          # MS-01's enp2s0f* ports, which no longer match what 01 and 03
+          # actually enumerate today (enp6s0f*), so it is stale there too.
+          #
+          # These args exist only so the node reaches maintenance mode on a
+          # predictable static IP before it has a config; the bond that survives
+          # the install is the one in the machine config. If the ISO ever comes
+          # up with no network, drop both args and let it DHCP on enp3s0/enp4s0.
+          - bond=bond0:enp5s0f0np0,enp5s0f1np1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
           - ip=10.3.1.2::10.3.0.254:255.255.0.0:talos-k8s-mixed-02:bond0:off:10.3.0.254::10.3.0.254
           - *halt_if_installed
   - <<: *talos-k8s-mixed
