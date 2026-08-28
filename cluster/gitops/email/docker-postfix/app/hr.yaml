@@ -41,7 +41,27 @@ spec:
       - name: *serving_cert_volume_name
         mountPath: /etc/postfix/certs
         readOnly: true
+    # Set the timezone directly instead of letting the k8tz webhook inject it -- see
+    # the pod annotation below. The image is Debian-based and ships tzdata, so this
+    # resolves natively with no zoneinfo mount needed.
+    extraEnv:
+      - name: TZ
+        value: America/Chicago
     pod:
+      annotations:
+        # k8tz's injected timezone mounts break container creation under the
+        # kata-containers runtime. It mounts a single emptyDir at BOTH
+        # /usr/share/zoneinfo (volume root) and /etc/localtime (subPath
+        # America/Chicago) -- the file mount's source nested inside the directory
+        # mount's source. kata-agent fails that with:
+        #   failed to create shim task: File exists (os error 17)
+        # so the mail container never starts (StartError, exit 128). Confirmed by
+        # A/B on 2026-08-28: the same image on the same node under kata starts fine
+        # with injection disabled, and fails with it enabled. It is image-dependent
+        # -- debian/busybox-based images fail, alpine-based ones (including the
+        # postfix-exporter sidecar, which is why it starts in the same sandbox the
+        # mail container dies in) are unaffected.
+        k8tz.io/inject: "false"
       labels:
         endpoints.netpols.home.arpa/email-relay: "true"
       #   TODO enable this when migrating workloads to istio
