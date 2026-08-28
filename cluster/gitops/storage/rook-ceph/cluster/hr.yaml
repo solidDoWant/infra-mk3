@@ -5,6 +5,16 @@ metadata:
   name: &app_name rook-ceph-cluster
 spec:
   interval: 5m
+  # Rook reconciles Ceph daemons serially -- mons one at a time gated on quorum
+  # health, then mgrs, then OSDs -- and holds CephCluster in `Progressing` until
+  # the whole walk finishes. Measured at 6-7m for a resource-only change, which
+  # overruns Helm's 5m default and fails the upgrade on the readiness wait even
+  # though the apply itself succeeded. With `upgrade.remediation.strategy:
+  # rollback` from the repo-wide HelmRelease defaults, that timeout then reverts
+  # the change and re-restarts every daemon, and the rollback overruns for the
+  # same reason -- an oscillation that cannot converge, since each direction
+  # creates the `Progressing` state the other is waiting to clear.
+  timeout: 20m
   chart:
     spec:
       chart: rook-ceph-cluster
