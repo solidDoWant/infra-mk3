@@ -55,10 +55,34 @@
 # Discovered rather than hardcoded: /dev/sg* numbers are assigned by SCSI
 # discovery order and change when hardware is added or removed. The unit
 # template passes each as a --device flag for raw SG_IO (library moves, LTFS).
+#
+# REAL HARDWARE ONLY — mhvtl's virtual devices are deliberately excluded.
+# The virtual library mirrors the real hardware's INQUIRY identity (same IBM
+# 3573-TL / ULT3580-TD6 strings), so a plain vendor/type match cannot tell
+# them apart; filter on the pseudo-adapter's proc_name instead, exactly as
+# the setup_mhvtl udev rules do. Two reasons this matters:
+#   * Discovery runs ONCE, at ansible time, and the result is frozen into the
+#     unit as static --device flags. mhvtl's nodes come and go with its
+#     daemons, so baking them in couples every worker start to mhvtl's
+#     runtime state — a stopped vtltape@<id> leaves a dangling --device and
+#     `docker run` fails outright with "no such file or directory". That took
+#     the worker down for 31 days from 2026-07-28 (an unattended glibc
+#     upgrade re-execed systemd; vtltape@.service's KillMode=none orphaned
+#     the queue-12 daemon, so the replacement instance refused to start and
+#     /dev/sg22 never came back).
+#   * The unit ALREADY passes mhvtl through dynamically, via the
+#     MHVTL_DEVICE_FLAGS ExecStartPre generator, resolved per-start from the
+#     stable /dev/mhvtl/* symlinks. Listing them here too is a second,
+#     stale-by-construction representation of the same devices.
 - name: Discover the tape drive and changer SCSI generic device nodes
   ansible.builtin.shell: |
     set -o pipefail
-    lsscsi -g | awk '/tape|mediumx/ {print $NF}'
+    lsscsi -g | awk '/tape|mediumx/ {print $1, $NF}' | tr -d '[]' |
+      while read -r hctl dev; do
+        if [ "$(cat /sys/class/scsi_host/host${hctl%%:*}/proc_name 2>/dev/null)" != mhvtl ]; then
+          echo "$dev"
+        fi
+      done
   args:
     executable: /bin/bash
   changed_when: false
@@ -73,9 +97,11 @@
     that:
       - tape_archiver_sg_discovery.stdout_lines | length >= 3
     fail_msg: >-
-      Expected at least 3 SCSI generic nodes (2 tape drives + 1 changer) from
-      `lsscsi -g`, got: {{ tape_archiver_sg_discovery.stdout_lines }}. Check
-      the FC HBA passthrough and tape library connectivity.
+      Expected at least 3 REAL SCSI generic nodes (2 tape drives + 1 changer)
+      from `lsscsi -g`, got: {{ tape_archiver_sg_discovery.stdout_lines }}.
+      Check the FC HBA passthrough and tape library connectivity. Note that
+      mhvtl's virtual devices are excluded by design and never satisfy this
+      check, so a running virtual library will not mask absent hardware.
 
 - name: Ensure Docker is running
   ansible.builtin.service:

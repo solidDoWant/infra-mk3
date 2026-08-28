@@ -186,6 +186,32 @@
     mode: 0644
   notify: Reload systemd
 
+# The shipped units' KillMode=none orphans daemons across a systemd re-exec,
+# which permanently fails the replacement instance and silently removes that
+# drive's device nodes. See the drop-in for the full failure mode.
+- name: Create the daemon drop-in directories
+  ansible.builtin.file:
+    path: /etc/systemd/system/{{ item }}.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop:
+    - vtltape@
+    - vtllibrary@
+
+- name: Harden the daemons against orphaning on a systemd re-exec
+  ansible.builtin.template:
+    src: survive-daemon-reexec.conf.j2
+    dest: /etc/systemd/system/{{ item }}.service.d/survive-daemon-reexec.conf
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - vtltape@
+    - vtllibrary@
+  notify: Reload systemd
+
 # Stable /dev/mhvtl/* names so dry-run device paths never depend on SCSI
 # discovery order. Matched on the mhvtl pseudo-adapter's proc_name — a
 # virtual IBM ULT3580-TD6 can never be confused with the real drives.

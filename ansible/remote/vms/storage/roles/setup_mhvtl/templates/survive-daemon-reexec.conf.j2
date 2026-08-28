@@ -1,0 +1,35 @@
+# {{ ansible_managed }}
+#
+# Rate limiting lives in [Unit]: StartLimitIntervalSec/StartLimitBurst moved
+# there in systemd 229 and are silently ignored under [Service].
+[Unit]
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+# ORPHAN SAFETY. The units mhvtl ships set KillMode=none, so on stop systemd
+# signals nothing and leaves the daemon running — it even logs "Unit process
+# <pid> (vtltape) remains running after unit stopped". Any systemd re-exec
+# that restarts these units (an unattended glibc upgrade did exactly this on
+# 2026-07-28) therefore races the old daemon against the new one: vtltape's
+# check_for_running_daemons() sees the orphan still holding the queue and the
+# replacement exits 2 with "found another running daemon... exiting".
+#
+# Upstream then has no Restart=, so the instance stays failed FOREVER. That is
+# not a cosmetic failure: no daemon means the mhvtl module never registers
+# that drive, so its /dev/st*, /dev/sg* and /dev/mhvtl/* nodes never appear.
+# On 2026-07-28 queue 12 died this way and took the tape-archiver data worker
+# down with it for 31 days (a dangling --device /dev/sg22).
+#
+# KillMode=mixed stops the orphan being created: SIGTERM to the main process,
+# SIGKILL to anything left in the cgroup after TimeoutStopSec. These are
+# virtual drives backed by ordinary files, with no real hardware to leave in a
+# bad state, so a hard kill costs at most an in-flight dry run.
+KillMode=mixed
+
+# Belt and braces for the case where an orphan still appears (a daemon started
+# outside its unit, say): retry rather than latching failed, so the instance
+# self-heals as soon as the queue frees up. The window is deliberately wider
+# than the default 5-starts-in-10s burst, which gives up in seconds.
+Restart=on-failure
+RestartSec=10
