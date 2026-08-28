@@ -27,7 +27,7 @@ specs:
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/part-of: victoria-logs
-              app.kubernetes.io/name: vlogs
+              app.kubernetes.io/name: vlsingle
         toPorts:
           - ports:
               - port: "9428"

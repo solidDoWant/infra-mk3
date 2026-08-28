@@ -5,11 +5,11 @@ kind: CiliumNetworkPolicy
 metadata:
   name: victoria-logs
 specs:
-  - description: vlogs
-    endpointSelector: &vlogs_selector
+  - description: vlsingle
+    endpointSelector: &vlsingle_selector
       matchLabels:
         app.kubernetes.io/part-of: victoria-logs
-        app.kubernetes.io/name: vlogs
+        app.kubernetes.io/name: vlsingle
     # egress:
     ingress:
       # Kubelet for healthcheck
@@ -53,9 +53,9 @@ specs:
                 protocol: UDP
               - port: "53"
                 protocol: TCP
-      # To vlogs
+      # To vlsingle
       - toEndpoints:
-          - *vlogs_selector
+          - *vlsingle_selector
         toPorts:
           - ports:
               - port: "9428"

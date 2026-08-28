@@ -1,6 +1,6 @@
 ---
-apiVersion: operator.victoriametrics.com/v1beta1
-kind: VLogs
+apiVersion: operator.victoriametrics.com/v1
+kind: VLSingle
 metadata:
   name: victoria-logs-1
 spec:
@@ -8,8 +8,12 @@ spec:
   image:
     tag: v1.17.0-victorialogs
   priorityClassName: system-cluster-critical
-  # This cannot be set until https://github.com/VictoriaMetrics/operator/issues/1306 is addressed
-  # replicaCount: 2
+  # Deliberately left at one pod per instance. VLSingle caps a single CR at one
+  # replica, and VictoriaLogs' own cluster mode (VLCluster) shards rather than
+  # replicates -- upstream is explicit that real HA is only achieved by sending
+  # copies of the logs to *independent* instances. That is what the two CRs here
+  # plus the fluentd `copy` fan-out provide, so this is the recommended shape and
+  # not a limitation to design around.
   retentionPeriod: 1w
   podMetadata:
     labels:
@@ -18,7 +22,7 @@ spec:
     - labelSelector:
         matchLabels:
           app.kubernetes.io/part-of: victoria-logs
-          app.kubernetes.io/name: vlogs
+          app.kubernetes.io/name: vlsingle
       maxSkew: 1
       topologyKey: kubernetes.io/hostname
       whenUnsatisfiable: DoNotSchedule
@@ -33,8 +37,8 @@ spec:
     storageClassName: victoria-logs
     volumeMode: Filesystem
 ---
-apiVersion: operator.victoriametrics.com/v1beta1
-kind: VLogs
+apiVersion: operator.victoriametrics.com/v1
+kind: VLSingle
 metadata:
   name: victoria-logs-2
 spec:
@@ -42,8 +46,12 @@ spec:
   image:
     tag: v1.17.0-victorialogs
   priorityClassName: system-cluster-critical
-  # This cannot be set until https://github.com/VictoriaMetrics/operator/issues/1306 is addressed
-  # replicaCount: 2
+  # Deliberately left at one pod per instance. VLSingle caps a single CR at one
+  # replica, and VictoriaLogs' own cluster mode (VLCluster) shards rather than
+  # replicates -- upstream is explicit that real HA is only achieved by sending
+  # copies of the logs to *independent* instances. That is what the two CRs here
+  # plus the fluentd `copy` fan-out provide, so this is the recommended shape and
+  # not a limitation to design around.
   retentionPeriod: 1w
   podMetadata:
     labels:
@@ -52,7 +60,7 @@ spec:
     - labelSelector:
         matchLabels:
           app.kubernetes.io/part-of: victoria-logs
-          app.kubernetes.io/name: vlogs
+          app.kubernetes.io/name: vlsingle
       maxSkew: 1
       topologyKey: kubernetes.io/hostname
       whenUnsatisfiable: DoNotSchedule

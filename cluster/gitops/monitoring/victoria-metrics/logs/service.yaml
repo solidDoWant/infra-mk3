@@ -1,5 +1,6 @@
 ---
-# This is needed because currently all instances must be deployed separately due to lack of STS support
+# Aggregates both independent VLSingle instances behind one name so vmauth can
+# fan queries across them. They are separate CRs on purpose -- see vmlogs.yaml.
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,6 +8,6 @@ metadata:
 spec:
   selector:
     app.kubernetes.io/part-of: victoria-logs
-    app.kubernetes.io/name: vlogs
+    app.kubernetes.io/name: vlsingle
   ports:
     - port: 9428
