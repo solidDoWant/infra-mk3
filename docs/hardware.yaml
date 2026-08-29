@@ -324,11 +324,16 @@ Compute:
     Cable management:
       Type: Cable management arm
       Manufacturer: Dell
+  # Only talos-k8s-mixed-01 is still an MS-01. Node 02's died in the 2026-07-31
+  # outage and node 03 was swapped to match; both are MS-A2s now (entry below).
+  # Every part listed here except the chassis, board, CPU and integrated NICs
+  # moved across into those two MS-A2s, so this entry still describes the RAM,
+  # drives and GPU that are in service -- just in a different box.
   - Manufacturer: Minisforum
     Model: MS-01
     Type: Mini PC
     Rack height: 2 # Rack units
-    Count: 3
+    Count: 1
     Hardware:
       CPU:
         - Manufacturer: Intel
@@ -392,7 +397,9 @@ Compute:
               - M.2 slot: 1
           - Manufacturer: Samsung
             Series: PM9A3
-            Model: MZQL21T9HCJR-00A07
+            # Node 01's is the -00B7C variant; the two that went into the
+            # MS-A2s are -00A07.
+            Model: MZQL21T9HCJR-00B7C
             Count: 1
             Type: SSD
             Form factor: U.2 7mm
@@ -507,6 +514,213 @@ Compute:
       OOBM: # Out of band management
         Manufacturer: Intel
         Model: vPro Enterprise
+      OS:
+        Kernel: Linux
+        Distribution: Talos
+    Mount:
+      Type: Shelf
+  # talos-k8s-mixed-02 (2026-08-27) and talos-k8s-mixed-03 (2026-08-29).
+  # Drop-in replacements for the MS-01s: the RAM, all three NVMe drives and the
+  # Arc Pro A40 were transplanted from the MS-01 chassis unchanged, so those
+  # sections are identical to the entry above and are not repeated in full.
+  # What actually differs is the board, the CPU, the integrated NICs and the
+  # loss of out-of-band management.
+  - Manufacturer: Minisforum
+    Model: MS-A2
+    Type: Mini PC
+    Rack height: 2 # Rack units
+    Count: 2
+    Hardware:
+      CPU:
+        - Manufacturer: AMD
+          Model: Ryzen 9 9955HX
+          Count: 1
+          Clock frequency max: 5.4 # GHz
+          Core count: 16
+          Thread count: 32
+          Socket: Fixed
+          TDP: 55 # Watts, configurable 45-75; TODO confirm the BIOS setting
+      # Transplanted from the MS-01 -- same Mushkin MRA5S560LKKD48GX2 pair.
+      RAM:
+        - Manufacturer: Mushkin
+          Model: MRA5S560LKKD48GX2
+          Count: 2
+          Type: DDR5 SDRAM
+          Form factor: SODIMM
+          Size: 48 # GB
+          Clock frequency max: 5200 # MHz
+          Physical locations:
+            - Slot: 1
+            - Slot: 2
+      # Transplanted from the MS-01, data intact -- the same physical Inland
+      # QN322 (boot, reports as "PCIe SSD"), Kingston KC3000 (ZFS
+      # local-storage pool) and Samsung PM9A3 (Ceph OSD). The MS-A2 has no U.2
+      # bay, so the PM9A3 runs on an M.2-to-U.2 adapter.
+      #
+      # ⚠ The PM9A3's slot must be pinned to PCIe Gen3 in BIOS. At Gen4 the
+      # link throws ~17 correctable RxErr/sec while idle (BadTLP 0 -- signal
+      # margin, not data loss). This is a BIOS-only setting, lost on reset.
+      Storage:
+        Drives:
+          - Manufacturer: Inland
+            Model: QN322
+            Count: 1
+            Type: SSD
+            Form factor: M.2 2280
+            Interface: NVMe
+            Capacity: 2000 # GB
+            PCIe:
+              Slot:
+                Generation: 4.0
+                Lanes: 4
+              Device:
+                Generation: 3.0
+                Lanes: 4
+            NAND technology: QLC
+            Has DRAM: false
+            Has PLP: false
+            Physical locations:
+              - M.2 slot: 2
+          - Manufacturer: Kingston
+            Model: KC3000
+            Count: 1
+            Type: SSD
+            Form factor: M.2 2280
+            Interface: NVMe
+            Capacity: 2048 # GB
+            PCIe:
+              Slot:
+                Generation: 4.0
+                Lanes: 4
+              Device:
+                Generation: 4.0
+                Lanes: 4
+            NAND technology: TLC
+            Has DRAM: true
+            Has PLP: false
+            Physical locations:
+              - M.2 slot: 3
+          - Manufacturer: Samsung
+            Series: PM9A3
+            Model: MZQL21T9HCJR-00A07
+            Count: 1
+            Type: SSD
+            Form factor: U.2 7mm
+            Interface: NVMe
+            Capacity: 1920 # GB
+            PCIe:
+              Slot:
+                # Pinned down from 4.0 in BIOS -- see the note above.
+                Generation: 3.0
+                Lanes: 4
+              Device:
+                Generation: 4.0
+                Lanes: 4
+            NAND technology: TLC
+            Has DRAM: true
+            Has PLP: true
+            Physical locations:
+              - M.2 slot: 1 # via an M.2-to-U.2 adapter
+      Network:
+        Integrated:
+          - Manufacturer: Realtek
+            Model: RTL8125
+            Ports:
+              - Connector: RJ-45
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                  - 2500
+                Physical layers supported:
+                  Ethernet: true
+                Physical location:
+                  - Motherboard: 1
+                Count: 1
+          - Manufacturer: Intel
+            Model: I226-V
+            Ports:
+              - Connector: RJ-45
+                Data rates supported: # Mbps
+                  - 10
+                  - 100
+                  - 1000
+                  - 2500
+                Physical layers supported:
+                  Ethernet: true
+                Physical location:
+                  - Motherboard: 2
+                Count: 1
+          - Manufacturer: Intel
+            Model: X710
+            Ports:
+              - Connector: SFP+
+                Data rates supported: # Mbps
+                  - 100
+                  - 1000
+                  - 2500
+                  - 5000
+                  - 10000
+                Physical layers supported:
+                  Ethernet: true
+                Count: 2
+                Physical location:
+                  - Motherboard: 1
+                  - Motherboard: 2
+      # Transplanted from the MS-01. Note there is no iGPU contribution here:
+      # the Ryzen's Radeon graphics are not an Intel device, so each MS-A2
+      # publishes exactly 1 gpu.intel.com device where an MS-01 published 2.
+      GPU:
+        - Manufacturer: Intel
+          Model: Arc Pro A40
+          Count: 1
+          Clock frequency max: 1.55 # GHz
+          VRAM:
+            Size: 6 # GB
+            Type: GDDR6
+            Memory bus width: 96 # Bits
+            Bandwidth: 192 # GB/s
+          Transcoding support:
+            H.264:
+              Decode: true
+              Encode: true
+            H.265:
+              Decode: true
+              Encode: true
+            AV1:
+              Decode: true
+              Encode: true
+            VP9:
+              Decode: true
+              Encode: true
+          Display outputs:
+            - Type: Mini DisplayPort
+              Count: 4
+          PCIe:
+            Slot:
+              Generation: 4.0
+              Lanes: 8
+            Device:
+              Generation: 4.0
+              Lanes: 16
+            Height: Half-height
+          Physical location:
+            - PCIe slot: 1
+          TBP: 50 # Watts
+      Power:
+        Power supplies:
+          - Manufacturer: Minisforum
+            Model: Generic
+            Type: Brick
+            Max supply: 240 # Watts; TODO confirm against the shipped brick
+            Hot swappable: false
+            Connector: C14
+            Count: 1
+    Software:
+      # No vPro/AMT equivalent on AMD and no dedicated OOBM NIC, so these nodes
+      # have no out-of-band management at all -- 10.1.1.2 and 10.1.1.3 in
+      # docs/network.yaml are dead. kvm-01 is the only out-of-band path.
+      OOBM: null
       OS:
         Kernel: Linux
         Distribution: Talos
