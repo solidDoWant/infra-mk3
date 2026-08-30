@@ -21,7 +21,7 @@ Run through the following guides, in order:
 * [Brocade ICX 7250 setup](./setup-icx7250.md)
 * [MPR3141 setup](./setup-mpr3141.md)
 * [R730XD setup](./setup-r730xd.md)
-* [MS-01 setup](./setup-ms-01.md)
+* [MS-A2 setup](./setup-ms-a2.md)
 
 # Cluster bootstrapping
 

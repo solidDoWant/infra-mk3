@@ -93,7 +93,7 @@ Despite roughly following a tree topology, there are several uncommon design ele
 
 * I have a 56 Gbps Ethernet link between the Proxmox R730XD server and the Mellanox switch. This requires all Mellanox network hardware (NIC, cable, switch). If I remember correctly, it's achieved via a line coding scheme in the physical coding sublayer with less overhead (128b/130b maybe?), alongside hardware with a higher SNR to reduce the bit error rate.
 
-* The Brocade access switch unfortunately does not have any QSFP+ cages, but it does have 8x SFP+ cages. I'm using a squid/breakout DAC cable to establish four separate 10 Gbps links between the switches, combined in a LAG. I also have LAGs with each of the three MS-01 nodes, formed with a pair of 10 Gbps links. The MS-01 LAG uses two separate DAC cables on each node (connected, in total, to two upstream QSFP+ ports). By using LACP, this allows prevents downtime in the event that a cable fails (or, more likely, is removed accidentally).
+* The Brocade access switch unfortunately does not have any QSFP+ cages, but it does have 8x SFP+ cages. I'm using a squid/breakout DAC cable to establish four separate 10 Gbps links between the switches, combined in a LAG. I also have LAGs with each of the three MS-A2 nodes, formed with a pair of 10 Gbps links. The MS-A2 LAG uses two separate DAC cables on each node (connected, in total, to two upstream QSFP+ ports). By using LACP, this allows prevents downtime in the event that a cable fails (or, more likely, is removed accidentally).
 
 * Not diagrammed is a fiber patch panel with LC connectors. Inside/behind the panel, there are splitter cables that split fiber pairs MPO-8 type B cables to 4x LC connectors. I then run LC UPC OM3 from this patch panel to various devices throughout my home.
 
@@ -126,11 +126,11 @@ flowchart LR
 
     sx6036 <--QSFP+ breakout DAC cable to 4x SFP+ LAG @ 10Gbps/link--> icx7250
   end
-  subgraph 3x MS-01s
+  subgraph 3x MS-A2s
     direction LR
 
-    ms01_vpro[vPro-enabled 1000Base-T NIC]
-    ms01_sfp[2x SFP+ NIC]
+    msa2_mgmt[2x 2.5GBase-T NIC]
+    msa2_sfp[2x SFP+ NIC]
   end
   subgraph misc_dev["Miscellaneous devices (all 1000Base-T)"]
     direction LR
@@ -143,9 +143,9 @@ flowchart LR
 
   isp <--SC/APC OS2 fiber--> ont <--> sfp
   qsfp <--QSFP+ DAC cable @ 56Gbps--> sx6036
-  sx6036 <--2x QSFP+ breakout DAC cable to 4x SFP+ LAG @ 10Gbps/link--> ms01_sfp
+  sx6036 <--2x QSFP+ breakout DAC cable to 4x SFP+ LAG @ 10Gbps/link--> msa2_sfp
   idrac <--> icx7250
-  icx7250 <--> ms01_vpro
+  icx7250 <--> msa2_mgmt
   icx7250 <--> misc_dev
 ```
 
@@ -157,7 +157,7 @@ My physical network is subdivided into several virtual LANs (VLANs) spreading ac
 
 | ID  | Name          | Description                                                                                                       | IP address ranges                                    |
 | --- | ------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 100 | Management    | Out of band management (iDRAC, vPro) and hypervisor access (Proxmox web interface)                                | 10.1.0.0/16                                          |
+| 100 | Management    | Out of band management (iDRAC, KVM console) and hypervisor access (Proxmox web interface)                                | 10.1.0.0/16                                          |
 | 200 | Hosts         | Primary network access for machines that run workloads, used for SSH, WAN access, k8s control plane traffic, etc. | 10.2.0.0/16                                          |
 | 300 | Kubernetes    | CNI traffic between k8s pods                                                                                      | 10.3.0.0/16 (BGP), 10.32.0.0/28 (Kubernetes subnets) |
 | 400 | User devices  | End user devices (desktops, laptops, etc.)                                                                        | 10.4.0.0/16                                          |
@@ -218,11 +218,11 @@ This procedure satisfies the [3-2-1 backup rule](https://www.backblaze.com/blog/
 
 ### Compute
 
-I currently have four physical hosts. One R730XD running Proxmox, and three MS-01 running Talos. Hostnames follow the format `$OS-$PURPOSE-$NUMBER`. For the current hosts, these are:
+I currently have four physical hosts. One R730XD running Proxmox, and three MS-A2 running Talos. Hostnames follow the format `$OS-$PURPOSE-$NUMBER`. For the current hosts, these are:
 * `proxmox-vm-host-01`
 * `talos-k8s-mixed-0{1..4}` (mixed referring to the node running both the control plane, and workloads)
 
-All hosts have two network interface groups of one or more interfaces. The first one is an out of band management port (iDRAC, vPro), and the second is a trunk port for OS and application network traffic.
+All hosts have two network interface groups of one or more interfaces. The first one is connected to the management VLAN, and the second is a trunk port for OS and application network traffic. Only the VM host has true out of band management (iDRAC); the Kubernetes hosts are reached out of band via a KVM console instead.
 
 #### VM host
 
@@ -234,7 +234,7 @@ The VM host runs Proxmox as a hypervisor and uses a pair of Intel Xeon E5-2667 v
 
 #### Kubernetes hosts
 
-All three current dedicated Kubernetes hosts are identical. They are all [Minisforum MS-01](https://store.minisforum.com/products/minisforum-ms-01) small form factor PCs. Each one is equipped with an Intel i9-13900H 14 core/20 thread processor a clock rate of up to 5.4 GHz. The RAM is comprised of two 48 GB DDR5 modules at running at 5200 MT/s. All three nodes use generic M.2 NVMe drives for boot (without a mirror), and contain a Samsung 1.92TB PM9A3 enterprise U.2 SSD exclusively for Ceph. The nodes are connected with three interfaces to the network: one 1000Base-T port for vPro access, and two SFP+ cages forming a LAG.
+All three current dedicated Kubernetes hosts are identical. They are all [Minisforum MS-A2](https://store.minisforum.com/products/minisforum-ms-a2) small form factor PCs. Each one is equipped with an AMD Ryzen 9 9955HX 16 core/32 thread processor at a clock rate of up to 5.4 GHz. The RAM is comprised of two 48 GB DDR5 modules at running at 5200 MT/s. All three nodes use generic M.2 NVMe drives for boot (without a mirror), and contain a Samsung 1.92TB PM9A3 enterprise SSD exclusively for Ceph, attached via an M.2 to U.2 adapter. Each node also carries a discrete Intel Arc Pro A40 for hardware transcoding and ML inference, exposed to workloads through DRA. The nodes are connected with four interfaces to the network: two 2.5GBase-T ports on the management VLAN, and two SFP+ cages forming a LAG. There is no out of band management on these boxes, so a KVM console is used instead.
 
 ## Software architecture
 

@@ -42,7 +42,7 @@ dashboards: &dashboards
   label: "" # Remove the label, and use operator resources to load the dashboards.
 debug:
   enabled: false
-# Looks like the NIC on the ms-01 nodes does not support GRO :(
+# Looks like the X710 NICs in the Kubernetes nodes do not support GRO :(
 # enableIPv4BIGTCP: true
 # This is a tradeoff between performance (not where you'd think) and security
 # Disabled until https://github.com/cilium/cilium/issues/35667 is addressed
@@ -186,7 +186,7 @@ loadBalancer:
   # * using a LACP bond
   # * using jumbo frames
   # * using a VLAN interfaces
-  # This doesn't actually do anything on the ms-01 nodes.
+  # This doesn't actually do anything on the Kubernetes nodes.
   acceleration: best-effort
   algorithm: maglev
   mode: dsr

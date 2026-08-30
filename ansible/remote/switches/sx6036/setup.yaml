@@ -162,7 +162,7 @@
         speed: 56000
         tagged_vlans: "{{ vlans.keys() | map('int') | list }}"
 
-- name: Configure MS-01 ports
+- name: Configure Kubernetes node ports
   hosts: sx6036
   gather_facts: false
   vars:
