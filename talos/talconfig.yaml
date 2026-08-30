@@ -160,11 +160,14 @@ nodes:
             # BIOS-loaded one is newer and the kernel will not downgrade. That
             # is expected, not a failed upgrade.
             - siderolabs/amd-ucode
+            # Driver/firmware for the Ryzen's integrated Radeon graphics. The
+            # base Talos kernel ships no amdgpu module at all (there is no
+            # drivers/gpu/drm/amd directory), so without this the iGPU sits on
+            # the PCI bus with nothing bound to it.
+            - siderolabs/amdgpu
             # Firmware/driver extension for the discrete Intel Arc Pro card.
             # Without it that card does not come up and the node contributes
-            # zero gpu.intel.com devices. The Ryzen's Radeon graphics are not an
-            # Intel device, so that card is the node's only DRA GPU -- three
-            # cluster-wide, one per node.
+            # zero gpu.intel.com devices -- three cluster-wide, one per node.
             - siderolabs/i915
             # For virtualization/isolation
             - siderolabs/kata-containers
@@ -173,7 +176,7 @@ nodes:
         # TODO set the following args on the installer only (not ISO):
         # - amd_iommu=on
         # - iommu=pt
-        extraKernelArgs: &common_kernel_args
+        extraKernelArgs:
           # Make ZFS flush to disk more frequently on async writes:
           # https://vadosware.io/post/everything-ive-seen-on-optimizing-postgres-on-zfs-on-linux/#controversial-zfs_txg_timeout1--synchronous_commitoff--logbiasthroughput
           - zfs.zfs_txg_timeout=1
