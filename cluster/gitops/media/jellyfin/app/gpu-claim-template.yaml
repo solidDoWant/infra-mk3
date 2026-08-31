@@ -1,5 +1,5 @@
 ---
-# This relies on the beta resource claim API + the Intel GPU resource driver.
+# This relies on the beta resource claim API + the AMD GPU resource driver.
 apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:
@@ -10,7 +10,7 @@ spec:
       requests:
         - name: gpu
           exactly:
-            deviceClassName: gpu.intel.com
+            deviceClassName: gpu.amd.com
             selectors:
               - cel:
                   expression: device.attributes["gpu.amd.com"].deviceID == '${AMD_IGPU_PCI_DEVICE_ID}'
