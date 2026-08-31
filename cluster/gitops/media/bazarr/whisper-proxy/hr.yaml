@@ -93,9 +93,33 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
+      labels:
+        # The CTC forced-aligner runs on the GPU via OpenVINO (upstream moved it
+        # off onnxruntime in 0.0.9), so the claim is load-bearing. Cannot use the
+        # Ryzen iGPU -- OpenVINO's GPU plugin is Intel-only.
+        gpu.home.arpa/workload.compute: arc-pro
       resourceClaims:
         - name: gpu
           resourceClaimTemplateName: whisper-proxy-gpu
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchExpressions:
+                    - key: gpu.home.arpa/workload.compute
+                      operator: In
+                      values: ["arc-pro"]
+            - weight: 50
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchExpressions:
+                    - key: gpu.home.arpa/workload.transcode
+                      operator: In
+                      values: ["arc-pro"]
       dnsConfig:
         options:
           - name: ndots

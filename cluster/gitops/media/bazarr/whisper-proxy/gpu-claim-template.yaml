@@ -1,5 +1,16 @@
 ---
-# Used for subtitle alignment
+# Used for subtitle alignment. The CTC forced-aligner runs on the GPU through
+# OpenVINO (upstream moved it off onnxruntime in 0.0.9), so this claim is
+# load-bearing rather than vestigial.
+#
+# Arc Pro, shared (adminAccess), co-tenanting with immich-machine-learning:
+#
+#   * It cannot use the Ryzen iGPU -- OpenVINO's GPU plugin is Intel-only.
+#   * It previously selected 'Iris Xe', which no longer exists in the cluster,
+#     so the pod could never schedule.
+#   * adminAccess because the three Arc Pro allocation slots have no exclusive
+#     headroom, and the aligner's hold is intermittent (one model, invoked per
+#     alignment request).
 apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:
@@ -11,6 +22,7 @@ spec:
         - name: gpu
           exactly:
             deviceClassName: gpu.intel.com
+            adminAccess: true
             selectors:
               - cel:
-                  expression: device.attributes["gpu.intel.com"].family == 'Iris Xe'
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro A-Series'

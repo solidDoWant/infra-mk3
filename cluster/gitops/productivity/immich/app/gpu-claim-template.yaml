@@ -1,15 +1,17 @@
 ---
 # Intel GPU for the immich machine-learning pods (OpenVINO inference), via DRA.
 #
-# Exclusive claim on an Arc Pro (A40/A50, 6GB dedicated VRAM). The only other
-# exclusive Arc Pro consumer is openarc-subtitles (a single fixed replica), so two
-# of the three Arc Pro dGPUs are always free for the two ML replicas — each gets a
-# dedicated GPU that always schedules. media-processor / Coder use adminAccess
-# (shared) and never block an exclusive claim.
+# Shared (adminAccess) claim on an Arc Pro (A40/A50, 6 GiB VRAM).
 #
-# Arc Pro is chosen over the Iris Xe iGPUs for performance and to avoid sharing
-# compute; the model set only needs ~1-2GB of the 6GB. Because there is one Arc Pro
-# per node, the two replicas naturally land on different nodes (good spread / HA).
+# Measured footprint: 0 at idle, 0.96 GiB with CLIP + facial recognition loaded,
+# 1.24 GiB peak with OCR as well. Models unload after the default 300s
+# MACHINE_LEARNING_MODEL_TTL, so the hold is bursty rather than continuous --
+# this is a cheap co-tenant and does not need a dedicated card.
+#
+# adminAccess also means the two replicas no longer consume two of the three
+# allocation slots, which previously left no exclusive headroom for anything
+# else. Spreading the replicas across nodes is now the job of the pod
+# anti-affinity in hr.yaml rather than a side effect of exclusivity.
 apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:
@@ -21,6 +23,7 @@ spec:
         - name: gpu
           exactly:
             deviceClassName: gpu.intel.com
+            adminAccess: true
             selectors:
               - cel:
                   expression: device.attributes["gpu.intel.com"].family == 'Arc Pro A-Series'
@@ -28,10 +31,12 @@ spec:
 # Intel GPU for the immich microservices worker's video transcoding (ffmpeg
 # QSV/VAAPI), via DRA.
 #
-# adminAccess (shared) — the cluster convention for transcode workloads. Targets
-# the Iris Xe iGPUs because they are the least-scheduled GPU type by adminAccess
-# claims (the Arc Pros carry ML, Coder, and media-processor transcode). Requires
+# adminAccess (shared) — the cluster convention for transcode workloads. Requires
 # the namespace label resource.kubernetes.io/admin-access: "true".
+#
+# Targets Arc Pro. This previously selected the Iris Xe iGPUs on the grounds that
+# they were the least-contended GPU type; that hardware no longer exists in the
+# cluster, so the claim was unsatisfiable and the pod could not schedule.
 apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:
@@ -47,4 +52,4 @@ spec:
             allocationMode: All
             selectors:
               - cel:
-                  expression: device.attributes["gpu.intel.com"].family == 'Iris Xe'
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro A-Series'

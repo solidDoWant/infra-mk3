@@ -265,7 +265,9 @@ spec:
           serviceAccount:
             identifier: media-processor
           pod:
-            labels: *worker_pod_labels
+            labels:
+              <<: *worker_pod_labels
+              gpu.home.arpa/workload.transcode: arc-pro
             resourceClaims:
               - name: gpu
                 resourceClaimTemplateName: media-processor-transcode-gpu
@@ -282,6 +284,27 @@ spec:
                       matchLabels:
                         app.kubernetes.io/name: media-processor
                         app.kubernetes.io/controller: transcode
+                # Best-effort on top of the hard one-per-node rule above: prefer
+                # nodes without other GPU consumers. These workers genuinely
+                # saturate the video engines while running, so keeping them off
+                # jellyfin's card matters for playback latency.
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  - weight: 100
+                    podAffinityTerm:
+                      topologyKey: kubernetes.io/hostname
+                      labelSelector:
+                        matchExpressions:
+                          - key: gpu.home.arpa/workload.transcode
+                            operator: In
+                            values: ["arc-pro"]
+                  - weight: 50
+                    podAffinityTerm:
+                      topologyKey: kubernetes.io/hostname
+                      labelSelector:
+                        matchExpressions:
+                          - key: gpu.home.arpa/workload.compute
+                            operator: In
+                            values: ["arc-pro"]
           initContainers:
             tbot:
               <<: *tbot_container

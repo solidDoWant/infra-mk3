@@ -188,9 +188,30 @@ spec:
         # Settings -> Video Transcoding -> Hardware Acceleration to QSV in the
         # Immich admin UI to actually use it.
         pod:
+          labels:
+            gpu.home.arpa/workload.transcode: arc-pro
           resourceClaims:
             - name: gpu
               resourceClaimTemplateName: immich-microservices-transcode-gpu
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.transcode
+                          operator: In
+                          values: ["arc-pro"]
+                - weight: 50
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.compute
+                          operator: In
+                          values: ["arc-pro"]
 
       # ---- Machine learning (OpenVINO on Intel Arc Pro GPU) ----
       machine-learning:
@@ -199,9 +220,34 @@ spec:
         podDisruptionBudget:
           minAvailable: 1
         pod:
+          labels:
+            gpu.home.arpa/workload.compute: arc-pro
           resourceClaims:
             - name: gpu
               resourceClaimTemplateName: immich-machine-learning-gpu
+          affinity:
+            podAntiAffinity:
+              # Also spreads the two replicas from each other, since both carry
+              # this label. Measured VRAM at idle is 0 (models load on demand),
+              # so co-tenancy is cheap when it happens -- hence preferred, not
+              # required.
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.compute
+                          operator: In
+                          values: ["arc-pro"]
+                - weight: 50
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.transcode
+                          operator: In
+                          values: ["arc-pro"]
         containers:
           main:
             image:

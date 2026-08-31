@@ -76,9 +76,36 @@ spec:
         pod:
           labels:
             endpoints.netpols.home.arpa/oidc-querier: "true"
+            gpu.home.arpa/workload.transcode: iris-xe
           resourceClaims:
             - name: gpu
               resourceClaimTemplateName: jellyfin-gpu
+          affinity:
+            podAntiAffinity:
+              # Best-effort spread away from other GPU consumers. Jellyfin is a
+              # real-time workload: a stalled transcode is a stalled playback,
+              # so it wants to land on the least-contended card. Preferred (not
+              # required) so playback still starts when every node is busy.
+              preferredDuringSchedulingIgnoredDuringExecution:
+                # Transcode-vs-transcode is the contention that actually hurts
+                # here -- media-processor-transcode saturates the video engines
+                # when it runs.
+                - weight: 100
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.transcode
+                          operator: In
+                          values: ["iris-xe"]
+                - weight: 50
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.compute
+                          operator: In
+                          values: ["iris-xe"]
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000

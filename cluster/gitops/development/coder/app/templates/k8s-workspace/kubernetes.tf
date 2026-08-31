@@ -267,6 +267,15 @@ locals {
   enable_nfs       = data.coder_parameter.enable_nfs.value == "true"
   gpu_admin_access = data.coder_parameter.gpu_admin_access.value == "true"
   gpu_cel_selector = data.coder_parameter.gpu_type.value == "arc-pro" ? "device.attributes[\"gpu.intel.com\"].family == 'Arc Pro A-Series'" : "device.attributes[\"gpu.intel.com\"].family == 'Iris Xe'"
+
+  # A workspace is general-purpose, so a GPU-enabled one is assumed to do both
+  # transcode and compute. The value is the GPU type, so anti-affinity only
+  # repels workloads sharing the same physical device. See
+  # "docs/labels and annotations.md".
+  gpu_workload_labels = local.enable_gpu ? {
+    "gpu.home.arpa/workload.transcode" = data.coder_parameter.gpu_type.value
+    "gpu.home.arpa/workload.compute"   = data.coder_parameter.gpu_type.value
+  } : {}
 }
 
 provider "kubectl" {
@@ -329,8 +338,11 @@ resource "kubectl_manifest" "deployment" {
         type = "Recreate"
       }
       template = {
+        # GPU labels go on the pod template only, never on `selector` above --
+        # a Deployment selector is immutable, and toggling the GPU parameter on
+        # an existing workspace would otherwise be an unappliable change.
         metadata = {
-          labels      = local.labels
+          labels      = merge(local.labels, local.gpu_workload_labels)
           annotations = local.annotations
         }
         spec = merge(
@@ -425,19 +437,41 @@ resource "kubectl_manifest" "deployment" {
             affinity = {
               # This affinity attempts to spread out all workspace pods evenly across nodes.
               podAntiAffinity = {
-                preferredDuringSchedulingIgnoredDuringExecution = [{
-                  weight = 1
-                  podAffinityTerm = {
-                    topologyKey = "kubernetes.io/hostname"
-                    labelSelector = {
-                      matchExpressions = [{
-                        key      = "app.kubernetes.io/name"
-                        operator = "In"
-                        values   = ["coder-workspace"]
-                      }]
+                preferredDuringSchedulingIgnoredDuringExecution = concat(
+                  [{
+                    weight = 1
+                    podAffinityTerm = {
+                      topologyKey = "kubernetes.io/hostname"
+                      labelSelector = {
+                        matchExpressions = [{
+                          key      = "app.kubernetes.io/name"
+                          operator = "In"
+                          values   = ["coder-workspace"]
+                        }]
+                      }
                     }
-                  }
-                }]
+                  }],
+                  # When a GPU is attached, also prefer to sit away from the
+                  # cluster's other GPU consumers. Weighted far above the
+                  # workspace-spread term, which only breaks ties.
+                  local.enable_gpu ? [
+                    for label in ["gpu.home.arpa/workload.compute", "gpu.home.arpa/workload.transcode"] : {
+                      weight = 100
+                      podAffinityTerm = {
+                        topologyKey = "kubernetes.io/hostname"
+                        labelSelector = {
+                          matchExpressions = [{
+                            key      = label
+                            operator = "In"
+                            # Same GPU type only -- a workspace on the Arc Pro
+                            # does not contend with a workload on the iGPU.
+                            values = [data.coder_parameter.gpu_type.value]
+                          }]
+                        }
+                      }
+                    }
+                  ] : []
+                )
               }
             }
           },

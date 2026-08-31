@@ -1,9 +1,16 @@
 ---
-# Exclusive claim — openarc holds VRAM continuously, unlike
-# media-processor/fileflows which use adminAccess to ride along.
-# Two consumers (runtime Deployment + pre-upgrade setup Job) each
-# allocate their own claim; the cluster has 3 Arc Pro nodes so both
-# can be exclusive without contention.
+# Exclusive claim on an Arc Pro for the long-running server.
+#
+# openarc is the heaviest VRAM consumer in the cluster -- measured at 3.78 GiB of
+# the 6 GiB card, models resident continuously rather than loaded per request --
+# so it gets a card to itself. Every other Arc Pro consumer is adminAccess, which
+# leaves 2 of the 3 allocation slots free.
+#
+# ⚠ Exclusivity reserves a DRA allocation slot; it does NOT fence VRAM.
+# adminAccess claimants (media-processor-transcode, immich, whisper-proxy) attach
+# to this device regardless of this field, and nothing in Kubernetes tracks VRAM.
+# Keeping other large consumers off this card is the job of the pod anti-affinity
+# in hr.yaml.
 apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:
@@ -15,6 +22,36 @@ spec:
         - name: gpu
           exactly:
             deviceClassName: gpu.intel.com
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].family == 'Arc Pro A-Series'
+---
+# Separate claim for the pre-upgrade setup Job, which compiles models into the
+# shared OpenVINO cache PVC and exits. adminAccess, deliberately:
+#
+# The Job runs while the old runtime pod is still up and holding its exclusive
+# claim, so an exclusive claim here would need a SECOND free device at exactly
+# the moment the cluster is busiest. When immich-machine-learning also held
+# exclusive claims this could never schedule, and the HelmRelease upgrade timed
+# out waiting on it. adminAccess removes that failure mode permanently rather
+# than relying on there happening to be a spare card.
+#
+# The VRAM concern is real -- the Job loads the same ~3.8 GiB model set the
+# runtime already has resident, and two of those will not fit in 6 GiB. That is
+# handled by the anti-affinity in hr.yaml, which pushes the Job onto a different
+# node. It is best-effort, so a same-node placement is possible under pressure.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: openarc-subtitles-setup-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.intel.com
+            adminAccess: true
             selectors:
               - cel:
                   expression: device.attributes["gpu.intel.com"].family == 'Arc Pro A-Series'

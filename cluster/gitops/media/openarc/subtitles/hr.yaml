@@ -134,10 +134,50 @@ spec:
         pod:
           # A single failure is unlikely to succeed on another attempt.
           restartPolicy: Never
+          labels: &gpu_labels
+            gpu.home.arpa/workload.compute: arc-pro
+          # adminAccess, unlike the runtime Deployment -- see the note on
+          # openarc-subtitles-setup-gpu in gpu-claim-template.yaml.
+          resourceClaims:
+            - name: gpu
+              resourceClaimTemplateName: openarc-subtitles-setup-gpu
+          affinity: &gpu_affinity
+            podAntiAffinity:
+              # Best-effort only. The Job must still be able to schedule
+              # somewhere if every node already hosts a GPU workload;
+              # `required` here would reintroduce the upgrade deadlock.
+              preferredDuringSchedulingIgnoredDuringExecution:
+                # Keep compute workloads off one another -- they hold VRAM
+                # concurrently, and this Job loads the same ~3.8 GiB set the
+                # runtime pod already has resident.
+                - weight: 100
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.compute
+                          operator: In
+                          values: ["arc-pro"]
+                # Weaker: also prefer to sit away from transcode workloads,
+                # which contend for the render/video engines rather than VRAM.
+                - weight: 50
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchExpressions:
+                        - key: gpu.home.arpa/workload.transcode
+                          operator: In
+                          values: ["arc-pro"]
       openarc-subtitles:
         replicas: 1
         # Release the GPU device cleanly between revisions.
         strategy: Recreate
+        pod:
+          labels: *gpu_labels
+          resourceClaims:
+            - name: gpu
+              resourceClaimTemplateName: openarc-subtitles-gpu
+          affinity: *gpu_affinity
         containers:
           openarc:
             image: *image
@@ -200,9 +240,9 @@ spec:
         options:
           - name: ndots
             value: "1"
-      resourceClaims:
-        - name: gpu
-          resourceClaimTemplateName: openarc-subtitles-gpu
+      # `resourceClaims` is deliberately NOT set here. The runtime Deployment
+      # and the pre-upgrade setup Job use different claim templates (exclusive
+      # vs adminAccess), so each controller declares its own.
     persistence:
       # RWX so the pre-upgrade setup Job and the still-Running runtime
       # Deployment can both mount during an upgrade.
