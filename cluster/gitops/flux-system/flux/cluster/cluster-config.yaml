@@ -5,6 +5,12 @@ metadata:
   name: cluster-config
   namespace: flux-system
 data:
+  # PCI device ID of the Radeon 610M iGPU in the MS-A2 nodes (gfx1036). DRA
+  # claim selectors have to key on this: the AMD DRA driver reads productName
+  # from /sys/class/drm/card*/device/product_name, which the amdgpu driver only
+  # populates for datacenter cards, so on these nodes the attribute is an empty
+  # string and there is nothing human-readable to match on.
+  AMD_IGPU_PCI_DEVICE_ID: "0x13c0"
   LOCAL_ZFS_POOL_NAME: local-storage
   VICTORIA_METRICS_LICENSE_SERVICE_IP: 10.33.0.20
   NFS_ADDRESS: 10.2.3.1

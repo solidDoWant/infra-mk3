@@ -13,4 +13,4 @@ spec:
             deviceClassName: gpu.intel.com
             selectors:
               - cel:
-                  expression: device.attributes["gpu.intel.com"].family == 'Iris Xe'
+                  expression: device.attributes["gpu.amd.com"].deviceID == '${AMD_IGPU_PCI_DEVICE_ID}'

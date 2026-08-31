@@ -1,0 +1,11 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/helmrepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: rocm-charts
+  namespace: flux-system # Needed for https://kubesearch.dev/ indexing
+spec:
+  # Unlike the Intel resource drivers, ROCm publishes no OCI chart -- this is a
+  # plain gh-pages Helm repo.
+  url: https://rocm.github.io/k8s-gpu-dra-driver
