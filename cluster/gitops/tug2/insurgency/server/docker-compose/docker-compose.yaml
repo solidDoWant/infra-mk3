@@ -39,7 +39,7 @@ services:
   # Additional servers should be added here
   # The k8s service config and internet gateway's firewall will need to be updated as well
   envoy:
-    image: envoyproxy/envoy:contrib-v1.35.3
+    image: envoyproxy/envoy:contrib-v1.39.1
     volumes:
       # Mount TLS certs for Postgres connections
       - /mnt/postgres:/mnt/postgres:ro

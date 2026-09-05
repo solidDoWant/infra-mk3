@@ -1,31 +1,36 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
   outputs =
     {
-      self,
       nixpkgs,
-      nixos-generators,
       ...
     }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+
+      # The KubeVirt image format lives in nixpkgs itself (it was upstreamed as
+      # of NixOS 25.05, which is what nix-community/nixos-generators wrapped and
+      # is now deprecated in favor of). The module defines the
+      # `system.build.kubevirtImage` output and the `image.*` options naming the
+      # qcow2 it writes into that output directory.
+      nixosSystem = nixpkgs.lib.nixosSystem {
+        modules = [
+          (
+            { modulesPath, ... }:
+            {
+              imports = [ "${modulesPath}/virtualisation/kubevirt.nix" ];
+            }
+          )
+          ./configuration.nix
+        ];
+      };
     in
     {
-      packages.x86_64-linux = {
-        kubevirt-qcow2 = nixos-generators.nixosGenerate {
-          inherit system;
-          modules = [
-            ./configuration.nix
-          ];
-          format = "kubevirt";
-        };
+      packages.${system} = {
+        kubevirt-qcow2 = nixosSystem.config.system.build.kubevirtImage;
 
         # This is really really stupid, but the `dockerTools.buildImage` function
         # does not have a way to break the linkage between a build output and it's
@@ -37,7 +42,7 @@
         kubevirt-container = pkgs.runCommand "insurgency-server-image.tar" { } ''
           # Create layer directory and copy the actual file
           mkdir -p layer/disk
-          cp "${self.packages.x86_64-linux.kubevirt-qcow2}"/*.qcow2 layer/disk/insurgency-server.qcow2
+          cp "${nixosSystem.config.system.build.kubevirtImage}/${nixosSystem.config.image.filePath}" layer/disk/insurgency-server.qcow2
 
           # Create layer tarball
           tar -C layer -cf layer.tar .
