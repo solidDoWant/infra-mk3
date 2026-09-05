@@ -48,7 +48,7 @@ spec:
               # is in stock Envoy; we don't need the contrib build (which Harbor
               # uses only for the postgres protocol filter).
               repository: envoyproxy/envoy
-              tag: distroless-v1.35.3
+              tag: distroless-v1.39.1
             args:
               - -c
               - /etc/envoy/envoy.yaml

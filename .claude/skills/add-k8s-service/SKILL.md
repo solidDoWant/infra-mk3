@@ -113,7 +113,7 @@ The cluster does not use Istio for pod-to-pod mTLS — only cert-manager and exp
 For each backend that supports TLS:
 - Check whether the application natively supports TLS client certificates. If the app accepts a full DSN/connection URL, check whether the underlying driver supports TLS params in the DSN — Go (pgx/lib/pq), libpq, Npgsql, JDBC and most drivers do, even when not explicitly documented. This is the most common case and should be verified before concluding Envoy is needed.
 - If yes (native TLS): use cert-manager client certs, mount as volumes, configure via the app's native mechanism
-- If no: use an Envoy proxy sidecar (image: `envoyproxy/envoy:contrib-v1.35.3` or latest). The app connects to `127.0.0.1:<port>` unencrypted; Envoy proxies to the real backend over mTLS. See `references/operators.md` for the full pattern and `references/envoy-sidecar-pg.yaml` for a reusable Envoy config template. Reference implementation: `cluster/gitops/development/harbor/app/`
+- If no: use an Envoy proxy sidecar (image: `envoyproxy/envoy:contrib-v1.39.1` or latest). The app connects to `127.0.0.1:<port>` unencrypted; Envoy proxies to the real backend over mTLS. See `references/operators.md` for the full pattern and `references/envoy-sidecar-pg.yaml` for a reusable Envoy config template. Reference implementation: `cluster/gitops/development/harbor/app/`
 
 Note: Redis/Dragonfly mTLS via Envoy is currently broken upstream (envoyproxy/envoy#41659). Flag this if Dragonfly is needed with an app that doesn't support native TLS.
 

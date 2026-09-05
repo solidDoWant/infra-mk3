@@ -61,7 +61,7 @@ controllers:
       envoy:
         image:
           repository: envoyproxy/envoy
-          tag: contrib-v1.35.3      # Always pin; use latest available
+          tag: contrib-v1.39.1      # Always pin; use latest available
         ports:
           - name: envoy-admin
             containerPort: 8000

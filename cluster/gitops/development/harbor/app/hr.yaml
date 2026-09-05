@@ -89,7 +89,7 @@ spec:
         - &envoy_sidecar
           name: envoy
           # Contrib image is required because the postgres filter extension is only in the contrib build
-          image: envoyproxy/envoy:contrib-v1.35.3
+          image: envoyproxy/envoy:contrib-v1.39.1
           ports:
             - name: envoy-admin
               containerPort: 8000
@@ -397,7 +397,7 @@ spec:
                 value:
                   - name: envoy
                     # Contrib image is required because the postgres filter extension is only in the contrib build
-                    image: envoyproxy/envoy:contrib-v1.35.3
+                    image: envoyproxy/envoy:contrib-v1.39.1
                     ports:
                       - name: envoy-admin
                         containerPort: 8000
