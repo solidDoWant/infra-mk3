@@ -13,7 +13,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: teleport-charts
-      version: 18.8.2
+      version: 18.11.0
   values:
     roles: db,app
     proxyAddr: teleport-cluster.security.svc.cluster.local:443

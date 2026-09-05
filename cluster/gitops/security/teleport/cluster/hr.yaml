@@ -7,6 +7,17 @@ metadata:
   name: teleport-cluster
 spec:
   interval: 5m
+  # This release rolls two auth replicas, two proxy replicas (see the replica
+  # postRenderer below) and the operator, under `requireAntiAffinity: true`, and
+  # the chart deliberately waits for the old proxy to stop answering before
+  # starting the new one. That readiness walk can exceed Helm's 5m default, which
+  # fails the upgrade even though the apply itself succeeded. Combined with
+  # `upgrade.remediation.strategy: rollback` from the repo-wide HelmRelease
+  # defaults, the rollback then re-rolls the same pods and overruns identically
+  # -- an oscillation that cannot converge. `retries` does NOT bound it, because
+  # a generation bump resets the count. `spec.timeout` is the only lever; the
+  # rollback strategy itself cannot be overridden per-HR (the meta-patch wins).
+  timeout: 20m
   chart:
     spec:
       chart: teleport-cluster
@@ -14,7 +25,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: teleport-charts
-      version: 18.8.2
+      version: 18.11.0
   valuesFrom:
     # S3 URL
     - kind: ConfigMap
