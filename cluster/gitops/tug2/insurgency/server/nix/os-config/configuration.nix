@@ -88,9 +88,10 @@ in
       ];
     };
 
-    # Mount the test server's Postgres TLS secrets into the VM
+    # Mount the test server's Postgres TLS secrets into the VM.
+    # `device` is the virtiofs tag from vm-pool.yaml, which QEMU caps at 36 bytes.
     "/mnt/postgres-test" = {
-      device = "insurgency-postgres-insurgency-test-user";
+      device = "postgres-test";
       fsType = "virtiofs";
       options = [
         "ro"

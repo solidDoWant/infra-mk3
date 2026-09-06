@@ -41,7 +41,9 @@ spec:
                   virtiofs: {}
                 - name: insurgency-postgres-insurgency-user
                   virtiofs: {}
-                - name: insurgency-postgres-insurgency-test-user
+                # NOTE: this name becomes the virtiofs tag, which QEMU caps at 36 bytes.
+                # Do not name it after the secret -- that is 40 bytes and the VM will not boot.
+                - name: postgres-test
                   virtiofs: {}
                 - name: discord-webhook
                   virtiofs: {}
@@ -76,7 +78,7 @@ spec:
             - name: insurgency-postgres-insurgency-user
               secret:
                 secretName: insurgency-postgres-insurgency-user
-            - name: insurgency-postgres-insurgency-test-user
+            - name: postgres-test
               secret:
                 secretName: insurgency-postgres-insurgency-test-user
             - name: discord-webhook
