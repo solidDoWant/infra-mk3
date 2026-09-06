@@ -116,6 +116,7 @@ specs:
               - port: "23"
                 protocol: TCP
       # Game server traffic
+      # TCP/27000 is RCON, not game traffic, and isn't published by the service. Not copied below.
       - fromEntities:
           - world
         toPorts:
@@ -123,6 +124,9 @@ specs:
               - port: "27000"
                 protocol: TCP
               - port: "27000"
+                protocol: UDP
+              # tug2-insurgency-test
+              - port: "27001"
                 protocol: UDP
       # Local network for administrative access to game server
       - fromCIDRSet:

@@ -41,6 +41,8 @@ spec:
                   virtiofs: {}
                 - name: insurgency-postgres-insurgency-user
                   virtiofs: {}
+                - name: insurgency-postgres-insurgency-test-user
+                  virtiofs: {}
                 - name: discord-webhook
                   virtiofs: {}
               disks:
@@ -74,6 +76,9 @@ spec:
             - name: insurgency-postgres-insurgency-user
               secret:
                 secretName: insurgency-postgres-insurgency-user
+            - name: insurgency-postgres-insurgency-test-user
+              secret:
+                secretName: insurgency-postgres-insurgency-test-user
             - name: discord-webhook
               secret:
                 secretName: insurgency-server-discord-webhook

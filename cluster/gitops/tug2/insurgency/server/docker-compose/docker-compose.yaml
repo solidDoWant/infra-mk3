@@ -6,53 +6,75 @@ networks:
     driver: bridge
     enable_ipv4: true
     enable_ipv6: false
+# Shared config for every game server. Per-server settings are set on the services below.
+x-insurgency-server: &insurgency-server
+  pull_policy: always
+  depends_on:
+    - envoy
+  networks:
+    - insurgency-net
+  deploy:
+    update_config:
+      failure_action: rollback
+    restart_policy:
+      condition: any
+      delay: 10s
+    resources:
+      limits:
+        memory: 4G
+      reservations:
+        memory: 4G
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
 services:
+  # The 4 vCPUs are backed by only 3 physical host cores, so without cpusets the guest can schedule
+  # both simulation threads onto one core. Mapping is verified per-VM-placement, not permanent --
+  # see docs/insurgency-second-server.md. A `cpus` reservation is omitted on purpose: compose
+  # applies it as a CFS quota, which throttles the simulation thread.
   tug2-insurgency-main:
-    depends_on:
-      - envoy
+    <<: *insurgency-server
     image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.108
-    pull_policy: always
     environment:
       - PORT=27000
       - RCON_PASSWORD=${SECRET_RCON_PASSWORD}
     ports:
       - "27000:27000" # RCON
       - "27000:27000/udp" # Game traffic
-    networks:
-      - insurgency-net
-    deploy:
-      update_config:
-        failure_action: rollback
-      restart_policy:
-        condition: any
-        delay: 10s
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 4G
-          cpus: "1.0"
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    cpuset: "0,3"
   # Additional servers should be added here
   # The k8s service config and internet gateway's firewall will need to be updated as well
+  # Reaches Postgres on envoy's 5433 listener, which authenticates as the insurgency-test
+  # role and therefore lands in the insurgency-test schema.
+  tug2-insurgency-test:
+    <<: *insurgency-server
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test:0.0.2-dev
+    environment:
+      - PORT=27001
+      - RCON_PASSWORD=${SECRET_RCON_PASSWORD}
+    ports:
+      - "27001:27001" # RCON
+      - "27001:27001/udp" # Game traffic
+    cpuset: "1,2"
   envoy:
     image: envoyproxy/envoy:contrib-v1.39.1
     volumes:
       # Mount TLS certs for Postgres connections
       - /mnt/postgres:/mnt/postgres:ro
+      - /mnt/postgres-test:/mnt/postgres-test:ro
       - /mnt/root-ca:/mnt/root-ca:ro
       # Mount the Discord webhook secret
       - /mnt/discord-webhook:/mnt/discord-webhook:ro
       # Mount the Envoy config files
       - /mnt/docker-compose/envoy-config.yaml:/etc/envoy/envoy.yaml:ro
       - /mnt/docker-compose/postgres-client-cert-sds.yaml:/etc/envoy/postgres-client-cert-sds.yaml:ro
+      - /mnt/docker-compose/postgres-test-client-cert-sds.yaml:/etc/envoy/postgres-test-client-cert-sds.yaml:ro
       - /mnt/docker-compose/postgres-validation-context-sds.yaml:/etc/envoy/postgres-validation-context-sds.yaml:ro
     ports:
       - "8000:8000" # Admin interface
-      - "5432:5432" # Postgres listener
+      - "5432:5432" # Postgres listener (insurgency role)
+      - "5433:5433" # Postgres listener (insurgency-test role)
       - "80:80" # Discord webhook proxy
     networks:
       - insurgency-net

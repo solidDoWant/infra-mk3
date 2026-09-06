@@ -1,0 +1,13 @@
+---
+# SDS configuration for the test server's Postgres client certificate
+# Envoy will watch /mnt/postgres-test for changes and automatically reload
+resources:
+  - "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: postgres_test_client_cert
+    tls_certificate:
+      certificate_chain:
+        filename: /mnt/postgres-test/tls.crt
+      private_key:
+        filename: /mnt/postgres-test/tls.key
+      watched_directory:
+        path: /mnt/postgres-test

@@ -38,6 +38,19 @@ spec:
         # Set this to a long time due to https://github.com/envoyproxy/envoy/issues/41850 making envoy not auto-reload
         duration: 8760h # 1 year
         renewBefore: 4380h # 6 months
+      # Test game server. Gets its own schema in each of the existing databases, holding an
+      # independent copy of that database's tables. The schema is named after this role, so
+      # the default search_path resolves to it with no client-side configuration. The role has
+      # no grants on anything `insurgency` owns in public, and no CREATE on public, so it
+      # cannot write there. See docs/insurgency-second-server.md.
+      insurgency-test:
+        username: insurgency-test
+        disableReloading: true
+        # Same rationale as the `insurgency` user above (envoy does not auto-reload).
+        duration: 8760h # 1 year
+        renewBefore: 4380h # 6 months
+        role:
+          comment: Test game server
       # Read-only consumer (stats-api)
       stats-api:
         username: stats-api

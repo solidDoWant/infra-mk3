@@ -8,3 +8,8 @@ spec:
   owner: insurgency
   cluster:
     name: insurgency-postgres
+  schemas:
+    # The test server's copy of this database, independent of public in both content and
+    # structure. Starts empty. See docs/insurgency-second-server.md.
+    - name: insurgency-test
+      owner: insurgency-test

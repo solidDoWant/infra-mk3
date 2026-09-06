@@ -88,6 +88,16 @@ in
       ];
     };
 
+    # Mount the test server's Postgres TLS secrets into the VM
+    "/mnt/postgres-test" = {
+      device = "insurgency-postgres-insurgency-test-user";
+      fsType = "virtiofs";
+      options = [
+        "ro"
+        "nofail"
+      ];
+    };
+
     # Mount the Discord webhook secret into the VM
     "/mnt/discord-webhook" = {
       device = "discord-webhook";

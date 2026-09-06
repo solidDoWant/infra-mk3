@@ -7,6 +7,7 @@ configMapGenerator:
       - ./docker-compose.yaml
       - ./envoy-config.yaml
       - ./postgres-client-cert-sds.yaml
+      - ./postgres-test-client-cert-sds.yaml
       - ./postgres-validation-context-sds.yaml
     options:
       disableNameSuffixHash: true
