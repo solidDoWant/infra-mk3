@@ -10,3 +10,26 @@ spec:
   additionalConfig:
     maxObjects: "10000"
     maxSize: 256G
+    # The registry leaks S3 multipart uploads: when a layer push dies mid-stream
+    # (client abort, 500, quota rejection) the driver never calls
+    # AbortMultipartUpload, and the orphaned parts are invisible to ListObjects
+    # -- so the registry's own `maintenance.uploadpurging` walk cannot see them,
+    # even though it does delete the matching `_uploads/<uuid>/` scratch files.
+    # They still count against `num_objects`, so they accumulate until they fill
+    # maxObjects above, at which point pushes fail with QuotaExceeded and leak
+    # more parts on every retry. As of 2026-09-06 that had reached 8,499 orphaned
+    # parts / 91G against ~1,700 real objects. This rule is the only thing that
+    # reaps them.
+    bucketLifecycle: |
+      {
+        "Rules": [
+          {
+            "ID": "AbortIncompleteMultipartUploads",
+            "Status": "Enabled",
+            "Prefix": "",
+            "AbortIncompleteMultipartUpload": {
+              "DaysAfterInitiation": 1
+            }
+          }
+        ]
+      }
