@@ -388,7 +388,7 @@ spec:
             # working set 294Mi across both instances.
             resources:
               limits:
-                memory: &rgw_memory 512Mi
+                memory: &rgw_memory 1Gi
               requests:
                 cpu: 25m
                 memory: *rgw_memory
