@@ -49,7 +49,7 @@ services:
   # role and therefore lands in the insurgency-test schema.
   tug2-insurgency-test:
     <<: *insurgency-server
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test:0.0.5.dev
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test:0.0.5-dev
     environment:
       - PORT=27001
       - RCON_PASSWORD=${SECRET_RCON_PASSWORD}
