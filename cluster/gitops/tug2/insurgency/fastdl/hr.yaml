@@ -128,7 +128,13 @@ spec:
       envoy-config:
         type: configMap
         name: insurgency-fastdl-envoy-config
-        defaultMode: 0440
+        # 0444, not the 0440 the other Envoy sidecars in this repo use: those pods set an
+        # fsGroup, which is what makes a group-readable mount readable by a non-root uid.
+        # This pod deliberately has no fsGroup (nothing here needs one -- the only other
+        # volume is a read-only ImageVolume), so a 0440 root:root file is unreadable to
+        # uid 65532 and Envoy exits with "unable to read file: /etc/envoy/envoy.yaml".
+        # The config is a non-secret ConfigMap tracked in git, so world-readable is fine.
+        defaultMode: 0444
         advancedMounts:
           insurgency-fastdl:
             envoy:
