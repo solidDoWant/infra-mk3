@@ -1,0 +1,216 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: insurgency-fastdl
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      insurgency-fastdl:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        strategy: RollingUpdate
+        containers:
+          envoy:
+            # Same image and tag the game-server VM's compose file runs, so there is one
+            # Envoy version to reason about across the whole Insurgency deployment. The
+            # contrib build is not strictly required here (file_server is a core
+            # extension) but keeping the tags identical is worth more than the size
+            # difference.
+            image:
+              repository: docker.io/envoyproxy/envoy
+              tag: contrib-v1.39.1
+            args:
+              - --config-path
+              - /etc/envoy/envoy.yaml
+              # Two workers is plenty: requests are small static file reads, the reads
+              # themselves happen on the file server's own thread pool, and Cloudflare
+              # absorbs the repeat traffic.
+              - --concurrency
+              - "2"
+              - --service-cluster
+              - insurgency-fastdl
+            ports:
+              - name: web
+                containerPort: &web_port 8080
+              - name: metrics
+                containerPort: &metrics_port 9090
+            probes:
+              # Envoy's admin /ready, reached through the observability listener (the
+              # admin interface itself is bound to loopback). 200 "LIVE" once the
+              # listeners have initialized, so this reflects the process rather than a
+              # hardcoded 200. Custom specs because both probes target the secondary
+              # port, not the primary one.
+              readiness:
+                enabled: true
+                custom: true
+                spec: &ready_probe
+                  httpGet:
+                    path: /ready
+                    port: *metrics_port
+                  initialDelaySeconds: 0
+                  periodSeconds: 10
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              liveness:
+                enabled: true
+                custom: true
+                spec: *ready_probe
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              privileged: false
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 25m
+                memory: &memory 128Mi
+              limits:
+                memory: *memory
+        pod:
+          annotations:
+            # k8tz's injected timezone mounts break container creation under the
+            # kata-containers runtime -- it mounts one emptyDir at both
+            # /usr/share/zoneinfo and /etc/localtime (the file mount's source nested
+            # inside the directory mount's source) and kata-agent fails that with
+            # "failed to create shim task: File exists (os error 17)". It is
+            # image-dependent and the Envoy image is Ubuntu-based, which is the failing
+            # family (this is what kept docker-postfix down for 8 days). Envoy needs no
+            # local timezone -- it logs in UTC -- so there is nothing to replace it with.
+            k8tz.io/inject: "false"
+          labels:
+            endpoints.netpols.home.arpa/external-ingress-enabled: "true"
+          # Harbor project tug2 is private, and an ImageVolume pull uses the pod's
+          # imagePullSecrets exactly like a container image pull.
+          # tug2-pull-credentials-dockerconfig is the kubernetes.io/dockerconfigjson
+          # secret the Kyverno policy in ../stats-api/pull-credentials-policy.yaml
+          # derives from tug2-pull-credentials.
+          imagePullSecrets:
+            - name: tug2-pull-credentials-dockerconfig
+    defaultPodOptions:
+      # VM-level isolation: this is public-facing and the file server extension it runs
+      # is upstream-flagged work-in-progress with an unknown security posture.
+      #
+      # If the pod ever fails to start with a kata-agent mount error, the ImageVolume
+      # below is the thing to suspect -- containerd hands the image snapshot over as a
+      # read-only bind mount and kata shares bind mounts into the guest over virtio-fs,
+      # but that combination is not otherwise exercised in this cluster. Dropping this
+      # line falls back to runc with no other changes.
+      runtimeClassName: kata
+      securityContext:
+        runAsNonRoot: true
+        # Matches the uid the game-server VM's compose file runs Envoy as. No fsGroup:
+        # the only writable volume is an emptyDir (created world-writable), and the
+        # ImageVolume is read-only, so there is nothing to chown.
+        runAsUser: 65532
+        runAsGroup: 65532
+    persistence:
+      # Envoy bootstrap config. Envoy has no config hot-reload, so the ConfigMap carries
+      # kyverno.home.arpa/reload and the workload-reloader policy restarts the
+      # Deployment when it changes.
+      envoy-config:
+        type: configMap
+        name: insurgency-fastdl-envoy-config
+        defaultMode: 0440
+        advancedMounts:
+          insurgency-fastdl:
+            envoy:
+              - path: /etc/envoy
+      # Per-server content images, mounted as read-only ImageVolumes (beta in k8s 1.32,
+      # on by default in 1.33). The image is FROM scratch and holds only the content
+      # tree, so there is no runtime, no shell and nothing to execute in it.
+      #
+      # The server name lives in the mount point, not in the image: a content image has
+      # its tree at the image root and carries no server name, so the mounted volume is
+      # itself the document root (see path_mappings in the Envoy config).
+      #
+      # Adding a server is this volume plus a path_mapping and a route in the Envoy
+      # config -- FASTDL_SERVERS in the tug2 Makefile decides which servers have an
+      # image to mount at all. Today that is `test` only; `main` runs stock content.
+      fastdl-test:
+        type: custom
+        volumeSpec:
+          image:
+            reference: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test-fastdl:0.0.7-dev
+            pullPolicy: IfNotPresent
+        advancedMounts:
+          insurgency-fastdl:
+            envoy:
+              - path: /srv/test
+                readOnly: true
+    service:
+      insurgency-fastdl:
+        controller: insurgency-fastdl
+        ports:
+          web:
+            port: *web_port
+            primary: true
+          metrics:
+            port: *metrics_port
+    serviceMonitor:
+      insurgency-fastdl:
+        endpoints:
+          # Envoy's admin /stats/prometheus, via the observability listener. Scraped on
+          # both replicas (per-pod stats).
+          - port: metrics
+            path: /stats/prometheus
+            relabelings:
+              # Report `instance` as the pod name rather than the default <pod-ip>:<port>.
+              - action: replace
+                sourceLabels:
+                  - __meta_kubernetes_pod_name
+                targetLabel: instance
+    route:
+      insurgency-fastdl:
+        labels:
+          # Publish the public DNS record. external-dns runs with --cloudflare-proxied
+          # and --default-targets=public-wan, so this becomes a Cloudflare-proxied CNAME
+          # to the WAN with no per-route annotation needed.
+          external-dns.home.arpa/publish: "true"
+        hostnames:
+          - insurgency-fastdl.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          # Intranet clients (LAN players, and anyone testing with curl) resolve this
+          # hostname to the internal gateway via k8s-gateway and reach the pod directly
+          # instead of hairpinning out through Cloudflare and back in.
+          - name: internal-gateway
+            namespace: networking
+          # Public ingress: Cloudflare -> external gateway.
+          - name: external-gateway
+            namespace: networking
+        rules:
+          - filters:
+              # Set at the gateway rather than in the Envoy route config because the file
+              # server filter answers requests itself, ending filter iteration before the
+              # router applies route-level response headers.
+              #
+              # The staleness window this opens is the thing to keep in mind when
+              # publishing content: a client that fetches a file the server is enforcing a
+              # newer version of fails the consistency check and gets kicked. Publish the
+              # content image and roll this Deployment BEFORE bumping the game server that
+              # enforces it, and a stale edge copy can only be served for a minute.
+              - type: ResponseHeaderModifier
+                responseHeaderModifier:
+                  set:
+                    - name: Cache-Control
+                      value: public, max-age=60
+            backendRefs:
+              - identifier: insurgency-fastdl
+                port: *web_port

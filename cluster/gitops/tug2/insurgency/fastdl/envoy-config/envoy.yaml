@@ -1,0 +1,217 @@
+---
+# Static file server for Insurgency fast downloads (sv_downloadurl).
+#
+# Each game server that ships player-downloadable content gets a content image
+# (tug2/insurgency-<server>-fastdl) built by the same Dockerfile stage that generates
+# the server's downloadables list, mounted here as a read-only ImageVolume. A client
+# only ever fetches files the server advertised in the downloadables string table (see
+# the gg2_fastdl SourceMod plugin), and both sides come from the same build, so what is
+# served and what is requested cannot drift.
+#
+# Servers are namespaced by URL prefix -- https://insurgency-fastdl.<domain>/test --
+# rather than by hostname, so one Deployment, one DNS record and one Cloudflare cache
+# cover every server. Adding a server is a volume in hr.yaml plus a path_mapping and a
+# route below.
+#
+# WHY ENVOY AND NOT A WEB SERVER
+#
+# envoy.filters.http.file_server (new in Envoy 1.38.0, use-after-free fixed in 1.39.0)
+# is a core extension, so it is already in the image this cluster and the game-server VM
+# both use. It is flagged work-in-progress with an unknown security posture, which is
+# tolerable here and only here: the document roots are read-only image volumes holding
+# nothing but public game assets, the pod has no egress whatsoever, and the reachable
+# path space is bounded twice over (routes, then path_mappings).
+
+admin:
+  address:
+    socket_address:
+      # Loopback only. The admin interface has write endpoints (/quitquitquit,
+      # /runtime_modify), so it is never bound to a routable address. The two read-only
+      # endpoints needed off-pod -- /ready for the kubelet probes and /stats/prometheus
+      # for the scrape -- are reached through the observability listener below, which
+      # exact-matches exactly those two paths and 404s everything else.
+      address: 127.0.0.1
+      port_value: 9901
+
+node:
+  # Values are basically meaningless but must be set.
+  id: envoy-insurgency-fastdl
+  cluster: tug2
+
+static_resources:
+  clusters:
+    # Loopback back into this process's own admin interface. Loopback traffic never
+    # leaves the pod's network namespace, so it is not subject to the network policy.
+    - name: admin_cluster
+      connect_timeout: 1s
+      type: STATIC
+      load_assignment:
+        cluster_name: admin_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 9901
+
+  listeners:
+    # ===========================================================================
+    # Content listener -- the only thing the gateways route to.
+    # ===========================================================================
+    - name: content_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: fastdl
+                codec_type: AUTO
+                # The file server rejects any path that does not survive normalization
+                # with a 400, so normalize first and give it a clean path rather than
+                # relying on the gateway having already done it. Asset paths legitimately
+                # contain escaped characters -- one map-asset stub lives under
+                # "materials/maps/3d skybox/" -- so escaped slashes are the only escape
+                # treated as hostile.
+                normalize_path: true
+                merge_slashes: true
+                path_with_escaped_slashes_action: UNESCAPE_AND_REDIRECT
+                # Cloudflare -> external-gateway is the only route in and the gateway
+                # already appends XFF, so do not treat the peer address as the client.
+                use_remote_address: false
+                access_log:
+                  - name: envoy.access_loggers.stdout
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                      log_format:
+                        json_format:
+                          # The failure this service exists to fix is "the client got the
+                          # wrong bytes", so log enough to tell a 404 (not served), a 400
+                          # (path rejected) and a 200 apart without a repro.
+                          time: "%START_TIME%"
+                          method: "%REQ(:METHOD)%"
+                          path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                          status: "%RESPONSE_CODE%"
+                          flags: "%RESPONSE_FLAGS%"
+                          details: "%RESPONSE_CODE_DETAILS%"
+                          bytes_sent: "%BYTES_SENT%"
+                          duration_ms: "%DURATION%"
+                          client_ip: "%REQ(X-FORWARDED-FOR)%"
+                          user_agent: "%REQ(USER-AGENT)%"
+                route_config:
+                  name: fastdl_route
+                  virtual_hosts:
+                    - name: fastdl
+                      domains: ["*"]
+                      routes:
+                        # One entry per server that ships a fastdl image. The file server
+                        # filter no-ops unless a route matches, so this list is the outer
+                        # bound on what is reachable; path_mappings is the inner one.
+                        #
+                        # The direct_response is a fallback that is not reached in
+                        # practice: on a match the filter ends filter iteration itself,
+                        # and it answers a request for a file the image does not contain
+                        # with its own 404. It exists so that a route/path_mapping
+                        # mismatch surfaces as a 404 rather than as a request falling
+                        # through to a router with no cluster.
+                        - match:
+                            prefix: /test/
+                          direct_response: &not_found
+                            status: 404
+                            body:
+                              inline_string: "not found\n"
+                        # Anything outside a server prefix -- including / -- is not
+                        # content and is never mapped to a file.
+                        - match:
+                            prefix: /
+                          direct_response: *not_found
+                http_filters:
+                  - name: envoy.filters.http.file_server
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.file_server.v3.FileServerConfig
+                      manager_config:
+                        # File reads happen on this pool, not on the worker threads, so a
+                        # cold read cannot stall unrelated connections.
+                        thread_pool:
+                          thread_count: 1
+                      # Request prefix -> document root. The remainder of the request path
+                      # is appended to file_path_prefix, and the result must still be
+                      # lexically normal and still start with file_path_prefix, so ".."
+                      # cannot escape a root.
+                      #
+                      # A content image is FROM scratch with its tree at the image ROOT
+                      # (materials/, models/, resource/, scripts/, plus downloadables.txt
+                      # and MANIFEST.txt), and carries no server name -- the same layout
+                      # whichever server it was built for. So the server name lives only in
+                      # the mount point, and the mounted volume IS the document root.
+                      path_mappings:
+                        - request_path_prefix: /test/
+                          file_path_prefix: /srv/test/
+                      # Suffix (no dot, lowercased) -> Content-Type. The engine does not
+                      # care, but a human debugging with curl does, and MANIFEST.txt /
+                      # downloadables.txt are meant to be read in a browser.
+                      content_types:
+                        theater: text/plain; charset=utf-8
+                        vmt: text/plain; charset=utf-8
+                        txt: text/plain; charset=utf-8
+                        res: text/plain; charset=utf-8
+                        bz2: application/x-bzip2
+                      # Models (mdl/vvd/vtx/phy/ani) and textures (vtf) are binary.
+                      default_content_type: application/octet-stream
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+    # ===========================================================================
+    # Observability listener -- kubelet probes and the metrics scrape only.
+    # ===========================================================================
+    # Deliberately a separate listener rather than extra routes on the content
+    # listener: the file server filter is not in this chain at all, so there is no
+    # ordering or per-route-disable trick standing between a probe and the admin
+    # interface, and nothing the gateways can reach can ever reach the admin endpoints.
+    - name: observability_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 9090
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: fastdl_observability
+                codec_type: AUTO
+                normalize_path: true
+                route_config:
+                  name: observability_route
+                  virtual_hosts:
+                    - name: observability
+                      domains: ["*"]
+                      routes:
+                        # Envoy's own readiness state (200 "LIVE" once the listeners are
+                        # initialized), so the probe reflects the process rather than a
+                        # hardcoded 200.
+                        - match:
+                            path: /ready
+                          route:
+                            cluster: admin_cluster
+                        - match:
+                            path: /stats/prometheus
+                          route:
+                            cluster: admin_cluster
+                        # Every other admin endpoint, including the write ones, is
+                        # unreachable through this listener.
+                        - match:
+                            prefix: /
+                          direct_response:
+                            status: 404
+                            body:
+                              inline_string: "not found\n"
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

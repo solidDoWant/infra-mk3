@@ -1,0 +1,14 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: insurgency-fastdl-envoy-config
+    files:
+      - envoy.yaml=./envoy.yaml
+    options:
+      labels:
+        # Envoy has no config hot-reload, so the restart-workload-on-config-changes
+        # Kyverno policy restarts the Deployment when this ConfigMap changes.
+        kyverno.home.arpa/reload: "true"
+      # The Deployment references this ConfigMap by a fixed name.
+      disableNameSuffixHash: true

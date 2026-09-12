@@ -49,10 +49,18 @@ services:
   # role and therefore lands in the insurgency-test schema.
   tug2-insurgency-test:
     <<: *insurgency-server
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test:0.0.6-dev
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test:0.0.7-dev
     environment:
       - PORT=27001
       - RCON_PASSWORD=${SECRET_RCON_PASSWORD}
+      # Fast download base URL, advertised to clients as sv_downloadurl. The
+      # insurgency-fastdl service in the tug2 namespace serves the matching
+      # tug2/insurgency-test-fastdl content image; servers are namespaced by URL prefix
+      # there, so this path must match the server's path_mapping in that service's Envoy
+      # config. The server itself never fetches this -- it already has the files; it only
+      # tells clients where to get them (see the gg2_fastdl plugin, which advertises the
+      # file list this image was built from), so no egress rule is needed for it.
+      - DOWNLOAD_URL=https://insurgency-fastdl.${SECRET_PUBLIC_DOMAIN_NAME}/test
     ports:
       - "27001:27001" # RCON
       - "27001:27001/udp" # Game traffic

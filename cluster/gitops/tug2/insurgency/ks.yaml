@@ -28,29 +28,6 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name tug2-insurgency-server
-spec:
-  targetNamespace: tug2
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/tug2/insurgency/server
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: tug2-insurgency-backend
-    - name: kubevirt-app
-    - name: teleport-crds
----
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
   name: &app_name tug2-insurgency-backup
 spec:
   targetNamespace: tug2
@@ -106,3 +83,58 @@ spec:
     - name: prometheus-crds
     # GrafanaDashboard CRD.
     - name: grafana-crds
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name tug2-insurgency-fastdl
+spec:
+  targetNamespace: tug2
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/tug2/insurgency/fastdl
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # HTTPRoute CRD for the gateway routes.
+    - name: gateway-crds
+    # Kyverno restarts the Deployment when the Envoy config ConfigMap changes, and
+    # generates the dockerconfigjson pull secret the ImageVolume pull needs. The policy
+    # that generates it lives in the stats-api directory (tug2-insurgency-stats-api);
+    # it is not depended on here because the secret it produces is synchronized and
+    # namespace-wide, so the worst case on a cold bootstrap is the image volume pull
+    # retrying until it lands.
+    - name: kyverno-app
+    # ServiceMonitor CRD for the metrics scrape.
+    - name: prometheus-crds
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name tug2-insurgency-server
+spec:
+  targetNamespace: tug2
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/tug2/insurgency/server
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: tug2-insurgency-backend
+    - name: kubevirt-app
+    - name: teleport-crds
+    - name: tug2-insurgency-fastdl

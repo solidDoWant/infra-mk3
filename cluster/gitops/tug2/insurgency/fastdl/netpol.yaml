@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: insurgency-fastdl
+specs:
+  - description: insurgency-fastdl
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: insurgency-fastdl
+        app.kubernetes.io/controller: insurgency-fastdl
+        app.kubernetes.io/instance: insurgency-fastdl
+    # No egress rules, deliberately. With the cluster-wide default-deny-all policy in
+    # force that means this pod can open no outbound connection at all, which is exactly
+    # right: the Envoy config has no upstream clusters and no DNS names in it, the
+    # content comes from an image volume the kubelet pulls (not the pod), and the only
+    # cluster it does route to is 127.0.0.1 -- loopback never leaves the pod's network
+    # namespace and is not subject to policy.
+    ingress:
+      # Content requests from the gateways. Public traffic arrives via
+      # Cloudflare -> external-gateway; intranet clients resolve the same hostname to
+      # the internal gateway.
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: external-gateway
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Kubelet for the liveness/readiness probes, which hit /ready on the
+      # observability listener rather than the content listener.
+      - fromEntities:
+          - host
+        toPorts: &observability_port
+          - ports:
+              - port: "9090"
+                protocol: TCP
+      # Prometheus metrics scraping (/stats/prometheus, same listener).
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *observability_port
