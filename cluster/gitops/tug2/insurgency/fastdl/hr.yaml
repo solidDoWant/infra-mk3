@@ -154,7 +154,7 @@ spec:
         type: custom
         volumeSpec:
           image:
-            reference: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test-fastdl:0.0.12-dev
+            reference: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test-fastdl:0.0.13-dev
             pullPolicy: IfNotPresent
         advancedMounts:
           insurgency-fastdl:
