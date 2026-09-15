@@ -16,7 +16,7 @@ resource "coder_app" "desktop" {
   agent_id     = coder_agent.main.id
   slug         = "desktop"
   display_name = "Desktop"
-  icon         = "/emojis/1f5a5.png"
+  icon         = "/emojis/1f5a5-fe0f.png"
   external     = true
   order        = 0
 

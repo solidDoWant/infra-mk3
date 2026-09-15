@@ -91,6 +91,28 @@ spec:
               - datavolumes
             verbs:
               - "*"
+          # Rule to manage per-workspace cloud-init Secrets (k8s-vm-workspace
+          # template). KubeVirt caps inline cloudInitNoCloud userData at 2048
+          # bytes, so the VM references a Secret instead.
+          #
+          # This cannot be narrowed with resourceNames - RBAC does not evaluate
+          # them for `create`, since the name is not known at authorization time -
+          # so it is namespace-wide write on Secrets, which would otherwise let a
+          # template overwrite the Postgres client cert, the Harbor pull
+          # credentials or the Claude token. The Kyverno policy in ./rbac.yaml
+          # confines this SA to Secrets labelled as workspace resources.
+          - apiGroups:
+              - ""
+            resources:
+              - secrets
+            verbs:
+              - create
+              - delete
+              - get
+              - list
+              - patch
+              - update
+              - watch
       podSecurityContext:
         fsGroup: 1000
       volumes:

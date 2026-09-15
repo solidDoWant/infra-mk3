@@ -62,6 +62,41 @@ resource "kubectl_manifest" "root_datavolume" {
   })
 }
 
+# Cloud-init user data for the VM.
+#
+# In a Secret rather than inline in the VM spec: KubeVirt's validating webhook
+# caps an inline cloudInitNoCloud.userData at 2048 bytes and this payload is over
+# it, so an inline one is rejected at apply time ("Should use UserDataSecretRef
+# for larger data"). A Secret also suits the contents better - the rendered file
+# carries the Coder agent token, which would otherwise sit in plaintext in an
+# object that is far more widely readable than a Secret.
+#
+# KubeVirt reads the `userdata` key (it also accepts `userData`). The token
+# changes on every workspace build, so this is updated in place each time; the
+# VMI is recreated on start, which is when KubeVirt reads it.
+resource "kubernetes_secret" "cloudinit" {
+  metadata {
+    name        = "${local.name}-cloudinit"
+    namespace   = local.namespace
+    labels      = local.labels
+    annotations = local.annotations
+  }
+
+  data = {
+    userdata = templatefile("${path.module}/cloud-init.yaml.tftpl", {
+      HOSTNAME = data.coder_workspace.me.name
+      # base64 to sidestep YAML escaping of the env file values. The agent binary
+      # itself is baked into the image (pkgs.coder); only its environment (token,
+      # URL, CA, etc.) is supplied per-workspace.
+      AGENT_ENV_B64  = base64encode(join("\n", [for k, v in local.env_vars : "${k}=${v}"]))
+      ENABLE_NFS     = local.enable_nfs
+      NFS_ADDRESS    = local.nfs_address
+      NFS_PATH       = local.nfs_path
+      NFS_MOUNT_PATH = local.nfs_mount_path
+    })
+  }
+}
+
 # The workspace VirtualMachine.
 #
 # Lifecycle: runStrategy follows the Coder start_count - "Always" while the
@@ -84,7 +119,10 @@ resource "kubectl_manifest" "vm" {
   # The root DataVolume must exist (and, on a version bump, the new one must be
   # created) before the VM references it; virt-controller then waits for the DV
   # to finish importing before it boots the VMI.
-  depends_on = [kubectl_manifest.root_datavolume]
+  depends_on = [
+    kubectl_manifest.root_datavolume,
+    kubernetes_secret.cloudinit,
+  ]
 
   server_side_apply = true
   # KubeVirt's virt-api co-owns .spec.runStrategy (it writes it back when
@@ -226,18 +264,13 @@ resource "kubectl_manifest" "vm" {
             },
             {
               name = "cloudinit"
+              # By reference, not inline: virtualmachine-validator rejects an
+              # inline userData over 2048 bytes, and this payload does not fit.
+              # It also keeps the agent token out of the VM object.
               cloudInitNoCloud = {
-                userData = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-                  HOSTNAME = data.coder_workspace.me.name
-                  # base64 to sidestep YAML escaping of the env file values. The
-                  # agent binary itself is baked into the image (pkgs.coder); only
-                  # its environment (token, URL, CA, etc.) is supplied per-workspace.
-                  AGENT_ENV_B64  = base64encode(join("\n", [for k, v in local.env_vars : "${k}=${v}"]))
-                  ENABLE_NFS     = local.enable_nfs
-                  NFS_ADDRESS    = local.nfs_address
-                  NFS_PATH       = local.nfs_path
-                  NFS_MOUNT_PATH = local.nfs_mount_path
-                })
+                userDataSecretRef = {
+                  name = kubernetes_secret.cloudinit.metadata[0].name
+                }
               }
             }
           ]

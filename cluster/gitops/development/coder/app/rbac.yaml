@@ -64,3 +64,18 @@ spec:
         failureAction: Enforce
         message: The Coder service account can only modify ServiceAccounts for Coder Workspaces.
         deny: *conditions
+    # The SA needs namespace-wide Secret writes for the VM workspaces' cloud-init
+    # Secrets (RBAC cannot scope `create` by name - see the matching rule in
+    # ./hr.yaml). This is what keeps that from reaching the Postgres cert, the
+    # Harbor pull credentials or the Claude token.
+    - name: deny-coder-sa-non-coder-secret-access
+      match:
+        resources:
+          kinds:
+            - Secret
+          namespaces:
+            - development
+      validate:
+        failureAction: Enforce
+        message: The Coder service account can only modify Secrets for Coder Workspaces.
+        deny: *conditions

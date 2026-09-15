@@ -258,7 +258,7 @@ data "coder_parameter" "enable_desktop" {
   type         = "bool"
   default      = "false"
   mutable      = true
-  icon         = "/emojis/1f5a5.png"
+  icon         = "/emojis/1f5a5-fe0f.png"
   order        = local.workspace_resources_order_start + 5
 }
 
