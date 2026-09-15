@@ -75,21 +75,32 @@ locals {
   # survives. Do the Update while the workspace is STOPPED (Stop -> Update ->
   # Start): KubeVirt won't swap a live VMI's disk, and Terraform can only destroy
   # the old root PVC cleanly once it is unmounted.
-  image_version = "20260701054741" # tag pushed by ./image (see above)
+  image_version = "20260915223148" # tag pushed by ./image (see above)
+
+  # The desktop variant is a SEPARATE image built from the same os-config with the
+  # Xfce/Teleport-desktop module added (see ../image/os-config/flake.nix). Both
+  # variants are pushed under the same timestamp tag by one `make` run, so
+  # image_version above covers both. The desktop closure is several GB, which is
+  # exactly why it is not simply baked into the one image.
+  enable_desktop   = tobool(data.coder_parameter.enable_desktop.value)
+  image_repository = "harbor.${local.public_domain}/coder/nixos-workspace${local.enable_desktop ? "-desktop" : ""}"
 
   # The NixOS workspace base image, built and pushed to Harbor by ./image. CDI
   # imports it (source.registry) into the per-workspace root DataVolume; the guest
   # then grows root to fill the PVC (boot.growPartition + fileSystems."/".autoResize,
   # from the nixos-generators kubevirt module).
-  vm_root_image = "harbor.${local.public_domain}/coder/nixos-workspace:${local.image_version}"
+  vm_root_image = "${local.image_repository}:${local.image_version}"
 
-  # Root DataVolume name, keyed on the image version so a version bump yields a new
-  # DV and thus a CDI reimport. It is a STANDALONE Terraform-managed resource (not a
+  # Root DataVolume name, keyed on the image version AND the variant so a change to
+  # either yields a new DV and thus a CDI reimport. The variant has to be in here:
+  # flipping enable_desktop changes which image the root is imported from, and
+  # without it the name would be unchanged and the workspace would keep booting the
+  # old root. It is a STANDALONE Terraform-managed resource (not a
   # dataVolumeTemplate), so Terraform owns its lifecycle: on a version bump the old
   # DV is destroyed (no orphaned PVCs) and the new one imported; on workspace delete
   # both the VM and this DV go away. See kubectl_manifest.root_datavolume in vm.tf.
   # (Normalize the version: dots are not RFC1123-safe in the name suffix.)
-  root_dv_name = "${local.name}-root-${replace(local.image_version, ".", "-")}"
+  root_dv_name = "${local.name}-root-${replace(local.image_version, ".", "-")}${local.enable_desktop ? "-desktop" : ""}"
 
   # Harbor pull secret (development ns). It is a dockerconfigjson (used by the
   # coder deployment as an imagePullSecret) that ALSO carries accessKeyId/secretKey
@@ -142,7 +153,7 @@ locals {
 # Parameters
 locals {
   workspace_resources_order_start = local.claude_order_start + local.claude_size
-  workspace_resources_size        = 5
+  workspace_resources_size        = 6
 }
 
 data "coder_parameter" "cpu" {
@@ -199,7 +210,7 @@ data "coder_parameter" "persistent_disk_size" {
 data "coder_parameter" "root_disk_size" {
   name         = "root_disk_size"
   display_name = "Root disk size"
-  description  = "Size of the ephemeral root filesystem (GB). The base image is imported into this disk and grown to fill it on boot. It is disposable and reset on a base-image upgrade, so keep durable data on the persistent disk (/home/coder, /workspace). Must be at least the base image's virtual size (~6 GB)."
+  description  = "Size of the ephemeral root filesystem (GB). The base image is imported into this disk and grown to fill it on boot. It is disposable and reset on a base-image upgrade, so keep durable data on the persistent disk (/home/coder, /workspace). Must be at least the base image's virtual size: ~7 GB, or ~12 GB with the desktop environment enabled."
   default      = "20"
   type         = "number"
   icon         = "/emojis/1f4bf.png"
@@ -207,9 +218,13 @@ data "coder_parameter" "root_disk_size" {
   order        = local.workspace_resources_order_start + 3
 
   validation {
-    # min must stay >= the base image's qcow2 virtual size; CDI fails the import
-    # if the target PVC is smaller than the source image.
-    min       = 10
+    # min must stay >= the qcow2 virtual size of the LARGEST variant; CDI fails
+    # the import if the target PVC is smaller than the source image. Measured at
+    # image_version below: base 6.96 GiB, desktop 11.8 GiB. A validation block
+    # cannot branch on enable_desktop, so this is the desktop floor rounded up -
+    # which is why the minimum is above what a base-image workspace needs.
+    # Re-measure with `qemu-img info` on a new build if the image grows.
+    min       = 12
     max       = 200
     monotonic = "increasing"
   }
@@ -224,6 +239,27 @@ data "coder_parameter" "enable_nfs" {
   mutable      = true
   icon         = "/emojis/1f4c1.png"
   order        = local.workspace_resources_order_start + 4
+}
+
+data "coder_parameter" "enable_desktop" {
+  name         = "enable_desktop"
+  display_name = "Desktop environment"
+  description  = <<-EOT
+    Run the desktop variant of the base image: a headless Xfce session served by
+    Teleport's Linux desktop service. Connect from the Teleport Web UI or Teleport
+    Connect (Resources -> Desktops), not from the Coder terminal.
+
+    This selects a DIFFERENT base image, so toggling it reimports the root disk -
+    do it while the workspace is STOPPED, the same as a base-image upgrade. Durable
+    data on /home/coder and /workspace is unaffected.
+
+    There is no GPU: the session renders with Mesa's llvmpipe on the CPU.
+  EOT
+  type         = "bool"
+  default      = "false"
+  mutable      = true
+  icon         = "/emojis/1f5a5.png"
+  order        = local.workspace_resources_order_start + 5
 }
 
 data "coder_workspace" "me" {}

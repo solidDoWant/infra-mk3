@@ -26,6 +26,33 @@ spec:
     db_service_labels: *all_labels
     group_labels: *all_labels
     windows_desktop_labels: *all_labels
+    linux_desktop_labels: *all_labels
+    # Local accounts this role may connect to a Linux desktop as.
+    #
+    # Separate from `logins` below: desktop authorization checks
+    # linux_desktop_labels for the resource and linux_desktop_logins for the
+    # account, and nothing else - the SSH logins do not carry over.
+    #
+    # This is an EXACT-MATCH list (slices.Contains in Teleport's
+    # linuxDesktopLoginMatcher), so "*" is not a wildcard here the way it is for
+    # the label selectors above; every account has to be named. The account must
+    # also already exist on the host - Teleport does not create host users for
+    # Linux desktops (create_desktop_user is Windows-only).
+    #
+    # The only host in this cluster that registers a Linux desktop is the Coder VM
+    # workspace (its provision token is the only one granting the LinuxDesktop
+    # role). `coder` is the workspace user and the normal way in; root is here for
+    # parity with the SSH `logins` below and as a way back in when a broken
+    # ~/.config stops the coder session from starting. Note that a root desktop's
+    # own state lands in /root, which - unlike /home/coder - is not on the
+    # persistent disk, so it resets on every base-image bump.
+    #
+    # `ubuntu` from the SSH logins is deliberately absent: no such account exists
+    # in the workspace image, and an unusable entry would still be offered in the
+    # Web UI's login picker (the account is only resolved when the session starts).
+    linux_desktop_logins:
+      - coder
+      - root
     db_names: &all_list
       - "*"
     db_users: *all_list
@@ -43,3 +70,11 @@ spec:
     review_requests:
       roles:
         - "*"
+  options:
+    # Desktop session recording defaults to ON and applies to Linux desktops as
+    # well as Windows ones. These are single-user development desktops, and a
+    # desktop recording is a video stream of the whole session - far bulkier than
+    # the SSH recordings this cluster keeps, for no audit value here. SSH session
+    # recording is untouched.
+    record_session:
+      desktop: false

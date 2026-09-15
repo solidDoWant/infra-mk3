@@ -44,6 +44,32 @@ your next restart with your home directory, workspace, and Nix packages intact.
   any other workspace.
 - **SSH** — the VM joins Teleport automatically on boot, so
   `tsh ssh coder@<workspace-name>` works (sessions are recorded).
+- **Desktop** — only with the `enable_desktop` parameter (see below).
+
+## Desktop environment
+
+Turning on **`enable_desktop`** gives the workspace a graphical Xfce desktop. It
+is served by Teleport, not by Coder: open the Teleport Web UI (or Teleport
+Connect), go to **Resources → Desktops**, and pick your workspace — or use the
+**Desktop** button on the workspace page, which links straight there. Log in as
+`coder`.
+
+Nothing runs until you connect; Teleport starts a virtual display and the session
+on demand, so an idle desktop workspace costs nothing extra at runtime.
+
+Two things to know before turning it on:
+
+- **It swaps the base image.** The desktop is a separate, larger base image, so
+  toggling this reimports the root disk exactly like a base-image upgrade. Do it
+  while the workspace is **stopped** (Stop → Update → Start). `/home/coder`,
+  `/workspace`, and your Nix packages are untouched; give the workspace a larger
+  **root disk** than the default when you enable it.
+- **Software rendering only.** There is no GPU, so everything renders on the CPU
+  via Mesa's llvmpipe. Fine for a browser, editors, and GUI tooling; slow for
+  anything seriously 3D.
+
+Your Xfce settings (panel layout, theme, xfconf) live in `/home/coder`, so they
+survive restarts and base-image upgrades.
 
 ## Good to know
 

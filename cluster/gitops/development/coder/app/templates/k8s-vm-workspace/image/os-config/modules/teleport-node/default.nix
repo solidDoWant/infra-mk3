@@ -13,6 +13,10 @@
 # development:coder-vm-workspace, then admits the node. The node registers under
 # its hostname (set per-workspace by cloud-init), so `tsh ssh coder@<workspace>`
 # works.
+#
+# The desktop image variant adds a `linux_desktop_service` to the same Teleport
+# instance - see ../desktop. It is configured there, not here, because only that
+# variant has an X session to offer.
 let
   teleportPkgs = import ../teleport { inherit pkgs; };
 in
@@ -59,7 +63,7 @@ in
   };
 
   services.teleport = {
-    package = teleportPkgs.withBPF;
+    package = teleportPkgs.package;
     enable = true;
 
     # This follows the teleport config file structure.

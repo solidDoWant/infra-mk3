@@ -8,8 +8,16 @@ kind: ServiceAccount
 metadata:
   name: coder-vm-workspace
 ---
-# Authorizes the VM workspaces to join Teleport as SSH nodes. Teleport's auth
-# validates the projected ServiceAccount token against this token's allow list.
+# Authorizes the VM workspaces to join Teleport as SSH nodes and, for the desktop
+# image variant, as Linux desktops. Teleport's auth validates the projected
+# ServiceAccount token against this token's allow list.
+#
+# One token covers both because the guest runs a single Teleport agent: the base
+# image enables only ssh_service, and the desktop variant adds
+# linux_desktop_service to the same process (see the workspace image's
+# modules/desktop). An agent only ever requests the roles for the services it
+# actually runs, so granting LinuxDesktop here does not give the base image
+# anything it can use.
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportprovisiontoken_v2.json
 apiVersion: resources.teleport.dev/v2
 kind: TeleportProvisionToken
@@ -18,6 +26,10 @@ metadata:
 spec:
   roles:
     - Node
+    # Teleport's system role for the Linux desktop service (api/types: the
+    # `linux_desktop` token type maps to SystemRole "LinuxDesktop"). Requires
+    # Teleport >= 18.11.0 on both the agent and auth.
+    - LinuxDesktop
   join_method: kubernetes
   kubernetes:
     allow:
