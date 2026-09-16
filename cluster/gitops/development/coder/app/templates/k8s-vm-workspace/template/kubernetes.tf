@@ -75,7 +75,7 @@ locals {
   # survives. Do the Update while the workspace is STOPPED (Stop -> Update ->
   # Start): KubeVirt won't swap a live VMI's disk, and Terraform can only destroy
   # the old root PVC cleanly once it is unmounted.
-  image_version = "20260915223148" # tag pushed by ./image (see above)
+  image_version = "20260916003009" # tag pushed by ./image (see above)
 
   # The desktop variant is a SEPARATE image built from the same os-config with the
   # Xfce/Teleport-desktop module added (see ../image/os-config/flake.nix). Both
@@ -246,8 +246,9 @@ data "coder_parameter" "enable_desktop" {
   display_name = "Desktop environment"
   description  = <<-EOT
     Run the desktop variant of the base image: a headless Xfce session served by
-    Teleport's Linux desktop service. Connect from the Teleport Web UI or Teleport
-    Connect (Resources -> Desktops), not from the Coder terminal.
+    Teleport's Linux desktop service. Connect from the Teleport WEB UI, under
+    Resources (not the Desktops page, which is Windows-only). Teleport Connect,
+    the desktop app, does not support Linux desktops.
 
     This selects a DIFFERENT base image, so toggling it reimports the root disk -
     do it while the workspace is STOPPED, the same as a base-image upgrade. Durable

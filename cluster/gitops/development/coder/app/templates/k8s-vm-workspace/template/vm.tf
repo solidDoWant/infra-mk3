@@ -267,8 +267,13 @@ resource "kubectl_manifest" "vm" {
               # By reference, not inline: virtualmachine-validator rejects an
               # inline userData over 2048 bytes, and this payload does not fit.
               # It also keeps the agent token out of the VM object.
+              #
+              # The key is `secretRef`, NOT `userDataSecretRef` - that is the Go
+              # field name the webhook's error message quotes, and it is not the
+              # serialized one. (`networkDataSecretRef` next to it in the schema
+              # IS spelled out, which makes the asymmetry easy to trip over.)
               cloudInitNoCloud = {
-                userDataSecretRef = {
+                secretRef = {
                   name = kubernetes_secret.cloudinit.metadata[0].name
                 }
               }

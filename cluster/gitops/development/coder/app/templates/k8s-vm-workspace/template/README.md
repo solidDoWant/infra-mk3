@@ -49,10 +49,13 @@ your next restart with your home directory, workspace, and Nix packages intact.
 ## Desktop environment
 
 Turning on **`enable_desktop`** gives the workspace a graphical Xfce desktop. It
-is served by Teleport, not by Coder: open the Teleport Web UI (or Teleport
-Connect), go to **Resources → Desktops**, and pick your workspace — or use the
-**Desktop** button on the workspace page, which links straight there. Log in as
-`coder`.
+is served by Teleport, not by Coder: open the Teleport **Web UI**, find your
+workspace under **Resources**, and hit Connect — or use the **Desktop** button on
+the workspace page, which opens that list pre-filtered. Log in as `coder`.
+
+Two navigation gotchas: it lives in the general **Resources** list, not the
+**Desktops** page (that one is Windows-only), and **Teleport Connect cannot open
+it** — the desktop app supports Windows desktops only, so use a browser.
 
 Nothing runs until you connect; Teleport starts a virtual display and the session
 on demand, so an idle desktop workspace costs nothing extra at runtime.

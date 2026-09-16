@@ -20,12 +20,18 @@ resource "coder_app" "desktop" {
   external     = true
   order        = 0
 
-  # Teleport's route is /web/cluster/<clusterId>/linux_desktops/<desktopName>/<login>:
-  #   clusterId   - the Teleport cluster name. This cluster names itself after its
-  #                 own proxy FQDN (clusterName in security/teleport/cluster/hr.yaml).
-  #   desktopName - the desktop registers under the guest's Teleport nodename,
-  #                 which is the OS hostname, which cloud-init sets to the
-  #                 workspace name (see cloud-init.yaml.tftpl / coder-set-hostname).
-  #   login       - the local account, always coder in this image.
-  url = "https://teleport.${local.public_domain}/web/cluster/teleport.${local.public_domain}/linux_desktops/${data.coder_workspace.me.name}/coder"
+  # The resources list, pre-filtered to this workspace, rather than a direct
+  # /linux_desktops/<name>/<login> session link.
+  #
+  # A direct link is not constructible here: for a Linux desktop the Web UI puts
+  # the agent's Teleport HOST UUID in that path segment (see
+  # UnifiedResources/ResourceActionButton.tsx - it passes desktop.host_id, unlike
+  # Windows desktops which use the resource name). That UUID is generated inside
+  # the guest on first boot and persisted to /var/lib/teleport, so Terraform has
+  # no way to know it. The registered resource's own name is a UUID too; only its
+  # `hostname` field is the workspace name.
+  #
+  # The clusterId segment is the Teleport cluster name, which this cluster sets to
+  # its own proxy FQDN (clusterName in security/teleport/cluster/hr.yaml).
+  url = "https://teleport.${local.public_domain}/web/cluster/teleport.${local.public_domain}/resources?search=${urlencode(data.coder_workspace.me.name)}"
 }

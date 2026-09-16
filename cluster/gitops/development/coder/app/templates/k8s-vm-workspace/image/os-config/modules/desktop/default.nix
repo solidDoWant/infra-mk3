@@ -45,7 +45,30 @@ in
   # not, so with only startx the session data would come out empty.
   services.displayManager.enable = true;
 
+  # XDG_RUNTIME_DIR, which nothing else in this VM provides.
+  #
+  # It is normally created by pam_systemd when logind opens a session, but
+  # Teleport's desktop service does not open one - /run/user stays empty and
+  # `loginctl list-sessions` shows none. Plenty of desktop software treats the
+  # variable as guaranteed: PipeWire and the xdg portals need it, the per-user
+  # D-Bus socket lives there, and Blender segfaults outright inside
+  # wl_display_connect (it probes its Wayland backend before falling back to X11,
+  # and handles the unset variable by crashing rather than by failing over).
+  #
+  # Lingering makes logind start a user manager at boot, which creates
+  # /run/user/1000 and keeps it there for the life of the VM, independent of any
+  # session. sessionCommands then exports it for the desktop session - the
+  # session wrapper Teleport is pointed at runs these, after /etc/profile and
+  # before the session itself. Guarded, so a real logind session would win.
+  users.users.coder.linger = true;
+
   services.xserver = {
+    displayManager.sessionCommands = ''
+      if [ -z "$XDG_RUNTIME_DIR" ]; then
+        export XDG_RUNTIME_DIR="/run/user/$(${pkgs.coreutils}/bin/id -u)"
+      fi
+    '';
+
     # Brings in the X server, drivers, and the session plumbing. On its own it
     # starts nothing: with startx as the display manager there is no
     # display-manager.service to run at boot.
