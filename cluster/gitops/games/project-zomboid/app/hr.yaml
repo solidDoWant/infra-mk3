@@ -18,12 +18,21 @@ spec:
   values:
     controllers:
       project-zomboid:
-        # A Zomboid server is a singleton. Every instance opens the same save
-        # directory and player database, so a second one corrupts the world.
+        # A StatefulSet rather than a Deployment, for its at-most-one guarantee.
+        #
+        # A Zomboid server is a singleton: every instance opens the same save directory
+        # and player database, and two of them sharing it corrupts the world. A
+        # ReplicaSet does not give that. It counts a pod as gone the moment it is marked
+        # for deletion, so the replacement starts immediately while the old pod is still
+        # inside its 150 second save-and-quit -- and ReadWriteOnce is per node, not per
+        # pod, so if both land on the same node they both mount the volume and write to
+        # the save at once. `strategy: Recreate` does not help; it only governs rollouts,
+        # not a deleted or evicted pod.
+        #
+        # A StatefulSet recreates an ordinal only once the previous pod is completely
+        # gone from the API, which is exactly the property needed here.
+        type: statefulset
         replicas: 1
-        # The data volume is ReadWriteOnce, so the old pod has to release it before
-        # the replacement can mount it.
-        strategy: Recreate
         # Not the usual "keep one of several alive" budget: with a single replica,
         # minAvailable: 1 leaves zero voluntary disruptions allowed, so the eviction API
         # refuses to take this pod at all. That is the point -- a stray `kubectl drain`,
