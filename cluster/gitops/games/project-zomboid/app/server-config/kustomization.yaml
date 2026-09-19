@@ -11,5 +11,13 @@ configMapGenerator:
         # restart-workload-on-config-changes Kyverno policy restarts the Deployment when
         # this ConfigMap changes, which re-runs the init container that applies it.
         kyverno.home.arpa/reload: "true"
+      annotations:
+        # Don't run Flux postBuild substitution on this ConfigMap. This is a game config
+        # file: descriptions, welcome messages and passwords are free text, and a stray $
+        # or ${ in any of them fails the substitution and takes the whole Kustomization
+        # down with it. Values that are not literal come in through the init container's
+        # env block instead, via the @NAME@ placeholders -- and hr.yaml IS substituted, so
+        # a Flux variable can be passed through an env var there.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
       # The HelmRelease references this ConfigMap by a fixed name.
       disableNameSuffixHash: true
