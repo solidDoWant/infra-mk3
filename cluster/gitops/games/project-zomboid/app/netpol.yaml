@@ -54,6 +54,20 @@ specs:
                 endPort: 27036
                 protocol: UDP
 
+      # Steam's connectivity check, which is plain HTTP and to a host outside the names
+      # above. The client library uses it to tell "this machine has no internet" apart
+      # from "Steam is down". Without it the check is a denied SYN to
+      # steamconnecttest.com:80 every time the server looks, which is what showed up in
+      # Hubble. test.steampowered.com is the same check against Valve's own host -- it
+      # matches the wildcard above, but only for 443, so port 80 needs saying here.
+      - toFQDNs:
+          - matchName: steamconnecttest.com
+          - matchName: test.steampowered.com
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
+
     ingress:
       # Game traffic from players on the internet, via the LoadBalancer address. The
       # client uses the game port and the one above it.
