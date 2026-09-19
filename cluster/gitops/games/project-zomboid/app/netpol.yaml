@@ -87,10 +87,19 @@ specs:
           - cidr: 205.196.6.0/24
         toPorts:
           - ports:
-              # Valve's config gives three port ranges across the POPs, all starting at
-              # 27015 and topping out at 27140.
+              # Relay traffic itself. Valve's config gives three port ranges across the
+              # POPs, all starting at 27015 and topping out at 27140.
               - port: "27015"
                 endPort: 27140
+                protocol: UDP
+              # STUN and Steam's two NAT-punch ports, to the same relay addresses. The
+              # server uses these to work out its public mapping before a relay path is
+              # picked, so they are denied at exactly the moment a client is connecting.
+              - port: "3478"
+                protocol: UDP
+              - port: "4379"
+                protocol: UDP
+              - port: "4380"
                 protocol: UDP
 
       # Steam's connectivity check, which is plain HTTP and to a host outside the names
