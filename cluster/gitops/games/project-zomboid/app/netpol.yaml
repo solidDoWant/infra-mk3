@@ -54,6 +54,45 @@ specs:
                 endPort: 27036
                 protocol: UDP
 
+      # Steam Datagram Relay. The server pings Valve's relay POPs constantly to keep a
+      # latency table, and clients that cannot reach it directly are routed through them.
+      #
+      # These cannot be expressed as FQDNs: the server is handed a raw IP and port list in
+      # Valve's network config over HTTPS and never looks any of it up in DNS, so Cilium's
+      # DNS proxy never sees a name to attach the IPs to and toFQDNs can never match them.
+      # Denied, it shows up as a constant stream of UDP egress to 27xxx across many
+      # addresses -- which is exactly what Hubble was reporting.
+      #
+      # The blocks below are every relay Valve publishes for this app (appid 108600),
+      # collapsed from 141 addresses. Regenerate if denied UDP to 27xxx reappears, since
+      # Valve adds and moves POPs:
+      #   curl -s 'https://api.steampowered.com/ISteamApps/GetSDRConfig/v1/?appid=108600'
+      - toCIDRSet:
+          - cidr: 45.121.184.0/24
+          - cidr: 103.10.124.0/23
+          - cidr: 103.28.54.0/24
+          - cidr: 146.66.152.0/24
+          - cidr: 146.66.155.0/24
+          - cidr: 155.133.224.0/22
+          - cidr: 155.133.230.0/24
+          - cidr: 155.133.238.0/24
+          - cidr: 155.133.244.0/24
+          - cidr: 155.133.246.0/24
+          - cidr: 155.133.248.0/23
+          - cidr: 155.133.252.0/24
+          - cidr: 155.133.255.0/24
+          - cidr: 162.254.192.0/21
+          - cidr: 185.25.180.0/24
+          - cidr: 185.25.182.0/23
+          - cidr: 205.196.6.0/24
+        toPorts:
+          - ports:
+              # Valve's config gives three port ranges across the POPs, all starting at
+              # 27015 and topping out at 27140.
+              - port: "27015"
+                endPort: 27140
+                protocol: UDP
+
       # Steam's connectivity check, which is plain HTTP and to a host outside the names
       # above. The client library uses it to tell "this machine has no internet" apart
       # from "Steam is down". Without it the check is a denied SYN to
