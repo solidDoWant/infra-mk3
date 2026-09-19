@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: project-zomboid
+specs:
+  - description: project-zomboid
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: project-zomboid
+        app.kubernetes.io/controller: project-zomboid
+        app.kubernetes.io/instance: project-zomboid
+    egress:
+      # DNS resolution. The wildcard rule is also what makes the toFQDNs rules below
+      # work at all -- Cilium populates them from the lookups it sees on this proxy.
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+
+      # Steam. The server registers itself with the master server, validates joining
+      # players' auth tickets, and downloads every workshop mod in its INI on each
+      # start. Without this it exits about a second after Steam initializes, silently.
+      #
+      # The UDP range is the part with no precedent in this cluster: every other UDP
+      # rule here is a single fixed port, and Cilium can only match UDP against an
+      # FQDN it saw resolved. If the server comes up but never appears in the Steam
+      # server browser, this rule is the first thing to widen.
+      - toFQDNs:
+          - matchPattern: "*.steampowered.com"
+          - matchPattern: "*.steamserver.net"
+          - matchPattern: "*.steamcontent.com"
+          - matchName: fastly.cdn.steampipe.steamcontent.com
+          - matchName: steampipe.akamaized.net
+        toPorts:
+          - ports:
+              # Workshop downloads and the web API.
+              - port: "443"
+                protocol: TCP
+              - port: "27018"
+                endPort: 27036
+                protocol: TCP
+              - port: "27015"
+                endPort: 27036
+                protocol: UDP
+
+    ingress:
+      # Game traffic from players on the internet, via the LoadBalancer address. The
+      # client uses the game port and the one above it.
+      - fromEntities:
+          - world
+        toPorts:
+          - ports:
+              - port: "16261"
+                protocol: UDP
+              - port: "16262"
+                protocol: UDP

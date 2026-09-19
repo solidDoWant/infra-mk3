@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name project-zomboid
+spec:
+  targetNamespace: games
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/games/project-zomboid/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # The save, the player database and the downloaded workshop mods live on a Ceph
+    # RBD volume.
+    - name: rook-ceph-cluster
+    # Publishes the DNSEndpoint records players connect to.
+    - name: external-dns
+    # Provides the `kata` RuntimeClass the pod is pinned to.
+    - name: kata-containers-runtime
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name project-zomboid-backup
+spec:
+  targetNamespace: games
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/games/project-zomboid/backup
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # Creates the PVC that is snapshotted.
+    - name: project-zomboid
+    - name: volume-snapshot-crds
+    - name: rook-ceph-cluster
+    # Provides the storage class the backup volume is created on.
+    - name: democratic-csi-zfs-generic-nfs

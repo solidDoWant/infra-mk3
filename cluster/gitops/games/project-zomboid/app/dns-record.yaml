@@ -1,0 +1,34 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: project-zomboid
+  labels:
+    external-dns.home.arpa/publish: "true"
+spec:
+  endpoints:
+    - dnsName: zomboid.${SECRET_PUBLIC_DOMAIN_NAME}
+      recordTTL: 180
+      recordType: CNAME
+      targets:
+        - public-wan.${SECRET_PUBLIC_DOMAIN_NAME}
+      providerSpecific:
+        # Cloudflare cannot proxy raw UDP, and external-dns proxies by default.
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "false"
+---
+# This is a dummy record so that k8s_gateway will resolve the record.
+# This is not published to cloudflare because the publish annotation is missing.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: project-zomboid-k8s-gateway
+spec:
+  endpoints:
+    - dnsName: zomboid.${SECRET_PUBLIC_DOMAIN_NAME}
+      recordTTL: 180
+      recordType: A
+      targets:
+        # The game server's own LoadBalancer address, not the ingress gateway --
+        # players on the local network connect straight to it over UDP.
+        - 10.34.0.17

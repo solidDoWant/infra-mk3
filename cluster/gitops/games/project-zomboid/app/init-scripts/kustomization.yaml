@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: project-zomboid-init-scripts
+    files:
+      - merge-server-ini.sh=./merge-server-ini.sh
+    options:
+      labels:
+        kyverno.home.arpa/reload: "true"
+      annotations:
+        # Don't run Flux postBuild substitution on this ConfigMap. The script is full of
+        # shell and awk variables that would collide with Flux's ${...} syntax. The values
+        # it needs come in through the init container's env block, where they ARE
+        # substituted.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+      disableNameSuffixHash: true

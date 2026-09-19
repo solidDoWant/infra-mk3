@@ -1,0 +1,223 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: project-zomboid
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 4.6.2
+  values:
+    controllers:
+      project-zomboid:
+        # A Zomboid server is a singleton. Every instance opens the same save
+        # directory and player database, so a second one corrupts the world. There is
+        # no PodDisruptionBudget for the same reason -- there is nothing to keep
+        # available during a drain, the server just has to stop and start again.
+        replicas: 1
+        # The data volume is ReadWriteOnce, so the old pod has to release it before
+        # the replacement can mount it.
+        strategy: Recreate
+        initContainers:
+          # Applies the keys from server-config/server.ini to the server's own INI before
+          # the server starts. The INI cannot just be mounted from the ConfigMap: it lives
+          # inside the data volume, which a ConfigMap cannot be mounted into, and the
+          # server rewrites the file itself.
+          #
+          # Runs the game image rather than pulling a second one -- the node already has
+          # it for the container below, and it carries the shell and awk the script needs.
+          init-config:
+            image: &image
+              # Built from "container images/project-zomboid". The image carries a
+              # complete Steam install of the game, so it only exists in Harbor.
+              repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/project-zomboid/project-zomboid
+              tag: public-r1
+            command:
+              - sh
+              - /etc/project-zomboid/init/merge-server-ini.sh
+            env:
+              # These two decide which file the script writes, so they are anchored here
+              # and reused by the server container rather than repeated -- the two have to
+              # agree or the server reads an INI nothing is managing.
+              SERVER_NAME: &server_name nk's server
+              DATA_DIR: &data_dir /var/lib/zomboid
+              # Substituted into the @JOIN_PASSWORD@ placeholder in server.ini. The game
+              # only takes the join password as a plain INI key, so it does land on the
+              # data volume in the clear -- this keeps it out of git, not off the disk.
+              JOIN_PASSWORD:
+                secretKeyRef:
+                  name: project-zomboid-credentials
+                  key: join-password
+            securityContext: &container_security_context
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: RuntimeDefault
+            resources:
+              requests:
+                cpu: 10m
+                memory: &init_memory 64Mi
+              limits:
+                memory: *init_memory
+        containers:
+          app:
+            image: *image
+            env:
+              # Names the INI, the save and the player database under the data volume.
+              # Changing it later starts a new world rather than renaming the old one.
+              SERVER_NAME: *server_name
+              DATA_DIR: *data_dir
+              # Used when the server creates its admin account, on the first start
+              # against an empty data volume.
+              ADMIN_PASSWORD:
+                secretKeyRef:
+                  name: project-zomboid-credentials
+                  key: admin-password
+              # JVM heap, overriding the -Xmx8g the game ships with. Sized to leave
+              # the JVM's non-heap usage room under the memory limit below.
+              MAX_HEAP: 3g
+              # The server only writes the world to disk when it is told to, and the
+              # image's entrypoint sends `save` then `quit` on SIGTERM. This has to
+              # stay below terminationGracePeriodSeconds or the kubelet kills the
+              # server mid-save and the world rolls back to the last autosave.
+              SHUTDOWN_TIMEOUT: "120"
+            ports:
+              - name: game
+                containerPort: &game_port 16261
+                protocol: UDP
+              - name: direct
+                containerPort: &direct_port 16262
+                protocol: UDP
+            # No probes on purpose. The server listens on UDP only -- there is nothing
+            # for an HTTP or TCP probe to connect to -- and a liveness probe that
+            # misfired during a long map load or a save would kill it mid-write.
+            securityContext: *container_security_context
+            resources:
+              requests:
+                cpu: 2
+                memory: &memory 5Gi
+              limits:
+                memory: *memory
+        pod:
+          annotations:
+            # k8tz's injected timezone mounts break container creation under the
+            # kata-containers runtime -- it mounts one emptyDir at both
+            # /usr/share/zoneinfo and /etc/localtime and kata-agent fails that with
+            # "failed to create shim task: File exists (os error 17)". It is
+            # image-dependent and this image is Ubuntu-based, which is the failing
+            # family (this is what kept docker-postfix down for 8 days). The server
+            # logs in UTC and takes no local timezone, so nothing replaces it.
+            k8tz.io/inject: "false"
+          # The Harbor project is private.
+          imagePullSecrets:
+            - name: project-zomboid-pull-credentials
+    defaultPodOptions:
+      # VM-level isolation: the server downloads and executes arbitrary Steam Workshop
+      # mod code, and it is reachable from the internet.
+      #
+      # Unlike the other kata workloads in this cluster, this one mounts a large RWO
+      # Ceph RBD volume, which kata is not otherwise exercised with here. If the pod
+      # fails to start with a kata-agent mount error, dropping this line falls back to
+      # runc with no other changes.
+      runtimeClassName: kata
+      securityContext:
+        runAsNonRoot: true
+        # Must stay 1000. Steamworks loads steamclient.so out of the home directory
+        # that /etc/passwd gives for the running UID, and the image only links it into
+        # place for 1000. Any other UID leaves the server exiting a second after Steam
+        # initializes, with nothing in the log to say why.
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      # Has to exceed SHUTDOWN_TIMEOUT above, which is how long the entrypoint waits
+      # for the server to finish saving before it gives up and kills it.
+      terminationGracePeriodSeconds: 150
+    persistence:
+      # Everything the server persists: the server INI and sandbox settings, the save,
+      # the player database, the logs, and the workshop mods it downloads.
+      data:
+        type: persistentVolumeClaim
+        storageClass: ssd-replicated-3x
+        accessMode: ReadWriteOnce
+        size: 20Gi
+        advancedMounts:
+          project-zomboid:
+            app:
+              - path: /var/lib/zomboid
+            # The init container edits the server INI in here before the server starts.
+            init-config:
+              - path: /var/lib/zomboid
+      # The root filesystem is read-only, and the server writes here at startup.
+      # Disk-backed on purpose: sqlite-jdbc extracts a native library into the temp
+      # directory and dlopen()s it, so this must not end up on a noexec mount, and the
+      # extracted library has no business counting against the memory limit.
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          project-zomboid:
+            app:
+              - path: /tmp
+      # Steam stages workshop downloads here before installing them. The installed
+      # mods themselves land on the data volume -- the entrypoint points
+      # steamapps/workshop at it -- so this only holds in-flight downloads.
+      steamapps:
+        type: emptyDir
+        advancedMounts:
+          project-zomboid:
+            app:
+              - path: /opt/pz-server/steamapps
+      # Generated by ./server-config/kustomization.yaml from server.ini. This is the
+      # file to edit to change a server setting.
+      server-config:
+        type: configMap
+        name: project-zomboid-server-config
+        defaultMode: 0444
+        advancedMounts:
+          project-zomboid:
+            init-config:
+              - path: /etc/project-zomboid/server-config
+                readOnly: true
+      # Generated by ./init-scripts/kustomization.yaml from merge-server-ini.sh.
+      init-scripts:
+        type: configMap
+        name: project-zomboid-init-scripts
+        defaultMode: 0444
+        advancedMounts:
+          project-zomboid:
+            init-config:
+              - path: /etc/project-zomboid/init
+                readOnly: true
+    service:
+      project-zomboid:
+        controller: project-zomboid
+        # Game traffic is UDP, which the Gateway API cannot carry. Cilium BGP
+        # advertises the address to the routers; the WAN NAT rule for it is configured
+        # on OPNsense, outside this repo.
+        type: LoadBalancer
+        annotations:
+          lbipam.cilium.io/ips: 10.34.0.17
+        ports:
+          game:
+            port: *game_port
+            protocol: UDP
+            primary: true
+          # The client opens a second channel on the port above the game port.
+          direct:
+            port: *direct_port
+            protocol: UDP

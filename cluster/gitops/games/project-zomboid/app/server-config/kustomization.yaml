@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: project-zomboid-server-config
+    files:
+      - server.ini=./server.ini
+    options:
+      labels:
+        # The server only reads its INI at startup, so the
+        # restart-workload-on-config-changes Kyverno policy restarts the Deployment when
+        # this ConfigMap changes, which re-runs the init container that applies it.
+        kyverno.home.arpa/reload: "true"
+      # The HelmRelease references this ConfigMap by a fixed name.
+      disableNameSuffixHash: true
