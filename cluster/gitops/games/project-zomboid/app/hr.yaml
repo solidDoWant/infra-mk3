@@ -19,13 +19,26 @@ spec:
     controllers:
       project-zomboid:
         # A Zomboid server is a singleton. Every instance opens the same save
-        # directory and player database, so a second one corrupts the world. There is
-        # no PodDisruptionBudget for the same reason -- there is nothing to keep
-        # available during a drain, the server just has to stop and start again.
+        # directory and player database, so a second one corrupts the world.
         replicas: 1
         # The data volume is ReadWriteOnce, so the old pod has to release it before
         # the replacement can mount it.
         strategy: Recreate
+        # Not the usual "keep one of several alive" budget: with a single replica,
+        # minAvailable: 1 leaves zero voluntary disruptions allowed, so the eviction API
+        # refuses to take this pod at all. That is the point -- a stray `kubectl drain`,
+        # a descheduler pass or node maintenance cannot pull a running world out from
+        # under its players.
+        #
+        # The cost is that a drain stalls on this pod rather than proceeding. To empty the
+        # node on purpose, delete the pod: eviction is what the budget blocks, and a plain
+        # delete still gets the full grace period, so the server saves and quits cleanly.
+        #
+        # maxUnavailable: 0 would state the intent more directly, but app-template 4.6.2
+        # silently drops a zero here and renders a PDB with no budget in it at all, which
+        # allows every eviction -- the opposite of what it looks like.
+        podDisruptionBudget:
+          minAvailable: 1
         initContainers:
           # Applies the keys from server-config/server.ini to the server's own INI before
           # the server starts. The INI cannot just be mounted from the ConfigMap: it lives
