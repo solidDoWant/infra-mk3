@@ -69,7 +69,15 @@ spec:
               # These two decide which file the script writes, so they are anchored here
               # and reused by the server container rather than repeated -- the two have to
               # agree or the server reads an INI nothing is managing.
-              SERVER_NAME: &server_name nk's server
+              #
+              # This name is load-bearing and must not be changed casually. It picks the
+              # save directory (spaces become underscores), the INI and sandbox file names,
+              # the player database file name, AND the `world` column every character row
+              # in players.db is keyed on. Changing it after a world exists does not rename
+              # anything -- the server generates a fresh world and hands everyone new
+              # survivors. It is `servertest` because that is what the imported co-op save
+              # was called, and keeping it avoids rewriting that column.
+              SERVER_NAME: &server_name servertest
               DATA_DIR: &data_dir /var/lib/zomboid
               # Substituted into the @JOIN_PASSWORD@ placeholder in server.ini. The game
               # only takes the join password as a plain INI key, so it does land on the
