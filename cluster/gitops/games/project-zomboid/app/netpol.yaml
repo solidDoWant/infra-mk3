@@ -108,6 +108,15 @@ specs:
                 protocol: TCP
 
     ingress:
+      # Kubelet health checks. The probes in hr.yaml open a TCP connection to RCON, which
+      # nothing else reaches -- the Service does not publish the port.
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "27015"
+                protocol: TCP
+
       # Game traffic from players on the internet, via the LoadBalancer address. The
       # client uses the game port and the one above it.
       - fromEntities:

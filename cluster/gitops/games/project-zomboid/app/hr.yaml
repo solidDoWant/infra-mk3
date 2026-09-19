@@ -78,6 +78,12 @@ spec:
                 secretKeyRef:
                   name: project-zomboid-credentials
                   key: join-password
+              # Substituted into @RCON_PASSWORD@ in server.ini. Without it the server
+              # never opens the RCON port and the probes below can never pass.
+              RCON_PASSWORD:
+                secretKeyRef:
+                  name: project-zomboid-credentials
+                  key: rcon-password
             securityContext: &container_security_context
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
@@ -121,9 +127,47 @@ spec:
               - name: direct
                 containerPort: &direct_port 16262
                 protocol: UDP
-            # No probes on purpose. The server listens on UDP only -- there is nothing
-            # for an HTTP or TCP probe to connect to -- and a liveness probe that
-            # misfired during a long map load or a save would kill it mid-write.
+              # RCON. Deliberately not published by the Service -- the only thing that
+              # connects to it is the kubelet, for the probes below.
+              - name: rcon
+                containerPort: &rcon_port 27015
+                protocol: TCP
+            # The game ports are UDP, which cannot be probed, but the RCON listener opens
+            # immediately after the world finishes loading -- the server logs "RCON:
+            # listening" about 20ms after "SERVER STARTED" -- so a TCP connect to it is a
+            # real signal that the world is up and the server loop is running. A process
+            # or exec check would only say the JVM exists, and that is already covered:
+            # if the JVM dies the entrypoint exits and the container restarts by itself.
+            # These probes exist for the case where it is alive but wedged.
+            #
+            # This depends on RCONPassword being set in server.ini. The server does not
+            # open the port at all without one, and the probes would fail forever.
+            probes:
+              startup:
+                enabled: true
+                type: TCP
+                port: *rcon_port
+                spec:
+                  # 15 minutes: a first start downloads every workshop mod in the INI
+                  # before it gets anywhere near loading the world.
+                  periodSeconds: 10
+                  failureThreshold: 90
+              liveness:
+                enabled: true
+                type: TCP
+                port: *rcon_port
+                spec:
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  # ~2.5 minutes unresponsive before a restart, which leaves a long save
+                  # room to block the accept loop without costing the world a restart.
+                  failureThreshold: 5
+              # No readiness probe. With a single replica, readiness going false empties
+              # the LoadBalancer's endpoints and cuts off every connected player; a
+              # restart is the only useful response to a wedged server, and liveness
+              # already does that.
+              readiness:
+                enabled: false
             securityContext: *container_security_context
             resources:
               requests:
