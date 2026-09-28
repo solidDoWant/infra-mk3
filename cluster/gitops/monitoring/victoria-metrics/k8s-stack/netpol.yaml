@@ -258,6 +258,8 @@ specs:
       - fromEntities:
           # Kubelet for healthcheck
           - host
+          # API server for port forwarding to the prometheus endpoints
+          - kube-apiserver
         toPorts:
           - ports:
               - port: http
