@@ -61,7 +61,7 @@ spec:
               # Built from "container images/project-zomboid". The image carries a
               # complete Steam install of the game, so it only exists in Harbor.
               repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/project-zomboid/project-zomboid
-              tag: public-r1
+              tag: public-r3
             command:
               - sh
               - /etc/project-zomboid/init/merge-server-ini.sh
