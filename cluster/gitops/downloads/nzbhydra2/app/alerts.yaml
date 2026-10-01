@@ -1,0 +1,64 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nzbhydra2-indexers
+spec:
+  groups:
+    - name: nzbhydra2-indexers
+      rules:
+        # Success ratio over the exporter's 6h window. A broken indexer sits at
+        # ~0.5 (Hydra records a successful access next to every failed one);
+        # healthy indexers have dipped to ~0.73 for a single window at worst.
+        - alert: NzbHydra2IndexerFailing
+          expr: nzbhydra2_indexer_api_success_ratio < 0.6
+          for: 2h
+          labels:
+            severity: warning
+          annotations:
+            summary: NZBHydra2 indexer {{ $labels.indexer }} is failing
+            description: |
+              Only {{ $value | humanizePercentage }} of API calls to
+              {{ $labels.indexer }} succeeded over the last 6h. Check the
+              indexer's last error in NZBHydra2 > Stats > Indexer statuses —
+              an expired subscription or a revoked API key look like this.
+
+        # Unrecoverable errors (e.g. bad credentials) disable an indexer until
+        # it is manually re-enabled, after which it gets no traffic at all.
+        - alert: NzbHydra2IndexerDisabled
+          expr: nzbhydra2_indexer_state{state="DISABLED_SYSTEM"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: NZBHydra2 disabled indexer {{ $labels.indexer }}
+            description: |
+              NZBHydra2 permanently disabled {{ $labels.indexer }} after an
+              unrecoverable error. It stays disabled until re-enabled in the
+              NZBHydra2 indexer config.
+
+        # Driven by the "VIP expiry" date set on the indexer in NZBHydra2. Keeps
+        # firing after the date passes, until the date is updated on renewal.
+        - alert: NzbHydra2IndexerVipExpiring
+          expr: (nzbhydra2_indexer_vip_expiry_timestamp_seconds - time()) / 86400 < 14
+          labels:
+            severity: warning
+          annotations:
+            summary: NZBHydra2 indexer {{ $labels.indexer }} VIP expires soon
+            description: |
+              The VIP subscription for {{ $labels.indexer }} expires in
+              {{ $value | printf "%.0f" }} day(s) (negative: already expired).
+              After renewing, update the VIP expiry date in the NZBHydra2
+              indexer config.
+
+        - alert: NzbHydra2ExporterFailing
+          expr: nzbhydra2_up == 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: NZBHydra2 indexer metrics are unavailable
+            description: |
+              The NZBHydra2 exporter has been unable to query the NZBHydra2 API
+              for 30m, so indexer alerts cannot fire. Check the exporter logs.

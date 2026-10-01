@@ -20,7 +20,7 @@ spec:
       nzbhydra2:
         containers:
           nzbhydra2:
-            image:
+            image: &image
               repository: ghcr.io/home-operations/nzbhydra2
               tag: 7.19.1
             env:
@@ -34,12 +34,35 @@ spec:
                 enabled: true
               liveness:
                 enabled: true
-            securityContext:
+            securityContext: &container_security_context
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
               capabilities:
                 drop:
                   - ALL
+          exporter:
+            # Reuses the NZBHydra2 image for its busybox, curl and jq. Each
+            # connection is served by a fresh run of the script.
+            image: *image
+            command:
+              - nc
+              - -lk
+              - -p
+              - "8080"
+              - -e
+              - /scripts/metrics.sh
+            env:
+              NZBHYDRA2_URL: http://localhost:5076
+            ports:
+              - name: metrics
+                containerPort: &metrics_port 8080
+            # No readiness probe: it would gate the whole pod, so a broken
+            # exporter would pull NZBHydra2 out of its Service.
+            probes:
+              liveness:
+                enabled: true
+                type: HTTP
+            securityContext: *container_security_context
         pod:
           annotations:
             k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0
@@ -63,27 +86,47 @@ spec:
         accessMode: ReadWriteOnce
         storageClass: ssd-replicated-3x
         size: 10Gi
-        globalMounts:
-          - path: /config
+        advancedMounts:
+          nzbhydra2:
+            nzbhydra2:
+              - path: /config
+            # Read for NZBHydra2's API key
+            exporter:
+              - path: /config
+                readOnly: true
       logs:
         type: emptyDir
         medium: Memory
         sizeLimit: 50Mi
-        globalMounts:
-          - path: /config/logs
+        advancedMounts:
+          nzbhydra2:
+            nzbhydra2:
+              - path: /config/logs
       media-downloads:
         type: nfs
         server: ${NFS_ADDRESS}
         path: ${NFS_MEDIA_PATH}
-        globalMounts:
-          - path: /config/blackhole/torrents
-            subPath: qbittorrent/blackhole
+        advancedMounts:
+          nzbhydra2:
+            nzbhydra2:
+              - path: /config/blackhole/torrents
+                subPath: qbittorrent/blackhole
       temp:
         type: emptyDir
         medium: Memory
         sizeLimit: 50Mi
-        globalMounts:
-          - path: /tmp
+        advancedMounts:
+          nzbhydra2:
+            nzbhydra2:
+              - path: /tmp
+      exporter-scripts:
+        type: configMap
+        name: nzbhydra2-exporter
+        defaultMode: 0755
+        advancedMounts:
+          nzbhydra2:
+            exporter:
+              - path: /scripts
     service:
       nzbhydra2:
         controller: nzbhydra2
@@ -91,6 +134,13 @@ spec:
           web:
             port: *web_port
             primary: true
+          metrics:
+            port: *metrics_port
+    serviceMonitor:
+      nzbhydra2:
+        endpoints:
+          - port: metrics
+            interval: 5m
     route:
       nzbhydra2:
         hostnames:

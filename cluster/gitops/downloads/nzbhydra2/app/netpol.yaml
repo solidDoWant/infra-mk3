@@ -69,6 +69,19 @@ specs:
           - ports:
               - port: "5076"
                 protocol: TCP
+      # Kubelet for exporter sidecar healthcheck
+      - fromEntities:
+          - host
+        toPorts: &metrics_ports
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *metrics_ports
       # From search requesters
       - fromEndpoints:
           - matchLabels:
