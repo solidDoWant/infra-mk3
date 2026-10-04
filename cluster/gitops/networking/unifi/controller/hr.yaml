@@ -111,6 +111,13 @@ spec:
             subPath: run
           - path: /tmp
             subPath: tmp
+      # Replaces the image's anonymous VOLUME so the kubelet accounts for and caps it.
+      # Disk, not memory: tmpfs pages count against the JVM's memory limit.
+      logs:
+        type: emptyDir
+        sizeLimit: 512Mi
+        globalMounts:
+          - path: /usr/lib/unifi/logs
       # TODO this does nothing - see https://github.com/goofball222/unifi/issues/148
       # root-ca:
       #   type: secret
