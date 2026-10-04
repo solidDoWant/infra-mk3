@@ -142,6 +142,7 @@ hubble:
               - destination.namespace
               - destination.pod_name
               - traffic_direction
+              - node_name
             includeFilters:
               # PolicyVerdict (type 5) = one event per new connection, not per packet
               - source_label:
