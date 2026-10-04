@@ -152,25 +152,24 @@ spec:
           - name: rgw
             enabled: true
       dashboard:
-        # SSO cannot currently be enabled. Due to a Ceph bug, SSO requires HTTPS
-        # even when the dashboard is behind a reverse proxy. This means that the
-        # reverse proxy must communicate with the dashboard over HTTPS. When
-        # using the Gateway API, this requires the use of a BackendTLSPolicy.
-        # The gateway API implementation that I'm currently using (Istio) does
-        # not support this. Therefore, the dashboard cannot have SSO enabled.
-        # encryption in transit will be handled by istio
-        # Related links:
-        # * Ceph HTTPS bug: https://tracker.ceph.com/issues/48306, https://github.com/rook/rook/issues/8633
-        # * Istio lack of support for BackendTLSPolicy: https://github.com/istio/istio/issues/50408
-        # * Dashboard SSO setup docs: https://docs.ceph.com/en/quincy/mgr/dashboard/#dashboard-sso-support
-        # To enable SSO (after the above is resolved):
-        # 1. Deploy the authentik SAML provider and application. ACS URL is
+        # SSO requires the dashboard to serve HTTPS itself: the SAML handler takes
+        # the scheme from the incoming connection and ignores X-Forwarded-Proto
+        # (https://tracker.ceph.com/issues/48306). Re-encrypting from the gateway
+        # via a BackendTLSPolicy needs a cert with a SAN, which rook's self-signed
+        # cert lacks. `dashboard.sslCertificateRef` (rook PR #17985, rook >=1.21)
+        # loads a cert-manager Secret instead.
+        # TODO after upgrading to rook v1.21:
+        # 1. Storage intermediary CA (components/issuers) + a Certificate for
+        #    rook-ceph-mgr-dashboard.storage.svc. Set `ssl: true` and
+        #    `sslCertificateRef`, and point the HTTPRoute at 8443.
+        # 2. BackendTLSPolicy against root-ca-pub-cert (see temporal's).
+        # 3. Authentik SAML provider + application. ACS URL is
         #    https://rook.${SECRET_PUBLIC_DOMAIN_NAME}/auth/saml2
-        # 2. Setup SSO via the toolbox pod:
+        # 4. Via the toolbox pod:
         #    `ceph dashboard sso setup saml2 https://rook.${SECRET_PUBLIC_DOMAIN_NAME} https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/api/v3/providers/saml/3/metadata/?download
-        # 3. Enable SSO:
         #    `ceph dashboard sso enable saml2`
-        # TODO Istio now supports BackendTLSPolicy in a newer version, so implement this after upgrading Istio.
+        #    SSO doesn't create users: each needs a matching dashboard account.
+        #    Docs: https://docs.ceph.com/en/squid/mgr/dashboard/#dashboard-sso-support
         ssl: false
         # TODO prom deployment
         # prometheusEndpoint:
