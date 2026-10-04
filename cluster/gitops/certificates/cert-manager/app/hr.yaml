@@ -35,7 +35,7 @@ spec:
     ingressShim:
       defaultIssuerGroup: cert-manager.io
       defaultIssuerKind: ClusterIssuer
-      defaultIssuerName: letsencrypt-staging # TODO switch this to prod once everything is stable
+      defaultIssuerName: letsencrypt-production
     dns01RecursiveNameserversOnly: true
     dns01RecursiveNameservers: https://dns.quad9.net/dns-query
     prometheus:
