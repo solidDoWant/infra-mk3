@@ -84,35 +84,6 @@ hubble:
       - icmp:labelsContext=source_pod,source_workload,source_namespace,destination_pod,destination_workload,destination_namespace,traffic_direction
       - port-distribution:labelsContext=source_pod,source_workload,source_namespace,destination_pod,destination_workload,destination_namespace,traffic_direction
       - tcp:labelsContext=source_pod,source_workload,source_namespace,destination_pod,destination_workload,destination_namespace,traffic_direction
-  # Per-IP flow records go to logs, not metrics: IP labels on the metrics above
-  # grew a series per internet client forever and OOMKilled vmagent. Shipped to
-  # VictoriaLogs by the fluent-bit node agent (monitoring/fluent/node-agent/hubble-*).
-  export:
-    static:
-      enabled: true
-      # /var/run is tmpfs on Talos, so these files are RAM: keep them small.
-      filePath: /var/run/cilium/hubble/events.log
-      fileMaxSizeMb: 5
-      fileMaxBackups: 1
-      allowList:
-        # PolicyVerdict (type 5) = one event per new connection, not per packet
-        - '{"source_label":["reserved:world"],"event_type":[{"type":5}]}'
-        - '{"verdict":["DROPPED"]}'
-      denyList:
-        # UniFi devices syslog to the controller VIP on 5514, which has no such
-        # port: ~2 drops/s of known noise
-        - '{"destination_ip":["10.34.0.4"],"verdict":["DROPPED"]}'
-      fieldMask:
-        - time
-        - verdict
-        - drop_reason_desc
-        - IP
-        - l4
-        - source.namespace
-        - source.pod_name
-        - destination.namespace
-        - destination.pod_name
-        - traffic_direction
   relay:
     enabled: true
     replicas: 2
@@ -145,33 +116,49 @@ hubble:
         ipv6:
           enabled: false
   export:
-    # Store up to 10GB worth of logs
-    # This can be tuned down once enough have been collected to generate netpols
-    fileMaxSizeMb: 1024
-    fileMaxBackups: 10
-    fileCompress: true
+    # Applies to every dynamic exporter (the chart ignores per-entry values).
+    # /var/run is tmpfs on Talos, so these files are RAM: keep them small.
+    fileMaxSizeMb: 5
+    fileMaxBackups: 1
+    fileCompress: false
     dynamic:
       enabled: true
       config:
         createConfigMap: true
         content:
-          - name: droppedAndErrored
-            # This is written to the host's disk and persisted across reboots
-            filePath: /var/run/cilium/hubble/logs/droppedAndErrored.log
+          # Per-IP flow records live here, not in the metrics above: IP labels
+          # grew a series per internet client forever and OOMKilled vmagent.
+          # Shipped to VictoriaLogs by monitoring/fluent/node-agent/hubble-*.
+          - name: internet-and-drops
+            filePath: /var/run/cilium/hubble/events.log
             fieldMask:
               - time
               - verdict
-              - IP.source
-              - IP.destination
+              - drop_reason_desc
+              - IP
               - l4
-              - source
-              - destination
+              - source.namespace
+              - source.pod_name
+              - destination.namespace
+              - destination.pod_name
               - traffic_direction
             includeFilters:
+              # PolicyVerdict (type 5) = one event per new connection, not per packet
+              - source_label:
+                  - reserved:world
+                event_type:
+                  - type: 5
               - verdict:
                   - AUDIT
                   - DROPPED
                   - ERROR
+            excludeFilters:
+              # UniFi devices syslog to the controller VIP on 5514, which has no
+              # such port: ~2 drops/s of known noise
+              - destination_ip:
+                  - 10.34.0.4
+                verdict:
+                  - DROPPED
           # - name: all
           #   filePath: /var/run/cilium/hubble/logs/all.log
           #   # This is the minimum needed for my policy generator
