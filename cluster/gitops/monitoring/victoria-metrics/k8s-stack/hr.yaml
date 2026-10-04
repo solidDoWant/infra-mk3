@@ -91,6 +91,10 @@ spec:
         # via per-cert TTL gauges and remain enabled.
         KubeClientCertificateExpiration:
           create: false
+        # Replaced by EtcdDatabaseHighFragmentation in etcd-alerts.yaml, which
+        # also requires the DB to use >50% of its quota.
+        etcdDatabaseHighFragmentationRatio:
+          create: false
     defaultDashboards:
       grafanaOperator: &grafana_operator
         enabled: true

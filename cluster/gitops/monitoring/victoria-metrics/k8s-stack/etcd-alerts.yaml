@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+# cspell:words defrag
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: etcd-health
+spec:
+  groups:
+    - name: etcd-health
+      rules:
+        # Replaces the chart's etcdDatabaseHighFragmentationRatio (disabled in
+        # hr.yaml). With constant lease/Flux churn the DB file settles at ~2x
+        # in-use space, which sits right on the upstream 50% line and flaps.
+        # Fragmentation only matters once the file eats into the backend quota.
+        - alert: EtcdDatabaseHighFragmentation
+          expr: |
+            (
+              last_over_time(etcd_mvcc_db_total_size_in_use_in_bytes{job=~".*etcd.*"}[5m])
+                /
+              last_over_time(etcd_mvcc_db_total_size_in_bytes{job=~".*etcd.*"}[5m])
+            ) < 0.5
+              and
+            (
+              last_over_time(etcd_mvcc_db_total_size_in_bytes{job=~".*etcd.*"}[5m])
+                /
+              last_over_time(etcd_server_quota_backend_bytes{job=~".*etcd.*"}[5m])
+            ) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: etcd member {{ $labels.instance }} is fragmented and over half its quota
+            description: |
+              etcd member {{ $labels.instance }} uses more than 50% of its backend
+              quota, and less than half of that is live data. Defragment one member
+              at a time, leader last: `talosctl -n <node> etcd defrag`. Find out what
+              bloated it first (check apiserver_storage_objects history).
+
+        # Kyverno's reports controller merges and deletes these. If it stops
+        # (Sep 2026: crashlooping for 3 days) they pile up at ~1k/hour, bloating
+        # etcd. Normal is <200.
+        - alert: KyvernoEphemeralReportsPileup
+          expr: |
+            sum(
+              max by (resource) (
+                apiserver_storage_objects{resource=~"(cluster)?ephemeralreports.reports.kyverno.io"}
+              )
+            ) > 2000
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanize }} Kyverno ephemeral reports are piling up in etcd"
+            description: |
+              Kyverno ephemeral reports are not being aggregated and deleted. Check
+              the kyverno-reports-controller pods for crashloops (the descheduler may
+              have evicted and replaced them, resetting restart counts).
