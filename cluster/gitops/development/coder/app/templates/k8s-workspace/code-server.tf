@@ -10,7 +10,7 @@ data "coder_parameter" "trust_workspace" {
   description  = "True if the workspace should be trusted automatically, false to always prompt"
   default      = "true"
   type         = "bool"
-  icon         = "/emojis/1f512.png" # TODO change to /emojis/1f6e1.png once https://github.com/coder/coder/issues/20836 is fixed
+  icon         = "/emojis/1f6e1-fe0f.png"
   mutable      = true
   order        = local.code_server_order_start + 0
 
