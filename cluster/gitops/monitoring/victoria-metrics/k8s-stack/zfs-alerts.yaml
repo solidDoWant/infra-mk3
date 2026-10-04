@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: zfs-pool-health
+spec:
+  groups:
+    - name: zfs-pool-health
+      rules:
+        - alert: ZFSPoolUnhealthy
+          expr: node_zfs_zpool_state{state!="online"} == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: ZFS pool {{ $labels.zpool }} on {{ $labels.instance }} is {{ $labels.state }}
+            description: |
+              ZFS pool {{ $labels.zpool }} on {{ $labels.instance }} is in state
+              {{ $labels.state }}. Check `zpool status -x` on the host.

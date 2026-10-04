@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+# cspell:words CTLSCSI
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: smartctl-scsi-health
+spec:
+  groups:
+    - name: smartctl-scsi-health
+      rules:
+        # The chart's health rules only cover NVMe metrics. SAS drives expose
+        # their error counters under different names.
+        - alert: SmartCTLSCSIUncorrectedErrors
+          expr: |
+            increase(smartctl_read_total_uncorrected_errors[1h]) > 0
+              or
+            increase(smartctl_write_total_uncorrected_errors[1h]) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: Drive {{ $labels.device }} on {{ $labels.instance }} has new uncorrected errors
+            description: |
+              Drive {{ $labels.device }} on {{ $labels.instance }} reported uncorrectable
+              read or write errors in the last hour.
+
+        - alert: SmartCTLSCSIGrownDefects
+          expr: increase(smartctl_scsi_grown_defect_list[1h]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: Drive {{ $labels.device }} on {{ $labels.instance }} has new grown defects
+            description: |
+              Drive {{ $labels.device }} on {{ $labels.instance }} has
+              {{ $value | humanize }} new grown defects in the last hour.
+
+        # smartctl_exporter keeps publishing its last cached values when a drive
+        # stops responding, so smart_status and exit_status stay healthy. SCSI
+        # power-on time ticks every scrape, so a frozen value means stale data.
+        # NVMe only updates hourly and is not covered by this rule.
+        - alert: SmartCTLSCSIDataStale
+          expr: |
+            changes(smartctl_device_power_on_seconds[30m]) == 0
+              and on(instance, device)
+            smartctl_device{protocol="SCSI"}
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: SMART data for {{ $labels.device }} on {{ $labels.instance }} stopped updating
+            description: |
+              Power-on time for {{ $labels.device }} on {{ $labels.instance }} has not
+              changed in 30 minutes. The drive or its path has likely stopped responding
+              and smartctl_exporter is republishing cached values.
