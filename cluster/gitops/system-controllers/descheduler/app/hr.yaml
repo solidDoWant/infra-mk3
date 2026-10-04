@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: descheduler-charts
-      version: 0.31.0
+      version: 0.36.0
   values:
     kind: Deployment
     replicas: 2
@@ -25,6 +25,8 @@ spec:
         cpu: 10m
         memory: &descheduler_memory 256Mi
       limits:
+        # Chart >=0.34 defaults a 500m CPU limit; Helm deep-merges it in.
+        cpu: null
         memory: *descheduler_memory
     leaderElection:
       enabled: true
@@ -46,9 +48,11 @@ spec:
           pluginConfig:
             - name: DefaultEvictor
               args:
-                evictLocalStoragePods: true
-                evictSystemCriticalPods: true
-                evictFailedBarePods: true
+                podProtections:
+                  defaultDisabled: &evictable_by_default
+                    - PodsWithLocalStorage
+                    - SystemCriticalPods
+                    - FailedBarePods
             - name: RemoveFailedPods
               args:
                 # TODO
@@ -92,15 +96,15 @@ spec:
           pluginConfig:
             - name: DefaultEvictor
               args:
-                evictLocalStoragePods: true
-                evictSystemCriticalPods: true
-                evictFailedBarePods: true
+                podProtections:
+                  defaultDisabled: *evictable_by_default
+                  # TODO enable once every replicated workload has a PDB:
+                  # extraEnabled:
+                  #   - PodsWithoutPDB
                 # Docs imply that this doesn't take into account
                 # topologyspreadconstraints.
                 nodeFit: true
                 minReplicas: 1
-                # TODO enable this upon 1.32 release
-                # ignorePodsWithoutPDB: true
             - name: RemoveDuplicates
             # Spread out workloads. There's no autoscaling, so all resources
             # might as well be used
