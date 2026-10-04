@@ -10,7 +10,8 @@ specs:
       matchLabels:
         app.kubernetes.io/name: spegel
     egress:
-      # TODO whatever world:5001 is - old router pod maybe?
+      # world:5001 drops are expected and correct: the bootstrap Lease stores the
+      # leader's pod IP, which goes stale when that pod is replaced. Don't allow it.
       # To k8s api for lease management
       - toEntities:
           - kube-apiserver
