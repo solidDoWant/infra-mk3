@@ -9,7 +9,6 @@ specs:
     endpointSelector:
       matchLabels:
         app.kubernetes.io/instance: approver-policy
-    # TODO update ports when https://github.com/cert-manager/approver-policy/pull/599 is merged
     ingress:
       - fromEndpoints:
           - matchLabels:
@@ -17,21 +16,19 @@ specs:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: "9402"
+              - port: metrics
                 protocol: TCP
       - fromEntities:
           - kube-apiserver
         toPorts:
           - ports:
-              # Webhook calls
-              - port: "10250"
+              - port: webhook
                 protocol: TCP
       - fromEntities:
           - host
         toPorts:
           - ports:
-              # Health check probes
-              - port: "6060"
+              - port: healthcheck
                 protocol: TCP
     egress:
       - toEntities:
