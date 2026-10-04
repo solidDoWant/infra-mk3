@@ -15,6 +15,9 @@ spec:
   # plus the fluentd `copy` fan-out provide, so this is the recommended shape and
   # not a limitation to design around.
   retentionPeriod: 1w
+  # Drop the oldest per-day partitions before the 30Gi volume fills (80%; the
+  # rest is headroom for merges). VL always keeps the last 2 days regardless.
+  retentionMaxDiskSpaceUsageBytes: 24GiB
   podMetadata:
     labels:
       app.kubernetes.io/part-of: victoria-logs
@@ -53,6 +56,9 @@ spec:
   # plus the fluentd `copy` fan-out provide, so this is the recommended shape and
   # not a limitation to design around.
   retentionPeriod: 1w
+  # Drop the oldest per-day partitions before the 30Gi volume fills (80%; the
+  # rest is headroom for merges). VL always keeps the last 2 days regardless.
+  retentionMaxDiskSpaceUsageBytes: 24GiB
   podMetadata:
     labels:
       app.kubernetes.io/part-of: victoria-logs
