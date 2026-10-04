@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterinput_v1alpha2.json
+# Hubble flow export written by cilium-agent (hubble.export.static in the cilium
+# values): new inbound connections from the internet, and all drops.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: hubble-flows
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  tail:
+    tag: hubble.flow
+    path: /var/run/cilium/hubble/events.log
+    parser: hubble
+    refreshIntervalSeconds: 10
+    memBufLimit: 16MB
+    skipLongLines: true
+    db: /fluent-bit/tail/hubble.db
+    dbLocking: true
+    # The file is tmpfs and rotates quickly; don't replay it on first start
+    readFromHead: false
+    storageType: filesystem

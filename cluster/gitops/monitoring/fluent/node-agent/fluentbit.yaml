@@ -50,9 +50,16 @@ spec:
       hostPath:
         path: /var/mnt/local-storage/daemonset/monitoring/fluent/node-agent/chunks
         type: DirectoryOrCreate
+    - name: hubble-flows
+      hostPath:
+        path: /var/run/cilium/hubble
+        type: DirectoryOrCreate
   volumesMounts:
     - name: chunks
       mountPath: /fluent-bit/chunks
+    - name: hubble-flows
+      mountPath: /var/run/cilium/hubble
+      readOnly: true
   # /api/v1/uptime is a pure "process is alive" check. fluent-bit v5.0 stopped
   # registering /api/v1/health unless `Health_Check On` is set (returns 404
   # otherwise), and the v5.0 /api/v2/health returns 500 on output error/retry

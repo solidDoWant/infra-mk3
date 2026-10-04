@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: hubble-flows
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: hubble.flow
+  filters:
+    # Hard cap so a flood (e.g. spoofed UDP) can't swamp the log pipeline:
+    # bursts up to rate*window (1200), then 20/s per node. Normal is ~1-2/s.
+    - throttle:
+        rate: 20
+        interval: 1s
+        window: 60
+    - nest:
+        operation: lift
+        nestedUnder: flow
+        addPrefix: hubble_
+    - modify:
+        rules:
+          - rename:
+              node_name: hubble_node
+          - remove: hubble_time
+          - copy:
+              hubble_verdict: log
+          - add:
+              logging_type: hubble.flow
+    - nest:
+        operation: nest
+        wildcard:
+          - hubble_*
+        removePrefix: hubble_
+        nestUnder: hubble
+    - nest:
+        operation: nest
+        wildcard:
+          - logging_*
+        removePrefix: logging_
+        nestUnder: logging
+    # IPs must stay out of the stream fields, or VictoriaLogs gets a stream per IP
+    - modify:
+        rules:
+          - add:
+              _meta_stream_fields: logging.type,hubble.node
+    - nest:
+        operation: nest
+        wildcard:
+          - _meta_*
+        removePrefix: _meta_
+        nestedUnder: _meta

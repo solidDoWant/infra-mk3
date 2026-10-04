@@ -8,7 +8,7 @@ metadata:
     config.fluentbit.fluent.io/enabled: "true"
     config.fluentbit.fluent.io/agent: node
 spec:
-  matchRegex: ^((kube|talos\.service)\..+|talos\.kernel)$
+  matchRegex: ^((kube|talos\.service)\..+|talos\.kernel|hubble\.flow)$
   forward:
     # Absolute FQDN (trailing dot). A bare `.monitoring.svc` is 2 dots, and the
     # 4-dot `.svc.cluster.local` form is still under the default ndots:5, so
