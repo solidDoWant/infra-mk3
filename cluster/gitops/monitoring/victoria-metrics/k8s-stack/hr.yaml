@@ -485,7 +485,7 @@ spec:
     defaultDatasources:
       grafanaOperator: *grafana_operator
       victoriametrics:
-        # TODO remove this after updating this chart f ar e nough
+        # TODO remove this block once the chart is >=0.68.0 (drops the version pin).
         # Replicates the chart default list purely to override the plugin
         # version -- the chart pins 0.15.1, which predates the Grafana 13 React
         # 19 work. 0.23.4 is the first release declaring Grafana 13 support;
