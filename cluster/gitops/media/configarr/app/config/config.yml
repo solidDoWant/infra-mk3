@@ -163,6 +163,8 @@ radarr:
     # GOTCHA: configarr resolves RECYCLARR templates against the `includes/`
     # tree (prefixed names like radarr-quality-profile-*), NOT the top-level
     # `templates/` dir — short names like `uhd-bluray-web` won't resolve.
+    # Recyclarr v8 deleted `includes/` upstream; configarr >=1.30.2 pins the
+    # legacy ref, which gets no further updates. Long-term: TRaSH templates.
     include:
       - template: radarr-quality-definition-movie
       - template: radarr-quality-profile-uhd-bluray-web
@@ -508,7 +510,6 @@ sonarr:
     # BR-DISK isn't a sonarr quality enum (radarr-only).
     quality_profiles:
       - name: Any Quality
-        language: Any
         score_set: default
         min_format_score: 0
         quality_sort: top

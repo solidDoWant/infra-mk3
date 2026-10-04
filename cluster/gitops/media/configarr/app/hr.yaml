@@ -36,8 +36,9 @@ spec:
         containers:
           configarr: &configarr_container
             image:
+              # cspell:words raydak
               repository: ghcr.io/raydak-labs/configarr
-              tag: 1.28.0
+              tag: 1.34.0
             env:
               RADARR_API_KEY:
                 secretKeyRef:
