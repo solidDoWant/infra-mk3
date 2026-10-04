@@ -153,6 +153,23 @@ hubble:
                   - AUDIT
                   - DROPPED
                   - ERROR
+            # WORKAROUND, remove once temporalio/temporal#11429 (PR #11431) ships and
+            # temporalio/server in data/temporal/app/hr.yaml includes it.
+            # Temporal's ringpop healer re-dials the previous pod generation's IPs
+            # (ringpop ports 693x) until the next restart; netpols deny it and Cilium's
+            # ICMP deny-response bounces back. ~55% of all exported rows were this.
+            excludeFilters:
+              - source_pod:
+                  - data/temporal-
+                destination_port: ["6933", "6934", "6935", "6936", "6939"]
+                verdict:
+                  - DROPPED
+              - destination_pod:
+                  - data/temporal-
+                protocol:
+                  - icmp
+                verdict:
+                  - DROPPED
           # - name: all
           #   filePath: /var/run/cilium/hubble/logs/all.log
           #   # This is the minimum needed for my policy generator
