@@ -95,6 +95,9 @@ specs:
           - ports:
               - port: "10001"
                 protocol: UDP
+          - ports:
+              - port: "5514"
+                protocol: UDP
       # Access from poller
       - fromEndpoints:
           - matchLabels:

@@ -62,6 +62,9 @@ spec:
               - name: discovery
                 containerPort: 10001
                 protocol: UDP
+              - name: syslog
+                containerPort: 5514
+                protocol: UDP
             probes:
               liveness: &probe
                 enabled: true
@@ -130,7 +133,13 @@ spec:
             targetPort: 8443
           speedtest:
             port: 6789
+          # app-template defaults service ports to TCP
           stun:
             port: 3478
+            protocol: UDP
           discovery:
             port: 10001
+            protocol: UDP
+          syslog:
+            port: 5514
+            protocol: UDP

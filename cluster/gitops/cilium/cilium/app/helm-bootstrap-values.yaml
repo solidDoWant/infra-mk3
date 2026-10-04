@@ -153,13 +153,6 @@ hubble:
                   - AUDIT
                   - DROPPED
                   - ERROR
-            excludeFilters:
-              # UniFi devices syslog to the controller VIP on 5514, which has no
-              # such port: ~2 drops/s of known noise
-              - destination_ip:
-                  - 10.34.0.4
-                verdict:
-                  - DROPPED
           # - name: all
           #   filePath: /var/run/cilium/hubble/logs/all.log
           #   # This is the minimum needed for my policy generator
