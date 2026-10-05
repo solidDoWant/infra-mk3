@@ -103,9 +103,8 @@ spec:
               args:
                 podProtections:
                   defaultDisabled: *evictable_by_default
-                  # TODO enable once every replicated workload has a PDB:
-                  # extraEnabled:
-                  #   - PodsWithoutPDB
+                  extraEnabled:
+                    - PodsWithoutPDB
                 # Docs imply that this doesn't take into account
                 # topologyspreadconstraints.
                 nodeFit: true
