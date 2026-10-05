@@ -11,7 +11,7 @@ REPLY_TIMEOUT="${REPLY_TIMEOUT:-60}"
 RCON_PORT="${RCON_PORT:-27015}"
 console_log="${DATA_DIR}/server-console.txt"
 
-log() { printf 'mod-updater: %s\n' "$*" >&2; }
+log() { printf '%s mod-updater: %s\n' "$(date -u +%FT%TZ)" "$*" >&2; }
 
 # Sends a console command and prints the first new log line matching the given pattern.
 run_command() {

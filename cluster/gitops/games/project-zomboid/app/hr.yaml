@@ -205,6 +205,9 @@ spec:
               limits:
                 memory: *mod_updater_memory
         pod:
+          labels:
+            # Restarts are left to mod-updater, which waits for the server to empty.
+            descheduler.home.arpa/enable-lifetime-eviction: "false"
           # Lets mod-updater write to the server's console, which is the server's stdin,
           # and signal the entrypoint to save and restart it. Same UID in both containers,
           # so no extra capabilities are needed.

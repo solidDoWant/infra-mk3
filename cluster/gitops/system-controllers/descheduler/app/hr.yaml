@@ -74,6 +74,11 @@ spec:
                 includingInitContainers: true
                 includingEphemeralContainers: true
                 maxPodLifeTimeSeconds: 604800 # One week
+                # Co-aged Ceph pods are evicted together; an OSD + mon leader in one
+                # pass loses the OSD's mark-down (ceph#18516), stalling all RBD writes ~30s.
+                namespaces:
+                  exclude:
+                    - storage
                 labelSelector:
                   matchExpressions:
                     - key: descheduler.home.arpa/enable-lifetime-eviction
