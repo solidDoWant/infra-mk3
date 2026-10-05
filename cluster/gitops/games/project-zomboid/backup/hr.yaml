@@ -38,6 +38,9 @@ spec:
               # Steam re-downloads every workshop mod on each start, so backing them
               # up only bloats the snapshot.
               - glob: workshop
+              # The server zips copies of the save here (on every start and on version
+              # changes). Redundant with Saves/, and they multiply the snapshot size.
+              - glob: backups
               - glob: Logs
               - glob: server-console.txt
               - glob: lost+found
