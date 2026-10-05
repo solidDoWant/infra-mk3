@@ -10,7 +10,6 @@ specs:
       matchLabels:
         app.kubernetes.io/name: minecraft-router
         app.kubernetes.io/instance: minecraft-router
-        app.kubernetes.io/component: minecraft-router
     egress:
       # DNS resolution
       - toEndpoints:

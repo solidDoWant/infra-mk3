@@ -13,10 +13,15 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 3.7.3
+      version: 4.6.2
   values:
     controllers:
       system-upgrade-controller:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        serviceAccount:
+          identifier: *app_name
         pod:
           securityContext:
             runAsNonRoot: true
@@ -50,7 +55,7 @@ spec:
               seccompProfile:
                 type: RuntimeDefault
     serviceAccount:
-      create: true
+      system-upgrade-controller: {}
     rbac:
       roles:
         system-upgrade-controller:
@@ -139,5 +144,5 @@ spec:
           roleRef:
             identifier: *app_name
           subjects:
-            - identifier: default
+            - identifier: *app_name
               namespace: "{{ .Release.Namespace }}"

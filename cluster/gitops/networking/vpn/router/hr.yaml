@@ -14,12 +14,14 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.2.0
+      version: 4.6.2
   values:
     controllers:
       vpn-router:
         replicas: 2
         strategy: RollingUpdate
+        podDisruptionBudget:
+          minAvailable: 1
         defaultContainerOptions: &default_container_options
           image:
             # This image includes both keepalived and the gateway route manager itself
@@ -285,6 +287,8 @@ spec:
       vpn-router-single:
         replicas: 2
         strategy: RollingUpdate
+        podDisruptionBudget:
+          minAvailable: 1
         defaultContainerOptions: *default_container_options
         initContainers:
           keepalived-config-gen:

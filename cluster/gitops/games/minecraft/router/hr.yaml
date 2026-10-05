@@ -14,12 +14,16 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 3.7.3
+      version: 4.6.2
   values:
     controllers:
       minecraft-router:
         replicas: 2
         strategy: RollingUpdate
+        podDisruptionBudget:
+          minAvailable: 1
+        serviceAccount:
+          identifier: minecraft-router
         containers:
           app:
             image:
@@ -80,7 +84,7 @@ spec:
               - name: ndots
                 value: "1"
     serviceAccount:
-      create: true
+      minecraft-router: {}
     rbac:
       roles:
         minecraft-router:
@@ -99,7 +103,7 @@ spec:
           roleRef:
             identifier: minecraft-router
           subjects:
-            - identifier: default
+            - identifier: minecraft-router
     persistence:
       scripts:
         type: configMap
