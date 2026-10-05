@@ -233,6 +233,8 @@ prometheus:
   enabled: true
 operator:
   rollOutPods: true
+  podDisruptionBudget:
+    enabled: true
   dashboards: *dashboards
 pmtuDiscovery:
   enabled: true
