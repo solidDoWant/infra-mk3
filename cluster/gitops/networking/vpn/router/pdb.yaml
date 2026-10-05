@@ -1,0 +1,26 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vpn-router
+  labels: &labels
+    app.kubernetes.io/name: vpn-router
+    app.kubernetes.io/instance: vpn-router
+    app.kubernetes.io/controller: vpn-router
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vpn-router-single
+  labels: &labels
+    app.kubernetes.io/name: vpn-router
+    app.kubernetes.io/instance: vpn-router
+    app.kubernetes.io/controller: vpn-router-single
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

@@ -1,0 +1,65 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: harbor-core
+  labels: &labels
+    app: harbor
+    release: harbor
+    component: core
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: harbor-jobservice
+  labels: &labels
+    app: harbor
+    release: harbor
+    component: jobservice
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: harbor-portal
+  labels: &labels
+    app: harbor
+    release: harbor
+    component: portal
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: harbor-registry
+  labels: &labels
+    app: harbor
+    release: harbor
+    component: registry
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: harbor-trivy
+  labels: &labels
+    app: harbor
+    release: harbor
+    component: trivy
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels

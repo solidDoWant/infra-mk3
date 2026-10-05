@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: coder
+  labels: &labels
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/instance: coder
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: *labels
