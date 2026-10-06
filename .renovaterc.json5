@@ -161,6 +161,12 @@
       extractVersion: "^v(?<version>.+)$",
     },
     {
+      description: "Kyverno chart pinned (see kyverno/app/hr.yaml): 3.6.3+ breaks service: apiCall contexts until kyverno/kyverno#16047 ships",
+      matchDatasources: ["helm"],
+      matchPackageNames: ["kyverno"],
+      allowedVersions: "<=3.6.2",
+    },
+    {
       description: "Kubernetes may not outrun what the deployed Talos supports; raise alongside Talos upgrades",
       matchDatasources: ["docker"],
       matchPackageNames: ["ghcr.io/siderolabs/kubelet"],
