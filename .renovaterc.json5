@@ -87,6 +87,12 @@
       versioning: "regex:^(?:(?<compatibility>contrib|distroless)-)?v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
     },
     {
+      description: "Ubuntu: numeric LTS tags only (ubuntu versioning also treats codenames like 'resolute' as versions)",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ubuntu", "docker.io/library/ubuntu"],
+      allowedVersions: "/^\\d[02468]\\.04$/",
+    },
+    {
       description: "Kubernetes may not outrun what the deployed Talos supports; raise alongside Talos upgrades",
       matchDatasources: ["docker"],
       matchPackageNames: ["ghcr.io/siderolabs/kubelet"],
