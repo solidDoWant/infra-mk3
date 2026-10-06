@@ -61,6 +61,9 @@ specs:
           - matchName: quay.io
           - matchPattern: "**.quay.io"
           - matchName: public.ecr.aws
+          # ECR Public's blob CDN (blob requests redirect here)
+          # cspell:words d2glxqk2uabbnd
+          - matchName: d2glxqk2uabbnd.cloudfront.net
           - matchName: registry.k8s.io
           - matchName: cdn.registry.k8s.io
           - matchPattern: "**.pkg.dev"
