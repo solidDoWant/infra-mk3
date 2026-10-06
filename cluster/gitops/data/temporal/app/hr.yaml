@@ -15,7 +15,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: temporal-charts
-      version: 1.2.0
+      version: 1.7.0
   valuesFrom:
     - kind: ConfigMap
       name: &archival_hr_vars temporal-archival-hr-vars
