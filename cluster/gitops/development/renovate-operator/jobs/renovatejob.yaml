@@ -46,15 +46,4 @@ spec:
         // Commits are made through the GitHub API, so GitHub signs them as
         // the App.
         platformCommit: "enabled",
-        packageRules: [
-          {
-            // Images built and pushed by CI to the in-cluster Harbor. The repo
-            // only holds the unsubstituted Flux placeholder for its host, so
-            // the lookup can't succeed.
-            description: "Skip in-cluster Harbor images",
-            matchDatasources: ["docker"],
-            matchPackageNames: ["/^harbor\\./"],
-            enabled: false,
-          },
-        ],
       }

@@ -1,0 +1,198 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Base: managers (flux / kubernetes / kustomize across all YAML),
+  // `# renovate:` annotations, oci:// refs, commit format.
+  // Policy (limits, grouping, automerge, approvals) lives below.
+  extends: [
+    "github>home-operations/renovate-presets#8.1.0",
+    "github>home-operations/renovate-presets//apps/cnpg.json5#8.1.0",
+    "github>home-operations/renovate-presets//apps/talosFactory.json5#8.1.0",
+    ":semanticCommits",
+    ":timezone(America/Chicago)",
+  ],
+
+  // The preset disables rate limiting. Without CI every merge is a deploy, so
+  // cap the backlog instead of opening ~200 PRs at once.
+  // prConcurrentLimit: 10,
+  // prHourlyLimit: 4,
+  // Hold new releases briefly (supply-chain safety, chained hotfix releases).
+  // timestamp-optional: registries without release timestamps (many OCI
+  // registries) would otherwise be held forever.
+  minimumReleaseAge: "3 days",
+  // cspell:words Behaviour
+  minimumReleaseAgeBehaviour: "timestamp-optional",
+  suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
+
+  // Replaces config:recommended's list, so the defaults are repeated.
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/*.sops.*",
+    ".claude/**",
+    "**/docs/**",
+    "schemas/**",
+    "custom hardware/**",
+    // Ad-hoc debug pods, not deployed by Flux.
+    "cluster/tooling/**",
+  ],
+
+  // The flux manager already extracts HelmRelease values images; helm-values
+  // would extract every hr.yaml image a second time.
+  "helm-values": { enabled: false },
+
+  customManagers: [
+    {
+      customType: "regex",
+      description: "GitHub release assets and tagged raw files (CRDs, manifests, dashboards, schemas)",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/releases/download/(?<currentValue>v?\\d[^/\\s]*)/",
+      ],
+      datasourceTemplate: "github-releases",
+    },
+    {
+      customType: "regex",
+      description: "Tagged raw.githubusercontent.com files",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?:refs/tags/)?(?<currentValue>v\\d[^/\\s]*)/",
+      ],
+      datasourceTemplate: "github-tags",
+    },
+  ],
+
+  packageRules: [
+    // --- Approval / safety ---------------------------------------------------
+    {
+      description: "Major updates wait for a Dependency Dashboard checkbox",
+      matchUpdateTypes: ["major"],
+      dependencyDashboardApproval: true,
+    },
+    {
+      description: "Images built and pushed by CI to the in-cluster Harbor; the repo only holds the unsubstituted host",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^harbor\\./"],
+      enabled: false,
+    },
+    {
+      description: "Inline image strings in HelmRelease values are already extracted by the flux manager",
+      matchManagers: ["kubernetes"],
+      matchFileNames: ["**/hr.yaml"],
+      enabled: false,
+    },
+    {
+      description: "Envoy publishes contrib-/distroless- variants as separate tag streams",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^(docker\\.io/)?envoyproxy/envoy$/"],
+      versioning: "regex:^(?:(?<compatibility>contrib|distroless)-)?v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
+      description: "Kubernetes may not outrun what the deployed Talos supports; raise alongside Talos upgrades",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/siderolabs/kubelet"],
+      allowedVersions: "<1.37",
+    },
+
+    // --- Groups (one PR for components that must move together) ------------
+    {
+      description: "Talos: talconfig + talosctl",
+      groupName: "talos",
+      matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Flux: install manifests + CLI",
+      groupName: "flux",
+      matchPackageNames: ["fluxcd/flux2", "ghcr.io/fluxcd/flux-cli"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Rook: operator + cluster charts",
+      groupName: "rook-ceph",
+      matchDatasources: ["helm"],
+      matchPackageNames: ["rook-ceph", "rook-ceph-cluster"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Istio: charts + istioctl",
+      groupName: "istio",
+      matchPackageNames: ["base", "istiod", "cni", "ztunnel", "gateway", "istio/istioctl"],
+      matchDatasources: ["helm", "docker"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    // CRDs applied from release assets must move with their operator.
+    {
+      description: "KEDA: chart + CRD kustomize base",
+      groupName: "keda",
+      matchPackageNames: ["keda", "kedacore/keda"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "grafana-operator",
+      matchPackageNames: ["/grafana-operator/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "system-upgrade-controller",
+      matchPackageNames: ["/system-upgrade-controller/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "node-network-operator",
+      matchPackageNames: ["/node-network-operator/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "whereabouts",
+      matchPackageNames: ["/whereabouts/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "kubevirt",
+      matchPackageNames: ["/kubevirt/", "/containerized-data-importer/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "rabbitmq",
+      matchPackageNames: ["/rabbitmq/", "/messaging-topology-operator/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+
+    // --- Labels -----------------------------------------------------------
+    {
+      matchUpdateTypes: ["major"],
+      addLabels: ["type/major"],
+    },
+    {
+      matchUpdateTypes: ["minor"],
+      addLabels: ["type/minor"],
+    },
+    {
+      matchUpdateTypes: ["patch"],
+      addLabels: ["type/patch"],
+    },
+    {
+      matchUpdateTypes: ["digest"],
+      addLabels: ["type/digest"],
+    },
+    {
+      matchDatasources: ["docker"],
+      addLabels: ["renovate/container"],
+    },
+    {
+      matchDatasources: ["helm"],
+      addLabels: ["renovate/helm"],
+    },
+    {
+      matchDatasources: ["github-releases", "github-tags"],
+      addLabels: ["renovate/github-release"],
+    },
+
+    // Last so it overrides any preset rule: no CI, and merging deploys.
+    {
+      description: "Automerge disabled for everything",
+      matchPackageNames: ["*"],
+      automerge: false,
+    },
+  ],
+}
