@@ -12,14 +12,14 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: fairwinds-charts
-      version: 4.7.2
+      version: 4.12.5
   values:
     fullnameOverride: vertical-pod-autoscaler
     recommender:
       revisionHistoryLimit: 1
       image:
         # renovate: datasource=github-releases depName=kubernetes/autoscaler
-        tag: 1.3.0
+        tag: 1.8.0
       podLabels:
         endpoints.netpols.home.arpa/time-series-querier: "true"
       extraArgs:
