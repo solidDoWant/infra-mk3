@@ -10,22 +10,29 @@ specs:
       matchLabels:
         app.kubernetes.io/name: spegel
     egress:
-      # world:5001 drops are expected and correct: the bootstrap Lease stores the
-      # leader's pod IP, which goes stale when that pod is replaced. Don't allow it.
-      # To k8s api for lease management
-      - toEntities:
-          - kube-apiserver
+      # DNS: peers are bootstrapped from the spegel-bootstrap headless service
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
         toPorts:
           - ports:
-              - port: "6443"
+              - port: "53"
+                protocol: UDP
+              - port: "53"
                 protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
       # To other spegel pods for transceiving images
       - toEndpoints:
           - *spegel_selector
         toPorts:
           - ports:
-              - port: router
+              - port: router-tcp
                 protocol: TCP
+              - port: router-quic
+                protocol: UDP
               - port: registry
                 protocol: TCP
     ingress:
@@ -49,8 +56,10 @@ specs:
           - *spegel_selector
         toPorts:
           - ports:
-              - port: router
+              - port: router-tcp
                 protocol: TCP
+              - port: router-quic
+                protocol: UDP
               - port: registry
                 protocol: TCP
       # Metrics
