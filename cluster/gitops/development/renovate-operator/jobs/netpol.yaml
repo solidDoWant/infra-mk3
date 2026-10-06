@@ -55,7 +55,9 @@ specs:
           - matchName: auth.docker.io
           - matchName: index.docker.io
           - matchName: hub.docker.com
+          # Docker Hub blob CDNs (config blobs carry source URL labels)
           - matchName: production.cloudflare.docker.com
+          - matchName: production.cloudfront.docker.com
           - matchName: quay.io
           - matchPattern: "**.quay.io"
           - matchName: public.ecr.aws
