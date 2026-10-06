@@ -6,6 +6,7 @@ metadata:
 spec:
   # Needed until https://github.com/VictoriaMetrics/operator/pull/1305 merges and releases
   image:
+    # renovate: datasource=docker depName=victoriametrics/victoria-logs
     tag: v1.17.0-victorialogs
   priorityClassName: system-cluster-critical
   # Deliberately left at one pod per instance. VLSingle caps a single CR at one
@@ -47,6 +48,7 @@ metadata:
 spec:
   # Needed until https://github.com/VictoriaMetrics/operator/pull/1305 merges and releases
   image:
+    # renovate: datasource=docker depName=victoriametrics/victoria-logs
     tag: v1.17.0-victorialogs
   priorityClassName: system-cluster-critical
   # Deliberately left at one pod per instance. VLSingle caps a single CR at one

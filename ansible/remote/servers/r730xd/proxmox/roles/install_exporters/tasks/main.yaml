@@ -63,6 +63,7 @@
         autoremove: true
     - name: Install smartctl exporter via GitHub release
       vars:
+        # renovate: datasource=github-releases depName=prometheus-community/smartctl_exporter
         smartctl_exporter_version: 0.14.0
       block:
         - name: Create temporary directory for smartctl exporter download 

@@ -40,6 +40,16 @@
   // would extract every hr.yaml image a second time.
   "helm-values": { enabled: false },
 
+  customDatasources: {
+    "grafana-plugins": {
+      defaultRegistryUrlTemplate: "https://grafana.com/api/plugins/{{packageName}}/versions",
+      format: "json",
+      transformTemplates: [
+        '{"releases": $map(items, function($i) { {"version": $i.version, "releaseTimestamp": $i.createdAt} })}',
+      ],
+    },
+  },
+
   customManagers: [
     {
       customType: "regex",
@@ -52,10 +62,50 @@
     },
     {
       customType: "regex",
-      description: "Tagged raw.githubusercontent.com files",
+      description: "VPA CRDs, tagged vertical-pod-autoscaler-X.Y.Z in the kubernetes/autoscaler monorepo",
       managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
       matchStrings: [
+        "https://raw\\.githubusercontent\\.com/kubernetes/autoscaler/refs/tags/vertical-pod-autoscaler-(?<currentValue>\\d+\\.\\d+\\.\\d+)/",
+      ],
+      depNameTemplate: "kubernetes/autoscaler",
+      datasourceTemplate: "github-releases",
+    },
+    {
+      customType: "regex",
+      description: "Kyverno dashboard, tagged kyverno-chart-X.Y.Z: tracked as the kyverno chart so it follows the chart pin",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/kyverno/kyverno/refs/tags/kyverno-chart-(?<currentValue>\\d+\\.\\d+\\.\\d+)/",
+      ],
+      depNameTemplate: "kyverno",
+      datasourceTemplate: "helm",
+      registryUrlTemplate: "https://kyverno.github.io/kyverno",
+    },
+    {
+      customType: "regex",
+      description: "Grafana plugins (grafana-operator plugins: lists)",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "- name: (?<depName>[a-z0-9]+(?:-[a-z0-9]+)*-(?:datasource|panel|app))\\n\\s+version: [\"']?(?<currentValue>\\d[^\"'\\s]*)",
+      ],
+      datasourceTemplate: "custom.grafana-plugins",
+    },
+    {
+      customType: "regex",
+      description: "tape-archiver data-worker image deployed by Ansible",
+      managerFilePatterns: ["/^ansible/.+\\.ya?ml$/"],
+      matchStrings: [
+        "(?<depName>ghcr\\.io/soliddowant/tape-archiver/[a-z0-9-]+):(?<currentValue>[\\w.-]+)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Tagged raw files (CRDs, manifests, dashboards, values schema refs)",
+      managerFilePatterns: ["/^cluster/.+\\.(ya?ml|json)$/"],
+      matchStrings: [
         "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?:refs/tags/)?(?<currentValue>v\\d[^/\\s]*)/",
+        "https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/raw/refs/tags/(?<currentValue>v\\d[^/\\s]*)/",
       ],
       datasourceTemplate: "github-tags",
     },
@@ -91,6 +141,24 @@
       matchDatasources: ["docker"],
       matchPackageNames: ["ubuntu", "docker.io/library/ubuntu"],
       allowedVersions: "/^\\d[02468]\\.04$/",
+    },
+    {
+      description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
+      matchDatasources: ["github-releases"],
+      matchPackageNames: ["kubernetes/autoscaler"],
+      extractVersion: "^vertical-pod-autoscaler-(?<version>\\d+\\.\\d+\\.\\d+)$",
+    },
+    {
+      description: "VictoriaLogs tags dropped the -victorialogs suffix after v1.17.0",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["victoriametrics/victoria-logs"],
+      versioning: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-victorialogs)?$",
+    },
+    {
+      description: "Release tags are vX.Y.Z; the Ansible var is bare",
+      matchDatasources: ["github-releases"],
+      matchPackageNames: ["prometheus-community/smartctl_exporter"],
+      extractVersion: "^v(?<version>.+)$",
     },
     {
       description: "Kubernetes may not outrun what the deployed Talos supports; raise alongside Talos upgrades",
@@ -131,6 +199,77 @@
       description: "spegel: HelmRelease + bootstrap helmfile chart, dashboard URL tag",
       groupName: "spegel",
       matchPackageNames: ["spegel", "ghcr.io/spegel-org/helm-charts/spegel", "spegel-org/spegel"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Teleport: charts, tbot sidecars (must not outrun the cluster) and chart schema refs",
+      groupName: "teleport",
+      matchPackageNames: ["/^teleport-/", "/gravitational\\/tbot/", "gravitational/teleport"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "VictoriaMetrics: k8s-stack chart (bundles the operator) + operator CRDs",
+      groupName: "victoria-metrics-operator",
+      matchPackageNames: ["victoria-metrics-k8s-stack", "VictoriaMetrics/operator"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "VictoriaLogs + its Grafana datasource plugin",
+      groupName: "victoria-logs",
+      matchPackageNames: ["victoriametrics/victoria-logs", "victoriametrics-logs-datasource"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Kyverno chart + dashboard (same chart version)",
+      groupName: "kyverno",
+      matchDatasources: ["helm"],
+      matchPackageNames: ["kyverno"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Cilium: chart (HelmRelease + bootstrap helmfile) + values schema ref",
+      groupName: "cilium",
+      matchPackageNames: ["cilium", "cilium/cilium"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    // Exporter/app image + the dashboard pinned to the same release.
+    {
+      groupName: "qbittorrent-exporter",
+      matchPackageNames: ["ghcr.io/martabal/qbittorrent-exporter", "martabal/qbittorrent-exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "nginx-prometheus-exporter",
+      matchPackageNames: ["ghcr.io/nginx/nginx-prometheus-exporter", "nginx/nginx-prometheus-exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "media-processor",
+      matchPackageNames: ["media-processor", "solidDoWant/media-processor"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "smartctl-exporter",
+      matchPackageNames: ["prometheus-community/smartctl_exporter", "quay.io/prometheuscommunity/smartctl-exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "tape-archiver: charts + the Ansible-deployed data-worker image",
+      groupName: "tape-archiver",
+      matchPackageNames: ["/^tape-archiver-/", "ghcr.io/soliddowant/tape-archiver/data-worker"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Coder: chart + CLI image in the devcontainer",
+      groupName: "coder",
+      matchPackageNames: ["coder", "ghcr.io/coder/coder"],
+      matchDatasources: ["helm", "docker"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "VPA: Fairwinds chart + recommender image + CRDs (kubernetes/autoscaler)",
+      groupName: "vpa",
+      matchPackageNames: ["vpa", "kubernetes/autoscaler"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -240,6 +379,17 @@
     {
       matchPackageNames: ["alpine/curl"],
       changelogUrl: "https://curl.se/changes.html",
+    },
+    // FairwindsOps/charts has no tags/releases; the chart dir history is the changelog.
+    {
+      matchDatasources: ["helm"],
+      matchPackageNames: ["vpa"],
+      changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/vpa",
+    },
+    {
+      matchDatasources: ["helm"],
+      matchPackageNames: ["goldilocks"],
+      changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/goldilocks",
     },
 
     // --- Labels -----------------------------------------------------------
