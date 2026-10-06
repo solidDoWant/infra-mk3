@@ -72,7 +72,7 @@ releases:
     namespace: system-controllers
     createNamespace: false # Handled by hook
     chart: spegel/spegel
-    version: v0.0.27
+    version: 0.7.4
     values:
       - ../gitops/system-controllers/spegel/app/helm-bootstrap-values.yaml
     hooks:
