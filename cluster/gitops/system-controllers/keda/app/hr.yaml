@@ -8,12 +8,13 @@ spec:
   interval: 1h
   chart:
     spec:
-      chart: ./keda
+      chart: keda
+      reconcileStrategy: ChartVersion
       sourceRef:
-        kind: GitRepository
+        kind: HelmRepository
         name: kedacore-charts
         namespace: flux-system
-      reconcileStrategy: Revision
+      version: 2.21.0
   values:
     # CRDs are deployed in a separate Flux Kustomization (keda-crds).
     crds:
