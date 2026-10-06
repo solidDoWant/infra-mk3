@@ -1,6 +1,6 @@
 # These links are for the VPN gateway network.
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.8/schemas/link_v1alpha1.json
 # This is the link that pods will join to via the bridge CNI plugin. The bridge VNI plugins will add one end of a veth pair to this bridge, and
 # the other end to the pod's network namespace.
 # This bridge will also have a VXLAN interface added to it, so that pods can communicate across nodes.
@@ -15,7 +15,7 @@ spec:
     # This matches the wireguard MTU, which is the limiting factor for the VPN gateway network.
     mtu: 1420
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.8/schemas/link_v1alpha1.json
 # This is the link that the VXLAN should use for transceiving packets. This is a virtual device (a bond), but it
 # is can transceive packets between nodes.
 apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
@@ -28,7 +28,7 @@ spec:
   # The operator will just assume that the link exists and is properly configured.
   unmanaged: {}
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.8/schemas/link_v1alpha1.json
 # The VXLAN links deployed by this connect the bridges on each node to each other, allowing pods to communicate across nodes.
 apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
 kind: Link
@@ -53,7 +53,7 @@ spec:
 ...
 # These links are for the router pod network (conntrackd + keepalived syncing).
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.8/schemas/link_v1alpha1.json
 apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
 kind: Link
 metadata:
@@ -62,7 +62,7 @@ spec:
   interfaceName: vpn-r-bridge0
   bridge: {}
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.8/schemas/link_v1alpha1.json
 apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
 kind: Link
 metadata:
@@ -71,7 +71,7 @@ spec:
   interfaceName: bond0
   unmanaged: {}
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.8/schemas/link_v1alpha1.json
 apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
 kind: Link
 metadata:
