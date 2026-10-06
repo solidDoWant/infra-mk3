@@ -68,7 +68,7 @@ COPY --from=ghcr.io/terraform-linters/tflint:v0.60.0 /usr/local/bin/tflint /usr/
 
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
-COPY --from=alpine/helm:3.16.2 /usr/bin/helm /usr/local/bin/helm
+COPY --from=alpine/helm:3.22.0 /usr/bin/helm /usr/local/bin/helm
 ## Plugins
 ### Required for helmfile
 RUN helm plugin install https://github.com/jkroepke/helm-secrets --version v4.6.2 && \
