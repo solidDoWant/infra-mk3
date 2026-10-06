@@ -1,6 +1,6 @@
 ---
 # Two routes are needed due to https://github.com/istio/istio/issues/56769
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: TCPRoute
 metadata:
   name: minecraft-router-internal
@@ -13,7 +13,7 @@ spec:
         - name: minecraft-router
           port: 25565
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: TCPRoute
 metadata:
   name: minecraft-router-external
