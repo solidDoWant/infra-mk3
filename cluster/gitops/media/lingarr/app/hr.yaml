@@ -33,7 +33,7 @@ spec:
               # Upstream publishes here in addition to docker.io; ghcr avoids
               # the anonymous-pull rate limit.
               repository: ghcr.io/lingarr-translate/lingarr
-              tag: 1.2.4@sha256:1acaed7642794141978d836a75227de4e5d927d580f99beffdd62cff0aa4ad41
+              tag: 1.3.0@sha256:12473f6f40beac1bb91ffadc7d8c7f1c2a0cd99ba336e4bf2c1dfa617c27a763
             env:
               # PostgreSQL — connection terminates on the envoy sidecar at
               # 127.0.0.1:5432, which proxies to lingarr-postgres over
