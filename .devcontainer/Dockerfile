@@ -46,7 +46,7 @@ COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6 /usr/local/bin/dive /usr
 COPY --from=ghcr.io/siderolabs/talosctl:v1.13.2 /talosctl /usr/local/bin/talosctl
 
 # talhelper
-COPY --from=ghcr.io/budimanjojo/talhelper:v3.1.8 /bin/talhelper /usr/local/bin/talhelper
+COPY --from=ghcr.io/budimanjojo/talhelper:v3.1.17 /bin/talhelper /usr/local/bin/talhelper
 
 # helmfile
 COPY --from=ghcr.io/helmfile/helmfile:v1.0.0-rc.7 /usr/local/bin/helmfile /usr/local/bin/helmfile
