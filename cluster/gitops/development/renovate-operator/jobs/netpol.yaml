@@ -62,6 +62,7 @@ specs:
           - matchPattern: "**.quay.io"
           - matchName: public.ecr.aws
           - matchName: registry.k8s.io
+          - matchName: cdn.registry.k8s.io
           - matchPattern: "**.pkg.dev"
           - matchName: factory.talos.dev
 
@@ -97,6 +98,7 @@ specs:
 
           # Terraform providers (Coder templates)
           - matchName: registry.terraform.io
+          - matchName: registry.coder.com
           - matchName: releases.hashicorp.com
           # Python and Ansible Galaxy (ansible/)
           # cspell:words pypi pythonhosted
