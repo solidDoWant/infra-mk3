@@ -62,7 +62,7 @@ spec:
           discord-notifier:
             image:
               repository: python
-              tag: 3.13.5-slim
+              tag: 3.14.8-slim
             envFrom:
               - secretRef:
                   name: minecraft-router-discord-notifier-webhook
