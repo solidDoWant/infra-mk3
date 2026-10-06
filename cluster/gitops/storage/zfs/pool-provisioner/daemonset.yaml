@@ -33,7 +33,7 @@ spec:
                       - zfs-pool-provisioner-scripts # This will be replaced by kustomize
       containers:
         - name: *app_name
-          image: alpine/k8s:1.36.1
+          image: alpine/k8s:1.37.1
           command:
             - /scripts/provision-zfs-pool.sh
           env:
