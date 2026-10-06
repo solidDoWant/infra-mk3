@@ -16,7 +16,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: grafana-charts
-      version: 5.24.0
+      version: 5.25.0
   values:
     # Sets CLUSTER_DOMAIN, which makes the operator address the managed Grafana
     # as `grafana-service.monitoring.svc.cluster.local` rather than the bare
