@@ -210,7 +210,7 @@
     {
       description: "VictoriaMetrics: k8s-stack chart (bundles the operator) + operator CRDs",
       groupName: "victoria-metrics-operator",
-      matchPackageNames: ["victoria-metrics-k8s-stack", "VictoriaMetrics/operator"],
+      matchPackageNames: ["/victoria-metrics-k8s-stack$/", "VictoriaMetrics/operator"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -218,6 +218,11 @@
       groupName: "victoria-logs",
       matchPackageNames: ["victoriametrics/victoria-logs", "victoriametrics-logs-datasource"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Keep the 0.x plugin on the victoria-logs group branch (the preset routes 0.x minors to major- branches)",
+      matchPackageNames: ["victoriametrics-logs-datasource"],
+      additionalBranchPrefix: "",
     },
     {
       description: "Kyverno chart + dashboard (same chart version)",
@@ -245,7 +250,7 @@
     },
     {
       groupName: "media-processor",
-      matchPackageNames: ["media-processor", "solidDoWant/media-processor"],
+      matchPackageNames: ["/(^|/)media-processor$/", "solidDoWant/media-processor"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -256,7 +261,7 @@
     {
       description: "tape-archiver: charts + the Ansible-deployed data-worker image",
       groupName: "tape-archiver",
-      matchPackageNames: ["/^tape-archiver-/", "ghcr.io/soliddowant/tape-archiver/data-worker"],
+      matchPackageNames: ["/(^|/)tape-archiver-(web|control-worker)$/", "ghcr.io/soliddowant/tape-archiver/data-worker"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
