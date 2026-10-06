@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/objectbucket.io/objectbucketclaim_v1alpha1.json
+# Renovate repository cache, forwarded to the job pods.
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: renovate-operator-bucket
+spec:
+  # Fixed name: the chart takes the bucket as a literal value, not a reference.
+  bucketName: renovate-operator
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    maxObjects: "10000"
+    maxSize: 10G
+    # Parts of aborted multipart uploads are invisible to ListObjects but count
+    # against maxObjects; nothing else reaps them.
+    bucketLifecycle: |
+      {
+        "Rules": [
+          {
+            "ID": "AbortIncompleteMultipartUploads",
+            "Status": "Enabled",
+            "Prefix": "",
+            "AbortIncompleteMultipartUpload": {
+              "DaysAfterInitiation": 1
+            }
+          }
+        ]
+      }

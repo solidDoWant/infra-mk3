@@ -1,0 +1,39 @@
+# HMAC secret for GitHub webhook deliveries. Set the same value as the GitHub
+# App's webhook secret (read it with: sops -d webhook-token.sops.yaml).
+apiVersion: v1
+kind: Secret
+metadata:
+    name: renovate-webhook-token
+type: Opaque
+stringData:
+    token: ENC[AES256_GCM,data:fdugycPgkFSg7+taxt9LnRWL2Qff0yhg/U10aDW0GflydVGdYAgiHFNV6iZxflRPpeR9ogIscZvanhK40Typ8w==,iv:Q8jMPipp2V9X1M85sKR/izt/AFDvFCsQGsqVyHQpqOQ=,tag:FF1glXT8x1IkvxG+lk8MiQ==,type:str]
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age:
+        - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBMNFNQNjkvZkFURk9oZTJ3
+            WTVieEJSK3phRmZQN2NoTElITy8zbmFTbWh3CnV3VUNjejlrdDR5Wm9UaVNNSTkw
+            NzI3TUNRSmpNWjJwL0RTeTE3QllGcVEKLS0tIHlVQjhTZUloWFB2MCs4R01xSGo5
+            ZVhxU0xPemx4cjdQM2RYL0hEc2hTQjAKqk/obob/vNAp+5R8XLuheZDFONdbdxcn
+            I71jAPZ/6YYsnqjfRfIodGrUsuie4OIU/m5mEe2bSNh5yhOFsyarMA==
+            -----END AGE ENCRYPTED FILE-----
+        - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSByWGNIMWZVZmVQNnN0UE5K
+            Vy80Qnh1S2NMRDdONWQ2aTNHY0pMRjJNd1hZClordU1FZXdlQkhkWWdHTklzbVpz
+            d1pKL0VtYmsyVmdnaU0zRzk2WHlwZ2cKLS0tIDl0ZHpqcTZiNFhFVWJrdzN3WmRY
+            MjdVcWgyek5hZWE2d0lRL2NUUitnZE0K870xUjjIjKu+s/qzob2MJZaaZsESgfjQ
+            ZQxbi+EoI0oJVu/O/O4JFI9QZDQVuWTsogukWLVgytyvxZkjHyG+ig==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-10-06T05:24:53Z"
+    mac: ENC[AES256_GCM,data:+r/kn4IP1fud36qtQcVaJQvjBQC1tjMNdy/ajK/PmoNMu+FGsQ+ta8izl3J52uNsEzSKPZLKyWqrX8fVhHOXxafC+nSq5RFlcank8vVTSKdjRStbOiAR+xQCMUWItLjU1Zdc5GkZm6DBxZUXtPeoY0iKigI0IEyGOQ7/46q7TBk=,iv:qb5yxCXBg6iSZPn3Scs+jqWPkpWaredRgZCe57Mkrio=,tag:95G/b4hpxMeTgf4uJHq72g==,type:str]
+    pgp: []
+    encrypted_regex: ^(data|stringData)$
+    mac_only_encrypted: true
+    version: 3.9.0

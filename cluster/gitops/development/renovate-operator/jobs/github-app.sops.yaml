@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: renovate-github-app
+  labels:
+    # Required for referencing custom keys once the operator's policy engine is enabled.
+    renovate-operator.mogenius.com/allow-ref: "true"
+type: Opaque
+stringData:
+  app-id: ENC[AES256_GCM,data:srH6uWmqWg==,iv:HasKhY1fgADCdurnRmY8EiwEPF50XpFReCt4oykq5wA=,tag:b3MTvvyRzz1fvp2fSL9uzA==,type:str]
+  installation-id: ENC[AES256_GCM,data:rHb3znyDo/M3,iv:cHxn8jYo1HGw70x7GbNRQYxlm4Cyo3TG9SwpCJ4UIN8=,tag:mrZb7ChrnwbUjrR1RcA8eA==,type:str]
+  private-key.pem: ENC[AES256_GCM,data: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,iv:GVNkXzH4klgvf1nuVI/gOz7plyEAfCmeT3RODwORG/0=,tag:YqnVmzoTuXC2czk5pOATbQ==,type:str]
+sops:
+  kms: []
+  gcp_kms: []
+  azure_kv: []
+  hc_vault: []
+  age:
+    - recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBEUHEyWWoxc0Y4RzMyekFx
+        c0p6YTBidWtiYVFGOEUxV3N4VmxWTDliYXprClAzNDNUUmk5RWhVVTFnemJCMXha
+        K095eUVQMFBJbmlUMFdmbHVMaGZ2Y0kKLS0tIHprY3QvbTZhN09DdlN1Mlp0SEJI
+        S2NpNElyc2QreExmWTRXTGR1djlQRG8Ke2/ZYZKoqNOoN4ks+9YJnwnzRbKo3OZ1
+        QPocI8OViSvoONwWgaQnhzliVJsy3gP6ho3b9DPAI8so9a1cBVdejw==
+        -----END AGE ENCRYPTED FILE-----
+    - recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+      enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA2czlyY1N0TElUR0l0WW8w
+        UnY4VXR5aHUvR3hEVmF4YzNneEhEM1d1S1RjClEra1NrK0gvSHU5RExFQnI2Z1Q0
+        a09veTJCSXRIR2Z2dGY5WncvOEZZYTQKLS0tIFZBZy92emxPQUhQU2JQRVloUXFm
+        NndHckZPVG5RTHQreWd0SDkvV2JqVFEKhVNKRNQYpiz+ubxUzlSe4rY+R3fmOg+n
+        SJO6twV6zoku/h7LQN1vKKguDf7U68vxvcLo9kqF0K+B1qljox2gMg==
+        -----END AGE ENCRYPTED FILE-----
+  lastmodified: "2026-10-06T05:28:37Z"
+  mac: ENC[AES256_GCM,data:hdNF2tUXUwyJINx6/TlfA3EeSZG6C7JSMX+JQQ3QwcBVvXLeYLzhgVws3vlqoaeHk/dfKps+4NgGaJ4eI+gRWc9NjwaGSxhsMJCGc9AzKDAwavedEJBNfkBehc9BXoPMdeqYFf/qyPMSJjQ9KvOq5Ou+fUxmjqHKB8b4yGtecZc=,iv:bEucUyGEQ8x3DhqvjqHzXZH+s3Hqv7aPXJY28RIZxvE=,tag:+/kfjc/A2slmPhl4Cyp8Tg==,type:str]
+  pgp: []
+  encrypted_regex: ^(data|stringData)$
+  mac_only_encrypted: true
+  version: 3.9.0

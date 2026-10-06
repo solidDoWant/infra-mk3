@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: build-renovate-operator-bucket-config
+spec:
+  rules:
+    # Key names required by the chart's s3.existingSecret, which the operator
+    # also forwards to the job pods as AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY.
+    - name: build-renovate-operator-bucket-credentials
+      match:
+        any:
+          - resources:
+              kinds:
+                - Secret
+              name: renovate-operator-bucket
+      skipBackgroundRequests: true
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: renovate-operator-bucket-credentials
+        namespace: development
+        data:
+          data:
+            access-key-id: "{{ request.object.data.AWS_ACCESS_KEY_ID }}"
+            secret-access-key: "{{ request.object.data.AWS_SECRET_ACCESS_KEY }}"

@@ -1,0 +1,110 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+# Discovery and executor pods spawned by the operator for the "renovate"
+# RenovateJob. Renovate needs to reach every datasource it looks up, so each
+# newly managed ecosystem (or vanity Go import host) needs an entry here; a
+# missing host shows up as a lookup failure in the run log and a Hubble drop.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: renovate-jobs
+specs:
+  - description: renovate
+    endpointSelector:
+      matchLabels:
+        renovate-operator.mogenius.com/renovatejob: renovate
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Rook S3 (repository cache), served through the internal gateway
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      - toFQDNs:
+          # cspell:words containerbase
+          # GitHub: platform API, git, presets, release notes, GitHub Actions
+          # and GitHub-releases datasources, containerbase tool downloads
+          - matchName: github.com
+          - matchName: api.github.com
+          - matchName: codeload.github.com
+          - matchPattern: "**.githubusercontent.com"
+          # Helm repositories hosted on GitHub Pages
+          - matchPattern: "*.github.io"
+
+          # Container registries
+          - matchName: ghcr.io
+          - matchName: registry-1.docker.io
+          - matchName: auth.docker.io
+          - matchName: index.docker.io
+          - matchName: hub.docker.com
+          - matchName: production.cloudflare.docker.com
+          - matchName: quay.io
+          - matchPattern: "**.quay.io"
+          - matchName: public.ecr.aws
+          - matchName: registry.k8s.io
+          - matchPattern: "**.pkg.dev"
+          - matchName: factory.talos.dev
+
+          # Helm repositories (cluster/gitops/flux-system/flux/sources/helm)
+          - matchName: charts.fairwinds.com
+          - matchName: charts.goauthentik.io
+          - matchName: charts.jetstack.io
+          - matchName: charts.releases.teleport.dev
+          - matchName: charts.rook.io
+          - matchName: helm.cilium.io
+          - matchName: helm.coder.com
+          # cspell:words goharbor
+          - matchName: helm.goharbor.io
+          - matchName: go.temporal.io
+          - matchName: kiali.org
+          - matchName: piraeus.io
+          - matchName: istio-release.storage.googleapis.com
+
+          # Go: toolchain install, module proxy/checksum DB, and common vanity
+          # import hosts (resolved via ?go-get=1 for source URLs)
+          - matchName: go.dev
+          - matchName: dl.google.com
+          - matchName: proxy.golang.org
+          - matchName: sum.golang.org
+          - matchName: storage.googleapis.com
+          - matchName: golang.org
+          - matchName: google.golang.org
+          - matchName: k8s.io
+          - matchName: sigs.k8s.io
+          # cspell:words gopkg
+          - matchName: gopkg.in
+          - matchName: go.uber.org
+
+          # Terraform providers (Coder templates)
+          - matchName: registry.terraform.io
+          - matchName: releases.hashicorp.com
+          # Python and Ansible Galaxy (ansible/)
+          # cspell:words pypi pythonhosted
+          - matchName: pypi.org
+          - matchName: files.pythonhosted.org
+          - matchName: galaxy.ansible.com
+          # Nix flake inputs
+          - matchName: cache.nixos.org
+          - matchName: releases.nixos.org
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
