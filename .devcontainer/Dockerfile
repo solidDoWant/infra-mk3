@@ -58,7 +58,7 @@ COPY --from=registry.k8s.io/kubectl:v1.36.1 /bin/kubectl /usr/local/bin/kubectl
 COPY --from=ghcr.io/fluxcd/flux-cli:v2.8.8 /usr/local/bin/flux /usr/local/bin/flux
 
 # Coder
-COPY --from=ghcr.io/coder/coder:v2.28.3 /opt/coder /usr/local/bin/coder
+COPY --from=ghcr.io/coder/coder:v2.37.4 /opt/coder /usr/local/bin/coder
 
 # Terraform
 COPY --from=hashicorp/terraform:1.13 /bin/terraform /usr/local/bin/terraform
