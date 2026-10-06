@@ -58,7 +58,7 @@ spec:
           metrics:
             image:
               repository: ghcr.io/nginx/nginx-prometheus-exporter
-              tag: 1.4.1
+              tag: 1.5.3
             args:
               - --nginx.scrape-uri=http://localhost:8080/stub_status
             resources:
