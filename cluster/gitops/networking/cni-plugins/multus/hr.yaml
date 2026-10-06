@@ -38,12 +38,12 @@ spec:
         defaultContainerOptions:
           image:
             repository: ghcr.io/k8snetworkplumbingwg/multus-cni
-            tag: v4.2.2-thick
+            tag: v4.3.1-thick
           resources:
             requests:
               cpu: 10m
-              # Why does multus need so much at startup??
-              memory: &memory 1Gi
+              # Delegate CNIs (~55Mi each) run in this cgroup; bounded by connectionLimit
+              memory: &memory 768Mi
             limits:
               memory: *memory
         initContainers:
@@ -69,6 +69,50 @@ spec:
               privileged: true
               readOnlyRootFilesystem: true
             terminationMessagePolicy: FallbackToLogsOnError
+            # Health endpoints are only served on the CNI unix socket, and the image has no curl.
+            # Probe connections count against connectionLimit, so timeouts allow for queueing behind a CNI burst.
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: &probe-command
+                      - perl
+                      - -MIO::Socket::UNIX
+                      - -e
+                      - &probe-script >-
+                        alarm 8;
+                        $s = IO::Socket::UNIX->new(Peer => "/host/run/multus/multus.sock") or exit 1;
+                        print $s "GET /$ARGV[0] HTTP/1.0\r\n\r\n";
+                        <$s> =~ m{^HTTP/\S+ 200 } or exit 1
+                      - healthz
+                  periodSeconds: 2
+                  timeoutSeconds: 10
+                  failureThreshold: 30
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: *probe-command
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - perl
+                      - -MIO::Socket::UNIX
+                      - -e
+                      - *probe-script
+                      - readyz
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 1
     persistence:
       host-cni-bin:
         type: hostPath
@@ -164,7 +208,8 @@ spec:
                 "multusConfigFile": "auto",
                 "socketDir": "/host/run/multus/",
                 "namespaceIsolation": true,
-                "globalNamespaces": "networking"
+                "globalNamespaces": "networking",
+                "connectionLimit": 8
             }
     serviceAccount:
       multus: {}
