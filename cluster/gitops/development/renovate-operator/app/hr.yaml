@@ -102,6 +102,10 @@ spec:
         enabled: true
       dashboard:
         enabled: true
+        labels:
+          # Grafana's k8s-sidecar provisions ConfigMaps with this label into
+          # the General folder, overwriting the grafana-operator copy (same uid).
+          grafana_dashboard: null
         grafanaDashboard:
           allowCrossNamespaceImport: true
           instanceSelector:
