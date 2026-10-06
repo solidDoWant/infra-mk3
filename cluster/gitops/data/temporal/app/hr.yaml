@@ -371,7 +371,7 @@ spec:
       enabled: true
       image:
         repository: temporalio/admin-tools
-        tag: 1.31.0
+        tag: 1.32.0
       # Same fsGroup reasoning as schema.securityContext — admintools mounts the
       # same postgres TLS secrets, and its image runs as user 1000.
       securityContext:
