@@ -32,6 +32,9 @@ spec:
       podLabels:
         # Ingress allow into the openid-configuration-proxy.
         endpoints.netpols.home.arpa/oidc-querier: "true"
+        # External gateway egress allow, for GitHub webhook deliveries. The
+        # pod's own netpol limits this to the webhook port.
+        endpoints.netpols.home.arpa/external-ingress-enabled: "true"
     resources:
       requests:
         cpu: 10m
