@@ -42,8 +42,8 @@ spec:
           resources:
             requests:
               cpu: 10m
-              # Why does multus need so much at startup??
-              memory: &memory 1Gi
+              # Delegate CNIs (~55Mi each) run in this cgroup; bounded by connectionLimit
+              memory: &memory 768Mi
             limits:
               memory: *memory
         initContainers:
@@ -164,7 +164,8 @@ spec:
                 "multusConfigFile": "auto",
                 "socketDir": "/host/run/multus/",
                 "namespaceIsolation": true,
-                "globalNamespaces": "networking"
+                "globalNamespaces": "networking",
+                "connectionLimit": 8
             }
     serviceAccount:
       multus: {}
