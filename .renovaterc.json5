@@ -315,6 +315,18 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "democratic-csi: chart + driver image (image tag sits in the chart's image map)",
+      groupName: "democratic-csi",
+      matchPackageNames: ["democratic-csi", "ghcr.io/democratic-csi/democratic-csi"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Keep the 0.x chart on the democratic-csi group branch (the preset routes 0.x minors to major- branches)",
+      matchDatasources: ["helm"],
+      matchPackageNames: ["democratic-csi"],
+      additionalBranchPrefix: "",
+    },
+    {
       groupName: "rabbitmq",
       matchPackageNames: ["/rabbitmq/", "/messaging-topology-operator/"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
@@ -337,7 +349,7 @@
       sourceUrl: "https://github.com/aws/aws-cli",
     },
     {
-      matchPackageNames: ["/^(docker\\.io/)?democraticcsi/democratic-csi$/"],
+      matchPackageNames: ["/^(docker\\.io/)?democraticcsi/democratic-csi$/", "ghcr.io/democratic-csi/democratic-csi"],
       sourceUrl: "https://github.com/democratic-csi/democratic-csi",
     },
     {

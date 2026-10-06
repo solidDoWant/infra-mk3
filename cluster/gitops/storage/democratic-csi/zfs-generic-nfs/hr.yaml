@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: democratic-csi-charts
-      version: 0.14.7
+      version: 0.15.1
   # Not using Teleport for this until https://github.com/democratic-csi/democratic-csi/issues/454
   # is addressed
   valuesFrom:
@@ -36,7 +36,6 @@ spec:
             sudoEnabled: true
           datasetProperties:
             # TODO user properties
-          # Needs https://github.com/democratic-csi/democratic-csi/pull/455
           snapshotProperties:
             # TODO user properties
           datasetParentName: bulk-pool-01/k8s/democratic-csi/nfs/pvcs
@@ -63,49 +62,28 @@ spec:
       externalHealthMonitorController:
         extraArgs:
           - --enable-node-watcher=true
-      # The chart hardcodes `--v=5` in each sidecar's `args`, and `extraArgs` is
-      # appended after it -- klog takes the LAST `--v`, so this overrides without
-      # having to restate the whole arg list.
-      #
-      # `--v=5` is a debugging level, and on these sidecars it is almost entirely
-      # client-go leader-election bookkeeping: every renewal of a lease the pod
-      # already holds is logged (`successfully renewed lease storage/...`), once
-      # every ~2s, forever. Measured over 24h before this change:
-      #
-      #   external-resizer      46,018 lines   (--v=5)
-      #   external-attacher     27,142          (--v=5)
-      #   external-provisioner  22,808          (--v=5)
-      #   external-snapshotter       28          (--v=2, set below since before)
-      #
-      # The snapshotter is the control: same chart, same sidecar family, same
-      # `--leader-election`, three orders of magnitude quieter purely because of
-      # the verbosity. Everything the other three emit in steady state is at
-      # V>=3 -- lease renewals plus per-resync `Started PVC processing` /
-      # `No need to resize PVC` for every PVC in the cluster. Real events
-      # (volume create/delete/attach/resize, leadership transitions, errors) are
-      # V<=2 or Error and still ship.
-      #
-      # `--v=2` (not 0/1) matches the level already used on the openebs
-      # zfs-localpv sidecars in this repo and is the usual production default for
-      # kubernetes-csi sidecars.
+      # Chart default `--v=5` is almost entirely leader-election lease renewals
+      # (~2s, forever) plus per-resync PVC chatter: ~96k lines/24h across
+      # attacher/provisioner/resizer. Real events (create/delete/attach/resize,
+      # leadership changes, errors) are V<=2 and still ship. `2` matches the
+      # openebs zfs-localpv sidecars and the usual kubernetes-csi default.
       externalAttacher:
-        extraArgs:
-          - --v=2
+        verbosityLevel: 2
       externalProvisioner:
-        extraArgs:
-          - --v=2
+        verbosityLevel: 2
       externalResizer:
-        extraArgs:
-          - --v=2
+        verbosityLevel: 2
       externalSnapshotter:
-        extraArgs:
-          - --v=2
+        verbosityLevel: 2
       driver:
-        image: &dcsi_image docker.io/democraticcsi/democratic-csi:v1.9.3
+        image: &image
+          registry: ghcr.io/democratic-csi/democratic-csi
+          # renovate: datasource=docker depName=ghcr.io/democratic-csi/democratic-csi
+          tag: v1.9.5
     node:
       priorityClassName: system-cluster-critical
       driver:
-        image: *dcsi_image
+        image: *image
     storageClasses:
       - name: zfs-generic-nfs
         reclaimPolicy: Delete
