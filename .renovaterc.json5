@@ -170,6 +170,78 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
 
+    // --- Changelog sources ---------------------------------------------------
+    // Release notes come from GitHub releases/tags of sourceUrl. Packages with
+    // no (or a wrong) org.opencontainers.image.source label get one here;
+    // changelogUrl is a link-only fallback where upstream tags don't match.
+    {
+      matchPackageNames: ["registry.k8s.io/kubectl"],
+      sourceUrl: "https://github.com/kubernetes/kubernetes",
+    },
+    {
+      matchPackageNames: ["/dragonfly-operator/"],
+      sourceUrl: "https://github.com/dragonflydb/dragonfly-operator",
+    },
+    {
+      matchPackageNames: ["public.ecr.aws/aws-cli/aws-cli"],
+      sourceUrl: "https://github.com/aws/aws-cli",
+    },
+    {
+      matchPackageNames: ["/^(docker\\.io/)?democraticcsi/democratic-csi$/"],
+      sourceUrl: "https://github.com/democratic-csi/democratic-csi",
+    },
+    {
+      matchPackageNames: ["ghcr.io/grpc-ecosystem/grpc-health-probe"],
+      sourceUrl: "https://github.com/grpc-ecosystem/grpc-health-probe",
+    },
+    {
+      matchPackageNames: ["ghcr.io/k8s-gateway/k8s_gateway"],
+      sourceUrl: "https://github.com/k8s-gateway/k8s_gateway",
+    },
+    {
+      matchPackageNames: ["ghcr.io/fluent/fluent-operator/fluent-bit"],
+      sourceUrl: "https://github.com/fluent/fluent-bit",
+    },
+    {
+      matchPackageNames: ["ghcr.io/jellyfin/jellyfin"],
+      sourceUrl: "https://github.com/jellyfin/jellyfin",
+    },
+    {
+      matchPackageNames: ["alpine/k8s"],
+      sourceUrl: "https://github.com/alpine-docker/k8s",
+    },
+    {
+      description: "Teleport's GitHub releases lag its charts/images",
+      matchPackageNames: ["/^teleport-/", "/gravitational\\/(tbot|teleport)/"],
+      changelogUrl: "https://goteleport.com/docs/changelog/",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/pause"],
+      changelogUrl: "https://github.com/kubernetes/kubernetes/blob/master/build/pause/CHANGELOG.md",
+    },
+    {
+      description: "Tags are kustomize/vX.Y.Z",
+      matchPackageNames: ["registry.k8s.io/kustomize/kustomize"],
+      changelogUrl: "https://github.com/kubernetes-sigs/kustomize/releases",
+    },
+    {
+      description: "contrib-/distroless- tags don't match envoy's vX.Y.Z releases",
+      matchPackageNames: ["/^(docker\\.io/)?envoyproxy/envoy$/"],
+      changelogUrl: "https://github.com/envoyproxy/envoy/releases",
+    },
+    {
+      matchPackageNames: ["python", "docker.io/library/python"],
+      changelogUrl: "https://docs.python.org/3/whatsnew/changelog.html",
+    },
+    {
+      matchPackageNames: ["ghcr.io/cloudnative-pg/postgresql"],
+      changelogUrl: "https://www.postgresql.org/docs/release/",
+    },
+    {
+      matchPackageNames: ["alpine/curl"],
+      changelogUrl: "https://curl.se/changes.html",
+    },
+
     // --- Labels -----------------------------------------------------------
     {
       matchUpdateTypes: ["major"],
