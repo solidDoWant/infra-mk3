@@ -61,7 +61,7 @@ COPY --from=ghcr.io/fluxcd/flux-cli:v2.8.8 /usr/local/bin/flux /usr/local/bin/fl
 COPY --from=ghcr.io/coder/coder:v2.28.3 /opt/coder /usr/local/bin/coder
 
 # Terraform
-COPY --from=hashicorp/terraform:1.13 /bin/terraform /usr/local/bin/terraform
+COPY --from=hashicorp/terraform:1.16 /bin/terraform /usr/local/bin/terraform
 
 # tflint
 COPY --from=ghcr.io/terraform-linters/tflint:v0.60.0 /usr/local/bin/tflint /usr/local/bin/tflint
