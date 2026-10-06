@@ -18,7 +18,7 @@ spec:
       # path.Clean("") becomes "." and trips the new namespace-segment check.
       # Affects our Postgres/Dragonfly CA-bundle policies. Bump back to
       # current once # https://github.com/kyverno/kyverno/pull/16047 is released.
-      version: 3.6.2
+      version: 3.9.1
   values:
     # Global logging for all controllers. The chart default verbosity is 2
     # (trace): the background controller alone emits ~1900 TRC lines (per-UR
