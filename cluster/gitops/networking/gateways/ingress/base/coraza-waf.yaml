@@ -27,5 +27,12 @@ spec:
       # Same for Teleport application access subdomains (<app>.teleport.<domain>).
       SecRule REQUEST_HEADERS:Host "@endsWith .teleport.${SECRET_PUBLIC_DOMAIN_NAME}" \
         "id:1001,phase:1,pass,nolog,ctl:ruleEngine=Off"
+      # GitHub webhook payloads embed Renovate's PR/issue markdown, whose HTML
+      # comments trip CRS XSS/RCE rules (941180, 932380). Skip body inspection
+      # only; deliveries are HMAC-verified by the renovate-operator.
+      SecRule REQUEST_HEADERS:Host "@streq renovate-webhook.${SECRET_PUBLIC_DOMAIN_NAME}" \
+        "id:1002,phase:1,pass,nolog,chain"
+        SecRule REQUEST_FILENAME "@beginsWith /webhook/v1/github" \
+          "ctl:requestBodyAccess=Off"
       Include @crs-setup-conf
       Include @owasp_crs/*.conf
