@@ -23,7 +23,7 @@ spec:
           app: &router_app
             image:
               repository: ghcr.io/athennamind/opnsense-exporter
-              tag: 0.0.8
+              tag: 0.0.17
             env:
               OPNSENSE_EXPORTER_OPS_PROTOCOL: https
               # OPNsense isn't integrated with infra PKI yet
