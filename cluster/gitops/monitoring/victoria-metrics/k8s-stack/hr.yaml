@@ -298,6 +298,9 @@ spec:
                 volumeMode: Filesystem
           extraArgs:
             downsampling.period: 30d:1m,180d:30m,1y:1h,2y:4h,5y:12h,10y:1d
+            # Per-metric-name query usage for vmui's cardinality explorer and
+            # /api/v1/status/metric_names_stats. Off by default in this version.
+            storage.trackMetricNamesStats: "true"
             # retentionFilter: # TODO set retention filters for specific low value, high volume metrics
           volumes:
             - name: victoria-metrics-license-service-serving-cert
