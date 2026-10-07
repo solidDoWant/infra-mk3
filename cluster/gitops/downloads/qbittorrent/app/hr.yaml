@@ -77,7 +77,6 @@ spec:
             FileLogger\Enabled=true ; Enable logging (needed by the container for stdout)
             FileLogger\MaxSizeBytes=66560
             FileLogger\Path=/config/qBittorrent/logs
-            MemoryWorkingSetLimit=1024  ; TODO - this is the cache size in MiB, should be tuned based on available memory
 
             [AutoRun]
             enabled=false
@@ -126,7 +125,6 @@ spec:
             Session\ResumeDataStorageType=SQLite ; This is the new storage backend for download progress
             ; Session\SSL\Port=26617  ; Does nothing currently
             Session\ShareLimitAction=Stop
-            Session\SubcategoriesEnabled=true
             Session\UseOSCache=true
             Session\UseRandomPort=false ; Don't listen on a random port
             ; Configure directories
