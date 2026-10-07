@@ -8,7 +8,6 @@ spec:
   # Pinned so operator bumps don't change the server version
   image: ghcr.io/dragonflydb/dragonfly:v1.33.1
   replicas: {{ .Values.instances }}
-  labels: {{ include "pod-selector-labels" . | nindent 4 }}
   env:
     # Block version checks, see
     # https://github.com/dragonflydb/dragonfly/blob/555d6b518a1cc0fe1332e98cb895077af666e967/src/server/version_monitor.cc#L133

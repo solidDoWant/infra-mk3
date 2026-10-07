@@ -42,7 +42,7 @@ specs:
         toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: dragonfly
-              app.kubernetes.io/instance: immich-dragonfly
+              app: immich-dragonfly
         toPorts:
           - ports:
               - port: "6379"

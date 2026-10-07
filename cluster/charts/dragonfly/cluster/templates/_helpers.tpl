@@ -26,5 +26,5 @@ labels:
 
 {{- define "pod-selector-labels" -}}
 app.kubernetes.io/name: dragonfly
-app.kubernetes.io/instance: {{ include "cluster-resource-name" . }}
+app: {{ include "cluster-resource-name" . }}
 {{- end}}
