@@ -23,7 +23,7 @@ spec:
           app:
             image:
               repository: ghcr.io/prometheus-pve/prometheus-pve-exporter
-              tag: 3.5.3
+              tag: 3.10.1
             args:
               - --web.listen-address=:9221 # No IPv6
             env:
