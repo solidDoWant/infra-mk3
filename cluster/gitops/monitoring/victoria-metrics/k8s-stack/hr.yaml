@@ -587,7 +587,7 @@ spec:
           # Reuses the smartctl-exporter image because it already bundles
           # smartmontools. Pin matches the app version in
           # ../../exporters/smartctl/hr.yaml.
-          image: quay.io/prometheuscommunity/smartctl-exporter:v0.14.0
+          image: quay.io/prometheuscommunity/smartctl-exporter:v0.15.0
           command:
             - /script/write-smartctl-thresholds.sh
           securityContext:
