@@ -15,6 +15,10 @@ spec:
       # new series every scrape (~70k/day). Strip them so it only identifies
       # the torrent; the values are exported as qbittorrent_torrent_* gauges.
       metricRelabelConfigs:
+        # Unused. qbittorrent_torrent_state also lacks qBittorrent 5's stopped states.
+        - action: drop
+          source_labels: [__name__]
+          regex: qbittorrent_(torrent_(state|comment|save_path)|tracker_.+)
         - if: '{__name__="qbittorrent_torrent_info"}'
           action: labeldrop
           regex: (time_active|uploaded|uploaded_session|downloaded|downloaded_session|up_speed|dl_speed|ratio|eta|progress|amount_left|size|seeders|leechers|added_on|completed_on)

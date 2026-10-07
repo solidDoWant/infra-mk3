@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: qbittorrent
+spec:
+  groups:
+    - name: qbittorrent
+      rules:
+        - alert: QBittorrentExporterDown
+          expr: absent(up{job="qbittorrent"} == 1)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: qBittorrent metrics are not being scraped
+            description: |
+              No successful scrape of the qBittorrent exporter for 15m. The other
+              qBittorrent alerts cannot fire while this is active.
+
+        # The exporter only emits the current status as a label, and the scrape
+        # has no stale markers, so take the most recently sampled series.
+        - alert: QBittorrentNotConnected
+          expr: |
+            label_mismatch(
+              topk(1, tlast_over_time(qbittorrent_transfer_connection_status[5m])),
+              "connection_status", "connected"
+            )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: qBittorrent is {{ $labels.connection_status }}
+            description: |
+              qBittorrent has reported "{{ $labels.connection_status }}" for 15m.
+              Traffic is routed through the VPN gateway; check the gateway and
+              forwarded port.
+
+        - alert: QBittorrentLowDiskSpace
+          expr: max(qbittorrent_global_free_space_on_disk_bytes) < 1099511627776
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: qBittorrent download disk has under 1 TiB free
+            description: |
+              {{ $value | humanize1024 }}B free on qBittorrent's default save path.
+
+        - alert: QBittorrentTorrentErrored
+          expr: |
+            label_match(
+              topk by (name) (1, tlast_over_time(qbittorrent_torrent_info[5m])),
+              "state", "error|missingFiles"
+            )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Torrent {{ $labels.name }} is in state {{ $labels.state }}
+            description: |
+              Torrent "{{ $labels.name }}" (category {{ $labels.category }}) has
+              been in state {{ $labels.state }} for 15m.
