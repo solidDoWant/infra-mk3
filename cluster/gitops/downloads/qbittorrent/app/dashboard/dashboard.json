@@ -2210,7 +2210,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "sum(max by (name) (qbittorrent_torrent_leechers) and on (name) qbittorrent_torrent_info{category=~\"$category\"})",
+          "expr": "sum(max by (name) (qbittorrent_torrent_leechers))",
           "interval": "",
           "legendFormat": "Leechers",
           "refId": "A"
@@ -2221,7 +2221,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "sum(max by (name) (qbittorrent_torrent_seeders) and on (name) qbittorrent_torrent_info{category=~\"$category\"})",
+          "expr": "sum(max by (name) (qbittorrent_torrent_seeders))",
           "hide": false,
           "interval": "",
           "legendFormat": "Seeders",
@@ -2515,7 +2515,7 @@
           "pluginVersion": "10.1.5",
           "targets": [
             {
-              "expr": "max by (name) (qbittorrent_torrent_upload_speed_bytes) and on (name) qbittorrent_torrent_info{category=~\"$category\"}",
+              "expr": "max by (name) (qbittorrent_torrent_upload_speed_bytes)",
               "legendFormat": "{{name}}",
               "refId": "A",
               "datasource": {
@@ -2619,7 +2619,7 @@
           "pluginVersion": "11.4.0",
           "targets": [
             {
-              "expr": "max by (name) (qbittorrent_torrent_download_speed_bytes) and on (name) qbittorrent_torrent_info{category=~\"$category\"}",
+              "expr": "max by (name) (qbittorrent_torrent_download_speed_bytes)",
               "legendFormat": "{{name}}",
               "refId": "A",
               "datasource": {
@@ -2725,7 +2725,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "max by (name) (qbittorrent_torrent_ratio) and on (name) qbittorrent_torrent_info{category=~\"$category\"}",
+              "expr": "max by (name) (qbittorrent_torrent_ratio)",
               "legendFormat": "{{name}}",
               "refId": "A"
             }
@@ -2771,7 +2771,8 @@
           "value": [
             "$__all"
           ]
-        }
+        },
+        "description": "Filters the Torrents table, States and current Seeders/Leechers"
       }
     ]
   },
