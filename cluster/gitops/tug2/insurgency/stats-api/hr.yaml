@@ -41,6 +41,8 @@ spec:
               PGSSLKEY: /etc/stats-api/certs/postgres/tls.key
               PGSSLROOTCERT: /etc/stats-api/certs/root-ca/ca.crt
               PGOPTIONS: -c statement_timeout=5000 # Fail fast if the database is unresponsive
+              # Replaces k8tz injection (see pod annotation). distroless/static ships tzdata.
+              TZ: America/Chicago
             ports:
               - name: web
                 containerPort: &web_port 8080
@@ -70,6 +72,12 @@ spec:
                 memory: *memory
                 cpu: 500m
         pod:
+          annotations:
+            # k8tz's nested zoneinfo + /etc/localtime mounts break kata: every pod
+            # deleted (weekly, by descheduler PodLifeTime) left an orphaned
+            # containerd-shim-kata-v2 whose container task never stops, so kubelet
+            # container GC fails "cannot delete running task" forever.
+            k8tz.io/inject: "false"
           labels:
             endpoints.netpols.home.arpa/external-ingress-enabled: "true"
           # Harbor project tug2 is private. tug2-pull-credentials-dockerconfig is the
