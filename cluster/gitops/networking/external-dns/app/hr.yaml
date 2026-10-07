@@ -42,7 +42,6 @@ spec:
       # v0.18+ skips default targets when the source has its own (gateway
       # status IPs), which the exclude nets below then strip -> records deleted
       - --force-default-targets
-      - --dry-run
       # Ensure internal IP addresses are not published by accident
       - --exclude-target-net=10.0.0.0/8
       - --exclude-target-net=172.16.0.0/12
