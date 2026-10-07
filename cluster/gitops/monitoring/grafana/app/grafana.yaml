@@ -76,6 +76,10 @@ spec:
       feedback_links_enabled: "false"
     plugins:
       plugin_admin_enabled: "false" # Require this to be managed via CR
+      # 13.x auto-updates the image's bundled plugins (prometheus, loki, ...) by
+      # unregistering then rewriting them under the read-only root FS; the
+      # rewrite fails and the plugin stays unregistered.
+      preinstall_auto_update: "false"
     dashboards:
       min_refresh_interval: 1s
     explore:
