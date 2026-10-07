@@ -2749,10 +2749,10 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values(qbittorrent_torrent_info, category)",
+        "definition": "label_values(qbittorrent_global_categories, category)",
         "query": {
           "qryType": 1,
-          "query": "label_values(qbittorrent_torrent_info, category)",
+          "query": "label_values(qbittorrent_global_categories, category)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
