@@ -64,7 +64,7 @@ COPY --from=ghcr.io/coder/coder:v2.28.3 /opt/coder /usr/local/bin/coder
 COPY --from=hashicorp/terraform:1.16 /bin/terraform /usr/local/bin/terraform
 
 # tflint
-COPY --from=ghcr.io/terraform-linters/tflint:v0.60.0 /usr/local/bin/tflint /usr/local/bin/tflint
+COPY --from=ghcr.io/terraform-linters/tflint:v0.64.0 /usr/local/bin/tflint /usr/local/bin/tflint
 
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
