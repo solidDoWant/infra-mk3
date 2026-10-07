@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+# OPNsense API changes (renamed ACL paths, new response shapes) break individual
+# collectors while the exporter stays scrapeable, so TargetDown never fires.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: opnsense-exporter
+spec:
+  groups:
+    - name: opnsense-exporter
+      rules:
+        # Per pod (opnsense-exporter-self scrape). `endpoint` is the OPNsense API
+        # path, renamed by the scrape's own `endpoint` target label.
+        - alert: OPNsenseExporterAPIErrors
+          expr: sum by (opnsense_instance, exported_endpoint) (rate(opnsense_exporter_endpoint_errors_total[15m])) > 0
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: OPNsense API call {{ $labels.exported_endpoint }} is failing on {{ $labels.opnsense_instance }}
+            description: |
+              The opnsense-exporter has been getting errors from
+              {{ $labels.exported_endpoint }} on {{ $labels.opnsense_instance }} for 1h,
+              so that collector's metrics are missing. A 403 usually means the API
+              user lacks the privilege, or OPNsense changed the path's ACL after an
+              upgrade (exporter too old). If the service isn't used, disable the
+              collector. Details: `kubectl logs -n monitoring deploy/opnsense-exporter-{{ $labels.opnsense_instance }}`.
+        - alert: OPNsenseUnhealthy
+          expr: max by (opnsense_instance) (opnsense_up) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: OPNsense {{ $labels.opnsense_instance }} health check is failing
+            description: |
+              opnsense_up has been 0 on {{ $labels.opnsense_instance }} for 15m: the
+              system status API is unreachable, reports a non-OK status, or returns
+              a response this exporter version can't parse (as 0.0.8 did with
+              OPNsense 25.1+). Check the router's System > Status page and
+              `kubectl logs -n monitoring deploy/opnsense-exporter-{{ $labels.opnsense_instance }}`.
