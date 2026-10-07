@@ -1,20 +1,14 @@
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-resources:
-  - ./dashboard.yaml
-  - ./envoy-config
-  - ./env-values.sops.yaml
-  - ./geoip-credentials.sops.yaml
-  - ./hr.yaml
-  - ./httproute.yaml
-  - ./k8s-sidecar-rbac.yaml
-  - ./netpol.yaml
 configMapGenerator:
   # Unfortunately because this needs to be mounted in the server pods, it
   # cannot live in the "configuration" fluxtomization
   - name: authentik-css
     files:
       - custom.css
-configurations:
-  - ./vol-mount-from-cm-transformer.yaml
+    options:
+      labels:
+        # subPath mounts never see ConfigMap updates, so restart instead
+        kyverno.home.arpa/reload: "true"
+      disableNameSuffixHash: true
