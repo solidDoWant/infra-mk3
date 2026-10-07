@@ -1,8 +1,8 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Extracts fields from istio gateway logs into `log_fields.*`, matching the
-# `kubernetes` filter's mergeLog convention for JSON loggers. `log` is kept
-# as-is: the access log line is already readable as `_msg`.
+# `kubernetes` filter's mergeLog convention for JSON loggers. Access lines keep
+# `log` as-is: the full line is readable and bare-word searchable as `_msg`.
 #
 # Named to sort after the `kubernetes` filter (monitoring/fluent/node-agent);
 # filters run in name order cluster-wide. ClusterFilter, not a namespaced
@@ -25,6 +25,12 @@ spec:
         parser: istio-gateway-access-log,istio-agent
         preserveKey: true
         reserveData: true
+    # Agent lines only (access lines have no gw_msg): `_msg` becomes the
+    # message alone; the other columns stay in log_fields.
+    - modify:
+        rules:
+          - hardCopy:
+              gw_msg: log
     - nest:
         operation: nest
         wildcard:
