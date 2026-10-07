@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: operator-reconcile-errors
+spec:
+  groups:
+    - name: operator-reconcile-errors
+      rules:
+        # Covers every controller-runtime operator. CR status is not a reliable
+        # signal: some (e.g. Dragonfly) keep reporting Ready while every reconcile fails.
+        - alert: OperatorReconcileErrors
+          expr: sum by (namespace, job, controller) (rate(controller_runtime_reconcile_errors_total[15m])) > 0
+          # Rides out transient optimistic-lock conflicts during rollouts
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} controller {{ $labels.controller }} has been failing reconciles for 30m"
+            description: |
+              {{ $labels.job }} ({{ $labels.namespace }}) controller {{ $labels.controller }}
+              has been returning reconcile errors for 30m. Spec changes to its
+              resources are not being applied, even if their status still looks
+              healthy. Check the operator logs for "Reconciler error".
