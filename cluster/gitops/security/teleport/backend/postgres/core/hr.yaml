@@ -46,6 +46,9 @@ spec:
             app.kubernetes.io/instance: teleport-cluster
             app.kubernetes.io/name: teleport-cluster
             app.kubernetes.io/component: auth
+    parameters:
+      # 18.6+ only allows built-in logical decoding plugins unless listed
+      output_plugin_libraries: pgoutput, test_decoding, wal2json
     extensions:
       - name: wal2json
         image:
