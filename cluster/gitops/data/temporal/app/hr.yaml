@@ -123,6 +123,12 @@ spec:
           enabled: false
         serviceMonitor:
           enabled: true
+          # Unused: long-poll wait time (high by design) and a duplicate of
+          # service_latency. Their _count/_sum are kept.
+          metricRelabelings:
+            - action: drop
+              sourceLabels: [__name__]
+              regex: (poll_latency|pri_poll_latency|service_latency_nouserlatency)_bucket
 
       # Cluster-level archival. The chart pastes this verbatim under the
       # server `archival:` key (NOT `server.config.archival` — that path is

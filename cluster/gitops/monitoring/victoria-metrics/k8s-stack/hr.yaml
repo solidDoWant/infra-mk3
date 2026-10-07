@@ -704,6 +704,28 @@ spec:
               targetLabel: metrics_path
             - targetLabel: job
               replacement: kubelet
+          # Shared by all kubelet endpoints (cadvisor, probes, resource, kubelet).
+          # Setting this replaces the chart default, so its rules are repeated first.
+          metricRelabelConfigs:
+            - action: labeldrop
+              regex: (uid)
+            - action: labeldrop
+              regex: (id|name)
+            - action: drop
+              source_labels: [__name__]
+              regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
+            # Unused. container_tasks_state is always 0 on cgroup v2; PSI
+            # (container_pressure_*) supersedes the page fault counters.
+            # prober_probe_total (failures) and the duration _sum/_count are kept.
+            - action: drop
+              source_labels: [__name__]
+              regex: (container_tasks_state|container_memory_failures_total|prober_probe_duration_seconds_bucket)
+            # Host-network pods report every node interface; node-exporter covers
+            # those. A denylist so unknown pod interfaces (tun0, vpn-*-veth0,
+            # tap0_kata, k6t-eth0, ...) are kept.
+            - action: drop
+              source_labels: [__name__, interface]
+              regex: container_network_.+;(bond0.*|enp.+|cilium_.+|lxc.+|dummy0|sit0|tunl0|teql0|tmp.+|vpn-(gw|r)-(bridge|vxlan)0)
     coreDns:
       # This is handled by the coredns deployments
       enabled: false

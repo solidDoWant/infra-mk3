@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: container-pressure
+spec:
+  groups:
+    - name: container-pressure
+      rules:
+        # PSI "full": share of wall time in which every task in the container was
+        # stalled on the resource. 7d max for memory was 5.5% (qbittorrent).
+        - alert: ContainerMemoryThrashing
+          expr: |
+            sum by (namespace, pod, container) (
+              rate(container_pressure_memory_stalled_seconds_total{metrics_path="/metrics/cadvisor", container!=""}[5m])
+            ) > 0.1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is stalled on memory"
+            description: |
+              All tasks in {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }}
+              were stalled on memory {{ $value | humanizePercentage }} of the time for 15m.
+              This is usually reclaim/thrashing close to the memory limit.
+
+        # Bulk-pool contention routinely stalls media apps for minutes; a 1h average
+        # above 50% fired 3 times in the 7d before this was added. Jobs (backups,
+        # transcodes) are IO-bound by design and excluded.
+        - alert: ContainerIOStalled
+          expr: |
+            (
+              sum by (namespace, pod) (
+                rate(container_pressure_io_stalled_seconds_total{metrics_path="/metrics/cadvisor", container!=""}[1h])
+              ) > 0.5
+            )
+            unless on (namespace, pod) kube_pod_owner{owner_kind="Job"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} is stalled on IO"
+            description: |
+              All tasks in {{ $labels.namespace }}/{{ $labels.pod }} were stalled on IO
+              {{ $value | humanizePercentage }} of the time over the last hour. Check
+              the backing storage pool's load.

@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+# The chart's PrometheusRule (also named "authentik") covers workers, outposts,
+# failed tasks and migrations.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: authentik-task-backlog
+spec:
+  groups:
+    - name: authentik-task-backlog
+      rules:
+        # 7d peak queue depth was 4
+        - alert: AuthentikTaskBacklog
+          expr: sum(max by (actor_name, queue_name) (authentik_tasks_queued)) > 50
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: authentik task queue is backing up
+            description: |
+              {{ $value | printf "%.0f" }} authentik tasks have been queued for 15m.
+              Workers are stuck or overloaded.

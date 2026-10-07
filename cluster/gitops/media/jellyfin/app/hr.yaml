@@ -186,6 +186,11 @@ spec:
         serviceName: jellyfin
         endpoints:
           - port: http
+            # Unused; _count keeps http_response_status_code for error rates
+            metricRelabelings:
+              - action: drop
+                sourceLabels: [__name__]
+                regex: microsoft_aspnetcore_hosting_http_server_request_duration_bucket
     route:
       jellyfin:
         hostnames:

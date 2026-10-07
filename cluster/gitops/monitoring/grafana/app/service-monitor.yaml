@@ -9,6 +9,11 @@ spec:
       path: /metrics
       port: grafana
       scrapeTimeout: 10s
+      # Unused: static toggle list and internals of Grafana's embedded apiserver
+      metricRelabelings:
+        - action: drop
+          sourceLabels: [__name__]
+          regex: grafana_feature_toggles_info|grafana_apiserver_.+_bucket|grafana_http_response_size_bytes_bucket
   jobLabel: grafana-deployment
   selector:
     matchLabels:

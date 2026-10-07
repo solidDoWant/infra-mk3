@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flux
+spec:
+  groups:
+    - name: flux
+      rules:
+        # From kube-state-metrics' custom resource state (ksm-custom-metrics.yaml).
+        # The Flux metrics' own namespace label is renamed to exported_namespace.
+        - alert: FluxResourceNotReady
+          expr: max by (customresource_kind, exported_namespace, name) (gotk_resource_info{ready="False"}) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Flux {{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is not ready
+            description: |
+              Flux {{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }}
+              has reported Ready=False for 15m. Inspect with
+              `flux events -n {{ $labels.exported_namespace }} --for {{ $labels.customresource_kind }}/{{ $labels.name }}`
+              or `kubectl -n {{ $labels.exported_namespace }} describe {{ $labels.customresource_kind | toLower }}.{{ $labels.customresource_group }} {{ $labels.name }}`.

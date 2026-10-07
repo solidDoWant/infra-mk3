@@ -75,3 +75,51 @@ spec:
               execution timeout in Temporal namespace {{ $labels.exported_namespace }}
               within the last 30m. Holds for 30m after the most recent timeout and
               re-arms on each new one.
+
+    - name: temporal-service-health
+      rules:
+        # Excludes errors that are normal API outcomes rather than server faults
+        - alert: TemporalServiceErrors
+          expr: |
+            sum by (service_name, error_type) (
+              increase(service_error_with_type{error_type!~".*(NotFound|AlreadyStarted|AlreadyExists|Canceled|ConditionFailed).*"}[15m])
+            ) > 5
+          labels:
+            severity: warning
+          annotations:
+            summary: Temporal {{ $labels.service_name }} is returning {{ $labels.error_type }}
+            description: |
+              {{ $value | printf "%.0f" }} {{ $labels.error_type }} errors from the Temporal
+              {{ $labels.service_name }} service in the last 15m.
+
+        # NotFound lookups (GetTaskQueueUserData, ~3k/week) and optimistic-concurrency
+        # conflicts are routine; shard ownership moves on every history restart.
+        - alert: TemporalPersistenceErrors
+          expr: |
+            sum by (service_name, operation, error_type) (
+              increase(persistence_error_with_type{error_type!~".*(NotFound|ConditionFailed|ShardOwnershipLost).*"}[15m])
+            ) > 5
+          labels:
+            severity: warning
+          annotations:
+            summary: Temporal {{ $labels.service_name }} persistence errors on {{ $labels.operation }}
+            description: |
+              {{ $value | printf "%.0f" }} {{ $labels.error_type }} errors from
+              {{ $labels.operation }} in the last 15m. Check temporal-postgres.
+
+        # Oldest task waiting in each queue. Unlike schedule-to-start latency
+        # (recorded only when a task starts) this keeps rising when no worker
+        # polls at all. 7d peak was 24s.
+        - alert: TemporalTaskBacklog
+          expr: |
+            max by (exported_namespace, taskqueue, task_type) (
+              approximate_backlog_age_seconds
+            ) > 600
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Temporal {{ $labels.exported_namespace }}/{{ $labels.taskqueue }} {{ $labels.task_type }} tasks are not being picked up
+            description: |
+              The oldest {{ $labels.task_type }} task on {{ $labels.exported_namespace }}/{{ $labels.taskqueue }}
+              has waited {{ $value | humanizeDuration }}. Its workers are missing, stuck or saturated.

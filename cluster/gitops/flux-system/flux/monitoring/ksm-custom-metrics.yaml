@@ -1,6 +1,8 @@
 ---
 # See https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/extend/customresourcestate-metrics.md
 # Pulled from https://github.com/fluxcd/flux2-monitoring-example/blob/e5ce1a5de2c11f0d5e02876fe167552a891bac6f/monitoring/controllers/kube-prometheus-stack/kube-state-metrics-config.yaml
+# revision is kept only on HelmRelease (chart version): commit SHAs and
+# artifact digests created a new series per resource on every push.
 kind: CustomResourceStateMetrics
 spec:
   resources:
@@ -21,7 +23,6 @@ spec:
             exported_namespace: [metadata, namespace]
             ready: [status, conditions, "[type=Ready]", status]
             suspended: [spec, suspend]
-            revision: [status, lastAppliedRevision]
             source_name: [spec, sourceRef, name]
     - groupVersionKind:
         group: helm.toolkit.fluxcd.io
@@ -62,7 +63,6 @@ spec:
             exported_namespace: [metadata, namespace]
             ready: [status, conditions, "[type=Ready]", status]
             suspended: [spec, suspend]
-            revision: [status, artifact, revision]
             url: [spec, url]
     - groupVersionKind:
         group: source.toolkit.fluxcd.io
@@ -81,7 +81,6 @@ spec:
             exported_namespace: [metadata, namespace]
             ready: [status, conditions, "[type=Ready]", status]
             suspended: [spec, suspend]
-            revision: [status, artifact, revision]
             endpoint: [spec, endpoint]
             bucket_name: [spec, bucketName]
     - groupVersionKind:
@@ -101,7 +100,6 @@ spec:
             exported_namespace: [metadata, namespace]
             ready: [status, conditions, "[type=Ready]", status]
             suspended: [spec, suspend]
-            revision: [status, artifact, revision]
             url: [spec, url]
     - groupVersionKind:
         group: source.toolkit.fluxcd.io
@@ -120,12 +118,11 @@ spec:
             exported_namespace: [metadata, namespace]
             ready: [status, conditions, "[type=Ready]", status]
             suspended: [spec, suspend]
-            revision: [status, artifact, revision]
             chart_name: [spec, chart]
             chart_version: [spec, version]
     - groupVersionKind:
         group: source.toolkit.fluxcd.io
-        version: v1beta2
+        version: v1
         kind: OCIRepository
       metricNamePrefix: gotk
       metrics:
@@ -140,7 +137,6 @@ spec:
             exported_namespace: [metadata, namespace]
             ready: [status, conditions, "[type=Ready]", status]
             suspended: [spec, suspend]
-            revision: [status, artifact, revision]
             url: [spec, url]
     - groupVersionKind:
         group: notification.toolkit.fluxcd.io

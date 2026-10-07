@@ -196,6 +196,11 @@ spec:
         enabled: true
         serviceMonitor:
           enabled: true
+          # Unused latency histograms; their _count/_sum are kept
+          metricRelabelings:
+            - action: drop
+              sourceLabels: [__name__]
+              regex: (django_http_requests_latency_seconds_by_view_method|authentik_property_mapping_execution_time|authentik_tasks_duration_milliseconds)_bucket
     worker:
       replicas: 2
       env:
