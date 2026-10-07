@@ -660,12 +660,13 @@ spec:
                 caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
                 serverName: kubernetes
               metricRelabelConfigs:
-                # Histograms unused by any rule or dashboard: ~250k series, ~29% of
-                # all scraped samples. apiserver_request_sli_duration_seconds_bucket
-                # feeds the apiserver SLO rules and must be kept.
-                - action: drop
+                # Allowlist: only metrics read by a rule or dashboard (incl.
+                # apiserver-alerts.yaml). The apiserver exports ~440 metrics; the rest
+                # were ~56k unused series. A new rule/dashboard on another apiserver
+                # metric must be added here.
+                - action: keep
                   source_labels: [__name__]
-                  regex: (apiserver_request_duration_seconds|etcd_request_duration_seconds|apiserver_request_body_size_bytes|apiserver_watch_list_duration_seconds|apiserver_watch_cache_read_wait_seconds|apiserver_response_sizes|apiserver_watch_events_sizes)_bucket
+                  regex: (apiserver_request_sli_duration_seconds_(bucket|sum|count)|apiserver_request_duration_seconds_(sum|count)|apiserver_request_total|apiserver_admission_webhook_fail_open_count|apiserver_admission_webhook_rejection_count|apiserver_admission_webhook_admission_duration_seconds_(sum|count)|apiserver_flowcontrol_rejected_requests_total|apiserver_request_terminations_total|apiserver_requested_deprecated_apis|apiserver_storage_objects|aggregator_unavailable_apiservice(_total)?|workqueue_queue_duration_seconds_bucket|workqueue_adds_total|workqueue_depth|rest_client_request_duration_seconds_bucket|rest_client_requests_total|kubernetes_build_info|go_.+|process_.+)
                 # SLO rules read le 1/5/30/+Inf; 0.05-0.4 keep the p99 quantile rule meaningful.
                 - action: drop
                   source_labels: [__name__, le]

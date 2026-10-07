@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: apiserver-admission
+spec:
+  groups:
+    - name: apiserver-admission
+      rules:
+        # failurePolicy: Ignore webhooks (k8tz, kyverno mutate) silently admit the
+        # request unmodified when they error. Nothing else surfaces this.
+        - alert: AdmissionWebhookFailOpen
+          expr: sum by (name, type) (increase(apiserver_admission_webhook_fail_open_count{job="apiserver"}[15m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Webhook {{ $labels.name }} failed open"
+            description: |
+              The {{ $labels.type }} webhook {{ $labels.name }} errored and, because its
+              failurePolicy is Ignore, the apiserver admitted the request without it.
+              Resources created in this window may be missing its mutations or bypassed
+              its validation (e.g. pods without k8tz TZ injection or Kyverno patches).
+              Check the webhook's pods and find the affected objects.
+
+        # failurePolicy: Fail webhooks reject matching writes when unreachable.
+        # Threshold rides out single 503s during webhook rollouts.
+        - alert: AdmissionWebhookCallErrors
+          expr: |
+            sum by (name, type) (
+              increase(apiserver_admission_webhook_rejection_count{job="apiserver", error_type="calling_webhook_error"}[15m])
+            ) > 5
+          labels:
+            severity: warning
+          annotations:
+            summary: "Webhook {{ $labels.name }} is failing calls ({{ $value | humanize }} in 15m)"
+            description: |
+              The apiserver could not get a response from the {{ $labels.type }} webhook
+              {{ $labels.name }}. With failurePolicy Fail, every matching write is being
+              rejected. Check the webhook's pods, service endpoints and network policy.
+
+        - alert: AdmissionWebhookSlow
+          expr: |
+            sum by (name, type) (rate(apiserver_admission_webhook_admission_duration_seconds_sum{job="apiserver"}[15m]))
+              /
+            sum by (name, type) (rate(apiserver_admission_webhook_admission_duration_seconds_count{job="apiserver"}[15m]))
+              > 3
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Webhook {{ $labels.name }} averages {{ $value | humanizeDuration }} per call"
+            description: |
+              The {{ $labels.type }} webhook {{ $labels.name }} is slow. Calls past the
+              webhook's timeoutSeconds (usually 10s) fail, rejecting or failing open
+              depending on its failurePolicy. Check the webhook pods for CPU throttling
+              or slow policy evaluation.
+
+        - alert: APIServerRequestsRejected
+          expr: sum by (priority_level, flow_schema, reason) (rate(apiserver_flowcontrol_rejected_requests_total{job="apiserver"}[5m])) > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "apiserver is rejecting {{ $labels.priority_level }} requests ({{ $labels.reason }})"
+            description: |
+              API Priority and Fairness is returning 429 for flow schema
+              {{ $labels.flow_schema }} (priority level {{ $labels.priority_level }},
+              reason {{ $labels.reason }}). A client is likely flooding the apiserver;
+              check apiserver_request_total by user agent and the APF debug endpoint
+              (kubectl get --raw /debug/api_priority_and_fairness/dump_priority_levels).
