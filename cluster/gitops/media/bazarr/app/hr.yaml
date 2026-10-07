@@ -99,13 +99,22 @@ spec:
                 enabled: true
                 custom: true
                 spec:
-                  exec:
+                  exec: &probe_exec
                     command:
                       - sh
                       - -c
                       - 'curl --fail -sS -o /dev/null -H "X-API-KEY: $$BAZARR_API_KEY" http://127.0.0.1:6767/api/system/status'
                   timeoutSeconds: 5
               liveness: *probe
+              # Startup blocks ~20s on an (egress-denied) GitHub update check, and upgrades run DB migrations
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec: *probe_exec
+                  timeoutSeconds: 5
+                  periodSeconds: 10
+                  failureThreshold: 60
             resources:
               requests:
                 cpu: 100m
