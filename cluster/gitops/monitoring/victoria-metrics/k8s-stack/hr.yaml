@@ -666,6 +666,10 @@ spec:
                 - action: drop
                   source_labels: [__name__]
                   regex: (apiserver_request_duration_seconds|etcd_request_duration_seconds|apiserver_request_body_size_bytes|apiserver_watch_list_duration_seconds|apiserver_watch_cache_read_wait_seconds|apiserver_response_sizes|apiserver_watch_events_sizes)_bucket
+                # SLO rules read le 1/5/30/+Inf; 0.05-0.4 keep the p99 quantile rule meaningful.
+                - action: drop
+                  source_labels: [__name__, le]
+                  regex: apiserver_request_sli_duration_seconds_bucket;(0\.6|0\.8|1\.25|1\.5|2|3|4|6|8|10|15|20|45|60)
     kubeControllerManager:
       service:
         selector:

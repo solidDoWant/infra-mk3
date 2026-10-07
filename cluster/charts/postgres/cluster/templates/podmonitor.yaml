@@ -9,6 +9,10 @@ metadata:
 spec:
   podMetricsEndpoints:
     - port: metrics
+      # Pod names are stable across restarts, pod IPs are not.
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: instance
       # pg_settings exports ~300 series/instance; keep only what the CNPG dashboard queries.
       # Two rules because VM relabeling is RE2 (no negative lookahead).
       metricRelabelings:

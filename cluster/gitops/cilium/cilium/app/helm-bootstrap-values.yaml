@@ -74,18 +74,19 @@ hubble:
     # Pulled from https://github.com/JJGadgets/Biohazard/blob/c096b4d4be79d892de9f24588cecc852f42207b5/kube/deploy/core/_networking/cilium/app/hr.yaml#L77-L84
     # with some changes. Record basically everything (this is overkill, but so is home infra so why not).
     # No source_pod/destination_pod: pod names churn series on every rollout and
-    # nothing aggregates below workload. Per-pod detail is in the hubble flow log.
+    # nothing aggregates below workload. flow/tcp are namespace-only (dashboards never
+    # group by workload). Per-pod detail is in the hubble flow log.
     enabled:
       # TODO maybe set ignoreAAAA, as AAAA records are refused by coredns
       - dns:labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
       # - dns:query;labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
       - drop:labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
-      - flow:labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
+      - flow:labelsContext=source_namespace,destination_namespace,traffic_direction
       - flows-to-world:any-drop;port;labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
       - httpV2:labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
       - icmp:labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
       - port-distribution:labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
-      - tcp:labelsContext=source_workload,source_namespace,destination_workload,destination_namespace,traffic_direction
+      - tcp:labelsContext=source_namespace,destination_namespace,traffic_direction
   relay:
     enabled: true
     replicas: 2
