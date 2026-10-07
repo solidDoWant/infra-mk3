@@ -27,10 +27,6 @@
 {{ include "cluster-resource-name" . }}-wal
 {{- end -}}
 
-{{- define "db-registration-configmap-name" -}}
-{{ include "cluster-resource-name" .}}-db-registration
-{{- end }}
-
 {{- define "bucket.port" -}}
 {{- if .Values.bucket.endpoint -}}
 {{ default 443 (regexSplit ":" (urlParse .Values.bucket.endpoint).host 2 | rest | first) | quote }}
