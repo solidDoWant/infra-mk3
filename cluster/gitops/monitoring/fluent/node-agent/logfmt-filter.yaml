@@ -1,0 +1,80 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Parses logfmt lines (Go slog/logrus text: cilium, external-dns, exporters,
+# ...) into `log_fields.*` and sets `_msg` to `msg`. Lua rather than the
+# built-in logfmt parser, which accepts bare words (any text "parses") and
+# writes keys at the top level where they can clobber `log`/`stream`.
+#
+# Only lines made entirely of `key=value` pairs, with a `msg` or `level` key,
+# are touched; everything else returns unchanged (0) without re-encoding.
+# The operator joins the Lua onto one line, appending `; ` to most lines: no
+# `--` comments and no trailing semicolons (`return x;;` is a syntax error).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-logfmt
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: kube.*
+  filters:
+    - lua:
+        call: parse_logfmt
+        code: |
+          local function logfmt(s)
+            local out = {}
+            local count = 0
+            local i = 1
+            local n = #s
+            while i <= n do
+              local key = s:match("^[%w_%.%-]+", i)
+              if not key then return nil end
+              i = i + #key
+              if s:sub(i, i) ~= "=" then return nil end
+              i = i + 1
+              local val
+              if s:sub(i, i) == '"' then
+                local buf = {}
+                local j = i + 1
+                while true do
+                  local k = s:find('[\\"]', j)
+                  if not k then return nil end
+                  buf[#buf + 1] = s:sub(j, k - 1)
+                  if s:sub(k, k) == '"' then
+                    i = k + 1
+                    break
+                  end
+                  local e = s:sub(k + 1, k + 1)
+                  if e == "n" then e = "\n" elseif e == "t" then e = "\t" end
+                  buf[#buf + 1] = e
+                  j = k + 2
+                end
+                val = table.concat(buf)
+              else
+                val = s:match("^[^ ]*", i)
+                i = i + #val
+              end
+              out[key] = val
+              count = count + 1
+              if i <= n then
+                if s:sub(i, i) ~= " " then return nil end
+                local ws = s:match("^ +", i)
+                i = i + #ws
+              end
+            end
+            if count < 2 or (out["msg"] == nil and out["level"] == nil) then return nil end
+            return out
+          end
+
+          function parse_logfmt(tag, ts, record)
+            local line = record["log"]
+            if type(line) ~= "string" or record["log_fields"] ~= nil then return 0, ts, record end
+            if not line:find("^[%w_%.%-]+=") then return 0, ts, record end
+            local fields = logfmt(line)
+            if not fields then return 0, ts, record end
+            if fields["level"] then fields["level"] = string.lower(fields["level"]) end
+            record["log_fields"] = fields
+            if fields["msg"] and fields["msg"] ~= "" then record["log"] = fields["msg"] end
+            return 2, ts, record
+          end
