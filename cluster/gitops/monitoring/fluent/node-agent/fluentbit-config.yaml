@@ -15,10 +15,10 @@ spec:
   parserSelector: *selector
   service:
     parsersFiles:
-      - /fluent-bit/etc/parsers.conf # Default parsers
-      # Parsers provided by the operator
-      - /fluent-bit/config/parsers.conf
-      - /fluent-bit/config/parsers_multiline.conf
+      # Image defaults; this file @INCLUDEs the operator-rendered
+      # /fluent-bit/config/parsers{,_multiline}.conf. Listing those too loads
+      # every parser twice, which fluent-bit 5.1+ treats as fatal.
+      - /fluent-bit/etc/parsers.conf
     httpServer: true
     storage:
       path: /fluent-bit/chunks
