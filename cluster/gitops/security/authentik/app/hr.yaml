@@ -6,6 +6,8 @@ metadata:
   name: &app_name authentik
 spec:
   interval: 5m
+  # DB migrations can outlast the 5m default; a rollback onto a migrated schema is worse
+  timeout: 15m
   chart:
     spec:
       chart: authentik
