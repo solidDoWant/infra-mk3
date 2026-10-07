@@ -14,7 +14,7 @@ spec:
         - public-wan.${SECRET_PUBLIC_DOMAIN_NAME}
       providerSpecific:
         # Cloudflare cannot proxy raw UDP, and external-dns proxies by default.
-        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+        - name: cloudflare/proxied
           value: "false"
 ---
 # This is a dummy record so that k8s_gateway will resolve the record.
