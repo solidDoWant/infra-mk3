@@ -1,0 +1,12 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: qbittorrent-dashboard
+    files:
+      - dashboard.json=./dashboard.json
+    options:
+      annotations:
+        # The dashboard uses ${DS_PROMETHEUS} grafana inputs
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+      disableNameSuffixHash: true

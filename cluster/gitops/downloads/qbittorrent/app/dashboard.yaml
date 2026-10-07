@@ -8,7 +8,11 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/martabal/qbittorrent-exporter/refs/tags/v1.13.4/grafana/dashboard_high_cardinality.json
+  # Fork of upstream v1.13.4 dashboard_high_cardinality.json: the Torrents table
+  # reads the per-torrent gauges instead of qbittorrent_torrent_info labels.
+  configMapRef:
+    key: dashboard.json
+    name: qbittorrent-dashboard
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
