@@ -67,8 +67,10 @@ specs:
               - port: "27018"
                 endPort: 27036
                 protocol: TCP
+      # Steam's plain-HTTP connectivity checks (steamconnecttest.com is on Akamai)
       - toFQDNs:
-          - matchPattern: "test.steampowered.com"
+          - matchName: steamconnecttest.com
+          - matchPattern: test.steampowered.com
         toPorts:
           - ports:
               - port: "80"

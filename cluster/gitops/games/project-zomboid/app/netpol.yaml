@@ -85,6 +85,9 @@ specs:
           - cidr: 185.25.180.0/24
           - cidr: 185.25.182.0/23
           - cidr: 205.196.6.0/24
+          # Added 2026-10: dfra (Frankfurt) and dvie (Vienna) relays
+          - cidr: 89.222.108.160/30
+          - cidr: 152.233.52.96/30
         toPorts:
           - ports:
               # Relay traffic itself. Valve's config gives three port ranges across the
