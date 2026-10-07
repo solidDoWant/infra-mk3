@@ -67,7 +67,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
+                "uid": ""
             },
             "fieldConfig": {
                 "defaults": {
@@ -125,7 +125,7 @@
                     "refId": "A",
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     }
                 }
             ],
@@ -135,7 +135,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": ""
             },
             "description": "The number of certificates in \"Ready\" state",
             "fieldConfig": {
@@ -186,7 +186,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": false,
@@ -204,7 +204,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": ""
             },
             "description": "The number of certificates _not_ in \"Ready\" state",
             "fieldConfig": {
@@ -259,7 +259,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "expr": "sum(certmanager_certificate_ready_status{condition!=\"True\", exported_namespace=~\"$namespace\"})",
@@ -274,7 +274,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": ""
             },
             "description": "The number of certificates that should have renewed already, but have not.",
             "fieldConfig": {
@@ -329,7 +329,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": false,
@@ -361,7 +361,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": ""
             },
             "fieldConfig": {
                 "defaults": {
@@ -467,7 +467,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": false,
@@ -481,7 +481,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${datasource}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": false,
@@ -548,7 +548,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
+                "uid": ""
             },
             "fieldConfig": {
                 "defaults": {
@@ -654,7 +654,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${datasource}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": false,
@@ -668,7 +668,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": false,
@@ -735,7 +735,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": ""
             },
             "fieldConfig": {
                 "defaults": {
@@ -823,7 +823,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": true,
@@ -840,7 +840,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": ""
             },
             "fieldConfig": {
                 "defaults": {
@@ -928,7 +928,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     },
                     "editorMode": "code",
                     "exemplar": true,
@@ -945,7 +945,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
+                "uid": ""
             },
             "fieldConfig": {
                 "defaults": {
@@ -1038,7 +1038,7 @@
                     "refId": "A",
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": ""
                     }
                 }
             ],
@@ -1067,7 +1067,7 @@
                 "current": {},
                 "datasource": {
                     "type": "prometheus",
-                    "uid": "${datasource}"
+                    "uid": ""
                 },
                 "definition": "label_values(certmanager_certificate_ready_status,exported_namespace)",
                 "includeAll": true,
