@@ -6,6 +6,8 @@ metadata:
   name: &app_name authentik
 spec:
   interval: 5m
+  # DB migrations can outlast the 5m default; a rollback onto a migrated schema is worse
+  timeout: 15m
   chart:
     spec:
       chart: authentik
@@ -13,7 +15,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: goauthentik-charts
-      version: 2026.5.3
+      version: 2026.8.3
   values:
     global:
       podLabels:
