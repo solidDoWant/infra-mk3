@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops dragonfly's INFO line for clients that disconnect before sending
+# anything. ~99% of it is Teleport's `default` health_check_config: both agents
+# TCP-dial every registered database every ~30s and close. Disabling the check
+# would lose dragonfly health in Teleport. Real client aborts match too; they
+# are INFO-level and not actionable.
+#
+# Named drop-* to sort before the `kubernetes` filter, skipping enrichment.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-dragonfly-teleport-healthcheck
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # `dragonfly` is the container name for every instance of the dragonfly chart.
+  matchRegex: ^kube\.[^.]+\.[^.]+\.dragonfly\.
+  filters:
+    - grep:
+        exclude: 'log \AI\d{8} [\d:.]+ +\d+ dragonfly_connection\.cc:\d+\] Error reading from peer \S+ Software caused connection abort'
