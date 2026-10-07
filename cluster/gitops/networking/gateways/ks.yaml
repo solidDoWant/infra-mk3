@@ -85,6 +85,31 @@ spec:
   dependsOn:
     - name: ingress-gateways-base
 ---
+# ingress-gateways-logging — fluent-bit ClusterFilters/ClusterParsers for the
+# gateway pods. Cluster-scoped and selected by label, so they can live here.
+# Deliberately NOT a dependency of `ingress-gateways`: logging must not gate
+# gateway readiness.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: ingress-gateways-logging
+spec:
+  targetNamespace: networking
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: ingress-gateways
+  interval: 5m
+  path: /cluster/gitops/networking/gateways/ingress/logging
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: fluent-crds
+---
 # ingress-gateways — pure no-op aggregator. Its path renders nothing
 # (ingress/kustomization.yaml has `resources: []`); it only becomes Ready once
 # both child Kustomizations are, preserving `dependsOn: ingress-gateways` for

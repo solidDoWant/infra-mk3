@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops internal-gateway access-log lines for machine keepalive traffic: health
+# probes, Temporal worker long-polls/heartbeats, and Coder DERP latency checks.
+#
+# Each rule pins the request line AND `200 - via_upstream - "-"` (no response
+# flags, no transport failure), so failed or abnormal requests still ship.
+# gRPC application errors are still HTTP 200, hence exact paths only.
+#
+# Not done at the source (Telemetry CR filter): Envoy treats a CEL eval error
+# as "don't log", which would blank the TCP/TLS passthrough listeners' logs.
+#
+# Named drop-* to sort before the `kubernetes` filter, skipping enrichment.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-internal-gateway-keepalive-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # External gateway deliberately excluded: its log is the record of internet traffic.
+  matchRegex: ^kube\.networking\.internal-gateway-[^.]*\.istio-proxy\.
+  filters:
+    - grep:
+        exclude: 'log "POST /grpc\.health\.v1\.Health/Check HTTP/2" 200 - via_upstream - "-" '
+    - grep:
+        exclude: 'log "POST /temporal\.api\.workflowservice\.v1\.WorkflowService/(PollActivityTaskQueue|PollWorkflowTaskQueue|RecordWorkerHeartbeat) HTTP/2" 200 - via_upstream - "-" '
+    # Only while a Coder client is connected.
+    - grep:
+        exclude: 'log "GET /derp/latency-check HTTP/1\.1" 200 - via_upstream - "-" '
