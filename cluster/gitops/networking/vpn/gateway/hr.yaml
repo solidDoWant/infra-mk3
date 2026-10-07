@@ -33,7 +33,7 @@ spec:
             # Use the same image just to avoid pulling another image.
             image: &image # cspell:words qmcgaw
               repository: qmcgaw/gluetun
-              tag: v3.40.0
+              tag: v3.41.3
             env:
               VPN_INTERFACE: tun0 # Interface for VPN traffic
               GATEWAY_NETWORK_INTERFACE: vpn-gw-veth0 # Interface for the VPN subnet
@@ -79,7 +79,6 @@ spec:
               PUID: "1000"
               PGID: "1000"
               VERSION_INFORMATION: "off"
-              HEALTH_VPN_DURATION_INITIAL: 10s
               # Listen on all interfaces
               # TODO iptables rule to block traffic from tun0
               HEALTH_SERVER_ADDRESS: ":9999"
