@@ -22,12 +22,22 @@ spec:
         containers:
           app: &router_app
             image:
+              # cspell:words athennamind
               repository: ghcr.io/athennamind/opnsense-exporter
               tag: 0.0.17
             env:
               OPNSENSE_EXPORTER_OPS_PROTOCOL: https
               # OPNsense isn't integrated with infra PKI yet
               OPNSENSE_EXPORTER_OPS_INSECURE: "true"
+              # Services not run on the routers. DHCP is ISC dhcpd, which the
+              # exporter has no collector for; the routers are VMs (no sensors).
+              # cspell:words KEADHCPV
+              OPNSENSE_EXPORTER_DISABLE_KEADHCPV4: "true"
+              OPNSENSE_EXPORTER_DISABLE_KEADHCPV6: "true"
+              OPNSENSE_EXPORTER_DISABLE_IPSEC: "true"
+              OPNSENSE_EXPORTER_DISABLE_WIREGUARD: "true"
+              OPNSENSE_EXPORTER_DISABLE_OPENVPN: "true"
+              OPNSENSE_EXPORTER_DISABLE_TEMPERATURE: "true"
             envFrom:
               - secretRef:
                   name: opnsense-credentials-router-01
