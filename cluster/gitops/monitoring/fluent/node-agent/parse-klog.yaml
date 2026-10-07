@@ -1,0 +1,62 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Extracts klog/glog headers (kube-apiserver, cert-manager, openebs, KubeVirt,
+# CDI, descheduler, dragonfly, ...) into `log_fields.*` and sets `_msg` to the
+# message alone. Level letters map to the words JSON loggers use.
+#
+# Matches all pods: the parser is `\A`-anchored, so other lines fail on the
+# first byte. Named to sort after the `kubernetes` filter.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-klog
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: kube.*
+  filters:
+    - parser:
+        keyName: log
+        parser: klog
+        preserveKey: true
+        reserveData: true
+    - modify:
+        conditions:
+          - keyValueEquals:
+              kl_level: I
+        rules:
+          - set:
+              kl_level: info
+    - modify:
+        conditions:
+          - keyValueEquals:
+              kl_level: W
+        rules:
+          - set:
+              kl_level: warning
+    - modify:
+        conditions:
+          - keyValueEquals:
+              kl_level: E
+        rules:
+          - set:
+              kl_level: error
+    - modify:
+        conditions:
+          - keyValueEquals:
+              kl_level: F
+        rules:
+          - set:
+              kl_level: fatal
+    # Absent for header-only lines, which keep the raw line.
+    - modify:
+        rules:
+          - hardCopy:
+              kl_msg: log
+    - nest:
+        operation: nest
+        wildcard:
+          - kl_*
+        removePrefix: kl_
+        nestUnder: log_fields

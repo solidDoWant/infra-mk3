@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterparser_v1alpha2.json
+# klog/glog header: `Lmmdd hh:mm:ss.uuuuuu thread file:line] msg`. glog
+# (e.g. dragonfly) writes the date as yyyymmdd.
+#
+# Onigmo uses Ruby semantics: `^`/`$` are LINE anchors and `.` excludes `\n`.
+# `\A`/`\z` + `(?m:.*)` stop a header after a newline from matching (and the
+# engine retrying at every line start), and keep multi-line messages whole.
+#
+# The `kl_` prefix is moved under `log_fields` by parse-klog.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: klog
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  regex:
+    regex: '\A(?<kl_level>[IWEF])(?<kl_date>\d{4}(?:\d{4})?) (?<kl_time>\d{2}:\d{2}:\d{2}\.\d+) +(?<kl_thread>\d+) (?<kl_source>[^ \]]+:\d+)\](?: (?<kl_msg>(?m:.*)))?\z'
