@@ -56,6 +56,9 @@ spec:
               tag: "3.19"
             env:
               NZBGET_HOST: http://127.0.0.1:6789
+              # info only adds a line per /metrics scrape and startup banners;
+              # API/scrape failures log at warn/error.
+              LOG_LEVEL: warn
             ports:
               - name: metrics
                 containerPort: 9452
