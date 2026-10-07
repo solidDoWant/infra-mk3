@@ -435,11 +435,13 @@ spec:
           # temporal-permissions: custom scope (defined in the Authentik blueprint)
           # that injects the `permissions` claim Temporal's authorizer reads.
           value: openid,profile,email,temporal-permissions
-        # Setting TEMPORAL_TLS_CA enables TLS in the UI's gRPC client. SNI
-        # comes from TEMPORAL_ADDRESS (chart-set to temporal-frontend.data.svc),
-        # which matches the cert SAN, so no TEMPORAL_TLS_SERVER_NAME override.
+        # Setting TEMPORAL_TLS_CA enables TLS in the UI's gRPC client. The chart
+        # sets TEMPORAL_ADDRESS to the short `temporal-frontend` name (not in the
+        # cert SAN), so pin SNI explicitly. Host verification is off by default.
         - name: TEMPORAL_TLS_CA
           value: /etc/ssl/certs/root-ca.pem
+        - name: TEMPORAL_TLS_SERVER_NAME
+          value: temporal-frontend.data.svc
       additionalEnvSecretName: temporal-ui-oidc
       additionalVolumes:
         # 0444 because the temporalio/ui image runs as a non-root user and no
