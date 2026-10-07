@@ -18,6 +18,28 @@ spec:
         - if: '{__name__="qbittorrent_torrent_info"}'
           action: labeldrop
           regex: (time_active|uploaded|uploaded_session|downloaded|downloaded_session|up_speed|dl_speed|ratio|eta|progress|amount_left|size|seeders|leechers|added_on|completed_on)
+        # Torrents added by magnet link keep the URL-encoded dn= name. %25 must be last.
+        - &url_decode
+          action: replace_all
+          source_labels: [name]
+          target_label: name
+          regex: "%20"
+          replacement: " "
+        - {<<: *url_decode, regex: "%21", replacement: "!"}
+        - {<<: *url_decode, regex: "%23", replacement: "#"}
+        - {<<: *url_decode, regex: "%26", replacement: "&"}
+        - {<<: *url_decode, regex: "%27", replacement: "'"}
+        - {<<: *url_decode, regex: "%28", replacement: "("}
+        - {<<: *url_decode, regex: "%29", replacement: ")"}
+        - {<<: *url_decode, regex: "%2[Bb]", replacement: "+"}
+        - {<<: *url_decode, regex: "%2[Cc]", replacement: ","}
+        - {<<: *url_decode, regex: "%3[Aa]", replacement: ":"}
+        - {<<: *url_decode, regex: "%3[Bb]", replacement: ";"}
+        - {<<: *url_decode, regex: "%3[Dd]", replacement: "="}
+        - {<<: *url_decode, regex: "%40", replacement: "@"}
+        - {<<: *url_decode, regex: "%5[Bb]", replacement: "["}
+        - {<<: *url_decode, regex: "%5[Dd]", replacement: "]"}
+        - {<<: *url_decode, regex: "%25", replacement: "%"}
       vm_scrape_params:
         # Stale markers are computed from the raw scrape, before relabeling: every
         # changed info line marks the (identical, relabeled) live series stale.
