@@ -23,9 +23,6 @@ spec:
             image: &image
               repository: ghcr.io/home-operations/nzbhydra2
               tag: 7.19.2
-            env:
-              # Needed until https://github.com/home-operations/containers/pull/851 merges
-              NZBHYDRA_DISABLE_UPDATE: true
             ports:
               - name: web
                 containerPort: &web_port 5076
