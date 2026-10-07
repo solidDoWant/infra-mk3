@@ -29,12 +29,12 @@ spec:
         endpoints.netpols.home.arpa/time-series-querier: "true"
         endpoints.netpols.home.arpa/internal-dashboard-querier: "true"
       replicas: 2
-    resources:
-      requests:
-        cpu: 10m
-        memory: &memory 512Mi
-      limits:
-        memory: *memory
+      resources:
+        requests:
+          cpu: 10m
+          memory: &memory 512Mi
+        limits:
+          memory: *memory
     external_services:
       istio:
         # If https://github.com/kiali/kiali/issues/8220 is addressed then this can be removed
