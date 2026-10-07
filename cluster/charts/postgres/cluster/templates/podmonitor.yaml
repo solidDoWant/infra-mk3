@@ -9,6 +9,16 @@ metadata:
 spec:
   podMetricsEndpoints:
     - port: metrics
+      # pg_settings exports ~300 series/instance; keep only what the CNPG dashboard queries.
+      # Two rules because VM relabeling is RE2 (no negative lookahead).
+      metricRelabelings:
+        - sourceLabels: [__name__, name]
+          regex: cnpg_pg_settings_setting;(max_connections|shared_buffers|effective_cache_size|block_size|work_mem|maintenance_work_mem|random_page_cost|seq_page_cost)
+          targetLabel: __keep_setting
+          replacement: "1"
+        - sourceLabels: [__name__, __keep_setting]
+          regex: cnpg_pg_settings_setting;
+          action: drop
   selector:
     matchLabels:
       cnpg.io/cluster: {{ include "cluster-resource-name" . }}
