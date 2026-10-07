@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kubelet-runtime
+spec:
+  groups:
+    - name: kubelet-runtime
+      rules:
+        # Sustained CRI errors mean the kubelet and containerd disagree about
+        # state, e.g. `remove_container` looping on "cannot delete running task"
+        # for containers whose task outlived the pod. exec_sync is excluded: it
+        # errors on every exec-probe timeout.
+        - alert: KubeletRuntimeErrors
+          expr: |
+            sum by (instance, operation_type) (
+              rate(kubelet_runtime_operations_errors_total{job="kubelet", metrics_path="/metrics", operation_type!="exec_sync"}[15m])
+            ) > 0
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kubelet on {{ $labels.instance }} keeps failing {{ $labels.operation_type }} ({{ $value | humanize }}/s)"
+            description: |
+              The kubelet on {{ $labels.instance }} has been getting errors from the
+              container runtime for {{ $labels.operation_type }} for over an hour.
+              Find the failing IDs and error in the kubelet log:
+              `talosctl -n {{ $labels.instance }} logs kubelet | grep "runtime service failed"`.
+              "cannot delete running task" means containerd still has a task (often
+              an orphaned shim) for a container the kubelet considers dead.
