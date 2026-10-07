@@ -23,7 +23,7 @@ spec:
             image:
               # Project's own image — only published to GHCR (no Docker Hub image exists).
               repository: ghcr.io/av1155/houndarr
-              tag: v1.12.0@sha256:4a837a90400ed8aa24b7bb4c62154c6290ae3b51780a69ed9842e481e563363c
+              tag: v1.13.3@sha256:b2e4ff8b550d385a56ea3380bddf88253eac00d750a811a8f97090ff77dcc79e
             env:
               # Forward-auth via the Authentik outpost. Houndarr has first-class
               # proxy-auth support: it reads the authenticated username from a
