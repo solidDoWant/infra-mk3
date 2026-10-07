@@ -29,7 +29,7 @@ spec:
         init:
           # Chart default is docker.io/busybox:1.36; this is the same image from
           # a registry that is not rate limited.
-          image: public.ecr.aws/docker/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+          image: public.ecr.aws/docker/library/busybox:1.38.0@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
           # Chart default is privileged. This container only runs a `[ -d ]`
           # test against the hostPath-mounted /sys, and both paths it tests
           # (/sys/class/kfd, /sys/module/amdgpu/drivers) are 0755 root:root, so
