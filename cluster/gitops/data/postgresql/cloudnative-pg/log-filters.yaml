@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops CNPG Pooler metrics-scrape chatter: each scrape opens three
+# admin-console connections over the unix socket, and pgbouncer logs three lines
+# per connection. Also drops the exporter's `Missing metric` for peers rows,
+# which only exist with pgbouncer peering.
+#
+# `log_connections=0` is instance-global and would hide real client logins.
+# Real clients log as `<db>/<user>@<ip>:<port>`, never `@unix`.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-pgbouncer-admin-console-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # `pgbouncer` is the container name of every CNPG Pooler.
+  matchRegex: ^kube\.[^.]+\.[^.]+\.pgbouncer\.
+  filters:
+    - grep:
+        exclude: 'log /pgbouncer@unix'
+    - grep:
+        exclude: 'log "msg":"Missing metric"'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on CNPG pods to the readable message instead of the JSON envelope:
+# `record.message` (postgres), `record.msg` (pgbouncer), else `msg`. Fields stay
+# under `log_fields.*`. Runs after `kubernetes`, which populates `log_fields`.
+# Scoped by container name (no pod labels with Use_Tag_For_Meta).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-cnpg-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.[^.]+\.[^.]+\.(postgres|pgbouncer|plugin-barman-cloud|bootstrap-controller)\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          local function str(v)
+            if type(v) == "string" and v ~= "" then return v end
+          end
+
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" or not str(fields["msg"]) then
+              return 0, ts, record
+            end
+            local inner = fields["record"]
+            local msg
+            if type(inner) == "table" then
+              msg = str(inner["message"]) or str(inner["msg"])
+            end
+            record["log"] = msg or fields["msg"]
+            return 2, ts, record
+          end

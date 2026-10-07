@@ -1,5 +1,14 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Filters run in name order cluster-wide. App-specific filters live next to
+# their apps: `drop-*` sort before this one, so dropped records skip
+# enrichment; `parse-*`/`promote-*` sort after it and can use `log_fields`.
+# Pre-enrichment filters match the raw `log` key against tags shaped
+# `kube.<namespace>.<pod>.<container>.<container_id>`.
+#
+# Always ClusterFilter: namespaced Filters match nothing here, because the
+# operator's per-namespace tag rewrite keys on `$kubernetes['namespace_name']`,
+# which this filter nests (fluent/fluent-operator#1211).
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterFilter
 metadata:

@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops authentik's access-log records for its health and metrics endpoints
+# (in-container healthcheck, kubelet probes, metrics scrapes).
+#
+# No source lever: the Django and Rust request loggers are unconditional, and
+# AUTHENTIK_LOG_LEVEL is global.
+#
+# Matches both the server's structlog (`": "`) and the worker's compact serde
+# JSON (`":"`). Anchored on `"event":` because the worker repeats the path in
+# its `spans` array. Requires status 200, so failing probes/scrapes still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-authentik-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.security\.authentik-(server|worker)-[^.]*\.(server|worker)\.
+  filters:
+    # Django `/-/health/{live,ready}/` and `/-/metrics/`, plus the Rust worker's
+    # bare `/metrics` (:9300). Separate branches so unserved variants can't match.
+    - grep:
+        exclude: 'log "event": ?"(/-/(health/(live|ready)|metrics)/|/metrics)".*"status": ?200[,}]'

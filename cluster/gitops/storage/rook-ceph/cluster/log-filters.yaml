@@ -1,0 +1,159 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops ceph-exporter's `system:0` line: a stray boost "no error" code printed
+# on every successful poll, and the container's only output.
+#
+# No source lever: the write bypasses Ceph logging, and the only knob is
+# `--stats-period` (metric resolution). Anchored exactly, so `system:<non-zero>`
+# or any real message ships.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-ceph-exporter-system-noise
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.storage\.rook-ceph-exporter-[^.]*\.ceph-exporter\.
+  filters:
+    - grep:
+        exclude: 'log ^system:0$'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the log-collector sidecar's 15-minute loop: rook's generated script runs
+# under `set -x` with `logrotate --verbose`, and neither is configurable.
+#
+# `logCollector.enabled: false` would remove it at the source, but also stops
+# Ceph writing /var/log/ceph, which upstream triage expects. Enumerates the
+# benign shapes only: logrotate errors/warnings and actual rotations still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-rook-log-collector-logrotate-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # The sidecar rides in every Ceph daemon pod; the container name selects it.
+  matchRegex: ^kube\.storage\.rook-ceph-[^.]*\.log-collector\.
+  filters:
+    # `set -x` trace.
+    - grep:
+        exclude: 'log ^\+ '
+    # --verbose blank separators.
+    - grep:
+        exclude: 'log ^$'
+    # --verbose per-cycle bookkeeping.
+    - grep:
+        exclude: 'log ^reading config file '
+    - grep:
+        exclude: 'log ^Reading state from file: '
+    - grep:
+        exclude: 'log ^Creating (new state|stub state file: )'
+    - grep:
+        exclude: 'log ^Allocating hash table for state file, size [0-9]+ entries$'
+    - grep:
+        exclude: 'log ^Handling [0-9]+ logs$'
+    - grep:
+        exclude: 'log ^rotating pattern: '
+    - grep:
+        exclude: 'log ^empty log files are not rotated, '
+    - grep:
+        exclude: 'log ^considering log '
+    - grep:
+        exclude: 'log ^ +(Now: |Last rotated at )[0-9]{4}-'
+    - grep:
+        exclude: 'log ^ +log does not need rotating \(log has '
+    - grep:
+        exclude: 'log ^ +log .* does not exist -- skipping$'
+    - grep:
+        exclude: 'log ^not running postrotate script, since no logs were rotated$'
+    - grep:
+        exclude: 'log ^switching euid from [0-9]+ to [0-9]+ and egid from [0-9]+ to [0-9]+ \(pid [0-9]+\)$'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the active ceph-mgr's housekeeping chatter. Unlike the mons, little of
+# it can be gated in cephConfig: the pgmap `[DBG]` clog mirror is level 0, most
+# of the rest is per-module Python INFO, and the prometheus access log honours
+# no log level. Every WARNING/ERROR/CRITICAL from any module still ships.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-rook-mgr-debug-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Both mgrs; whichever is active is the loud one.
+  matchRegex: ^kube\.storage\.rook-ceph-mgr-
+  filters:
+    # Level-0 cluster-log mirror (pgmap heartbeat). [INF]/[WRN]/[ERR] ship.
+    - grep:
+        exclude: 'log log_channel\(\w+\) log \[DBG\]'
+    # Modules whose INFO is purely periodic telemetry.
+    - grep:
+        exclude: 'log \[insights INFO '
+    - grep:
+        exclude: 'log \[pg_autoscaler INFO'
+    - grep:
+        exclude: 'log \[balancer INFO'
+    - grep:
+        exclude: 'log \[dashboard INFO'
+    # Modules with real INFO actions: only their housekeeping tick.
+    - grep:
+        exclude: 'log \[volumes INFO mgr_util\] (scanning for idle|cleaning up) connections'
+    - grep:
+        exclude: 'log \[rbd_support INFO[^]]*\].*load_schedules'
+    - grep:
+        exclude: 'log \[rook INFO[^]]*\] (ADDED|MODIFIED|DELETED) event'
+    # /metrics scrape access log, in both its cherrypy-wrapped and bare forms.
+    - grep:
+        exclude: 'log \[prometheus INFO cherrypy\.access'
+    - grep:
+        exclude: 'log "GET /metrics HTTP/'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the mgr `watch-active` sidecar's 15s "active mgr unchanged" poll (three
+# lines per tick, nearly all of its output). The cadence is hard-coded and
+# rook's logLevel doesn't reach these lines.
+#
+# A real failover is logged by `op-mgr` ("updating mgr_role label ...
+# New active mgr"), which no rule here matches.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-rook-mgr-watch-active-heartbeat
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.storage\.rook-ceph-mgr-[^.]*\.watch-active\.
+  filters:
+    - grep:
+        exclude: 'log I \| cephcmd: Checking mgr_role label value of daemon '
+    - grep:
+        exclude: 'log I \| cephcmd: active mgr is still the same \(.\)\. No need to update mgr_role label on daemon .\.$'
+    - grep:
+        exclude: 'log I \| cephcmd: successfully checked mgr_role label\. checking again in '
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the two mon log sources cephConfig can't gate (dout level 0). The rest
+# of the mon noise is gated at the source in hr.yaml's `mon:` cephConfig; prefer
+# that lever.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-rook-mon-debug-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.storage\.rook-ceph-mon-
+  filters:
+    # Local mirror of read-only audit/cluster clog entries. Mutating commands
+    # log at [INF] and errors at [ERR]; both ship.
+    - grep:
+        exclude: 'log log_channel\(\w+\) log \[DBG\]'
+    # Cache-rebalance tick, every 5s per mon.
+    - grep:
+        exclude: 'log _set_new_cache_sizes'

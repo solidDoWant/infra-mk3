@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops openarc's received/completed access-log pair for its 5s liveness probe.
+# The access log has no path exclusion, and the probe period is the
+# silent-model-unload detection window.
+#
+# Requests from anywhere but 127.0.0.1, and non-200 completions, still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-openarc-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.media\.openarc-subtitles-[^.]*\.openarc\.
+  filters:
+    - grep:
+        exclude: 'log - INFO - Request received: GET /openarc/status from 127\.0\.0\.1$'
+    - grep:
+        exclude: 'log - INFO - Request completed: GET /openarc/status status=200 duration='

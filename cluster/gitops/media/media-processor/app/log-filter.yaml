@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the watcher's 5s per-directory `scan complete` lines that submitted no
+# jobs. The cadence is the import latency, and LOG_LEVEL=warn would also drop
+# `dispatched workflow`. Scans that submitted work still ship; `$` matters
+# because `files_discovered=0` also contains `=0`.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-media-processor-watcher-idle-scans
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.media\.media-processor-watcher-[^.]*\.watcher\.
+  filters:
+    - grep:
+        exclude: 'log msg="scan complete" .*jobs_submitted=0$'

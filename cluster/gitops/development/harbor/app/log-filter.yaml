@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops health-probe access logs (kubelet and Harbor's own checks) from the
+# registry, registryctl and portal containers. Their access logs can only be
+# disabled wholesale.
+#
+# Pinned to the bare root path (registry API traffic is `/v2/...`) and status
+# 200, so pulls/pushes and failing probes still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-harbor-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # registryctl shares the registry pod.
+  matchRegex: ^kube\.development\.harbor-(registry|portal)-[^.]*\.(registry|registryctl|portal)\.
+  filters:
+    # registry (empty referer).
+    - grep:
+        exclude: 'log "GET / HTTP/1\.1" 200 [0-9]+ "" "(kube-probe|Go-http-client)/'
+    # portal (`-` referer).
+    - grep:
+        exclude: 'log "GET / HTTP/1\.1" 200 [0-9]+ "-" "(kube-probe|Go-http-client)/'
+    # registryctl.
+    - grep:
+        exclude: 'log "GET /api/health HTTP/1\.1" 200 [0-9]+'

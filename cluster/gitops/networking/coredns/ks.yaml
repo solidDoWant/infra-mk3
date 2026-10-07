@@ -46,14 +46,14 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name coredns-dashboards
+  name: &app_name coredns-monitoring
 spec:
   targetNamespace: networking
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/networking/coredns/dashboards
+  path: /cluster/gitops/networking/coredns/monitoring
   prune: true
   sourceRef:
     kind: GitRepository
@@ -61,6 +61,7 @@ spec:
   wait: true
   dependsOn:
     - name: grafana-crds
+    - name: fluent-crds
 ---
 # The vpn-dns symlink is just here to make it a little easier to track coredns installs. It isn't actually deployed twice by flux.
 # See ../vpn/ks.yaml for the actual vpn-dns deployment.

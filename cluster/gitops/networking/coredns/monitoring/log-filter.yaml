@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Keeps CoreDNS query logs out of VictoriaLogs except for failures. Query
+# logging stays on, so `kubectl logs` still shows everything.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-coredns-query-noise
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # All coredns deployments (kube-dns, k8s-gateway, vpn-dns).
+  matchRegex: ^kube\.networking\.coredns
+  filters:
+    # Successes, including NODATA. NXDOMAIN/SERVFAIL/REFUSED and [ERROR]/[WARNING] ship.
+    - grep:
+        exclude: 'log " NOERROR '
+    # AAAA NXDOMAIN: dual-stack clients probing v4-only names. Expected.
+    - grep:
+        exclude: 'log "AAAA IN[^"]*" NXDOMAIN '
+    # Search-path expansions of the barman-cloud S3 endpoint, which every CNPG
+    # cluster tries against each search suffix. The absolute `s3.<domain>.`
+    # query still ships. Blocked at the source: the CNPG Cluster CRD has no
+    # dnsConfig for ndots (cloudnative-pg#11037, PR #11066), and a trailing-dot
+    # endpoint breaks WAL archiving (Python puts the dot in TLS SNI; see
+    # bucket.endpoint in cluster/charts/postgres/cluster/values.yaml). Remove
+    # once ndots is settable. Domain is Flux-substituted.
+    - grep:
+        exclude: 'log IN s3\.${SECRET_PUBLIC_DOMAIN_NAME}\.([a-z0-9-]+\.)?(svc\.)?cluster\.local'

@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the two LOG lines Postgres writes for every logical-decoding session.
+# Teleport's change feed polls pg_logical_slot_get_changes() every second per
+# auth pod, opening a new session each time.
+#
+# Not fixed at the source: raising change_feed_poll_interval delays inter-auth
+# cache/lock propagation, and log_min_messages ranks LOG above ERROR. Anchored on
+# `"message":` because every record also carries the decoding SQL in `query`;
+# ERRORs raised during a poll still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-teleport-core-pg-decoding-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Any instance: the feed runs on whichever is primary.
+  matchRegex: ^kube\.security\.teleport-core-postgres-
+  filters:
+    - grep:
+        exclude: 'log "message":"starting logical decoding for slot'
+    - grep:
+        exclude: 'log "message":"logical decoding found consistent point at'

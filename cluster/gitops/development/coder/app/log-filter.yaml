@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the Coder workspace agent's debug stream: periodic app-health, metadata,
+# stats and netcheck telemetry that it logs unconditionally.
+#
+# No source lever: the agent is started by the server's init script with no
+# log-level flag, and `--log-human` would also redirect info/warn/error.
+# `kubectl logs` keeps the full stream. Anchored on the slog prefix so user
+# output containing "[debu]" still ships. VM workspaces run the agent in the
+# guest and are unaffected.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-coder-agent-debug-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.development\.coder-workspace-[^.]*\.dev\.
+  filters:
+    - grep:
+        exclude: 'log ^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \[debu\]'

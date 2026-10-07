@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the descheduler's per-cycle "nothing changed" narration, including the
+# endless PDB-refusal loop against CNPG replicas.
+#
+# No source lever: these klog calls are V(0), and the 5m interval is a
+# placement choice. Evictions, non-zero eviction counts, overutilization, and
+# any non-PDB eviction error still ship; the counts are also metrics.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-descheduler-steady-state-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.system-controllers\.descheduler-[^.]*\.descheduler\.
+  filters:
+    - grep:
+        exclude: 'log defaultevictor\.go:[0-9]+\] "pod does not fit on any other node because of '
+    - grep:
+        exclude: 'log node\.go:[0-9]+\] "Pod matches inter-pod anti-affinity rule of assigned pod on node"'
+    - grep:
+        exclude: 'log node_taint\.go:[0-9]+\] "Processing node" '
+    # Zero-eviction summaries only.
+    - grep:
+        exclude: 'log "Total number of evictions/requests" extension point="[^"]*" evictedPods=0 evictionRequests=0$'
+    # PDB refusal, reported by the eviction helper and again by the plugin.
+    # `pod.s` avoids escaping the apostrophe.
+    - grep:
+        exclude: 'log "Error evicting pod" err="error when evicting pod \(ignoring\) .*: Cannot evict pod as it would violate the pod.s disruption budget\."'
+    - grep:
+        exclude: 'log \] "eviction failed" err="error when evicting pod \(ignoring\) .*: Cannot evict pod as it would violate the pod.s disruption budget\." plugin='

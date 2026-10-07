@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the kubelet's volume-stats polling as traced by the driver and its grpc
+# proxy: Probe/NodeGetCapabilities/NodeGetVolumeStats plus the shell commands
+# each stats call runs.
+#
+# `--log-level` can only step down to `warn`, which would also drop the volume
+# lifecycle. Stage/publish request/response pairs, the real mount commands, the
+# stage-time `findmnt --source` probe, and all warn/error records still ship.
+# During a real mount the low-level shell trace is lost with the periodic one.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-democratic-csi-volumestats-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Controller and node pods. The external-* sidecars are quieted with --v=2 instead.
+  matchRegex: ^kube\.storage\.democratic-csi-zfs-generic-nfs-[^.]*\.(csi-driver|csi-proxy)\.
+  filters:
+    # driver: the idle-loop methods.
+    - grep:
+        exclude: 'log "message":"new (request|response) - driver: [A-Za-z]+ method: (Probe|NodeGetCapabilities|NodeGetVolumeStats) '
+    # driver: NodeGetVolumeStats' shell trace. `--mountpoint` first, so the
+    # stage-time `findmnt --source` probe ships.
+    - grep:
+        exclude: 'log ^executing mount command: findmnt --mountpoint '
+    - grep:
+        exclude: 'log ^executing filesystem command: (df -i|realpath) /var/lib/kubelet/pods/'
+    - grep:
+        exclude: 'log ^executing filesystem command: lsblk -a -b -l -J -O'
+    - grep:
+        exclude: 'log ^executing filesystem command: realpath /dev/loop[0-9]+'
+    # csi-proxy: the same idle methods.
+    - grep:
+        exclude: 'log ^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:]{8} request \(://localhost\) POST /csi\.v1\.(Node/NodeGetCapabilities|Node/NodeGetVolumeStats|Identity/Probe) HTTP/'
+    # csi-proxy: boilerplate grpc header dump after every request.
+    - grep:
+        exclude: 'log ^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:]{8} request headers map\['

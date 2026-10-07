@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops helm-controller's per-reconcile "nothing to do" lines, plus the fixed set
+# of PodSecurity admission warnings echoed for known-privileged releases.
+#
+# The PodSecurity rule is a judgement call: a NEW violation is dropped too.
+# Accepted because admission still enforces/audits and any interactive apply
+# shows it. Delete the third rule to restore them. Upgrades, drift corrections,
+# out-of-sync reasons, deprecations and errors still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-helm-controller-reconcile-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.flux-system\.helm-controller-
+  filters:
+    - grep:
+        exclude: 'log "msg":"HelmChart/.* is in-sync"'
+    - grep:
+        exclude: 'log "msg":"release in-sync with desired state"'
+    - grep:
+        exclude: 'log "msg":"would violate PodSecurity'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Ships only error-level records from kustomize-controller. An allowlist, so new
+# heartbeat lines in future Flux versions are dropped automatically.
+#
+# Trade-off: the "what did Flux apply" trail (`server-side apply completed`) is
+# not retained; use `kubectl logs` while chasing a change. Not done via
+# `--log-level`: zap has no warn level, and gating here stays reversible without
+# Flux re-applying itself.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-kustomize-controller-info-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.flux-system\.kustomize-controller-
+  filters:
+    - grep:
+        regex: 'log "level":"error"'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops notification-controller's "no alerts found" line, logged for every event
+# because the cluster has no Alert objects.
+#
+# Dropping `--events-addr` would stop it at the source, but would silently break
+# notifications once an Alert is added.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-notification-controller-discarded-events
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.flux-system\.notification-controller-
+  filters:
+    - grep:
+        exclude: 'log "msg":"discarding event, no alerts found for the involved object"'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops source-controller's per-reconcile "artifact up-to-date" line. Stored
+# artifacts, packaged charts, garbage collection and errors still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-source-controller-artifact-uptodate
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.flux-system\.source-controller-
+  filters:
+    - grep:
+        exclude: 'log "msg":"artifact up-to-date with remote revision'

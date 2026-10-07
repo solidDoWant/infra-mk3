@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops zfs-localpv's capacity polling: the controller's GetCapacity call and
+# response, and the node's 60s ZFSNode refresh. Both values are already on
+# CSIStorageCapacity/ZFSNode objects, and zfs-driver has no verbosity flags.
+#
+# Pinned to those methods and messages, so the ZFSVolume destroy-loop errors
+# (see the openebs-zfs-cleanup skill) still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-openebs-zfs-capacity-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.storage\.openebs-zfs-localpv-[^.]*\.openebs-zfs-plugin\.
+  filters:
+    # controller: GetCapacity, both directions.
+    - grep:
+        exclude: 'log grpc\.go:[0-9]+\] GRPC call: /csi\.v1\.Controller/GetCapacity requests '
+    - grep:
+        exclude: 'log grpc\.go:[0-9]+\] GRPC response: \{"available_capacity":[0-9]+\}'
+    # node: the ZFSNode refresh cycle.
+    - grep:
+        exclude: 'log zfsnode\.go:[0-9]+\] zfs node controller: (node pools updated|updating node object with|updated node object)'
+    - grep:
+        exclude: 'log zfsnode\.go:[0-9]+\] Got update event for zfs node'

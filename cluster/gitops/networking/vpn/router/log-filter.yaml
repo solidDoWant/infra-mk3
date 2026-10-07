@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops two benign keepalived patterns. VRRP state transitions, TCP_CHECK
+# failures, quorum changes and IPVS service add/remove still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-vpn-router-keepalived-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Both the multi and single router deployments.
+  matchRegex: ^kube\.networking\.vpn-router-.*\.keepalived\.
+  filters:
+    # Cross-talk: the two deployments (VRID 51 and 52) share an L2 and hear each
+    # other's multicast adverts. Distinct VRIDs, no split-brain.
+    - grep:
+        exclude: 'log Unknown VRID'
+    # State dumps triggered by the probes' SIGUSR1 FAULT check.
+    - grep:
+        exclude: 'log Printing .* data for process'

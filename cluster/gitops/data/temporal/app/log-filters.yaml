@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the frontend-cert refresh failure on history/matching/worker. The chart
+# renders one shared TLS config but mounts the frontend cert only on frontend
+# pods, so the others fail to load a cert they never serve, every 5m.
+#
+# Mounting the key into those services would be worse than the log line. The
+# frontend services aren't matched, so a real mount failure there ships, as
+# does any other error on this path.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-temporal-cert-refresh-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.data\.temporal-(history|matching|worker)-[^.]*\.temporal-(history|matching|worker)\.
+  filters:
+    - grep:
+        exclude: 'log "msg":"failed to load certificates","error":"open /etc/temporal/certs/frontend/tls\.crt: no such file or directory"'
+    - grep:
+        exclude: 'log "msg":"loading certificate from file","tls-cert-file":"/etc/temporal/certs/frontend/tls\.crt"'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the history scavenger's per-branch `deleted history garbage` receipt
+# (one ~550-byte line per reclaimed branch). Unconditional Info call; the only
+# lever is the global server log level.
+#
+# The per-run summary (`scavenger.deleteHandler processed.`) and all errors
+# still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-temporal-history-scavenger-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Temporal's own worker service, where the scanner runs.
+  matchRegex: ^kube\.data\.temporal-worker-[^.]*\.temporal-worker\.
+  filters:
+    - grep:
+        exclude: 'log "msg":"deleted history garbage"'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops temporal-web's access log for the kubelet `/healthz` probe. The access
+# logger is unconditional. Requires kube-probe and status 200, so a failing
+# probe still ships. Relies on echo's fixed JSON field order.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-temporal-web-healthprobe-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.data\.temporal-web-[^.]*\.temporal-web\.
+  filters:
+    - grep:
+        exclude: 'log "uri":"/healthz","user_agent":"kube-probe/[^"]*","status":200,'

@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops virt-api's access log for kube-apiserver's discovery/OpenAPI polls of
+# the aggregated subresources.kubevirt.io API. Logged at a fixed INFO level that
+# logVerbosity can't gate.
+#
+# Requires status 200 and one of the exact discovery URLs (closing `",`), so
+# failures and real subresource calls (console, vnc, ...) still ship. Relies on
+# Go's sorted map keys putting `statusCode` before `url`.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-virt-api-aggregation-access-log
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.system-controllers\.virt-api-[^.]*\.virt-api\.
+  filters:
+    - grep:
+        exclude: 'log "statusCode":200,.*"url":"(/apis|/openapi/v2|/apis/subresources\.kubevirt\.io/v1(alpha3)?(/healthz)?)",'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops virt-operator's steady-state reconcile heartbeat: it re-enqueues its
+# KubeVirt CR every 5s (hard-coded) and logs the same lines each cycle. Most
+# are V(0), so lowering verbosity can't silence them.
+#
+# Only the no-op `patched` and ready/handling lines are dropped; created/deleted,
+# namespace patches, warnings and errors ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-virt-operator-reconcile-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.system-controllers\.virt-operator-
+  filters:
+    - grep:
+        exclude: 'log "msg":"(Handling KubeVirt resource|Handling deployment|All KubeVirt resources created|All KubeVirt components ready|service [^"]*patched"|validatingAdmissionPolicy[^"]*patched"|Kept old CA certificates|Kubevirt namespace [^"]*labels are in sync")'
