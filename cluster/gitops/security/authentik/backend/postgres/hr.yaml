@@ -33,6 +33,8 @@ spec:
     users:
       authentik:
         username: authentik
+        # Server hot-reloads via Envoy SDS, worker via libpq per-connection reads
+        disableReloading: true
     bucket:
       endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
     netpol:

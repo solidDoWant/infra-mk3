@@ -22,23 +22,14 @@ spec:
         endpoints.netpols.home.arpa/email-sender: "true"
       env:
         # Postgres
-        ## RW endpoint
-        - name: AUTHENTIK_POSTGRESQL__HOST
-          value: authentik-postgres-rw.security.svc.cluster.local
+        ## RW endpoint. Host and TLS settings differ per component, see
+        ## server.env and worker.env.
         - name: AUTHENTIK_POSTGRESQL__NAME
           value: authentik
         - name: AUTHENTIK_POSTGRESQL__USER
           value: authentik
         - name: AUTHENTIK_POSTGRESQL__PORT
           value: "5432"
-        - name: AUTHENTIK_POSTGRESQL__SSLMODE
-          value: verify-full
-        - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
-          value: /etc/authentik/secrets/root-ca-cert/ca.crt
-        - name: AUTHENTIK_POSTGRESQL__SSLCERT
-          value: /etc/authentik/secrets/postgres-authentik-user/tls.crt
-        - name: AUTHENTIK_POSTGRESQL__SSLKEY
-          value: /etc/authentik/secrets/postgres-authentik-user/tls.key
         ## RO endpoint
         # Disable read replica configuration. This seems to cause a bug with !KeyOf
         # YAML tags, which causes blueprints to valid to install.
@@ -137,10 +128,6 @@ spec:
             name: authentik-css
             defaultMode: 0440
       volumeMounts:
-        - name: root-ca-cert
-          mountPath: /etc/authentik/secrets/root-ca-cert
-        - name: postgres-authentik-user
-          mountPath: /etc/authentik/secrets/postgres-authentik-user
         - name: authentik-css
           mountPath: /web/dist/custom.css
           subPath: custom.css
@@ -149,6 +136,54 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
     server:
       replicas: 2
+      env:
+        # Plaintext to the Envoy sidecar, which does the mTLS. The Go embedded
+        # outpost loads the client cert once at startup and never re-reads it.
+        - name: AUTHENTIK_POSTGRESQL__HOST
+          value: 127.0.0.1
+        # libpq's default `prefer` would attempt TLS without a client cert
+        # through the postgres_proxy filter
+        - name: AUTHENTIK_POSTGRESQL__SSLMODE
+          value: disable
+      initContainers:
+        - name: envoy
+          # Contrib image is required for the postgres_proxy filter
+          image: envoyproxy/envoy:contrib-v1.39.3
+          restartPolicy: Always
+          ports:
+            - name: envoy-admin
+              containerPort: 8000
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+            # The image has no USER; the entrypoint skips su-exec when non-root
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 25m
+              memory: &envoy_memory 64Mi
+            limits:
+              memory: *envoy_memory
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+            - name: postgres-authentik-user
+              mountPath: /etc/envoy/secrets/postgres
+            - name: root-ca-cert
+              mountPath: /etc/envoy/secrets/root-ca
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: authentik-server-envoy-pg-config
+            defaultMode: 0440
       podLabels:
         endpoints.netpols.home.arpa/external-ingress-enabled: "true"
         # Pods serving OIDC discovery + JWKS to in-cluster consumers (Temporal etc).
@@ -163,6 +198,19 @@ spec:
           enabled: true
     worker:
       replicas: 2
+      env:
+        # Python-only, and libpq re-reads the cert files on every connection,
+        # so native mTLS follows cert rotation without a restart
+        - name: AUTHENTIK_POSTGRESQL__HOST
+          value: authentik-postgres-rw.security.svc.cluster.local
+        - name: AUTHENTIK_POSTGRESQL__SSLMODE
+          value: verify-full
+        - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
+          value: /etc/authentik/secrets/root-ca-cert/ca.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLCERT
+          value: /etc/authentik/secrets/postgres-authentik-user/tls.crt
+        - name: AUTHENTIK_POSTGRESQL__SSLKEY
+          value: /etc/authentik/secrets/postgres-authentik-user/tls.key
       pdb:
         enabled: true
         minAvailable: 1
@@ -172,6 +220,10 @@ spec:
         - name: mask-blueprints
           emptyDir: {}
       volumeMounts:
+        - name: root-ca-cert
+          mountPath: /etc/authentik/secrets/root-ca-cert
+        - name: postgres-authentik-user
+          mountPath: /etc/authentik/secrets/postgres-authentik-user
         - &blueprints_mount
           name: sidecar-blueprints
           mountPath: &sidecar_blueprints_dir /blueprints/k8s-sidecar

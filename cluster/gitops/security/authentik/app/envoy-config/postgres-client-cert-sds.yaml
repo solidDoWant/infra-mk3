@@ -1,0 +1,12 @@
+---
+# File-based SDS for the postgres client cert. Envoy hot-reloads the cert
+# when the contents of /etc/envoy/secrets/postgres change (watched_directory
+# in envoy.yaml), so cert-manager rotations don't require a pod restart.
+resources:
+  - "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
+    name: postgres_client_cert
+    tls_certificate:
+      certificate_chain:
+        filename: /etc/envoy/secrets/postgres/tls.crt
+      private_key:
+        filename: /etc/envoy/secrets/postgres/tls.key
