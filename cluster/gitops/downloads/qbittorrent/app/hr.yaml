@@ -222,24 +222,6 @@ spec:
             primary: true
           metrics:
             port: 8090
-    serviceMonitor:
-      qbittorrent:
-        endpoints:
-          - port: metrics
-            # qbittorrent_torrent_info carries per-torrent values as labels, creating
-            # new series every scrape (~70k/day). Strip them so it only identifies
-            # the torrent; the values are exported as qbittorrent_torrent_* gauges.
-            metricRelabelings:
-              - action: labeldrop
-                regex: (time_active|uploaded|uploaded_session|downloaded_session|up_speed|dl_speed|ratio|eta|progress|amount_left|size|leechers|added_on|completed_on)
-              # Also on qbittorrent_tracker_info, where dropping them would collide series
-              - &info_only_labeldrop
-                sourceLabels: [__name__]
-                regex: qbittorrent_torrent_info
-                targetLabel: downloaded
-                replacement: ""
-              - <<: *info_only_labeldrop
-                targetLabel: seeders
     route:
       qbittorrent:
         hostnames:
