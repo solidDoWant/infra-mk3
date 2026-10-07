@@ -93,6 +93,17 @@ spec:
       labelSelector:
         matchLabels:
           cnpg.io/cluster: {{ include "cluster-resource-name" . }}
+        {{- if or .Values.pooler.rw.enabled .Values.pooler.ro.enabled }}
+        # Pooler pods share cnpg.io/cluster. Counting them can leave a replica,
+        # whose local volume pins it to one node, unschedulable. NotIn also
+        # matches join job pods, which have no podRole. Conditional so that
+        # clusters without a pooler keep their spec (a change restarts them).
+        matchExpressions:
+          - key: cnpg.io/podRole
+            operator: NotIn
+            values:
+              - pooler
+        {{- end }}
       whenUnsatisfiable: DoNotSchedule
       nodeTaintsPolicy: Honor
   plugins:
