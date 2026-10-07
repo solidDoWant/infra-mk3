@@ -6,7 +6,7 @@ metadata:
   name: {{ include "cluster-resource-name" . }}
 spec:
   # Pinned so operator bumps don't change the server version
-  image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.33.1
+  image: ghcr.io/dragonflydb/dragonfly:v1.33.1
   replicas: {{ .Values.instances }}
   labels: {{ include "pod-selector-labels" . | nindent 4 }}
   env:
