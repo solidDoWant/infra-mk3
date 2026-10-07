@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/certificaterequestpolicy_v1alpha1.json
+# Approve the metrics-server APIService serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: system-controllers-intermediary-ca-metrics-server-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: system-controllers-intermediary-ca
+    namespace:
+      matchNames:
+        - system-controllers
+  allowed:
+    dnsNames:
+      required: true
+      values:
+        - metrics-server.system-controllers.svc
+        - metrics-server.system-controllers.svc.cluster.local
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 1h

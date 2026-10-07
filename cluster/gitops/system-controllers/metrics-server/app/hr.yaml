@@ -16,10 +16,7 @@ spec:
       version: 3.14.0
   values:
     apiService:
-      # cert-manager TLS can't be verified: the chart always adds a bare
-      # `metrics-server.system-controllers` SAN, which the intermediary CA's
-      # name constraints reject. Needs a postRenderer dropping that SAN first.
-      insecureSkipTLSVerify: true
+      insecureSkipTLSVerify: false
     replicas: 2
     podDisruptionBudget:
       enabled: true
@@ -29,4 +26,39 @@ spec:
     serviceMonitor:
       enabled: true
     tls:
-      type: metrics-server
+      type: cert-manager
+      certManager:
+        existingIssuer:
+          enabled: true
+          kind: Issuer
+          group: cert-manager.io
+          name: system-controllers-intermediary-ca
+        # Pinned under the CertificateRequestPolicy maxDuration (1h).
+        duration: 1h
+        renewBefore: 30m
+  # Certificate patches to satisfy the namespace issuer + approver-policy:
+  #   * dnsNames: drop the bare `metrics-server.system-controllers` form
+  #     (violates the issuer's critical nameConstraints). The aggregator dials
+  #     `<svc>.<ns>.svc`, so that form must stay.
+  #   * commonName: removed; the bare `metrics-server` CN is unused.
+  #   * usages: drop `client auth`, only the serving cert is used.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: cert-manager.io
+              version: v1
+              kind: Certificate
+              name: metrics-server
+            patch: |
+              - op: replace
+                path: /spec/dnsNames
+                value:
+                  - metrics-server.system-controllers.svc
+                  - metrics-server.system-controllers.svc.cluster.local
+              - op: remove
+                path: /spec/commonName
+              - op: replace
+                path: /spec/usages
+                value:
+                  - server auth
