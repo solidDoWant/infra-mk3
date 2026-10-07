@@ -551,6 +551,21 @@ spec:
           # report the same metrics. Telling VM to scrape the service
           # rather than the underlying pods prevents duplicate metrics.
           discoveryRole: service
+          # Setting this replaces the chart default endpoint, so it is repeated here.
+          endpoints:
+            - port: http
+              honorLabels: true
+              metricRelabelConfigs:
+                - action: labeldrop
+                  regex: (uid|container_id|image_id)
+                # In-repo charts (GitRepository source) get chartVersion
+                # `<version>+<commit>`, so every push minted a new series per
+                # HelmRelease. Strip the build metadata.
+                - action: replace
+                  source_labels: [__name__, revision]
+                  regex: gotk_resource_info;([^+]*)\+.+
+                  target_label: revision
+                  replacement: $1
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
       revisionHistoryLimit: 1
