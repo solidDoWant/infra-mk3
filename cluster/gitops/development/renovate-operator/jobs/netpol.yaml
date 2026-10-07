@@ -111,6 +111,8 @@ specs:
           # Nix flake inputs
           - matchName: cache.nixos.org
           - matchName: releases.nixos.org
+          # Grafana plugin versions (custom.grafana-plugins datasource)
+          - matchName: grafana.com
         toPorts:
           - ports:
               - port: "443"
