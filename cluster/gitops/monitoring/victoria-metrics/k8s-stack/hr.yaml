@@ -645,6 +645,24 @@ spec:
                 - action: drop
                   source_labels: [mountpoint]
                   regex: "/var/lib/kubelet/pods.+"
+    kubeApiServer:
+      vmScrape:
+        spec:
+          endpoints:
+            # Chart default endpoint
+            - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+              port: https
+              scheme: https
+              tlsConfig:
+                caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                serverName: kubernetes
+              metricRelabelConfigs:
+                # Histograms unused by any rule or dashboard: ~250k series, ~29% of
+                # all scraped samples. apiserver_request_sli_duration_seconds_bucket
+                # feeds the apiserver SLO rules and must be kept.
+                - action: drop
+                  source_labels: [__name__]
+                  regex: (apiserver_request_duration_seconds|etcd_request_duration_seconds|apiserver_request_body_size_bytes|apiserver_watch_list_duration_seconds|apiserver_watch_cache_read_wait_seconds|apiserver_response_sizes|apiserver_watch_events_sizes)_bucket
     kubeControllerManager:
       service:
         selector:
