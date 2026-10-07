@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: fluent-charts
-      version: 4.2.0
+      version: 4.3.0
   values:
     containerRuntime: containerd
     Kubernetes: false # Don't deploy the built-in k8s pipeline
