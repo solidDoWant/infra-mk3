@@ -15,7 +15,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: temporal-charts
-      version: 1.2.0
+      version: 1.7.0
   valuesFrom:
     - kind: ConfigMap
       name: &archival_hr_vars temporal-archival-hr-vars
@@ -63,7 +63,7 @@ spec:
         repository: temporalio/server
         # When bumping: if the release includes temporalio/temporal#11429 (PR #11431),
         # drop the Temporal excludeFilters in cilium/cilium/app/helm-bootstrap-values.yaml.
-        tag: 1.31.0
+        tag: 1.32.0
       # Default replicas for every server component (frontend/history/matching/worker).
       replicaCount: 2
       # Applied to every server pod (frontend/internal-frontend/history/matching/
@@ -371,7 +371,7 @@ spec:
       enabled: true
       image:
         repository: temporalio/admin-tools
-        tag: 1.31.0
+        tag: 1.32.0
       # Same fsGroup reasoning as schema.securityContext — admintools mounts the
       # same postgres TLS secrets, and its image runs as user 1000.
       securityContext:
@@ -416,7 +416,7 @@ spec:
       replicaCount: 2
       image:
         repository: temporalio/ui
-        tag: 2.49.1
+        tag: 2.55.0
       # TEMPORAL_ADDRESS is hardcoded by the chart (web-deployment.yaml) using the
       # release name + namespace + frontend port — including it here causes a
       # duplicate-env-key error on apply. Don't re-add it.
