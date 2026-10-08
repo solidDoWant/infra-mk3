@@ -37,7 +37,10 @@
 # * Whitelist Cloudflare for HTTP access via firewall alias (https://www.cloudflare.com/ips-v4)
 # * Alias for UniFi Controller
 # * Firewall rules from management VLAN to UniFi Controller (see unifi-controller netpol)
-# * prometheus-node-exporter plugin added
+# * prometheus-node-exporter plugin added, plus
+#   /usr/local/etc/rc.syshook.d/start/15-os-release running
+#   `/etc/rc.d/os-release onestart` (OPNsense skips base rc.d, so the os
+#   collector finds no /etc/os-release)
 # * Firewall rules for k8s VLAN to nodes running prometheus-node-exporter
 # * NTP: enable iburst on all pool servers (Services > Network Time > General)
 #   so ntpd syncs in <1min on boot instead of ~8-10min

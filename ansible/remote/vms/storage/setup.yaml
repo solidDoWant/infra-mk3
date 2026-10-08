@@ -155,6 +155,18 @@
     #     name: setup_democratic_csi
 
     - name: Install exporters
+      # NFS server only; no bonds, IB, IPVS, or bcachefs in the VM, and the
+      # 6.8 kernel has no hung_task_detect_count. conntrack stays on:
+      # entries/limit work, but it always reports failure because the kernel
+      # lacks /proc/net/stat/nf_conntrack.
+      vars:
+        node_exporter_disabled_collectors:
+          - bcachefs
+          - bonding
+          - infiniband
+          - ipvs
+          - kernel_hung
+          - nfs
       ansible.builtin.include_role:
         name: install_exporters
 

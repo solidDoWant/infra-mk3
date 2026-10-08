@@ -28,11 +28,44 @@
         cache_valid_time: 600
         autoclean: true
         autoremove: true
+    # The distro package stays installed for its unit, user, and textfile
+    # collector timers; only the binary is replaced. Debian/Ubuntu ship 1.9.0,
+    # whose pressure collector fails on kernels without /proc/pressure/irq.
+    - name: Install node-exporter via GitHub release
+      vars:
+        # renovate: datasource=github-releases depName=prometheus/node_exporter
+        node_exporter_version: 1.12.1
+      ansible.builtin.unarchive:
+        src: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+        dest: /usr/local/bin
+        remote_src: true
+        include:
+          - node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter
+        extra_opts:
+          - --strip-components=1
+        owner: root
+        group: root
+        mode: 0755
+      register: node_exporter_binary
+    - name: Run the GitHub release node-exporter binary
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/prometheus-node-exporter.service.d/override.conf
+        content: |
+          [Service]
+          ExecStart=
+          ExecStart=/usr/local/bin/node_exporter $ARGS
+        owner: root
+        group: root
+        mode: 0644
+        directory_mode: 0755
+      register: node_exporter_override
+    # The upstream binary lacks the distro's defaults for the systemd collector
+    # and the textfile directory.
     - name: Configure node-exporter
       ansible.builtin.copy:
         dest: /etc/default/prometheus-node-exporter
         content: |
-          ARGS="--web.listen-address={{listening_address}}:9100"    
+          ARGS="--web.listen-address={{ listening_address }}:9100 --collector.systemd --collector.textfile.directory=/var/lib/prometheus/node-exporter{% for collector in node_exporter_disabled_collectors %} --no-collector.{{ collector }}{% endfor %}"
         owner: root
         group: root
         mode: 0644
@@ -41,7 +74,8 @@
       ansible.builtin.systemd:
         name: prometheus-node-exporter
         state: restarted
-      when: config_file.changed
+        daemon_reload: true
+      when: config_file.changed or node_exporter_binary.changed or node_exporter_override.changed
     # This is all kinds of broken on nvme-cli v2.8
     # This PR fixed compat with v2.11 and broke everything earlier:
     # https://github.com/prometheus-community/node-exporter-textfile-collector-scripts/pull/227

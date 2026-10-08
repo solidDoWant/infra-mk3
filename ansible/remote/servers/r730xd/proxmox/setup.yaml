@@ -292,6 +292,15 @@
     # TODO setup mail daemon once relay is setup
 
     - name: Install exporters
+      # No IPVS, NFS client, or bcachefs. RAPL's energy_uj is root-only; IPMI
+      # already reports system power. conntrack stays on for when the PVE
+      # firewall loads nf_conntrack.
+      vars:
+        node_exporter_disabled_collectors:
+          - bcachefs
+          - ipvs
+          - nfs
+          - rapl
       ansible.builtin.include_role:
         name: install_exporters
 
