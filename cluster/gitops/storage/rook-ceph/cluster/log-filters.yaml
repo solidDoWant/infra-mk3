@@ -157,3 +157,76 @@ spec:
     # Cache-rebalance tick, every 5s per mon.
     - grep:
         exclude: 'log _set_new_cache_sizes'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Extracts Ceph daemon lines into `log_fields.*` and sets `_msg` to the message
+# alone. Two shapes:
+#   debug <time> <thread> <prio> <msg>
+#   <ch> <time> <daemon> (<rank>) <seq> : <ch> [<LVL>] <msg>
+# The level comes from a `log_channel(<ch>) log [<LVL>] : ` or mgr module
+# `[<module> <LEVEL> <logger>] ` prefix, else the debug prio (-1 is derr).
+# Blank lines (separators in multi-line dumps) are dropped. Other lines, e.g.
+# Python tracebacks, pass through untouched; they interleave with other
+# output, so they can't be rejoined reliably.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-ceph-daemon-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.storage\.rook-ceph-(mon|mgr|osd|mds|rgw)-[^.]*\.(mon|mgr|osd|mds|rgw)\.
+  filters:
+    - lua:
+        call: parse_ceph
+        code: |
+          local levels = { DBG = "debug", INF = "info", WRN = "warning", ERR = "error", SEC = "error" }
+          local py_levels = { DEBUG = "debug", INFO = "info", WARNING = "warning", ERROR = "error", CRITICAL = "fatal" }
+
+          function parse_ceph(tag, ts, record)
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            if line:match("^%s*$") then
+              return -1, ts, record
+            end
+            local f = {}
+            local msg
+            local time, thread, prio, rest = line:match("^debug (%S+) (%x+) +(%-?%d+) (.*)$")
+            if time then
+              f.time, f.thread, f.prio = time, thread, tonumber(prio)
+              local channel, lvl, chmsg = rest:match("^log_channel%((%w+)%) log %[(%u+)%] : (.*)$")
+              local module, pylvl, logger, modmsg = rest:match("^%[(%S+) (%u+) ([^%]]+)%] (.*)$")
+              if channel then
+                f.channel, f.level, msg = channel, levels[lvl] or lvl, chmsg
+              elseif module and py_levels[pylvl] then
+                f.module, f.logger, f.level, msg = module, logger, py_levels[pylvl], modmsg
+              else
+                msg = rest
+                if f.prio < 0 then
+                  f.level = "error"
+                elseif f.prio == 0 then
+                  f.level = "info"
+                else
+                  f.level = "debug"
+                end
+              end
+            else
+              local cl = "^(%a+) (%S+) (%S+) %(([^)]+)%) (%d+) : %a+ %[(%u+)%] (.*)$"
+              local channel, t, daemon, rank, seq, lvl, clmsg = line:match(cl)
+              if not channel then
+                return 0, ts, record
+              end
+              f.channel, f.time, f.daemon, f.rank, f.seq = channel, t, daemon, rank, tonumber(seq)
+              f.level, msg = levels[lvl] or lvl, clmsg
+            end
+            f.msg = msg
+            record["log_fields"] = f
+            record["log"] = msg
+            return 2, ts, record
+          end

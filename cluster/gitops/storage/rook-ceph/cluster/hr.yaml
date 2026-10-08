@@ -99,6 +99,9 @@ spec:
           # are also what arrive in VictoriaLogs as `missing _msg field` records, since
           # they carry no content for a filter to match.
           debug_rocksdb: "3/5"
+        osd:
+          # BlueStore's RocksDB dumps the same stats every 10m per OSD; see mon.
+          debug_rocksdb: "3/5"
         # Applies to every radosgw daemon (the section is matched by entity
         # prefix, so it covers client.rgw.ssd.replicated.a and any future store).
         client.rgw:
