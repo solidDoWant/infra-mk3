@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` and `log_fields.*` for Envoy sidecars (containers named `envoy`).
+# - JSON from the bootstrap's `application_log_config.log_format.json_format`
+#   (`msg`, `level`, `logger`, `source`; see the add-k8s-service skill's
+#   references/envoy-sidecar-*.yaml), already merged into `log_fields` by the
+#   `kubernetes` filter.
+# - Envoy's default text format, `[<time>][<thread>][<level>][<logger>]
+#   [<source>] <msg>`: sidecars without that block, and the lines every sidecar
+#   prints before its bootstrap is loaded.
+# - JSON access logs (`method`, `path`, `status`, `flags`; no `msg`):
+#   `<method> <path> <status> <flags>`, logger `access`, 5xx as error.
+# Drops, once per start: the `statically linked extensions` listing (~60 lines)
+# and the work-in-progress API warning for contrib's v3alpha postgres_proxy.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-envoy-sidecar-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.[^.]+\.[^.]+\.envoy\.
+  filters:
+    - lua:
+        call: promote_envoy
+        code: |
+          local levels = { trace = "trace", debug = "debug", info = "info", warning = "warning", error = "error", critical = "fatal" }
+          local text_format = "^%[([%d%- :%.]+)%]%[%d+%]%[(%a+)%]%[([%w_]+)%] %[([^%]]+)%] (.*)$"
+
+          function promote_envoy(tag, ts, record)
+            local f = record["log_fields"]
+            if type(f) ~= "table" then
+              local line = record["log"]
+              if type(line) ~= "string" then
+                return 0, ts, record
+              end
+              local time, lvl, logger, source, text = line:match(text_format)
+              if not time then
+                return 0, ts, record
+              end
+              f = { time = time, level = lvl, logger = logger, source = source, msg = text }
+            end
+            local msg = f["msg"]
+            if msg == nil and f["method"] ~= nil and f["status"] ~= nil then
+              msg = tostring(f["method"]) .. " " .. tostring(f["path"] or "-") .. " " .. tostring(f["status"]) .. " " .. tostring(f["flags"] or "-")
+              f["logger"] = "access"
+              f["level"] = (tonumber(f["status"]) or 0) >= 500 and "error" or "info"
+              record["log"] = msg
+              return 2, ts, record
+            end
+            if type(msg) ~= "string" then
+              return 0, ts, record
+            end
+            if f["logger"] == "main" and (msg == "statically linked extensions:" or msg:match("^  [%w_.]+: ")) then
+              return -1, ts, record
+            end
+            if msg:match("^message '[%w_.]+' is contained in proto file '[^']+' marked as work%-in%-progress") then
+              return -1, ts, record
+            end
+            if type(f["level"]) == "string" then
+              f["level"] = levels[f["level"]] or f["level"]
+            end
+            record["log_fields"] = f
+            record["log"] = msg
+            return 2, ts, record
+          end

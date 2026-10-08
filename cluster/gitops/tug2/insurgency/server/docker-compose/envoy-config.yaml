@@ -7,6 +7,17 @@ admin:
       address: 0.0.0.0
       port_value: 8000
 
+# JSON lines, like the cluster's Envoy sidecars. %j escapes the message for
+# JSON.
+application_log_config:
+  log_format:
+    json_format:
+      time: "%Y-%m-%dT%T.%e%z"
+      level: "%l"
+      logger: "%n"
+      source: "%g:%#"
+      msg: "%j"
+
 node:
   # Values are basically meaningless but must be set
   id: envoy-insurgency-postgres-proxy

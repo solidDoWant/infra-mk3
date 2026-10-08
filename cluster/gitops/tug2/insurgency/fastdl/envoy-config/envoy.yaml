@@ -33,6 +33,17 @@ admin:
       address: 127.0.0.1
       port_value: 9901
 
+# JSON lines for fluent-bit (promote-envoy-sidecar-message). %j escapes the
+# message for JSON.
+application_log_config:
+  log_format:
+    json_format:
+      time: "%Y-%m-%dT%T.%e%z"
+      level: "%l"
+      logger: "%n"
+      source: "%g:%#"
+      msg: "%j"
+
 node:
   # Values are basically meaningless but must be set.
   id: envoy-insurgency-fastdl

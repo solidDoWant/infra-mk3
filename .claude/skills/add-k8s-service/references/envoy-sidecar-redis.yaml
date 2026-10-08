@@ -21,6 +21,17 @@ admin:
       address: 127.0.0.1
       port_value: 8000
 
+# JSON lines for fluent-bit (promote-envoy-sidecar-message). %j escapes the
+# message for JSON.
+application_log_config:
+  log_format:
+    json_format:
+      time: "%Y-%m-%dT%T.%e%z"
+      level: "%l"
+      logger: "%n"
+      source: "%g:%#"
+      msg: "%j"
+
 # SDS requires node.id and node.cluster to be set (it sends them in the
 # discovery request, even for file-based path_config_source). Values are
 # arbitrary labels used only in stats/logs.
