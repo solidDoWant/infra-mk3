@@ -37,3 +37,22 @@ spec:
             record["log"] = msg
             return 2, ts, record
           end
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops kube-apiserver's cancelled etcd dials. Every /metrics scrape creates a
+# throwaway etcd client for apiserver_storage_size_bytes and closes it at once
+# (apiserver storage/etcd3/metrics), cancelling its in-flight dial or TLS
+# handshake; with two vmagent replicas that's two per server every 20s. Only
+# those two cancellation forms are matched, so refused or timed-out dials ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-kube-apiserver-etcd-dial-cancel
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.kube-system\.kube-apiserver-[^.]*\.kube-apiserver\.
+  filters:
+    - grep:
+        exclude: 'log addrConn\.createTransport failed to connect to \{Addr: \\"127\.0\.0\.1:2379\\".*Err: connection error: desc = \\"transport: (Error while dialing: dial tcp 127\.0\.0\.1:2379: operation was canceled|authentication handshake failed: context canceled)\\"'
