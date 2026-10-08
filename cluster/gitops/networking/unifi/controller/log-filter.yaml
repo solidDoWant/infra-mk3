@@ -1,0 +1,86 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
+# One UniFi log4j event: a `[YYYY-MM-DD HH:MM:SS,mmm] ` header line, then every
+# following line up to the next header (Java stack traces, multi-line
+# messages). log4j writes each event in one write, so its lines are contiguous.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterMultilineParser
+metadata:
+  name: unifi-log4j
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  type: regex
+  flushTimeout: 2000
+  rules:
+    - start: start_state
+      regex: '/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\] /'
+      next: cont
+    - start: cont
+      regex: '/^(?!\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\] )/'
+      next: cont
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Rejoins the UniFi controller's stack traces with their log line, one record
+# per event. Named to sort before `kubernetes` so it sees raw lines; joined
+# records are re-emitted at the start of the pipeline, which this filter skips.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: join-unifi-stacktraces
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.networking\.unifi-controller-[^.]*\.app\.
+  filters:
+    - multiline:
+        keyContent: log
+        parser: unifi-log4j
+        emitterName: unifi-multiline
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Splits a UniFi event `[<time>] <<thread>> <LEVEL> <logger> - <msg>` into
+# `log_fields.*`: `_msg` is the message line alone, and a joined stack trace
+# goes to `log_fields.stacktrace`. Runs after `kubernetes`.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-unifi-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.networking\.unifi-controller-[^.]*\.app\.
+  filters:
+    - lua:
+        call: parse_unifi
+        code: |
+          local levels = { TRACE = "trace", DEBUG = "debug", INFO = "info", WARN = "warning", ERROR = "error", FATAL = "fatal" }
+          local header = "^%[(%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d,%d%d%d)%] <([^>]*)> (%u+) +(%S+) +%- (.*)$"
+
+          function parse_unifi(tag, ts, record)
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local first, trace = line:match("^([^\n]*)\n(.*)$")
+            if not first then
+              first = line
+            end
+            local time, thread, lvl, logger, msg = first:match(header)
+            if not time then
+              return 0, ts, record
+            end
+            local f = { time = time, thread = thread, level = levels[lvl] or lvl, logger = logger, msg = msg }
+            if trace and trace ~= "" then
+              f.stacktrace = trace
+            end
+            record["log_fields"] = f
+            record["log"] = msg
+            return 2, ts, record
+          end
