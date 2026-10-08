@@ -27,7 +27,8 @@ spec:
 # Sets `_msg` on CNPG pods to the readable message instead of the JSON envelope:
 # `record.message` (postgres), `record.msg` (pgbouncer), else `msg`. Fields stay
 # under `log_fields.*`. Runs after `kubernetes`, which populates `log_fields`.
-# Scoped by container name (no pod labels with Use_Tag_For_Meta).
+# Scoped by container name (no pod labels with Use_Tag_For_Meta), plus the
+# operator and barman-cloud plugin Deployments.
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterFilter
 metadata:
@@ -36,7 +37,7 @@ metadata:
     config.fluentbit.fluent.io/enabled: "true"
     config.fluentbit.fluent.io/agent: node
 spec:
-  matchRegex: ^kube\.[^.]+\.[^.]+\.(postgres|pgbouncer|plugin-barman-cloud|bootstrap-controller)\.
+  matchRegex: ^kube\.([^.]+\.[^.]+\.(postgres|pgbouncer|plugin-barman-cloud|bootstrap-controller)|data\.(cloudnative-pg-[^.]*\.manager|plugin-barman-cloud-[^.]*\.barman-cloud))\.
   filters:
     - lua:
         call: promote_message

@@ -20,6 +20,9 @@ spec:
     # is down, WAL archival and restore for every cluster using it fails.
     replicaCount: 2
     priorityClassName: system-cluster-critical
+    # The chart hard-codes `--log-level=debug`; the last flag wins.
+    additionalArgs:
+      - --log-level=info
     crds:
       create: true
     certificate:
