@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on kube-apiserver, kube-controller-manager and kube-scheduler to
+# `msg` instead of the JSON envelope. They run with `--logging-format=json`
+# (talconfig.yaml), whose records have no level: info records carry `v`, and
+# everything else is error-level. klog warnings land there too, so they show
+# as errors. The API server's etcd client logs zap JSON, which has its own
+# level. Runs after `kubernetes`, which populates `log_fields`.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-kube-control-plane-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.kube-system\.kube-(apiserver|controller-manager|scheduler)-[^.]*\.kube-(apiserver|controller-manager|scheduler)\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["msg"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            if fields["level"] == nil then
+              fields["level"] = fields["v"] ~= nil and "info" or "error"
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end

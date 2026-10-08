@@ -403,12 +403,16 @@ patches:
           bind-address: 0.0.0.0
           # Feature enablement
           feature-gates: kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true
+          # See apiServer.
+          logging-format: json
   # Configure the scheduler
   - |-
     cluster:
       scheduler:
         extraArgs:
          bind-address: 0.0.0.0
+         # See apiServer.
+         logging-format: json
   # Configuration for Cilium
   - |-
     cluster:
@@ -440,6 +444,9 @@ patches:
           # Resource enablement
           # Enable everything but alpha and legacy features
           runtime-config: "api/all=true,api/legacy=false"
+          # Text output splits multi-line values (e.g. `err=<...>`) across log
+          # records.
+          logging-format: json
   # Scheduler configuration
   - |-
     cluster:
