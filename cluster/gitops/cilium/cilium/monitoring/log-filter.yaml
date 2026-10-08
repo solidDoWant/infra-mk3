@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the agent's per-push xDS request/ack pair to cilium-envoy, logged at
+# info on every policy change (FQDN IP churn, endpoint churn) for every L7
+# endpoint on the node. Named to sort before `kubernetes`, so it matches the
+# raw logfmt line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-cilium-agent-xds-stream-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.cilium\.cilium-[^.]*\.cilium-agent\.
+  filters:
+    - grep:
+        exclude: 'log ^time=\S+ level=info msg=OnStream(Request|Response) module=agent\.controlplane\.envoy-proxy '
