@@ -3,6 +3,11 @@
 # Sets `_msg` on the Kyverno controllers to `message` instead of the JSON
 # envelope. Fields stay under `log_fields.*`. Runs after `kubernetes`, which
 # populates `log_fields`.
+#
+# Drops the webhook-controller's empty-GVK `resource not found`, logged every
+# reconcile for the templated generate kind in
+# copy-teleport-crs-to-security-namespace. Unparseable selectors resolve to an
+# all-empty GVK; a missing real kind keeps its GVK and still ships.
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterFilter
 metadata:
@@ -24,6 +29,9 @@ spec:
             local msg = fields["message"]
             if type(msg) ~= "string" or msg == "" then
               return 0, ts, record
+            end
+            if msg == "resource not found" and fields["logger"] == "webhook-controller" and (fields["kind"] or "") == "" then
+              return -1, ts, record
             end
             record["log"] = msg
             return 2, ts, record
