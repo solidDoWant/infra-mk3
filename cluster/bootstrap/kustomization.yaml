@@ -58,9 +58,9 @@ patches:
               - name: manager
                 resources:
                   limits:
-                    memory: 2Gi
+                    memory: 1Gi
                   requests:
-                    memory: 2Gi
+                    memory: 1Gi
                     cpu: 100m
     target: *performance_controllers_target
   # Remove CPU resource limit

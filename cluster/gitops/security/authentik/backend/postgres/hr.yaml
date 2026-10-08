@@ -17,6 +17,13 @@ spec:
     clusterName: authentik
     storage:
       size: 10Gi
+    # Steady-state working set ~750-850Mi, above the chart default
+    resources:
+      requests:
+        cpu: 100m
+        memory: 1Gi
+      limits:
+        memory: 1Gi
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     certificates:
       client:

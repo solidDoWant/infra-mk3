@@ -54,9 +54,9 @@ storage:
 resources:
   requests:
     cpu: 100m
-    memory: 1Gi
+    memory: 768Mi
   limits:
-    memory: 1Gi
+    memory: 768Mi
 parameters:
   shared_buffers: 256MB # This should be 25% of the total allocated memory per the docs
   # Not needed, backing storage (ZFS) uses CoW:

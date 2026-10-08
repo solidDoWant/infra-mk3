@@ -176,7 +176,7 @@ spec:
             resources:
               requests:
                 cpu: 200m
-                memory: &ms_memory 2Gi
+                memory: &ms_memory 1536Mi
               limits:
                 memory: *ms_memory
               # GPU attached via the DRA ResourceClaimTemplate in pod.resourceClaims.
