@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` and `log_fields.level` for the postfix pods. Runs after
+# `kubernetes`, which merges JSON lines into `log_fields`.
+# - mail, rsyslog JSON (`LOG_FORMAT: json`): `message` minus its leading space;
+#   the syslog `severity_label` maps to the usual level words. rsyslog's
+#   `-- MARK --` heartbeat is dropped.
+# - mail, supervisord: `<YYYY-MM-DD HH:MM:SS,mmm> <LEVEL> <msg>`.
+# - mail, startup script: `‣ <LEVEL> <msg>` (NOTE is info). Its other lines
+#   (banner, indented cp/rm output) pass through.
+# - exporter: Go stdlib `<YYYY/MM/DD HH:MM:SS> <msg>` with no level; `Failed`
+#   messages are errors, the rest info.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-postfix-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.email\.docker-postfix-mail-\d+\.(mail|exporter)\.
+  filters:
+    - lua:
+        call: parse_postfix
+        code: |
+          local syslog = { emerg = "fatal", alert = "fatal", crit = "fatal", err = "error", warning = "warning", notice = "info", info = "info", debug = "debug" }
+          local script = { DEBUG = "debug", INFO = "info", NOTE = "info", WARN = "warning", ERROR = "error" }
+          local supervisor = { BLAT = "trace", TRAC = "trace", DEBG = "debug", INFO = "info", WARN = "warning", ERRO = "error", CRIT = "fatal" }
+          local supervisord = "^(%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d,%d+) (%u+) (.*)$"
+          local gostd = "^(%d%d%d%d/%d%d/%d%d %d%d:%d%d:%d%d) (.*)$"
+
+          function parse_postfix(tag, ts, record)
+            local f = record["log_fields"]
+            if type(f) == "table" and f["type"] == "syslog_json" then
+              local msg = f["message"]
+              if type(msg) ~= "string" then
+                return 0, ts, record
+              end
+              msg = msg:gsub("^%s+", "")
+              if msg == "-- MARK --" then
+                return -1, ts, record
+              end
+              f["message"] = msg
+              f["level"] = syslog[f["severity_label"]] or f["severity_label"]
+              record["log"] = msg
+              return 2, ts, record
+            end
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local lvl, text = line:match("^‣ (%u+) +(.*)$")
+            if lvl then
+              record["log_fields"] = { level = script[lvl] or lvl:lower(), msg = text }
+              record["log"] = text
+              return 2, ts, record
+            end
+            local stime, slvl, stext = line:match(supervisord)
+            if stime then
+              record["log_fields"] = { time = stime, level = supervisor[slvl] or slvl:lower(), msg = stext }
+              record["log"] = stext
+              return 2, ts, record
+            end
+            local time, rest = line:match(gostd)
+            if time then
+              record["log_fields"] = { time = time, level = rest:match("^Failed") and "error" or "info", msg = rest }
+              record["log"] = rest
+              return 2, ts, record
+            end
+            return 0, ts, record
+          end
