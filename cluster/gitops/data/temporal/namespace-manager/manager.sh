@@ -11,9 +11,9 @@
 # - Adds custom search attributes to a Temporal namespace from k8s annotations
 #   prefixed with SEARCH_ATTRIBUTE_ANNOTATION_PREFIX. Each
 #   `<prefix><Name>: <Type>` annotation becomes a `search-attribute create`
-#   call. Additive only: removing the annotation does not drop the attribute,
-#   and Temporal rejects type changes (those surface as "already exists" and
-#   are silently ignored — the operator must drop and recreate manually).
+#   call, skipped when the namespace already has an attribute of that name.
+#   Additive only: removing the annotation does not drop the attribute, and a
+#   changed type is not applied — drop and recreate manually.
 #
 # Runs under busybox /bin/sh (no bash). The badouralix/curl-jq base image ships
 # curl + jq + busybox utils. The `temporal` CLI is mounted in via an OCI image
@@ -114,18 +114,26 @@ list_managed_namespaces() {
         | sort -u
 }
 
-# Idempotently ensure each annotated search attribute exists in the Temporal
-# namespace. Try-and-absorb mirrors the namespace create path: "already exists"
-# is the steady state on every tick after the first. Any other failure logs
-# and continues — a freshly-created namespace that hasn't propagated yet will
-# return "namespace not found" and be retried next tick.
+# Ensure each annotated search attribute exists in the Temporal namespace.
+# Attributes already present are skipped: `search-attribute create` succeeds
+# for an existing name+type, so it can't tell a real add apart. A failure
+# (e.g. a freshly-created namespace that hasn't propagated yet) logs and is
+# retried next tick.
 reconcile_search_attributes() {
     ns="$1"
     sas=$(list_desired_search_attrs "${ns}")
     [ -z "${sas}" ] && return 0
 
+    existing_sas=$("${TEMPORAL}" operator search-attribute list \
+        --namespace "${ns}" -o json \
+        | jq -r '.customAttributes // {} | keys[]') || {
+        echo "  failed to list search attributes for ${ns}" >&2
+        return 0
+    }
+
     printf '%s\n' "${sas}" | while IFS='=' read -r sa_name sa_type; do
         [ -z "${sa_name}" ] && continue
+        printf '%s\n' "${existing_sas}" | grep -qxF "${sa_name}" && continue
         if create_output=$("${TEMPORAL}" operator search-attribute create \
             --namespace "${ns}" \
             --name "${sa_name}" \
