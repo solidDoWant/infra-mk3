@@ -57,21 +57,18 @@ entries:
                 "is_superuser": request.user.is_superuser,
             }
         }
-  # authentik 2025.10 changed the default OpenID "email" scope mapping to always
-  # report email_verified=false (it previously hard-coded true), as authentik has
-  # no general source of truth for email verification. Override that managed
-  # mapping so the claim instead reflects a per-user "email_verified" attribute.
-  # Discord users get this attribute set to true by the update-attrs-from-discord
-  # policy (Discord enrollment already requires a verified account); the
-  # "discord" attribute fallback covers existing Discord users that pre-date the
-  # attribute, without them needing to re-authenticate. Users from any other
-  # source keep the safe false default unless explicitly verified.
+  # Replaces the default "email" mapping, which always reports email_verified=false.
+  # Not an override of the managed mapping: system blueprint re-applies (on upgrade)
+  # would silently revert it. Discord-sourced users count as verified (enrollment
+  # requires a verified Discord account, see discord-require-verified-account);
+  # anyone else needs an explicit "email_verified" user attribute.
+  # OAuth2 providers only: proxy providers re-add the managed mapping on every save,
+  # and two mappings with the same scope_name merge in undefined order.
   - model: authentik_providers_oauth2.scopemapping
-    id: scope-email
+    id: scope-email-verified
     identifiers:
-      managed: goauthentik.io/providers/oauth2/scope-email
+      name: "OpenID 'email' (verified)"
     attrs:
-      name: "authentik default OAuth Mapping: OpenID 'email'"
       scope_name: email
       description: Email address
       expression: |

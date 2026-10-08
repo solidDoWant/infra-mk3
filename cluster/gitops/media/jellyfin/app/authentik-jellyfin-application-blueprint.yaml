@@ -34,6 +34,11 @@ stringData:
           identifiers:
             name: Invalidation flow
           required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Blueprint library
+          required: true
       # Application
       - model: authentik_providers_oauth2.oauth2provider
         id: jellyfin-provider
@@ -77,7 +82,7 @@ stringData:
           property_mappings:
             - !Find [
                 authentik_providers_oauth2.scopemapping,
-                [name, "authentik default OAuth Mapping: OpenID 'email'"],
+                [name, "OpenID 'email' (verified)"],
               ]
             - !Find [
                 authentik_providers_oauth2.scopemapping,

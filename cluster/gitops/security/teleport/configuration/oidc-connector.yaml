@@ -12,6 +12,9 @@ spec:
     - https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}:443/v1/webapi/oidc/callback
   acr_values: goauthentik.io/providers/oauth2/default
   display: Login with Authentik
+  # Authentik is the sole IdP, users can't edit their own email, and roles come
+  # from groups, so email_verified gates nothing here.
+  allow_unverified_email: true
   scope:
     # This provides access to the `groups` claim
     - profile
