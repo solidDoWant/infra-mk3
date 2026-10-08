@@ -101,7 +101,7 @@ spec:
         # every server controller is harmless (~12 MB image, no exec cost).
         - name: probe-bin
           image:
-            reference: ghcr.io/grpc-ecosystem/grpc-health-probe:v0.4.57
+            reference: ghcr.io/grpc-ecosystem/grpc-health-probe:v0.4.58
             pullPolicy: IfNotPresent
       additionalVolumeMounts:
         - name: postgres-user-cert
