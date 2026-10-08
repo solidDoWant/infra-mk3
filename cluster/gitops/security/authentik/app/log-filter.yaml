@@ -23,3 +23,33 @@ spec:
     # bare `/metrics` (:9300). Separate branches so unserved variants can't match.
     - grep:
         exclude: 'log "event": ?"(/-/(health/(live|ready)|metrics)/|/metrics)".*"status": ?200[,}]'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on authentik server/worker to `event` instead of the JSON
+# envelope (the request path, for access-log records). Fields stay under
+# `log_fields.*`. Runs after `kubernetes`, which populates `log_fields`.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-authentik-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.security\.authentik-(server|worker)-[^.]*\.(server|worker)\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["event"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end
