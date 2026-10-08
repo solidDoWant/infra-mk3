@@ -28,6 +28,9 @@ spec:
     # errors are not verbosity-gated.
     features:
       logging:
+        # Text output is ANSI-colored with fields as key=value pairs. JSON has
+        # no caller field.
+        format: json
         verbosity: 1
       # Background scans evaluate native VAPs against a synthetic request with
       # empty userInfo, so every VAP here (all key on request.userInfo) errors
