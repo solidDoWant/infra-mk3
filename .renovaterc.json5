@@ -21,6 +21,15 @@
   minimumReleaseAge: "3 days",
   // cspell:words Behaviour
   minimumReleaseAgeBehaviour: "timestamp-optional",
+  // The resulting "did not have a releaseTimestamp, ... proceeding" WARNs are
+  // the expected outcome of the above, but count as repository problems and
+  // operator warnings. Per-dep detail stays at debug.
+  logLevelRemap: [
+    {
+      matchMessage: "/did not have a releaseTimestamp, but as we're running with minimumReleaseAgeBehaviour=timestamp-optional/",
+      newLogLevel: "debug",
+    },
+  ],
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
 
   // Replaces config:recommended's list, so the defaults are repeated.
