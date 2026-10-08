@@ -569,78 +569,12 @@ spec:
     prometheus-node-exporter:
       fullnameOverride: prometheus-node-exporter
       revisionHistoryLimit: 1
-      # NVMe drives report WCTEMP/CCTEMP via Identify Controller (NVMe spec
-      # bytes 266-269), which smartmontools prints in `-x` text output but does
-      # not currently serialize to JSON. smartctl-exporter only reads JSON, so
-      # the thresholds are unreachable through it. This sidecar parses the
-      # text output and publishes the values via node-exporter's textfile
-      # collector so they can be joined against smartctl_device_temperature
-      # in alerting expressions. See ../../exporters/smartctl/hr.yaml for the
-      # main exporter.
       extraArgs:
-        - --collector.textfile.directory=/textfile
         # No NFS server or tape drives on the nodes. RAPL's energy_uj is
         # root-only (0400), which the exporter (uid 65534) can't read.
         - --no-collector.nfsd
         - --no-collector.rapl
         - --no-collector.tapestats
-      sidecarVolumeMount:
-        # Auto-creates an in-memory emptyDir volume named "textfile" and mounts
-        # it readOnly on node-exporter; the sidecar writes to it below.
-        - name: textfile
-          mountPath: /textfile
-          readOnly: false
-      sidecarHostVolumeMounts:
-        # /dev for smartctl to access NVMe character devices. Mounted only on
-        # sidecars by the chart, not on node-exporter itself.
-        - name: dev
-          mountPath: /dev
-          hostPath: /dev
-          readOnly: false
-      extraVolumes:
-        - name: smartctl-thresholds-script
-          configMap:
-            name: smartctl-thresholds-script
-            defaultMode: 0755
-      sidecars:
-        # Needed until https://github.com/smartmontools/smartmontools/issues/583 is both fixed and
-        # used by smartctl-exporter. Exports NVMe drive warning and critical temperature thresholds
-        # for use in alerting rules.
-        - name: smartctl-thresholds
-          # Reuses the smartctl-exporter image because it already bundles
-          # smartmontools. Pin matches the app version in
-          # ../../exporters/smartctl/hr.yaml.
-          image: quay.io/prometheuscommunity/smartctl-exporter:v0.14.0
-          command:
-            - /script/write-smartctl-thresholds.sh
-          securityContext:
-            # Needed for raw NVMe ioctl access via /dev/nvmeN.
-            privileged: true
-            runAsUser: 0
-            runAsNonRoot: false
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - name: smartctl-thresholds-script
-              mountPath: /script
-              readOnly: true
-          # Detect a stuck loop (e.g. kernel ioctl wedge across all drives)
-          # and restart. mtime check uses 10 min = 2x the script's sleep
-          # interval, so a single slow iteration won't false-alarm.
-          livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - find /textfile/smartctl_nvme_thresholds.prom -mmin -10 | grep -q .
-            initialDelaySeconds: 60
-            periodSeconds: 60
-            failureThreshold: 3
-          resources:
-            requests:
-              cpu: 5m
-              memory: 32Mi
-            limits:
-              memory: 32Mi
       vmScrape:
         spec:
           endpoints:
