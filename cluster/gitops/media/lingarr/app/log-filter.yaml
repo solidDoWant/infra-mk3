@@ -1,0 +1,122 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
+# One Lingarr log event: a `[<time>] [<Level>] <category>: <msg>` line, then the
+# exception it carries (`<Type>: <msg>`, indented `at` frames, `--->` inner
+# exceptions, `--- End of ...` markers).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterMultilineParser
+metadata:
+  name: lingarr
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  type: regex
+  flushTimeout: 1000
+  rules:
+    - start: start_state
+      regex: '/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] \[[A-Za-z]+\] /'
+      next: cont
+    - start: cont
+      regex: '/^(\s|---|[A-Za-z_][\w.`]*(Exception|Error)( \(0x[0-9A-Fa-f]+\))?: )/'
+      next: cont
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Rejoins exceptions with their log line, one record per event. Named to sort
+# before `kubernetes` so it sees raw lines; joined records are re-emitted at
+# the start of the pipeline, which this filter skips.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: join-lingarr-exceptions
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.media\.lingarr-[^.]*\.lingarr\.
+  filters:
+    - multiline:
+        keyContent: log
+        parser: lingarr
+        emitterName: lingarr-multiline
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` and `log_fields.*` for Lingarr. Runs after `kubernetes`.
+# - `[<time>] [<Level>] <category>: <msg>`: level, logger, msg; a joined
+#   exception goes to `log_fields.exception`. Lingarr's `|Green|`-style
+#   emphasis markers and their ANSI colors are stripped.
+# - Lingarr also registers FluentMigrator's console logger app-wide, which
+#   prints every message again bare (`!!! ` prefixed for errors). A bare line
+#   equal to the previous message is dropped.
+# - Other bare lines are Console.WriteLine output: info, or warning/error by
+#   prefix. The libgssapi_krb5 probe at startup is dropped (no Kerberos;
+#   Postgres auth is the Envoy sidecar's client cert).
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-lingarr-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.media\.lingarr-[^.]*\.lingarr\.
+  filters:
+    - lua:
+        call: parse_lingarr
+        code: |
+          local levels = { Trace = "trace", Debug = "debug", Information = "info", Warning = "warning", Error = "error", Critical = "fatal" }
+          local header = "^%[(%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d)%] %[(%a+)%] ([^:]+): (.*)$"
+          local markers = { Reset = true, Green = true, Orange = true, Red = true }
+          local last = {}
+
+          local function clean(s)
+            return (s:gsub("\27%[[%d;]*m", ""):gsub("|/?(%a+)|", function(name) if markers[name] then return "" end end))
+          end
+
+          function parse_lingarr(tag, ts, record)
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local first, rest = line:match("^([^\n]*)\n(.*)$")
+            first = first or line
+            local time, lvl, category, msg = first:match(header)
+            if time then
+              msg = clean(msg)
+              last[tag] = msg
+              local f = { time = time, level = levels[lvl] or lvl:lower(), logger = category, msg = msg }
+              if rest and rest:match("%S") then
+                f["exception"] = rest:gsub("%s+$", "")
+              end
+              record["log_fields"] = f
+              record["log"] = msg
+              return 2, ts, record
+            end
+            local bare = clean(first)
+            local text = bare:match("^!!! (.*)$")
+            if last[tag] ~= nil and (bare == last[tag] or text == last[tag]) then
+              last[tag] = nil
+              return -1, ts, record
+            end
+            if bare:match("libgssapi_krb5%.so") then
+              return -1, ts, record
+            end
+            if bare:match("^%s*$") then
+              return -1, ts, record
+            end
+            local level = "info"
+            if text then
+              level = "error"
+            elseif bare:match("^Warning: ") then
+              level = "warning"
+            elseif bare:match("^Error") or bare:match("^An error occurred") then
+              level = "error"
+            end
+            text = text or bare
+            record["log_fields"] = { level = level, msg = text }
+            record["log"] = text
+            return 2, ts, record
+          end

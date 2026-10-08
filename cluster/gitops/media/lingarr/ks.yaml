@@ -43,6 +43,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: fluent-crds
     - name: prometheus-crds
     - name: gateway-crds
     - name: lingarr-backend
