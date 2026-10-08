@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on renovate-operator and the Renovate runs it spawns to `msg`
+# instead of the JSON envelope. Renovate's Bunyan levels are numbers; they're
+# mapped to words. containerbase's `[HH:MM:SS.mmm] LEVEL (pid): msg` startup
+# lines are split into `log_fields.*`. The discovery pod's output is a JSON
+# array of repositories, not a log, and passes through. Runs after
+# `kubernetes`, which populates `log_fields`.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-renovate-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.development\.renovate-[^.]*\.(renovate|renovate-operator)\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          local bunyan_levels = { [10] = "trace", [20] = "debug", [30] = "info", [40] = "warning", [50] = "error", [60] = "fatal" }
+          local text_levels = { TRACE = "trace", DEBUG = "debug", INFO = "info", WARN = "warning", ERROR = "error", FATAL = "fatal" }
+
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) == "table" then
+              local msg = fields["msg"]
+              if type(msg) ~= "string" or msg == "" then
+                return 0, ts, record
+              end
+              local level = bunyan_levels[tonumber(fields["level"]) or -1]
+              if level then
+                fields["level"] = level
+              end
+              record["log"] = msg
+              return 2, ts, record
+            end
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local time, lvl, pid, msg = line:match("^%[(%d%d:%d%d:%d%d%.%d+)%] (%u+) %((%d+)%): (.*)$")
+            if not time then
+              return 0, ts, record
+            end
+            record["log_fields"] = { time = time, level = text_levels[lvl] or lvl, pid = tonumber(pid), msg = msg }
+            record["log"] = msg
+            return 2, ts, record
+          end
