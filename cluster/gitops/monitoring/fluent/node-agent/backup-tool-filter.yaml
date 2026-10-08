@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on backup-tool (dr-job charts, `--log-format json`) to `msg`
+# instead of the JSON envelope, moving the leading step marker (e.g.
+# `(3):::(2)::::::***`) to `log_fields.step`. The error chain stays in
+# `log_fields.error`. The failure debug report on stderr is plain text and
+# passes through. Lives here because the jobs run in many namespaces. Runs
+# after `kubernetes`, which populates `log_fields`.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-backup-tool-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.[^.]+\.[^.]+\.backup-tool\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["msg"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            local step, rest = msg:match("^(%([%(%)%d:%*]*) (.*)$")
+            if step then
+              fields["step"] = step
+              msg = rest
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end
