@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Extracts istiod's `<time>\t<level>\t[<scope>\t]<msg>[\t<key=value ...>]` lines
+# into `log_fields.*` and sets `_msg` to the message alone. Uses the
+# `istio-agent` ClusterParser (istio-system/istio/base). Lines it
+# doesn't match (multi-line JSON dumps) pass through untouched.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-istiod-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.istio-system\.istiod-[^.]*\.discovery\.
+  filters:
+    - parser:
+        keyName: log
+        parser: istio-agent
+        preserveKey: true
+        reserveData: true
+    - modify:
+        rules:
+          - hardCopy:
+              istio_msg: log
+    - nest:
+        operation: nest
+        wildcard:
+          - istio_*
+        removePrefix: istio_
+        nestUnder: log_fields

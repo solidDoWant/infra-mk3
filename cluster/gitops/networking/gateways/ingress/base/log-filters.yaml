@@ -3,7 +3,8 @@
 # Envoy's default access log format (built-in `envoy` provider, TEXT encoding):
 # https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#default-format-string
 # Flags/details fields can be empty (e.g. Coraza WAF 403s), hence `\S*`.
-# The `gw_` prefix is moved under `log_fields` by parse-istio-gateway-logs.
+# The `gw_` prefix is moved under `log_fields` by parse-istio-gateway-logs. The
+# `istio-agent` parser lives in istio-system/istio/base.
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterParser
 metadata:
@@ -14,20 +15,6 @@ metadata:
 spec:
   regex:
     regex: '^\[(?<gw_start_time>[^\]]+)\] "(?<gw_method>\S+) (?<gw_path>.*) (?<gw_protocol>\S+)" (?<gw_response_code>\d+) (?<gw_response_flags>\S*) (?<gw_response_code_details>\S*) (?<gw_connection_termination_details>\S*) "(?<gw_upstream_transport_failure_reason>[^"]*)" (?<gw_bytes_received>\d+) (?<gw_bytes_sent>\d+) (?<gw_duration>\d+) (?<gw_upstream_service_time>\S+) "(?<gw_x_forwarded_for>[^"]*)" "(?<gw_user_agent>[^"]*)" "(?<gw_request_id>[^"]*)" "(?<gw_authority>[^"]*)" "(?<gw_upstream_host>[^"]*)" (?<gw_upstream_cluster>\S+) (?<gw_upstream_local_address>\S+) (?<gw_downstream_local_address>\S+) (?<gw_downstream_remote_address>\S+) (?<gw_requested_server_name>\S+) (?<gw_route_name>\S+)$'
----
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterparser_v1alpha2.json
-# istio-agent log lines: `<time>\t<level>\t[<scope>\t]<msg>[\t<key=value ...>]`.
-# Scope is absent on some lines (e.g. "Envoy proxy is ready").
-apiVersion: fluentbit.fluent.io/v1alpha2
-kind: ClusterParser
-metadata:
-  name: istio-agent
-  labels:
-    config.fluentbit.fluent.io/enabled: "true"
-    config.fluentbit.fluent.io/agent: node
-spec:
-  regex:
-    regex: '^(?<gw_time>\S+)\t(?<gw_level>\w+)\t(?:(?<gw_scope>\S+)\t)?(?<gw_msg>[^\t]*)(?:\t(?<gw_fields>.*))?$'
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops internal-gateway access-log lines for machine keepalive traffic: health
@@ -86,15 +73,21 @@ spec:
         parser: istio-gateway-access-log,istio-agent
         preserveKey: true
         reserveData: true
-    # Agent lines only (access lines have no gw_msg): `_msg` becomes the
+    # Agent lines only (access lines have no istio_msg): `_msg` becomes the
     # message alone; the other columns stay in log_fields.
     - modify:
         rules:
           - hardCopy:
-              gw_msg: log
+              istio_msg: log
     - nest:
         operation: nest
         wildcard:
           - gw_*
         removePrefix: gw_
+        nestUnder: log_fields
+    - nest:
+        operation: nest
+        wildcard:
+          - istio_*
+        removePrefix: istio_
         nestUnder: log_fields
