@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: license-service-exporter
+spec:
+  groups:
+    - name: license-service-exporter
+      rules:
+        # The nginx exporter sidecar stays scrapeable (`up` = 1) while nginx is
+        # down. Each replica reports its own nginx; fire only when none is up.
+        - alert: LicenseServiceNginxDown
+          expr: max by (namespace, job) (nginx_up{job="victoria-metrics-license-service"}) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "License service nginx is unreachable on every replica"
+            description: |
+              No victoria-metrics-license-service replica in {{ $labels.namespace }}
+              can reach its nginx's stub_status, so the license service is likely not
+              serving. Check the pods' nginx containers.

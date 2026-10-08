@@ -743,7 +743,7 @@ spec:
             # kubelet metric must be added here. Two-step because VM relabeling is RE2.
             - action: replace
               source_labels: [metrics_path, __name__]
-              regex: /metrics/cadvisor;(container_cpu_usage_seconds_total|container_cpu_cfs_(throttled_seconds|throttled_periods|periods)_total|container_memory_(rss|swap|cache|working_set_bytes)|container_pressure_(io|memory)_stalled_seconds_total|container_oom_events_total|container_fs_(reads|writes)(_bytes)?_total|container_fs_usage_bytes|container_network_.+|machine_cpu_cores|machine_memory_bytes)
+              regex: /metrics/cadvisor;(container_cpu_usage_seconds_total|container_cpu_cfs_(throttled_seconds|throttled_periods|periods)_total|container_memory_(rss|swap|cache|working_set_bytes)|container_pressure_(io|memory)_stalled_seconds_total|container_oom_events_total|container_fs_(reads|writes)(_bytes)?_total|container_fs_usage_bytes|container_network_.+|machine_cpu_cores|machine_memory_bytes|container_scrape_error|machine_scrape_error)
               target_label: __keep
               replacement: "1"
             - action: replace

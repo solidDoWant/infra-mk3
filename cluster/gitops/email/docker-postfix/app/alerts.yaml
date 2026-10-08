@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: postfix-exporter
+spec:
+  groups:
+    - name: postfix-exporter
+      rules:
+        # The exporter stays scrapeable (`up` = 1) when it cannot read showq.
+        - alert: PostfixExporterCannotReadQueue
+          expr: postfix_up == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Postfix exporter cannot read {{ $labels.path }} on {{ $labels.pod }}"
+            description: |
+              The postfix exporter in {{ $labels.namespace }}/{{ $labels.pod }} cannot
+              read the mail queue via {{ $labels.path }}, so queue metrics are missing.
+              Either postfix is down or the shared spool mount is broken.

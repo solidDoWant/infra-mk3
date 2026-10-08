@@ -8,40 +8,10 @@ spec:
   groups:
     - name: unifi-device-availability
       rules:
-        # Detect a UniFi device (AP / switch / gateway) that has reset itself
-        # and gone offline while STILL being listed by the controller.
-        #
-        # Reference incident — ap-01 (U6+) reset itself on 2026-06-26 ~10:10 UTC
-        # and was offline for ~7h until it was manually re-adopted at ~18:33 UTC.
-        # While offline-but-listed, the controller kept the device but reported
-        # all of its live stats as exactly zero:
-        #     unpoller_device_memory_used_bytes:  145 MB --> 0 --> 144 MB
-        #     unpoller_device_memory_utilization_ratio: 0.62 --> 0 --> 0.61
-        #     unpoller_device_cpu_utilization_ratio:    0.01 --> 0 --> 0.07
-        #     unpoller_device_uptime_seconds:    ~306h --> 0 (stuck) --> climbs
-        #
-        # `unpoller_device_memory_used_bytes == 0` is the cleanest detector for
-        # this state: a running AP/switch/gateway ALWAYS uses memory, so a zero
-        # reading only happens when the device is offline. Verified over 7 days
-        # of history this series was 0 ONLY during the incident (no false
-        # positives), and replaying the rule it would have started firing at
-        # ~11:31 UTC and held until re-adoption.
-        #
-        # Why this and not the uptime gauge alone: uptime < threshold also fires
-        # for a perfectly healthy quick reboot (uptime climbs from 0 but memory
-        # is non-zero the whole time). memory == 0 fires ONLY for offline/dead,
-        # which is the failure mode that actually needs attention.
-        #
-        # `max by (...)` (not min/sum): collapse the brief window where the old
-        # and new poller-pod `instance` series coexist for one device, and fire
-        # only when the *highest* reading is still 0 (i.e. no scrape shows the
-        # device alive). Grouping by (name, type, site_name) drops the
-        # `instance`/`pod` churn from unifi-poller restarts so the alert stays
-        # keyed to the physical device.
-        #
-        # Note `unpoller_site_disconnected` is deliberately NOT used: it stayed
-        # flat at 0 through the entire ap-01 outage and never registered the
-        # missing device.
+        # A device that resets and drops off while still listed by the controller
+        # reports all live stats as exactly 0; a running device always uses
+        # memory. (`unpoller_site_disconnected` doesn't register this.) Grouped
+        # by device so poller-pod restarts don't split the series.
         - alert: UnifiDeviceOffline
           expr: |
             max by (name, type, site_name) (unpoller_device_memory_used_bytes) == 0
@@ -57,20 +27,9 @@ spec:
               adoption. If this was not planned, the device reset itself; check
               its power/PoE and re-adopt it from the UniFi controller.
 
-        # Catch a device that rebooted but came back healthy/online — the case
-        # UnifiDeviceOffline misses (a quick reboot keeps memory non-zero, so the
-        # only evidence is the uptime gauge climbing from ~0).
-        #
-        # Uptime alone cannot use resets()/delta() here: the reset coincided with
-        # a unifi-poller pod restart that left a ~1h GAP in the series, and a gap
-        # defeats counter-reset math (resets(...[12h]) evaluated to 0 over this
-        # very incident). An absolute low-uptime test is gap-robust.
-        #
-        # `unless ... memory_used_bytes == 0` excludes the offline state so this
-        # does NOT double-page alongside UnifiDeviceOffline: while the device is
-        # offline (memory 0) only UnifiDeviceOffline fires; once it is back up
-        # with a low uptime (memory non-zero) this fires instead, until uptime
-        # climbs past 1h and it auto-resolves.
+        # A reboot that came back healthy (memory never hits 0). Absolute uptime
+        # rather than resets(): poller restarts leave gaps that defeat reset
+        # detection. Excludes the offline state, which UnifiDeviceOffline covers.
         - alert: UnifiDeviceRebooted
           expr: |
             (min by (name, type, site_name) (unpoller_device_uptime_seconds) < 3600)
@@ -88,18 +47,9 @@ spec:
               firmware/config change, check the controller event log and the
               device's power/PoE.
 
-        # Catch the device's metrics disappearing ENTIRELY (dropped from the
-        # controller, not just reporting zeros). Neither rule above can fire then
-        # because there is no series to evaluate.
-        #
-        # `unless` keeps each (name, type, site_name) that was being polled 15m
-        # ago but is absent now. Guard with the poller being up
-        # (`up{job="unifi-poller"} == 1`): when the unifi-poller pod itself is
-        # down/restarting EVERY device series disappears at once — that is a
-        # poller problem (covered by generic target-down alerting), not N
-        # simultaneous device failures. In the reference incident the only
-        # absence window (10:10–11:21) was exactly such a poller restart, so this
-        # rule correctly stayed quiet and UnifiDeviceOffline did the detecting.
+        # A device whose series disappeared entirely (removed from the
+        # controller). Gated on the poller being up: when it isn't, every
+        # device vanishes at once and UnifiPollerDown covers it.
         - alert: UnifiDeviceUnreachable
           expr: |
             (
@@ -120,18 +70,8 @@ spec:
               unreachable, or has been removed from the controller. Check the
               device's power/PoE and the UniFi controller.
 
-        # The unifi-poller exporter itself being down. When it is, EVERY rule
-        # above goes blind — there are no device metrics at all — so without this
-        # rule a device that resets while the poller is also down goes
-        # completely undetected. In the reference incident the poller pod was
-        # down for the first ~64m (10:10–11:14 UTC, the `up` series fully absent,
-        # not even up==0), which is exactly the window the device-level rules
-        # could not cover; this rule would have fired ~10:20 and filled it.
-        #
-        # `absent(up{...} == 1)` covers both failure shapes in one expression:
-        # scrape failing (up==0, filtered out by ==1) and the target vanishing
-        # entirely (pod gone, no `up` series). Mirrors the existing KEDA
-        # KEDAOperatorDown rule. for:10m rides out routine pod restarts/rollouts.
+        # Every rule above is blind without the poller. Covers both a failing
+        # scrape (up == 0) and the target vanishing (no `up` series).
         - alert: UnifiPollerDown
           expr: |
             absent(up{job="unifi-poller"} == 1)
@@ -145,3 +85,17 @@ spec:
               device or client metrics are being collected, and all UniFi device
               availability alerts are blind until it recovers. Check the
               unifi-poller deployment in the networking namespace.
+
+        # The poller running but unable to log in to / reach the controller.
+        - alert: UnifiPollerCannotReachController
+          expr: max by (source) (unpoller_controller_up) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: unifi-poller cannot reach the UniFi controller
+            description: |
+              unifi-poller is running but cannot query {{ $labels.source }}, so no
+              UniFi device or client metrics are being collected and all UniFi device
+              availability alerts are blind. Check the poller logs for auth or
+              connection errors.

@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+# The instance manager's exporter stays scrapeable (`up` = 1) while its queries
+# fail, so TargetDown never fires and the missing metrics go unnoticed
+# (e.g. pg_stat_wal on PG18).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cnpg-exporter
+spec:
+  groups:
+    - name: cnpg-exporter
+      rules:
+        - alert: CNPGExporterCannotReachPostgres
+          expr: cnpg_collector_up == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CNPG exporter on {{ $labels.namespace }}/{{ $labels.pod }} cannot reach Postgres"
+            description: |
+              The metrics exporter for cluster {{ $labels.cluster }} is being scraped
+              but cannot query Postgres, so all cnpg_* database metrics for
+              {{ $labels.pod }} are missing. Check the postgres container's logs.
+        - alert: CNPGExporterCollectionFailing
+          expr: |
+            cnpg_collector_last_collection_error == 1
+              or
+            cnpg_pgbouncer_last_collection_error == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.__name__ }} on {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: |
+              The exporter's last collection failed for 30m, so some cnpg_* metrics
+              are missing. The pod's logs name the failing query.

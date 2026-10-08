@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+# node-exporter stays scrapeable (`up` = 1) while individual collectors fail.
+# Other exporters' equivalents live beside each app.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: node-exporter-collectors
+spec:
+  groups:
+    - name: node-exporter-collectors
+      rules:
+        # Only collectors that succeeded within the last 30d: many fail
+        # permanently because the platform lacks the feature (rapl, tapestats,
+        # ipvs, `os` on FreeBSD). A collector broken since deployment, or for
+        # more than 30d, is not reported.
+        - alert: NodeExporterCollectorFailing
+          expr: |
+            node_scrape_collector_success == 0
+              and on (instance, collector)
+            max_over_time(node_scrape_collector_success[30d] offset 1h) == 1
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "node-exporter collector {{ $labels.collector }} is failing on {{ $labels.instance }}"
+            description: |
+              The {{ $labels.collector }} collector worked on {{ $labels.instance }}
+              within the last 30 days but has failed for 1h, typically after an
+              OS/kernel or exporter upgrade. The node-exporter log names the error.

@@ -26,6 +26,22 @@ spec:
               The kubelet on {{ $labels.instance }} has been getting errors from the
               container runtime for {{ $labels.operation_type }} for over an hour.
               Find the failing IDs and error in the kubelet log:
-              `talosctl -n {{ $labels.instance }} logs kubelet | grep "runtime service failed"`.
+              `talosctl -n <node IP> logs kubelet | grep "runtime service failed"`.
               "cannot delete running task" means containerd still has a task (often
               an orphaned shim) for a container the kubelet considers dead.
+        # cAdvisor stays scrapeable (`up` = 1) while its collection fails.
+        - alert: KubeletCadvisorCollectionFailing
+          expr: |
+            container_scrape_error{job="kubelet", metrics_path="/metrics/cadvisor"} == 1
+              or
+            machine_scrape_error{job="kubelet", metrics_path="/metrics/cadvisor"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cAdvisor {{ $labels.__name__ }} on {{ $labels.instance }}"
+            description: |
+              The kubelet's cAdvisor on {{ $labels.instance }} has failed to collect
+              for 30m, so container_*/machine_* metrics for that node are missing or
+              stale (dashboards, pressure and throttling alerts go blind). The kubelet
+              log names the error.

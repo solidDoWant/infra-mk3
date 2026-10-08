@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: hubble-exporter
+spec:
+  groups:
+    - name: hubble-exporter
+      rules:
+        # A failed dynamic exporter stops writing its flow log; the agent itself
+        # stays healthy, so nothing else notices.
+        - alert: HubbleDynamicExporterDown
+          expr: hubble_dynamic_exporter_up == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Hubble flow exporter {{ $labels.name }} is down on {{ $labels.node }}"
+            description: |
+              The Hubble dynamic exporter {{ $labels.name }} on {{ $labels.node }} is
+              not writing flows, so that node's flow log (shipped to VictoriaLogs) has
+              a gap. Check the cilium-agent logs on {{ $labels.node }}.

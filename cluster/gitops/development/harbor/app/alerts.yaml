@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: harbor-exporter
+spec:
+  groups:
+    - name: harbor-exporter
+      rules:
+        # The exporter stays scrapeable (`up` = 1) while a component is down.
+        # `max` so an exporter rollout's overlapping pods can't fire it.
+        - alert: HarborComponentDown
+          expr: max by (namespace, component) (harbor_up) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Harbor {{ $labels.component }} is down"
+            description: |
+              The Harbor exporter reports the {{ $labels.component }} component as
+              unhealthy. Check the {{ $labels.component }} pods in {{ $labels.namespace }}.

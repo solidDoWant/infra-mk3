@@ -10,10 +10,11 @@ spec:
   groups:
     - name: opnsense-exporter
       rules:
-        # Per pod (opnsense-exporter-self scrape). `endpoint` is the OPNsense API
-        # path, renamed by the scrape's own `endpoint` target label.
+        # Per pod (opnsense-exporter-self scrape); `min` so it fires only when
+        # every replica is failing. `endpoint` is the OPNsense API path, renamed
+        # by the scrape's own `endpoint` target label.
         - alert: OPNsenseExporterAPIErrors
-          expr: sum by (opnsense_instance, exported_endpoint) (rate(opnsense_exporter_endpoint_errors_total[15m])) > 0
+          expr: min by (opnsense_instance, exported_endpoint) (rate(opnsense_exporter_endpoint_errors_total[15m])) > 0
           for: 1h
           labels:
             severity: warning
