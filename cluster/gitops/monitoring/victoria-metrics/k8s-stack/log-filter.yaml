@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` to the message alone for everything the VM operator deploys
+# (cluster, vmagent, vmalert, vmauth, VictoriaLogs) and the operator itself:
+#   <ts>\t<level>\t<caller>\t<msg>      VictoriaMetrics binaries
+#   JSON with `msg`                     operator
+#   YYYY/MM/DD HH:MM:SS <msg>           vmalert's config-reloader
+# The other fields go to `log_fields.*`. logfmt reloader lines are already
+# promoted by parse-logfmt. Runs after `kubernetes`, which populates
+# `log_fields`.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-victoria-metrics-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.monitoring\.(v[ml][a-z]+-[^.]*\.(vmagent|vmalert|vmauth|vminsert|vmselect|vmstorage|vlsingle|config-reloader)|victoria-metrics-operator-[^.]*\.operator)\.
+  filters:
+    - lua:
+        call: parse_vm
+        code: |
+          function parse_vm(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) == "table" then
+              local msg = fields["msg"]
+              if type(msg) ~= "string" or msg == "" then
+                return 0, ts, record
+              end
+              record["log"] = msg
+              return 2, ts, record
+            end
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local time, level, caller, msg = line:match("^(%d%d%d%d%-%d%d%-%d%dT%S+)\t(%a+)\t([^\t]+)\t(.*)$")
+            if time then
+              record["log_fields"] = { time = time, level = level, caller = caller, msg = msg }
+              record["log"] = msg
+              return 2, ts, record
+            end
+            local stime, smsg = line:match("^(%d%d%d%d/%d%d/%d%d %d%d:%d%d:%d%d) (.*)$")
+            if not stime then
+              return 0, ts, record
+            end
+            record["log_fields"] = { time = stime, msg = smsg }
+            record["log"] = smsg
+            return 2, ts, record
+          end
