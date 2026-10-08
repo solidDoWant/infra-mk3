@@ -25,6 +25,9 @@ spec:
       web_fqdn: kiali.${SECRET_PUBLIC_DOMAIN_NAME}
       web_root: /
     deployment:
+      # Text output appends fields as quoted key=value pairs after the message.
+      logger:
+        log_format: json
       pod_labels:
         endpoints.netpols.home.arpa/time-series-querier: "true"
         endpoints.netpols.home.arpa/internal-dashboard-querier: "true"
