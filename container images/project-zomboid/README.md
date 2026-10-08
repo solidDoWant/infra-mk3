@@ -15,12 +15,12 @@ make push CONTAINER_REGISTRY=...  # build and push to a private registry
 make print-image-name
 ```
 
-| Variable             | Default  | Notes                                                                          |
-| -------------------- | -------- | ------------------------------------------------------------------------------ |
-| `PZ_BRANCH`          | `public` | Steam branch. `legacy41` is the build 41 line, `42.19` and friends pin a build. |
-| `PZ_BRANCH_PASSWORD` | empty    | Only needed for password-protected betas.                                      |
-| `IMAGE_REVISION`     | `1`      | Bump for packaging changes that aren't a game build change.                     |
-| `VERSION`            | `$(PZ_BRANCH)-r$(IMAGE_REVISION)` | Image tag.                                            |
+| Variable             | Default                           | Notes                                                                           |
+| -------------------- | --------------------------------- | ------------------------------------------------------------------------------- |
+| `PZ_BRANCH`          | `public`                          | Steam branch. `legacy41` is the build 41 line, `42.19` and friends pin a build. |
+| `PZ_BRANCH_PASSWORD` | empty                             | Only needed for password-protected betas.                                       |
+| `IMAGE_REVISION`     | `1`                               | Bump for packaging changes that aren't a game build change.                     |
+| `VERSION`            | `$(PZ_BRANCH)-r$(IMAGE_REVISION)` | Image tag.                                                                      |
 
 Branches are whatever `steamcmd +login anonymous +app_info_print 380870 +quit` lists under
 `branches`, so check there before pinning one.
@@ -36,19 +36,19 @@ make run-local LOCAL_ADMIN_PASSWORD=somepassword
 make stop-local
 ```
 
-| Variable            | Default            | Notes                                                                  |
-| ------------------- | ------------------ | ---------------------------------------------------------------------- |
-| `ADMIN_PASSWORD`    | empty              | Required on a server's first start; ignored afterwards.                |
-| `ADMIN_USERNAME`    | `admin`            |                                                                        |
-| `SERVER_NAME`       | `pzserver`         | Names the INI, the save and the player database under `DATA_DIR`.       |
-| `DATA_DIR`          | `/var/lib/zomboid` | Everything persistent. Mount a volume here, owned by `1000:1000`.       |
-| `PORT`              | `16261`            | UDP. The client also uses `PORT + 1`.                                   |
-| `BIND_IP`           | empty              | One address to bind. Leave empty for all of them - see below.           |
-| `MAX_HEAP`          | empty              | e.g. `8g`. Overrides the `-Xmx8g` the game ships with.                  |
-| `EXTRA_JAVA_OPTS`   | empty              | Extra JVM args, e.g. `-XX:+UseSerialGC`.                                |
-| `EXTRA_SERVER_ARGS` | empty              | Passed through to the server, e.g. `-nosteam`.                          |
-| `STEAM_VAC`         | `true`             |                                                                        |
-| `SHUTDOWN_TIMEOUT`  | `120`              | Seconds the server gets to save on shutdown before it is killed.        |
+| Variable            | Default            | Notes                                                                    |
+| ------------------- | ------------------ | ------------------------------------------------------------------------ |
+| `ADMIN_PASSWORD`    | empty              | Required on a server's first start; not passed to the server afterwards. |
+| `ADMIN_USERNAME`    | `admin`            |                                                                          |
+| `SERVER_NAME`       | `pzserver`         | Names the INI, the save and the player database under `DATA_DIR`.        |
+| `DATA_DIR`          | `/var/lib/zomboid` | Everything persistent. Mount a volume here, owned by `1000:1000`.        |
+| `PORT`              | `16261`            | UDP. The client also uses `PORT + 1`.                                    |
+| `BIND_IP`           | empty              | One address to bind. Leave empty for all of them - see below.            |
+| `MAX_HEAP`          | empty              | e.g. `8g`. Overrides the `-Xmx8g` the game ships with.                   |
+| `EXTRA_JAVA_OPTS`   | empty              | Extra JVM args, e.g. `-XX:+UseSerialGC`.                                 |
+| `EXTRA_SERVER_ARGS` | empty              | Passed through to the server, e.g. `-nosteam`.                           |
+| `STEAM_VAC`         | `true`             |                                                                          |
+| `SHUTDOWN_TIMEOUT`  | `120`              | Seconds the server gets to save on shutdown before it is killed.         |
 
 Server settings themselves are not environment variables: the server writes
 `Server/<SERVER_NAME>.ini` and `Server/<SERVER_NAME>_SandboxVars.lua` into `DATA_DIR` on its first

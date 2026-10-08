@@ -1,0 +1,125 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
+# One Project Zomboid log event: a line starting with a non-space character,
+# then every following indented line (`\tStack trace:`, `\t\t<frame>`,
+# `\t<exception>`).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterMultilineParser
+metadata:
+  name: project-zomboid
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  type: regex
+  flushTimeout: 2000
+  rules:
+    - start: start_state
+      regex: '/^\S/'
+      next: cont
+    - start: cont
+      regex: '/^\s/'
+      next: cont
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Rejoins the server's stack traces with their log line, one record per event.
+# Named to sort before `kubernetes` so it sees raw lines; joined records are
+# re-emitted at the start of the pipeline, which this filter skips.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: join-project-zomboid-traces
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.games\.project-zomboid-\d+\.app\.
+  filters:
+    - multiline:
+        keyContent: log
+        parser: project-zomboid
+        emitterName: project-zomboid-multiline
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` and `log_fields.*` for the server pod. Runs after `kubernetes`.
+# - Game log `<LEVEL>: <category> f:<frame> st:<ms>[ at <location>]> <msg>`:
+#   level (LOG is info), category, frame, uptime_ms, location; a joined trace
+#   goes to `log_fields.stacktrace`.
+# - Launcher (`pzexe...`), JVM (`WARNING: ...`) and entrypoint lines get a
+#   logger and level. The launcher echoes every argument, so the one after
+#   `-adminpassword` is redacted (the image only passes it on first start).
+# - mod-updater JSON: `msg`.
+# Blank lines are dropped.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-project-zomboid-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.games\.project-zomboid-\d+\.(app|mod-updater)\.
+  filters:
+    - lua:
+        call: parse_pz
+        code: |
+          local levels = { TRACE = "trace", DEBUG = "debug", LOG = "info", WARN = "warning", ERROR = "error" }
+          local header = "^(%u+)%s*: (%S+)%s+f:(%S+) st:([%d,]+)(.-)> ?(.*)$"
+          local redact_next = {}
+
+          function parse_pz(tag, ts, record)
+            local f = record["log_fields"]
+            if type(f) == "table" and type(f["msg"]) == "string" then
+              record["log"] = f["msg"]
+              return 2, ts, record
+            end
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            if line:match("^%s*$") then
+              return -1, ts, record
+            end
+            local first, rest = line:match("^([^\n]*)\n(.*)$")
+            first = first or line
+            local lvl, category, frame, st, loc, msg = first:match(header)
+            if lvl then
+              f = { level = levels[lvl] or lvl:lower(), category = category, frame = frame, uptime_ms = tonumber((st:gsub(",", ""))), msg = msg }
+              loc = loc:gsub("^%s*at%s+", ""):gsub("%s+$", "")
+              if loc ~= "" then
+                f["location"] = loc
+              end
+              if rest and rest:match("%S") then
+                f["stacktrace"] = rest:gsub("%s+$", "")
+              end
+              record["log_fields"] = f
+              record["log"] = msg
+              return 2, ts, record
+            end
+            if first:match("^p[xz]exe") then
+              if redact_next[tag] and first:match("^pzexe: arg: ") then
+                first = "pzexe: arg: <redacted>"
+              end
+              redact_next[tag] = (first == "pzexe: arg: -adminpassword") or nil
+              record["log_fields"] = { logger = "pzexe", level = "info", msg = first }
+              record["log"] = first
+              return 2, ts, record
+            end
+            local jvm = first:match("^WARNING: (.*)$")
+            if jvm then
+              record["log_fields"] = { logger = "jvm", level = "warning", msg = jvm }
+              record["log"] = jvm
+              return 2, ts, record
+            end
+            local ep = first:match("^entrypoint: (.*)$")
+            if ep then
+              local bad = ep:match("killing") or ep:match("must be set") or ep:match("not writable")
+              record["log_fields"] = { logger = "entrypoint", level = bad and "error" or "info", msg = ep }
+              record["log"] = ep
+              return 2, ts, record
+            end
+            return 0, ts, record
+          end

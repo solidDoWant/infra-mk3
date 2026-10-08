@@ -52,7 +52,9 @@ if [[ -n "${BIND_IP}" ]]; then
     server_args+=(-ip "${BIND_IP}")
 fi
 
-if [[ -n "${ADMIN_PASSWORD}" ]]; then
+# First start only: it creates the admin account and is ignored once the server's INI exists.
+# The launcher echoes every argument to stdout, so passing it later would only leak it into logs.
+if [[ -n "${ADMIN_PASSWORD}" && ! -f "${DATA_DIR}/Server/${SERVER_NAME}.ini" ]]; then
     server_args+=(-adminpassword "${ADMIN_PASSWORD}")
 fi
 

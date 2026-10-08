@@ -11,7 +11,8 @@ REPLY_TIMEOUT="${REPLY_TIMEOUT:-60}"
 RCON_PORT="${RCON_PORT:-27015}"
 console_log="${DATA_DIR}/server-console.txt"
 
-log() { printf '%s mod-updater: %s\n' "$(date -u +%FT%TZ)" "$*" >&2; }
+# One JSON object per line. Messages are fixed strings and numbers, so nothing needs escaping.
+log() { printf '{"time":"%s","level":"%s","msg":"%s"}\n' "$(date -u +%FT%TZ)" "$1" "$2" >&2; }
 
 # Sends a console command and prints the first new log line matching the given pattern.
 run_command() {
@@ -28,30 +29,30 @@ run_command() {
 check() {
     local pid reply players
     # Truncated to 15 characters because that is all pgrep compares against.
-    pid=$(pgrep -o ProjectZomboid6) || { log "server is not running"; return; }
+    pid=$(pgrep -o ProjectZomboid6) || { log warning "server is not running"; return; }
 
     # RCON opens once the world has loaded, the same signal the probes use. Before that
     # the server is still downloading mods and loading the map.
     if ! (exec 3<> "/dev/tcp/127.0.0.1/${RCON_PORT}") 2> /dev/null; then
-        log "server is still starting"
+        log info "server is still starting"
         return
     fi
 
     reply=$(run_command "${pid}" checkModsNeedUpdate \
         'CheckModsNeedUpdate: (Mods need update|Mods updated|Check not completed)') ||
-        { log "no answer to checkModsNeedUpdate"; return; }
+        { log warning "no answer to checkModsNeedUpdate"; return; }
     case "${reply}" in
         *"Mods need update"*) ;;
         *"Mods updated"*) return ;;
-        *) log "mod update check did not complete, will retry"; return ;;
+        *) log warning "mod update check did not complete, will retry"; return ;;
     esac
 
     reply=$(run_command "${pid}" players 'Players connected \([0-9]+\)') ||
-        { log "no answer to players"; return; }
+        { log warning "no answer to players"; return; }
     players=$(sed -E 's/.*Players connected \(([0-9]+)\).*/\1/' <<< "${reply}")
 
     if (( players > 0 )); then
-        log "mod update pending, waiting for ${players} player(s) to leave"
+        log info "mod update pending, waiting for ${players} player(s) to leave"
         # cspell:words servermsg
         printf '%s\n' 'servermsg "A mod update is available. The server will restart to install it once everyone has left."' \
             2> /dev/null > "/proc/${pid}/fd/0"
@@ -60,7 +61,7 @@ check() {
 
     # SIGTERM to the entrypoint runs its shutdown handler: save, quit, and a kill only if
     # that overruns SHUTDOWN_TIMEOUT. The kubelet then restarts the container.
-    log "mod update pending and the server is empty, restarting it"
+    log info "mod update pending and the server is empty, restarting it"
     kill -TERM "$(awk '/^PPid:/ { print $2 }' "/proc/${pid}/status")"
 }
 
