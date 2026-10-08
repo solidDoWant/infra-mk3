@@ -15,6 +15,13 @@ spec:
       version: 0.17.1
   values:
     fullnameOverride: smartctl-exporter
+    image:
+      # Ahead of the chart's appVersion (v0.14.0). v0.15.0 passes
+      # `--capabilities`, which exports NVMe WCTEMP/CCTEMP as
+      # smartctl_device_temperature{temperature_type="op_limit_max"/"critical_limit_max"}
+      # (requires the image's smartctl >= 7.5). Drop once the chart catches up.
+      repository: quay.io/prometheuscommunity/smartctl-exporter
+      tag: v0.15.0
     serviceMonitor:
       enabled: true
       relabelings:
@@ -27,9 +34,7 @@ spec:
     prometheusRules:
       enabled: true
       rules:
-        # Replaced by the per-drive trip-based alert in alerts.yaml, which
-        # joins against smartctl_nvme_warning_temp_celsius from the
-        # node-exporter sidecar in ../../victoria-metrics/k8s-stack/.
+        # Replaced by the per-drive threshold alerts in alerts.yaml.
         # The chart's default fires at a fixed 60°C with `for: 1m`, which is
         # noisy and well below most NVMe drives' manufacturer-defined WCTEMP.
         smartCTLDDeviceTemperature:

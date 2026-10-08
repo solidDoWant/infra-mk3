@@ -13,20 +13,18 @@ spec:
         # cheap to evaluate per alert.
         #
         # Priority order:
-        #   1. smartctl_nvme_{warning,critical}_temp_celsius — published by the
-        #      node-exporter sidecar in ../../victoria-metrics/k8s-stack/. Covers
-        #      NVMe drives whose WCTEMP/CCTEMP smartmontools does not serialize
-        #      to JSON (https://github.com/smartmontools/smartmontools/issues/583).
-        #   2. smartctl_device_temperature{temperature_type="drive_trip"} > 0 —
-        #      ATA drives that report a non-zero SCT temperature trip via
-        #      smartctl-exporter. The `> 0` filter drops drives whose firmware
-        #      reports a zero ("not configured") threshold.
+        #   1. op_limit_max / critical_limit_max — NVMe WCTEMP / CCTEMP from
+        #      Identify Controller. Needs exporter >= v0.15.0 (`--capabilities`)
+        #      and smartctl >= 7.5. Some drives (e.g. Optane P1600X) report
+        #      neither.
+        #   2. drive_trip > 0 — SCSI/ATA trip temperature. The `> 0` filter drops
+        #      drives whose firmware reports a zero ("not configured") threshold.
         #   3. A static fallback of 60°C, keyed off the drive's current-temperature
         #      series so the result is per-drive. Conservative — most modern
         #      drives can run hotter without issue, but 60°C will not damage anything.
         - record: smartctl_effective_warning_temp_celsius
           expr: |
-            sum by (instance, device) (smartctl_nvme_warning_temp_celsius)
+            sum by (instance, device) (smartctl_device_temperature{temperature_type="op_limit_max"} > 0)
               or
             sum by (instance, device) (smartctl_device_temperature{temperature_type="drive_trip"} > 0)
               or
@@ -34,7 +32,7 @@ spec:
 
         - record: smartctl_effective_critical_temp_celsius
           expr: |
-            sum by (instance, device) (smartctl_nvme_critical_temp_celsius)
+            sum by (instance, device) (smartctl_device_temperature{temperature_type="critical_limit_max"} > 0)
               or
             sum by (instance, device) (smartctl_device_temperature{temperature_type="drive_trip"} > 0)
               or
@@ -75,24 +73,3 @@ spec:
               Drive {{ $labels.device }} on {{ $labels.instance }} is at {{ $value }}°C,
               within 2°C of its effective critical threshold. The drive will enter
               emergency throttling or shut down at the critical threshold.
-
-        # When the textfile writer sidecar wedges and gets restarted in a loop,
-        # smartctl_nvme_{warning,critical}_temp_celsius disappear and the alerts
-        # above silently fall through to the drive_trip / 60°C fallback. For NVMe
-        # drives this is usually an aggressive downgrade (real WCTEMP is typically
-        # 70-85°C, so falling back to 60°C will fire spurious warnings). Catch
-        # the underlying sidecar failure directly.
-        - alert: SmartCTLNVMeThresholdsTextfileStale
-          expr: time() - node_textfile_mtime_seconds{file="/textfile/smartctl_nvme_thresholds.prom"} > 1800
-          for: 10m
-          labels:
-            severity: warning
-          annotations:
-            summary: NVMe threshold metrics file stale on {{ $labels.instance }}
-            description: |
-              The smartctl-thresholds writer sidecar on {{ $labels.instance }} has not
-              refreshed /textfile/smartctl_nvme_thresholds.prom in over 30 minutes.
-              NVMe temperature alerts will fall back to drive_trip (if reported) or a
-              static 60°C ceiling until the sidecar recovers, which may produce false
-              positives on drives whose real WCTEMP is well above 60°C. Check the
-              sidecar logs in the prometheus-node-exporter DaemonSet.
