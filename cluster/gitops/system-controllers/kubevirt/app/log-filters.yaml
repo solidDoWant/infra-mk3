@@ -63,6 +63,25 @@ spec:
         exclude: 'log "msg":"Finished degraded check",.*"type":"Degraded","status":"False"'
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops virt-launcher's guest-agent poller narration: a `Polling command: [...]`
+# line every 5s and `Polling API operations: N` every 10s per VM (~2.3k
+# lines/h each), both V(0) in v1.6. Upstream moved `Polling command` to V(3) in
+# v1.8.0 (kubevirt 021524ba74); `Polling API operations` is still V(0) in
+# v1.9.0. Poller errors are separate lines and ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-virt-launcher-agent-poller-chatter
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.[^.]+\.virt-launcher-[^.]*\.compute\.
+  filters:
+    - grep:
+        exclude: 'log "msg":"Polling (command: \[[^"]*\]|API operations: \d+)","pos":"agent_poller\.go:\d+"'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on KubeVirt and CDI components to `msg` instead of the JSON envelope, or
 # `<method> <url> <statusCode>` for virt-api access-log records, which have no
 # message. Fields stay under `log_fields.*`. Runs after `kubernetes`, which
