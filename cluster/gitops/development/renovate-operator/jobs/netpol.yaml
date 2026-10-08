@@ -60,6 +60,10 @@ specs:
           - matchName: production.cloudfront.docker.com
           - matchName: quay.io
           - matchPattern: "**.quay.io"
+          # Microsoft Container Registry (devcontainer base images)
+          - matchName: mcr.microsoft.com
+          # MCR's regional blob endpoints (blob requests redirect here)
+          - matchPattern: "*.data.mcr.microsoft.com"
           - matchName: public.ecr.aws
           # ECR Public's blob CDN (blob requests redirect here)
           # cspell:words d2glxqk2uabbnd
