@@ -34,7 +34,18 @@ spec:
         secret:
           defaultMode: 0440
           secretName: email-intermediate-ca-docker-postfix-serving-cert
+      # Under kata each container's mount of the spool PVC is a separate
+      # virtiofs mount, and a unix socket bound through one can't be connected
+      # through another, so the exporter couldn't reach showq. A Memory
+      # emptyDir is a tmpfs inside the guest VM, shared by both containers.
+      # The exporter's mount is added by the post-renderer below.
+      - name: &postfix_public_volume_name postfix-public
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Mi
     extraVolumeMounts:
+      - name: *postfix_public_volume_name
+        mountPath: /var/spool/postfix/public
       - name: *secret_name
         mountPath: /etc/postfix/upstream-relay-credentials
         readOnly: true
@@ -98,6 +109,12 @@ spec:
               - op: add
                 path: /spec/template/spec/runtimeClassName
                 value: kata
+              # containers/1 is the exporter
+              - op: add
+                path: /spec/template/spec/containers/1/volumeMounts/-
+                value:
+                  name: postfix-public
+                  mountPath: /var/spool/postfix/public
             target:
               group: apps
               version: v1
