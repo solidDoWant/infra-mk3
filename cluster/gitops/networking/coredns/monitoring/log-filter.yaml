@@ -28,3 +28,58 @@ spec:
     # once ndots is settable. Domain is Flux-substituted.
     - grep:
         exclude: 'log IN s3\.${SECRET_PUBLIC_DOMAIN_NAME}\.([a-z0-9-]+\.)?(svc\.)?cluster\.local'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Parses CoreDNS `[<LEVEL>] <msg>` lines into `log_fields.*` and drops the
+# level prefix from `_msg`. Query-log lines, in the log plugin's default
+#   <client>:<port> - <id> "<type> <class> <name> <proto> <size> <do> <bufsize>" <rcode> <flags> <rsize> <duration>
+# format, keep the line as `_msg` and also get per-field values (rcode, name,
+# client_ip, duration_seconds, ...). `plugin/<name>: ` lines get `plugin`.
+# Runs after `kubernetes`; successful queries are already dropped by
+# drop-coredns-query-noise.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-coredns-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # All coredns deployments (kube-dns, k8s-gateway, vpn-dns).
+  matchRegex: ^kube\.networking\.coredns-[^.]*\.coredns\.
+  filters:
+    - lua:
+        call: parse_coredns
+        code: |
+          local levels = { DEBUG = "debug", INFO = "info", WARNING = "warning", ERROR = "error", FATAL = "fatal" }
+          local query = '^(%S+):(%d+) %- (%d+) "(%S+) (%S+) (%S+) (%S+) (%d+) (%S+) (%d+)" (%S+) (%S+) (%d+) (%S+)$'
+
+          function parse_coredns(tag, ts, record)
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local lvl, rest = line:match("^%[(%u+)%] (.*)$")
+            if not lvl then
+              return 0, ts, record
+            end
+            local f = { level = levels[lvl] or lvl, msg = rest }
+            local client, port, id, qtype, qclass, name, proto, size, dnssec, bufsize, rcode, flags, rsize, duration = rest:match(query)
+            if client then
+              f.client_ip, f.client_port, f.query_id = client, tonumber(port), tonumber(id)
+              f.type, f.class, f.name, f.proto, f.size = qtype, qclass, name, proto, tonumber(size)
+              f.do_bit, f.bufsize, f.rcode, f.flags = dnssec == "true", tonumber(bufsize), rcode, flags
+              f.response_size, f.duration_seconds = tonumber(rsize), tonumber((duration:gsub("s$", "")))
+            else
+              local plugin = rest:match("^plugin/(%S+): ")
+              if plugin then
+                f.plugin = plugin
+              end
+            end
+            record["log_fields"] = f
+            record["log"] = rest
+            return 2, ts, record
+          end
