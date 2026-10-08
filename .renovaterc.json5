@@ -44,8 +44,9 @@
     "grafana-plugins": {
       defaultRegistryUrlTemplate: "https://grafana.com/api/plugins/{{packageName}}/versions",
       format: "json",
+      // Each version carries the plugin's GitHub repo; sourceUrl drives changelog fetching.
       transformTemplates: [
-        '{"releases": $map(items, function($i) { {"version": $i.version, "releaseTimestamp": $i.createdAt} })}',
+        '{"releases": $map(items, function($i) { {"version": $i.version, "releaseTimestamp": $i.createdAt} }), "sourceUrl": items[0].url}',
       ],
     },
   },
@@ -438,9 +439,36 @@
       changelogUrl: "https://github.com/hashicorp/terraform/releases",
     },
     {
-      description: "Tags are gpu-vX.Y.Z",
+      description: "Tags are gpu-vX.Y.Z; release notes fall back to extractVersion for tag matching",
       matchPackageNames: ["/intel-gpu-resource-driver/"],
-      changelogUrl: "https://github.com/intel/intel-resource-drivers-for-kubernetes/releases",
+      extractVersion: "^(?:gpu-v)?(?<version>.+)$",
+    },
+    {
+      description: "talos-factory custom datasource (talosFactory preset) has no source",
+      matchDatasources: ["custom.talos-factory"],
+      sourceUrl: "https://github.com/siderolabs/talos",
+    },
+    // Coder registry modules: monorepo tagged release/coder/<module>/vX.Y.Z.
+    // extractVersion is per module so sibling modules' tags can't match.
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["/^registry\\.coder\\.com/coder//"],
+      sourceUrl: "https://github.com/coder/registry",
+    },
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["registry.coder.com/coder/claude-code/coder"],
+      extractVersion: "^(?:release/coder/claude-code/v)?(?<version>\\d.*)$",
+    },
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["registry.coder.com/coder/git-commit-signing/coder"],
+      extractVersion: "^(?:release/coder/git-commit-signing/v)?(?<version>\\d.*)$",
+    },
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["registry.coder.com/coder/agentapi/coder"],
+      extractVersion: "^(?:release/coder/agentapi/v)?(?<version>\\d.*)$",
     },
     // Monorepo chart tags (<chart>-helm-chart-X.Y.Z) don't match; link the chart changelog.
     {
