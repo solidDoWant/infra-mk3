@@ -1,0 +1,119 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
+# One NZBHydra2 log event: a `<date> <time> <LEVEL> [<thread>] ` line (the
+# CONSOLE_LOG_PATTERN set in hr.yaml), then every line up to the next one.
+# Messages can carry unindented newlines (SQL errors), so continuation is
+# "not a header" rather than "indented".
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterMultilineParser
+metadata:
+  name: nzbhydra2
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  type: regex
+  flushTimeout: 1000
+  rules:
+    - start: start_state
+      regex: '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [A-Z]+ \[/'
+      next: cont
+    - start: cont
+      regex: '/^(?!\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [A-Z]+ \[)/'
+      next: cont
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Rejoins multi-line events (stack traces, SQL errors) with their log line, one
+# record per event. Named to sort before `kubernetes` so it sees raw lines;
+# joined records are re-emitted at the start of the pipeline, which this
+# filter skips.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: join-nzbhydra2-events
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.downloads\.nzbhydra2-[^.]*\.nzbhydra2\.
+  filters:
+    - multiline:
+        keyContent: log
+        parser: nzbhydra2
+        emitterName: nzbhydra2-multiline
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` and `log_fields.*` for NZBHydra2. Runs after `kubernetes`.
+# - `<date> <time> <LEVEL> [<thread>] <logger> : [<mdc>] <msg>`: level,
+#   thread, logger, msg; the MDC (`[ID: <search>, Host: <ip>, User: <user>] `)
+#   becomes search_id/host/user. Lines after the first (stack trace, rest of a
+#   multi-line message) go to `log_fields.detail`.
+# - logback's default layout, used before NZBHydra2's config loads:
+#   `<time> [<thread>] <LEVEL> <logger> -- <msg>`.
+# - JVM notices: `Picked up ...` (info), `... VM warning: ...` (warning).
+# Blank lines and the ASCII-art banner (spaces and punctuation only) are
+# dropped.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-nzbhydra2-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.downloads\.nzbhydra2-[^.]*\.nzbhydra2\.
+  filters:
+    - lua:
+        call: parse_nzbhydra2
+        code: |
+          local levels = { TRACE = "trace", DEBUG = "debug", INFO = "info", WARN = "warning", ERROR = "error" }
+          local mdc_keys = { ID = "search_id", Host = "host", User = "user" }
+          local header = "^(%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d%.%d%d%d) (%u+) %[(.-)%] (%S+) : (.*)$"
+          local early = "^(%d%d:%d%d:%d%d%.%d%d%d) %[(.-)%] (%u+) (%S+) %-%- (.*)$"
+
+          function parse_nzbhydra2(tag, ts, record)
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local first, rest = line:match("^([^\n]*)\n(.*)$")
+            first = first or line
+            if not first:match("%w") then
+              return -1, ts, record
+            end
+            local f
+            local time, lvl, thread, logger, msg = first:match(header)
+            if time then
+              f = { time = time, level = levels[lvl] or lvl:lower(), thread = thread, logger = logger }
+              local mdc, after = msg:match("^%[(%a+: [^%]]*)%] (.*)$")
+              if mdc and mdc_keys[mdc:match("^%a+")] then
+                for key, value in mdc:gmatch("(%a+): ([^,]+)") do
+                  f[mdc_keys[key] or key] = value
+                end
+                msg = after
+              end
+            else
+              time, thread, lvl, logger, msg = first:match(early)
+              if time then
+                f = { time = time, level = levels[lvl] or lvl:lower(), thread = thread, logger = logger }
+              elseif first:match("^Picked up ") then
+                f = { logger = "jvm", level = "info" }
+                msg = first
+              elseif first:match(" VM warning: ") then
+                f = { logger = "jvm", level = "warning" }
+                msg = first
+              else
+                return 0, ts, record
+              end
+            end
+            f["msg"] = msg
+            if rest and rest:match("%S") then
+              f["detail"] = rest:gsub("%s+$", "")
+            end
+            record["log_fields"] = f
+            record["log"] = msg
+            return 2, ts, record
+          end

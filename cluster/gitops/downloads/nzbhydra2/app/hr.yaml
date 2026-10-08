@@ -23,6 +23,13 @@ spec:
             image: &image
               repository: ghcr.io/home-operations/nzbhydra2
               tag: 7.19.2
+            env:
+              # Console layout for fluent-bit (parse-nzbhydra2-logs): no ANSI
+              # colors or padding, full logger name. NZBHydra2 has no JSON
+              # console option; its logback config reads this variable, and
+              # keeps its API key/password scrubbing on the result. %mdc is
+              # `[ID: <search>, Host: <ip>, User: <user>] ` when set.
+              CONSOLE_LOG_PATTERN: "%d{yyyy-MM-dd HH:mm:ss.SSS} %level [%thread] %logger : %mdc%replace(%marker: ){'^: ',''}%m%n%wEx{15}"
             ports:
               - name: web
                 containerPort: &web_port 5076
