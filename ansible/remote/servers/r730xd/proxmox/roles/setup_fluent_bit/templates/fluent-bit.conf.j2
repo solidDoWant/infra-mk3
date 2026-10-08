@@ -105,7 +105,10 @@
     # Recycle connections after a bounded number of uses so the Teleport
     # sessions behind the tunnel stay short-lived and small — long-running
     # high-volume sessions are a known Teleport weak spot. At flush=5s this
-    # is a fresh connection every ~5 minutes.
+    # is a fresh connection every ~5 minutes. The idle timeout must outlast
+    # quiet gaps in the journal (a few lines/min): at the 30s default every
+    # gap closed the connection, and each reconnect is a new Teleport app
+    # session (start+end audit events) — ~2/min per host.
     net.keepalive              on
-    net.keepalive_idle_timeout 30
+    net.keepalive_idle_timeout 600
     net.keepalive_max_recycle  60
