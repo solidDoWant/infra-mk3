@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` from KEDA's zap JSON `msg` (`logging.*.format: json`) and maps
+# `warn` to `warning`. The `kubernetes` filter has already merged the JSON into
+# `log_fields`. client-go's leader-election lines stay klog text and go
+# through parse-klog.
+#
+# Drops the scale loop's zero-count `Scaling Jobs` lines (a running and a
+# pending line per ScaledJob every polling interval); nonzero counts still ship.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-keda-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.system-controllers\.keda-(operator|admission-webhooks)-[^.]*\.keda-(operator|admission-webhooks)\.
+  filters:
+    - lua:
+        call: promote_keda
+        code: |
+          function promote_keda(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["msg"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            if msg == "Scaling Jobs" and (fields["Number of running Jobs"] == 0 or fields["Number of pending Jobs"] == 0) then
+              return -1, ts, record
+            end
+            if fields["level"] == "warn" then
+              fields["level"] = "warning"
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end

@@ -27,6 +27,12 @@ spec:
 
     priorityClassName: system-cluster-critical
 
+    logging:
+      operator:
+        format: json
+      webhooks:
+        format: json
+
     # Applies to all KEDA components. grpc-go's DNS resolver does a TXT lookup at
     # `_grpc_config.<target>` for service config before dialing; CoreDNS never serves
     # those records, so it always NXDOMAINs and then walks the search list, turning one
