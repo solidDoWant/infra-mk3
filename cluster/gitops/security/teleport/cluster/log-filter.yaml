@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on Teleport auth/proxy/agent and the operator to `message`
+# instead of the JSON envelope. Fields, including `error`, stay under
+# `log_fields.*`. Runs after `kubernetes`, which populates `log_fields`. The
+# operator's klog lines are handled by parse-klog.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-teleport-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.security\.teleport-(cluster-(auth|proxy)-[^.]*\.teleport|agent-\d+\.teleport|cluster-operator-[^.]*\.operator)\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["message"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end

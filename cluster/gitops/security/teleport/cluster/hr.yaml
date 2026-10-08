@@ -39,6 +39,12 @@ spec:
       installCRDs: never
     clusterName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     kubeClusterName: infra-mk3
+    # Text output renders trace errors as their DebugReport: multi-line,
+    # HTML-escaped, with a stack trace. JSON uses the plain user message, so
+    # logged errors carry no stack trace. Switch to `text` temporarily to get
+    # one (restarts the pods).
+    log:
+      format: json
     proxyProtocol: off
     auth:
       teleportConfig:
