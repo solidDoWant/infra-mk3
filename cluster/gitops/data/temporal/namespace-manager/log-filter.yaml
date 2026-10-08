@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` from manager.sh's JSON `msg`. The `kubernetes` filter has already
+# merged the JSON into `log_fields`; levels are already info/warning/error.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-temporal-namespace-manager-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.data\.temporal-namespace-manager-[^.]*\.manager\.
+  filters:
+    - lua:
+        call: promote_manager
+        code: |
+          function promote_manager(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" or type(fields["msg"]) ~= "string" then
+              return 0, ts, record
+            end
+            record["log"] = fields["msg"]
+            return 2, ts, record
+          end

@@ -18,6 +18,10 @@
 # Runs under busybox /bin/sh (no bash). The badouralix/curl-jq base image ships
 # curl + jq + busybox utils. The `temporal` CLI is mounted in via an OCI image
 # volume from temporalio/admin-tools — referenced through $TEMPORAL.
+#
+# Logs one JSON object per line (`time`, `level`, `msg`, plus context fields
+# such as `namespace`), only for actions and failures. Failed commands' output
+# goes into `detail`.
 
 set -eu
 # busybox ash supports pipefail. Without it, a failing curl/temporal would be
@@ -39,20 +43,35 @@ export TEMPORAL_ADDRESS
 SA_DIR=/var/run/secrets/kubernetes.io/serviceaccount
 K8S_API=https://kubernetes.default.svc
 
+# Captures stderr of commands whose stdout is parsed, for `detail` on failure.
+ERR_FILE=$(mktemp)
+
+# log <level> <msg> [<key> <value>]...
+log() {
+    level="$1"
+    msg="$2"
+    shift 2
+    jq -nc --arg level "${level}" --arg msg "${msg}" '
+        {time: (now | todate), level: $level, msg: $msg}
+        + ($ARGS.positional as $kv
+           | reduce range(0; $kv | length; 2) as $i ({}; . + {($kv[$i]): $kv[$i + 1]}))
+    ' --args "$@"
+}
+
 # Holds the raw k8s namespace API response for the current reconcile tick.
 # Cached once per tick so derived views (names, per-namespace annotations) all
 # read from the same snapshot without repeating the API call.
 DESIRED_NS_RAW=""
 
 fetch_desired_namespaces() {
-    # --fail-with-body so HTTP 4xx/5xx becomes a non-zero exit AND prints the
-    # response body so the operator can debug.
+    # --fail-with-body so HTTP 4xx/5xx becomes a non-zero exit AND returns the
+    # response body, which the caller logs.
     DESIRED_NS_RAW=$(curl -sS --fail-with-body \
         --cacert "${SA_DIR}/ca.crt" \
         -H "Authorization: Bearer $(cat "${SA_DIR}/token")" \
         --get \
         --data-urlencode "labelSelector=${NAMESPACE_LABEL}=true" \
-        "${K8S_API}/api/v1/namespaces")
+        "${K8S_API}/api/v1/namespaces" 2>"${ERR_FILE}")
 }
 
 list_desired_namespaces() {
@@ -125,9 +144,9 @@ reconcile_search_attributes() {
     [ -z "${sas}" ] && return 0
 
     existing_sas=$("${TEMPORAL}" operator search-attribute list \
-        --namespace "${ns}" -o json \
+        --namespace "${ns}" -o json 2>"${ERR_FILE}" \
         | jq -r '.customAttributes // {} | keys[]') || {
-        echo "  failed to list search attributes for ${ns}" >&2
+        log error "failed to list search attributes" namespace "${ns}" detail "$(cat "${ERR_FILE}")"
         return 0
     }
 
@@ -138,12 +157,11 @@ reconcile_search_attributes() {
             --namespace "${ns}" \
             --name "${sa_name}" \
             --type "${sa_type}" 2>&1); then
-            echo "+ adding search attribute ${ns}/${sa_name} (${sa_type})"
+            log info "added search attribute" namespace "${ns}" attribute "${sa_name}" type "${sa_type}"
         elif printf '%s' "${create_output}" | grep -qi 'already exists'; then
             :
         else
-            printf '%s\n' "${create_output}" >&2
-            echo "  failed to create search attribute ${ns}/${sa_name} (${sa_type})" >&2
+            log error "failed to create search attribute" namespace "${ns}" attribute "${sa_name}" type "${sa_type}" detail "${create_output}"
         fi
     done
 }
@@ -154,12 +172,13 @@ reconcile() {
     # empty `desired` from an *errored* call would also delete everything
     # managed, which we don't want.
     fetch_desired_namespaces || {
-        echo "k8s namespace list failed; skipping reconcile" >&2
+        log error "k8s namespace list failed; skipping reconcile" detail "$(cat "${ERR_FILE}")${DESIRED_NS_RAW:+
+${DESIRED_NS_RAW}}"
         return 1
     }
     desired=$(list_desired_namespaces)
-    TEMPORAL_NS_RAW=$("${TEMPORAL}" operator namespace list -o json) || {
-        echo "temporal namespace list failed; skipping reconcile" >&2
+    TEMPORAL_NS_RAW=$("${TEMPORAL}" operator namespace list -o json 2>"${ERR_FILE}") || {
+        log error "temporal namespace list failed; skipping reconcile" detail "$(cat "${ERR_FILE}")"
         return 1
     }
     existing=$(list_existing_namespaces)
@@ -184,7 +203,6 @@ reconcile() {
 
     printf '%s\n' "${to_create}" | while IFS= read -r ns; do
         [ -z "${ns}" ] && continue
-        echo "+ creating temporal namespace: ${ns}"
         # 2160h = 90d. Temporal's --retention parses via Go time.ParseDuration,
         # which doesn't accept the `d` suffix.
         #
@@ -198,12 +216,11 @@ reconcile() {
             --retention 2160h \
             --history-archival-state enabled \
             --visibility-archival-state enabled 2>&1); then
-            :
+            log info "created temporal namespace" namespace "${ns}"
         elif printf '%s' "${create_output}" | grep -q 'already exists'; then
-            echo "  ${ns} already exists in temporal — skipping"
+            log warning "temporal namespace already exists; skipping" namespace "${ns}"
         else
-            printf '%s\n' "${create_output}" >&2
-            echo "  failed to create ${ns}" >&2
+            log error "failed to create temporal namespace" namespace "${ns}" detail "${create_output}"
         fi
     done
 
@@ -218,17 +235,18 @@ reconcile() {
 
     printf '%s\n' "${to_delete}" | while IFS= read -r ns; do
         [ -z "${ns}" ] && continue
-        echo "- deleting temporal namespace: ${ns}"
-        "${TEMPORAL}" operator namespace delete \
+        if delete_output=$("${TEMPORAL}" operator namespace delete \
             --namespace "${ns}" \
-            --yes \
-            || echo "  failed to delete ${ns}" >&2
+            --yes 2>&1); then
+            log info "deleted temporal namespace" namespace "${ns}"
+        else
+            log error "failed to delete temporal namespace" namespace "${ns}" detail "${delete_output}"
+        fi
     done
 }
 
+log info "starting" temporal_address "${TEMPORAL_ADDRESS}" poll_interval_seconds "${POLL_INTERVAL_SECONDS}"
 while :; do
-    echo "[$(date -u -Iseconds)] reconciling..."
     reconcile || true
-    echo "[$(date -u -Iseconds)] sleeping ${POLL_INTERVAL_SECONDS}s"
     sleep "${POLL_INTERVAL_SECONDS}"
 done

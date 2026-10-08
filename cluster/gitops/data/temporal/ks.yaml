@@ -76,4 +76,5 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: fluent-crds
     - name: temporal-app
