@@ -20,6 +20,12 @@ spec:
       # every parser twice, which fluent-bit 5.1+ treats as fatal.
       - /fluent-bit/etc/parsers.conf
     httpServer: true
+    # Hot-reload watchdog: a reload still running after this many seconds
+    # aborts the process, and the container restarts instead of wedging
+    # (pod 1/1, nothing shipped). Disabled by default (0). Reloads normally
+    # take <1s. It starts after the reload's first log line, so it can't catch
+    # fluent/fluent-bit#10274, which deadlocks inside that line.
+    hotReloadTimeout: 60
     storage:
       path: /fluent-bit/chunks
       deleteIrrecoverableChunks: "on"

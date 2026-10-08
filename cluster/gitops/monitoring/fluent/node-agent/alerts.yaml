@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fluentbit-node-agent
+spec:
+  groups:
+    - name: fluentbit-node-agent
+      rules:
+        # A wedged hot reload leaves the pod 1/1 and its HTTP server answering
+        # (so TargetDown never fires), but the engine ships nothing and its
+        # counters freeze. Every node logs continuously, so a stalled output
+        # is never legitimate. Known cause: fluent/fluent-bit#10274 (SIGHUP
+        # handler deadlock; the watcher sends 3 SIGHUPs per config change).
+        - alert: FluentBitNodeAgentOutputStalled
+          expr: sum by (namespace, pod, instance) (rate(fluentbit_output_proc_records_total{job="fluentbit-node-agent"}[5m])) == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "fluent-bit node agent {{ $labels.pod }} on {{ $labels.instance }} stopped shipping logs"
+            description: |
+              {{ $labels.namespace }}/{{ $labels.pod }} has forwarded no records for
+              10m while still being scraped, which usually means a hot reload
+              wedged. Delete the pod; the hostPath position DB resumes the tails,
+              so the gap is backfilled.
