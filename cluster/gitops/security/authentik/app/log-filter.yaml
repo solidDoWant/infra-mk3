@@ -19,10 +19,11 @@ metadata:
 spec:
   matchRegex: ^kube\.security\.authentik-(server|worker)-[^.]*\.(server|worker)\.
   filters:
-    # Django `/-/health/{live,ready}/` and `/-/metrics/`, plus the Rust worker's
+    # Django `/-/health/{live,ready}/` and `/-/metrics/`, the Rust server's
+    # `/health/{live,ready}/` (logged without the `/-` mount prefix), and the
     # bare `/metrics` (:9300). Separate branches so unserved variants can't match.
     - grep:
-        exclude: 'log "event": ?"(/-/(health/(live|ready)|metrics)/|/metrics)".*"status": ?200[,}]'
+        exclude: 'log "event": ?"(/-/(health/(live|ready)|metrics)/|/health/(live|ready)/|/metrics)".*"status": ?200[,}]'
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on authentik server/worker to `event` instead of the JSON
