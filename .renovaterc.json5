@@ -534,21 +534,47 @@
     },
 
     // --- Labels -----------------------------------------------------------
+    // Update-type labels use `labels` (last match wins) so a later rule can
+    // relabel; other labels use `addLabels` and accumulate on top.
     {
       matchUpdateTypes: ["major"],
-      addLabels: ["type/major"],
+      labels: ["type/major"],
     },
     {
       matchUpdateTypes: ["minor"],
-      addLabels: ["type/minor"],
+      labels: ["type/minor"],
     },
     {
       matchUpdateTypes: ["patch"],
-      addLabels: ["type/patch"],
+      labels: ["type/patch"],
     },
     {
       matchUpdateTypes: ["digest"],
-      addLabels: ["type/digest"],
+      labels: ["type/digest"],
+    },
+    // After the update-type labels so `labels` overrides type/minor.
+    {
+      description: "Kubernetes, Talos and Rook/Ceph minors are their breaking releases: handle them as majors",
+      matchUpdateTypes: ["minor"],
+      matchPackageNames: [
+        // Kubernetes
+        "ghcr.io/siderolabs/kubelet",
+        "registry.k8s.io/kubectl",
+        "alpine/k8s",
+        // Talos
+        "siderolabs/talos",
+        "ghcr.io/siderolabs/talosctl",
+        "ghcr.io/siderolabs/installer",
+        // Rook/Ceph
+        "rook-ceph",
+        "rook-ceph-cluster",
+        "/(^|/)ceph/ceph$/",
+      ],
+      dependencyDashboardApproval: true,
+      semanticCommitType: "feat",
+      commitMessagePrefix: "{{semanticCommitType}}({{semanticCommitScope}})!:",
+      additionalBranchPrefix: "major-",
+      labels: ["type/major"],
     },
     {
       matchDatasources: ["docker"],
