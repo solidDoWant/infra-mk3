@@ -18,6 +18,19 @@ patches:
         name: placeholder-value-does-not-matter
     target:
       kind: Namespace
+  # cdi-operator strips the served-but-unstored v1alpha1 from its CRD on every
+  # reconcile; the release manifest still ships it, so each Flux apply re-adds
+  # it and the two fight every 5m.
+  - patch: |-
+      - op: test
+        path: /spec/versions/0/name
+        value: v1alpha1
+      - op: remove
+        path: /spec/versions/0
+    target:
+      group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: cdis.cdi.kubevirt.io
   # Fix missing items on the CDI operator deployment
   - patch: |-
       # Set replicas to 2
