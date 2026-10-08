@@ -59,3 +59,63 @@ spec:
   filters:
     - grep:
         exclude: 'log "uri":"/healthz","user_agent":"kube-probe/[^"]*","status":200,'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on the Temporal server and web pods to the readable message
+# instead of the JSON envelope: `msg` (server), else `<method> <uri> <status>`
+# (web access log, which has no message field). Standard-library log lines
+# (`YYYY/MM/DD HH:MM:SS [<component>] <msg>`, from the config templater and the
+# web auth code) are split into `log_fields.*`. Runs after `kubernetes`, which
+# populates `log_fields`.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-temporal-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.data\.temporal-[^.]*\.temporal-(frontend|internal-frontend|history|matching|worker|web)\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) == "table" then
+              local msg = fields["msg"]
+              if type(msg) == "string" and msg ~= "" then
+                record["log"] = msg
+                return 2, ts, record
+              end
+              local method, uri = fields["method"], fields["uri"]
+              if type(method) == "string" and type(uri) == "string" then
+                local status = fields["status"] and (" " .. tostring(fields["status"])) or ""
+                record["log"] = method .. " " .. uri .. status
+                return 2, ts, record
+              end
+              return 0, ts, record
+            end
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            local time, rest = line:match("^(%d%d%d%d/%d%d/%d%d %d%d:%d%d:%d%d) (.*)$")
+            if not time then
+              return 0, ts, record
+            end
+            local f = { time = time }
+            local component, msg = rest:match("^%[([^%]]+)%] (.*)$")
+            if component then
+              f.component = component
+            else
+              msg = rest
+            end
+            f.msg = msg
+            record["log_fields"] = f
+            record["log"] = msg
+            return 2, ts, record
+          end
