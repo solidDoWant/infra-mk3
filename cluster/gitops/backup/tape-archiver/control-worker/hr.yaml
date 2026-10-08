@@ -120,6 +120,9 @@ spec:
                 - /etc/tbot/tbot.yaml
                 - --diag-addr
                 - :4444
+                # Text renders logged errors as a multi-line DebugReport with a stack
+                # trace; JSON keeps the plain message only. Switch to `text` to get one.
+                - --log-format=json
               env:
                 # Override tbot's hard-coded default
                 # (/var/run/secrets/kubernetes.io/serviceaccount/token) so the
