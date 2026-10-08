@@ -13,7 +13,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: soliddowant-charts
-      version: 0.0.9
+      version: 0.0.10
   values:
     config:
       crds:
@@ -24,6 +24,11 @@ spec:
         issuerRef:
           kind: Issuer
           name: networking-intermediary-ca
+      # Production mode (JSON) at debug level: the debug lines record actual
+      # link changes.
+      logging:
+        development: false
+        level: debug
     resources:
       rawResources:
         webhook-certificate:

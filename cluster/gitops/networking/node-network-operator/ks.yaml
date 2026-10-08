@@ -37,6 +37,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: fluent-crds
     - name: node-network-operator-crds
     - name: prometheus-crds
     - name: networking-namespace-issuer

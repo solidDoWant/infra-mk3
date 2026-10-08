@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` from the operator's zap JSON `msg` (`config.logging`) and maps
+# `warn` to `warning`. The `kubernetes` filter has already merged the JSON into
+# `log_fields`. client-go's leader-election lines stay klog text and go through
+# parse-klog.
+#
+# Drops the webhook's `Validation for Link`: Flux's server-side dry-run of the
+# Link manifests calls it for every Link on every reconcile.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-node-network-operator-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.networking\.node-network-operator-(cluster|node)-[^.]*\.node-network-operator\.
+  filters:
+    - lua:
+        call: promote_nno
+        code: |
+          function promote_nno(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["msg"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            if msg == "Validation for Link" then
+              return -1, ts, record
+            end
+            if fields["level"] == "warn" then
+              fields["level"] = "warning"
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end
