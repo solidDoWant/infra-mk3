@@ -75,6 +75,18 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
+  name: k8s-resources-nodes-overview
+spec:
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    name: grafana-dashboard-k8s-resources-nodes-overview
+    key: k8s-resources-nodes-overview.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
   name: k8s-resources-pod
 spec:
   instanceSelector:

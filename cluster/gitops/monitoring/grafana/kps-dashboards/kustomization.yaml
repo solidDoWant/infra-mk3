@@ -2,7 +2,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/refs/tags/v0.14.0/manifests/grafana-dashboardDefinitions.yaml
+  - https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/refs/tags/v0.19.0/manifests/grafana-dashboardDefinitions.yaml
   - dashboards.yaml
 commonAnnotations:
   kustomize.toolkit.fluxcd.io/substitute: disabled
