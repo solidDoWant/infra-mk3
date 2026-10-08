@@ -54,8 +54,7 @@ specs:
               # Webhook calls
               - port: https
                 protocol: TCP
-      - &from_healthcheck
-        fromEntities:
+      - fromEntities:
           - host
         toPorts:
           - ports:
@@ -71,7 +70,12 @@ specs:
         app.kubernetes.io/instance: cert-manager
         app.kubernetes.io/component: controller
     ingress:
-      - *from_healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http-healthz
+                protocol: TCP
       - *from_monitoring
     egress:
       # Access to Cloudflare API, ACME providers, etc.

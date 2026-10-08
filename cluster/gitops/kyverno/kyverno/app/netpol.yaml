@@ -59,10 +59,9 @@ specs:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              # For some dumb reason, the admission controller uses a different port name
-              - port: metrics-port
-                protocol: TCP
-              - port: metrics
+              # Admission controller names it "metrics-port", the rest "metrics".
+              # Numeric avoids per-endpoint "unknown named port" warnings.
+              - port: "8000"
                 protocol: TCP
   - description: kyverno-clean-reports
     endpointSelector:
