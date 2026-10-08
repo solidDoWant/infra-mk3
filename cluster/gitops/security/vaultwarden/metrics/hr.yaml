@@ -32,6 +32,10 @@ spec:
                 sslcert=/certs/postgres/user/tls.crt&\
                 sslkey=/certs/postgres/user/tls.key&\
                 sslmode=verify-full"
+              # Each update opens a fresh pool and drops it without closing,
+              # logging "SSL error: unexpected eof" + "connection reset" on
+              # Postgres per connection.
+              UPDATE_SECONDS: "900"
             ports:
               - name: metrics
                 containerPort: 3040
