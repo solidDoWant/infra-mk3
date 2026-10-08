@@ -4,6 +4,16 @@
 # CDI, descheduler, dragonfly, ...) into `log_fields.*` and sets `_msg` to the
 # message alone. Level letters map to the words JSON loggers use.
 #
+# Structured klog (`InfoS`/`ErrorS`) writes `"<msg>" key=value ...` (older
+# klogr: `"msg"="<msg>" "key"="value" ...`): the message unquoted becomes
+# `_msg`, and each pair a `log_fields` key (quoted values unescaped;
+# `[...]`/`{...}` values kept whole). A key that collides with
+# a header field (`level`, `msg`, ...) goes under `attr.<key>`. Messages that
+# don't parse as that form are left as they are.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+#
 # Matches all pods: the parser is `\A`-anchored, so other lines fail on the
 # first byte. Named to sort after the `kubernetes` filter.
 apiVersion: fluentbit.fluent.io/v1alpha2
@@ -60,3 +70,119 @@ spec:
           - kl_*
         removePrefix: kl_
         nestUnder: log_fields
+    - lua:
+        call: parse_klog_structured
+        code: |
+          local esc = { n = "\n", t = "\t", r = "\r", ['"'] = '"', ["\\"] = "\\" }
+
+          local function unquote(s, i)
+            local out = {}
+            local j = i + 1
+            while j <= #s do
+              local c = s:sub(j, j)
+              if c == "\\" then
+                local n = s:sub(j + 1, j + 1)
+                out[#out + 1] = esc[n] or ("\\" .. n)
+                j = j + 2
+              elseif c == '"' then
+                return table.concat(out), j + 1
+              else
+                out[#out + 1] = c
+                j = j + 1
+              end
+            end
+            return nil, j
+          end
+
+          local function bare(s, i)
+            local depth = 0
+            local quoted = false
+            local j = i
+            while j <= #s do
+              local c = s:sub(j, j)
+              if quoted then
+                if c == "\\" then
+                  j = j + 1
+                elseif c == '"' then
+                  quoted = false
+                end
+              elseif c == '"' then
+                quoted = true
+              elseif c == "[" or c == "{" then
+                depth = depth + 1
+              elseif (c == "]" or c == "}") and depth > 0 then
+                depth = depth - 1
+              elseif c == " " and depth == 0 then
+                break
+              end
+              j = j + 1
+            end
+            return s:sub(i, j - 1), j
+          end
+
+          local function structured(s)
+            local msg = nil
+            local i = 1
+            if s:sub(1, 6) == '"msg"=' then
+              s = " " .. s
+            elseif s:sub(1, 1) == '"' then
+              msg, i = unquote(s, 1)
+              if not msg then
+                return nil
+              end
+            else
+              return nil
+            end
+            local pairs_ = {}
+            while i <= #s do
+              local key = s:match("^ ([%w_%.%-/]+)=", i)
+              local skip = 2
+              if not key then
+                key = s:match('^ "([%w_%.%-/]+)"=', i)
+                skip = 4
+              end
+              if not key then
+                return nil
+              end
+              i = i + #key + skip
+              local value
+              if s:sub(i, i) == '"' then
+                value, i = unquote(s, i)
+                if not value then
+                  return nil
+                end
+              else
+                value, i = bare(s, i)
+              end
+              if msg == nil and key == "msg" then
+                msg = value
+              else
+                pairs_[#pairs_ + 1] = { key, value }
+              end
+            end
+            if msg == nil then
+              return nil
+            end
+            return msg, pairs_
+          end
+
+          function parse_klog_structured(tag, ts, record)
+            local f = record["log_fields"]
+            if type(f) ~= "table" or f["thread"] == nil or f["source"] == nil or type(f["msg"]) ~= "string" then
+              return 0, ts, record
+            end
+            local msg, kv = structured(f["msg"])
+            if not msg then
+              return 0, ts, record
+            end
+            f["msg"] = msg
+            for _, p in ipairs(kv) do
+              if f[p[1]] == nil then
+                f[p[1]] = p[2]
+              else
+                f["attr." .. p[1]] = p[2]
+              end
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end
