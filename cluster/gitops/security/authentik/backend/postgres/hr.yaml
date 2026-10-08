@@ -15,6 +15,8 @@ spec:
         name: infra-mk3
   values:
     clusterName: authentik
+    storage:
+      size: 10Gi
     teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     certificates:
       client:
