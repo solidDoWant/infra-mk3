@@ -13,10 +13,8 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: intel-resource-drivers-charts
-      version: 0.11.0
+      version: 0.12.0
   values:
-    image:
-      repository: ghcr.io/intel/intel-resource-drivers-for-kubernetes
     cdi:
       staticPath: /var/cdi/static
       dynamicPath: /var/cdi/dynamic
@@ -40,24 +38,12 @@ spec:
       # This value only half-works: the chart nests --manage-binding=false
       # inside its `if healthMonitoring.enabled` block, so with monitoring off
       # the flag is never passed and the binary default (true) wins. What the
-      # value DOES still do is add a selector to the gpu-vfio.intel.com
-      # DeviceClass restricting it to already-vfio-bound GPUs -- which matches
-      # nothing here, so no claim can reach the rebind path. The postRenderer
-      # below closes the daemon-side gap. Drop it if upstream unnests the flag.
+      # value DOES still do is restrict the gpu-vfio.intel.com DeviceClass to
+      # already-vfio-bound GPUs (and gpu.intel.com to i915/xe-bound ones), so no
+      # claim can reach the rebind path. extraArgs closes the daemon-side gap.
+      # Drop it if upstream unnests the flag.
       manageBinding:
         enabled: false
+      extraArgs: --manage-binding=false
     nodeFeatureRules:
       enabled: true
-  postRenderers:
-    - kustomize:
-        patches:
-          # See the manageBinding note above.
-          - patch: |
-              - op: add
-                path: /spec/template/spec/containers/0/args/-
-                value: --manage-binding=false
-            target:
-              group: apps
-              version: v1
-              kind: DaemonSet
-              name: intel-gpu-resource-driver-kubelet-plugin
