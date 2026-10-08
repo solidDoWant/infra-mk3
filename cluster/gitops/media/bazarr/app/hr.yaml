@@ -84,6 +84,10 @@ spec:
               POSTGRES_DATABASE: bazarr
               POSTGRES_USERNAME: bazarr
               POSTGRES_PASSWORD: not-used-cert-auth-via-envoy
+              # Envoy forwards an SSLRequest upstream instead of answering it,
+              # so libpq's default sslmode=prefer handshakes with Postgres
+              # without a client cert (FATAL 28000) before retrying plaintext.
+              PGSSLMODE: disable
               # Sourced for the probes' X-API-KEY header (kubelet's
               # httpGet.httpHeaders values are literal, so probes must
               # exec into the container to read the secret).

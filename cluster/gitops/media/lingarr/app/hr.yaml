@@ -46,7 +46,12 @@ spec:
               DB_PORT: "5432"
               DB_DATABASE: lingarr
               DB_USERNAME: lingarr
-              DB_PASSWORD: not-used-cert-auth-via-envoy
+              # Envoy forwards an SSLRequest upstream instead of answering it,
+              # so Npgsql's default SSL Mode=Prefer handshakes with Postgres
+              # without a client cert (FATAL 28000) before retrying plaintext.
+              # Npgsql ignores PGSSLMODE; the value is interpolated unescaped
+              # into every connection string, so append the option here.
+              DB_PASSWORD: not-used-cert-auth-via-envoy;SSL Mode=Disable
               # No app-level auth — access is gated by the internal-gateway
               # (not internet-exposed) and the netpol.
               AUTH_ENABLED: "false"
