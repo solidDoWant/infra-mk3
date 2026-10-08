@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Extracts multus (and its whereabouts IPAM) `<time> [<level>] <msg>` lines
+# into `log_fields.*` and sets `_msg` to the message alone. `verbose` is
+# multus's info tier. klog and logfmt (cilium-cni) lines are handled by
+# parse-klog and parse-logfmt.
+#
+# On Add/Del multus logs the pretty-printed NetworkAttachmentDefinition config,
+# one record per line. Those continuation lines (indented JSON, bare `}`/`]`)
+# and blank lines are dropped: the config is in git, and the Add/Del line keeps
+# the pod and attachment names. Go panic traces (tab-indented paths) don't
+# match and still ship.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: parse-multus-logs
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.networking\.multus-[^.]*\.multus\.
+  filters:
+    - lua:
+        call: parse_multus
+        code: |
+          local levels = { panic = "fatal", error = "error", verbose = "info", debug = "debug" }
+
+          function parse_multus(tag, ts, record)
+            local line = record["log"]
+            if type(line) ~= "string" then
+              return 0, ts, record
+            end
+            if line:match("^%s*$") or line:match("^%s+[%{%}%[%]\"]") or line:match("^[%}%]],?$") then
+              return -1, ts, record
+            end
+            local time, lvl, msg = line:match("^(%d%d%d%d%-%d%d%-%d%dT%S+) %[(%a+)%] (.*)$")
+            if not time then
+              return 0, ts, record
+            end
+            msg = (msg:gsub(" {$", ""))
+            record["log_fields"] = { time = time, level = levels[lvl] or lvl, msg = msg }
+            record["log"] = msg
+            return 2, ts, record
+          end
