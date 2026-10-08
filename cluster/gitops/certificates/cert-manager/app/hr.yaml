@@ -38,6 +38,8 @@ spec:
       defaultIssuerName: letsencrypt-production
     dns01RecursiveNameserversOnly: true
     dns01RecursiveNameservers: https://dns.quad9.net/dns-query
+    extraArgs: &json_logs
+      - --logging-format=json
     prometheus:
       servicemonitor:
         enabled: true
@@ -60,6 +62,7 @@ spec:
               topologyKey: kubernetes.io/hostname
     webhook:
       replicaCount: 2
+      extraArgs: *json_logs
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
@@ -67,7 +70,13 @@ spec:
     cainjector:
       replicaCount: 2
       featureGates: ServerSideApply=true
+      extraArgs: *json_logs
       podDisruptionBudget:
         enabled: true
         minAvailable: 1
       affinity: *affinity_rules
+    startupapicheck:
+      # The chart's default is [-v]; keep it.
+      extraArgs:
+        - -v
+        - --logging-format=json

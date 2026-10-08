@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` and `log_fields.level` for cert-manager (controller, webhook,
+# cainjector, startupapicheck) and approver-policy, which log JSON. The
+# `kubernetes` filter has already merged it into `log_fields`.
+# - cert-manager (klog JSON) has no level: no `v` is error, `v: 1` from a
+#   `cert-manager*` logger is warning (its WarnLevel), anything else info.
+# - approver-policy (slog JSON): `DEBUG+3` style levels become `debug`.
+# Drops, all routine with short-lived certificates (every renewal):
+# - condition timestamp narration for Certificates and CertificateRequests,
+#   and old CertificateRequest revision GC.
+# - cainjector's `unable to fetch certificate that owns the secret` when the
+#   Certificate is already gone: a Secret outliving its Certificate on
+#   deletion, logged once per injectable kind.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-cert-manager-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.certificates\.cert-manager-[^.]*\.cert-manager-(controller|webhook|cainjector|startupapicheck|approver-policy)\.
+  filters:
+    - lua:
+        call: promote_cert_manager
+        code: |
+          local levels = { DEBUG = "debug", INFO = "info", WARN = "warning", ERROR = "error" }
+          local chatter = { ["Setting lastTransitionTime for Certificate condition"] = true, ["Found status change for Certificate condition; setting lastTransitionTime"] = true, ["Setting lastTransitionTime for CertificateRequest condition"] = true, ["Found status change for CertificateRequest condition; setting lastTransitionTime"] = true, ["garbage collecting old certificate request revision"] = true }
+
+          function promote_cert_manager(tag, ts, record)
+            local f = record["log_fields"]
+            if type(f) ~= "table" or type(f["msg"]) ~= "string" then
+              return 0, ts, record
+            end
+            local msg = f["msg"]
+            if chatter[msg] then
+              return -1, ts, record
+            end
+            if msg == "unable to fetch certificate that owns the secret" and type(f["err"]) == "string" and f["err"]:match("not found$") then
+              return -1, ts, record
+            end
+            if type(f["level"]) == "string" then
+              local base = f["level"]:match("^%u+")
+              f["level"] = levels[base] or f["level"]:lower()
+            elseif f["v"] == nil then
+              f["level"] = "error"
+            elseif f["v"] == 1 and type(f["logger"]) == "string" and f["logger"]:match("^cert%-manager") then
+              f["level"] = "warning"
+            else
+              f["level"] = "info"
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end
