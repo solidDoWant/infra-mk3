@@ -41,18 +41,23 @@ spec:
         exclude: 'log "msg":"(Handling KubeVirt resource|Handling deployment|All KubeVirt resources created|All KubeVirt components ready|service [^"]*patched"|validatingAdmissionPolicy[^"]*patched"|Kept old CA certificates|Kubevirt namespace [^"]*labels are in sync")'
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
-# Sets `_msg` on virt-launcher's compute container to `msg` instead of the JSON
-# envelope. Fields stay under `log_fields.*`. Runs after `kubernetes`, which
-# populates `log_fields`. VMs run in any namespace, hence the pod-name match.
+# Sets `_msg` on KubeVirt components to `msg` instead of the JSON envelope, or
+# `<method> <url> <statusCode>` for virt-api access-log records, which have no
+# message. Fields stay under `log_fields.*`. Runs after `kubernetes`, which
+# populates `log_fields`. VMs run in any namespace, hence the pod-name match
+# for virt-launcher. klog lines are handled by parse-klog.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterFilter
 metadata:
-  name: promote-virt-launcher-message
+  name: promote-kubevirt-message
   labels:
     config.fluentbit.fluent.io/enabled: "true"
     config.fluentbit.fluent.io/agent: node
 spec:
-  matchRegex: ^kube\.[^.]+\.virt-launcher-[^.]*\.compute\.
+  matchRegex: ^kube\.([^.]+\.virt-launcher-[^.]*\.compute|system-controllers\.virt-(handler|controller|api|operator)-[^.]*\.virt-(handler|controller|api|operator))\.
   filters:
     - lua:
         call: promote_message
@@ -63,9 +68,15 @@ spec:
               return 0, ts, record
             end
             local msg = fields["msg"]
-            if type(msg) ~= "string" or msg == "" then
-              return 0, ts, record
+            if type(msg) == "string" and msg ~= "" then
+              record["log"] = msg
+              return 2, ts, record
             end
-            record["log"] = msg
-            return 2, ts, record
+            local method, url = fields["method"], fields["url"]
+            if type(method) == "string" and type(url) == "string" then
+              local status = fields["statusCode"] and (" " .. tostring(fields["statusCode"])) or ""
+              record["log"] = method .. " " .. url .. status
+              return 2, ts, record
+            end
+            return 0, ts, record
           end
