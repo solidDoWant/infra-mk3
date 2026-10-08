@@ -29,6 +29,9 @@ spec:
 # under `log_fields.*`. Runs after `kubernetes`, which populates `log_fields`.
 # Scoped by container name (no pod labels with Use_Tag_For_Meta), plus the
 # operator and barman-cloud plugin Deployments.
+#
+# Drops the operator's admission-webhook narration, logged on every Flux
+# reapply of a Cluster, Database, or Pooler. Creation validation still ships.
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterFilter
 metadata:
@@ -45,11 +48,15 @@ spec:
           local function str(v)
             if type(v) == "string" and v ~= "" then return v end
           end
+          local webhook_chatter = { ["Defaulting for Cluster"] = true, ["Defaulting for database"] = true, ["Defaulting for Pooler"] = true, ["Validation for Cluster upon update"] = true, ["Validation for Database upon update"] = true, ["Validation for Pooler upon update"] = true, ["Pooler not automatically configured, manual configuration required"] = true }
 
           function promote_message(tag, ts, record)
             local fields = record["log_fields"]
             if type(fields) ~= "table" or not str(fields["msg"]) then
               return 0, ts, record
+            end
+            if webhook_chatter[fields["msg"]] and str(fields["logger"]) and fields["logger"]:find("%-resource$") then
+              return -1, ts, record
             end
             local inner = fields["record"]
             local msg
