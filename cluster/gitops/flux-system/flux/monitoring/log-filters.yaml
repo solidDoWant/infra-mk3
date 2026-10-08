@@ -79,3 +79,33 @@ spec:
   filters:
     - grep:
         exclude: 'log "msg":"artifact up-to-date with remote revision'
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` on the Flux controllers to `msg` instead of the JSON envelope.
+# Fields stay under `log_fields.*`. Runs after `kubernetes`, which populates
+# `log_fields`.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-flux-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.flux-system\.(helm|kustomize|notification|source)-controller-[^.]*\.manager\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["msg"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end
