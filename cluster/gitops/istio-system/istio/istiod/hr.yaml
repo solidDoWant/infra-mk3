@@ -74,8 +74,11 @@ spec:
         # `istioctl analyze` covers the real need without the runtime noise.
         enableAnalysis: false
       priorityClassName: system-cluster-critical
+      # istiod, and the pilot-agent and Envoy of injected pods and gateways.
+      logAsJson: true
     meshConfig:
       trustDomain: istio.cluster.local
+      accessLogEncoding: JSON
       extensionProviders:
         - name: authentik
           envoyExtAuthzHttp:

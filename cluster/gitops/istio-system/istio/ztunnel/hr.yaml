@@ -16,6 +16,7 @@ spec:
       version: 1.30.5
   values:
     profile: ambient
+    logAsJson: true
     caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
     # Defaults to the bare `istiod.<istioNamespace>.svc:15012`, which cannot resolve
     # absolutely and so burns three NXDOMAINs against the search list first.

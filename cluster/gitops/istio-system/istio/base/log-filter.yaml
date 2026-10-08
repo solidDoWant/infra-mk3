@@ -1,0 +1,68 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Sets `_msg` for istio components logging JSON (`global.logAsJson` and
+# equivalents): istiod, istio-cni, ztunnel, istio-csr, and the gateways'
+# pilot-agent and Envoy. The `kubernetes` filter has already merged the JSON
+# into `log_fields`.
+# - `msg`, or `message` for ztunnel. A multi-line message (config and
+#   kubeconfig dumps) keeps its first line; the rest goes to `log_fields.detail`.
+# - Levels: `warn` becomes `warning`. istio-csr's klog JSON has no level: `v`
+#   marks info, its absence error.
+# - The one plain-text startup line (`<YYYY/MM/DD HH:MM:SS> <LEVEL> <msg>`,
+#   Go automemlimit) is parsed too.
+# Gateway access logs have no message; parse-istio-gateway-logs
+# (networking/gateways/ingress) handles them.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-istio-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  # Gateway pods are <gateway>-<gatewayclass>-<hash>-<suffix>.
+  matchRegex: ^kube\.(istio-system\.(istiod-[^.]*\.discovery|istio-cni-node-[^.]*\.install-cni|ztunnel-[^.]*\.istio-proxy|cert-manager-istio-csr-[^.]*\.cert-manager-istio-csr)|networking\.[^.]+-gateway-[^.]*\.istio-proxy)\.
+  filters:
+    - lua:
+        call: promote_istio
+        code: |
+          local levels = { trace = "trace", debug = "debug", info = "info", warn = "warning", warning = "warning", error = "error", critical = "fatal", fatal = "fatal" }
+          local gotext = "^(%d%d%d%d/%d%d/%d%d %d%d:%d%d:%d%d) (%u+) (.*)$"
+
+          function promote_istio(tag, ts, record)
+            local f = record["log_fields"]
+            if type(f) ~= "table" then
+              local line = record["log"]
+              if type(line) ~= "string" then
+                return 0, ts, record
+              end
+              local time, lvl, text = line:match(gotext)
+              if not time then
+                return 0, ts, record
+              end
+              record["log_fields"] = { time = time, level = levels[lvl:lower()] or lvl:lower(), msg = text }
+              record["log"] = text
+              return 2, ts, record
+            end
+            local key = f["msg"] ~= nil and "msg" or "message"
+            local msg = f[key]
+            if type(msg) ~= "string" then
+              return 0, ts, record
+            end
+            local first, rest = msg:match("^([^\n]*)\n(.*)$")
+            if first then
+              msg = first:gsub("[%s:]+$", "")
+              f[key] = msg
+              f["detail"] = rest:gsub("%s+$", "")
+            end
+            if f["level"] == nil and f["caller"] ~= nil then
+              f["level"] = f["v"] ~= nil and "info" or "error"
+            elseif type(f["level"]) == "string" then
+              f["level"] = levels[f["level"]] or f["level"]
+            end
+            record["log"] = msg
+            return 2, ts, record
+          end
