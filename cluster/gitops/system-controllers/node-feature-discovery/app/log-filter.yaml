@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the worker's per-pass pair (`starting feature discovery...`, `feature
+# discovery completed`), logged every sleepInterval (60s) on every node. Label
+# updates and errors are separate lines and still ship. Named to sort before
+# `kubernetes`, so it matches the raw klog line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-nfd-worker-discovery-pass
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.system-controllers\.node-feature-discovery-worker-[^.]*\.worker\.
+  filters:
+    - grep:
+        exclude: 'log ^I\d{4} [\d:.]+ +\d+ nfd-worker\.go:\d+\] "(starting feature discovery\.\.\.|feature discovery completed)"$'
