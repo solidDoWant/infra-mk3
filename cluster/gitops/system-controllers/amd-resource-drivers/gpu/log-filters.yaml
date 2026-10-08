@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
+# Drops the kubelet plugin's liveness-probe echo: the gRPC health check sends an
+# empty NodePrepareResources to its own socket every 10s (period hard-coded in
+# the chart), and the driver logs each call at V(0), so verbosity can't gate it.
+#
+# Only zero-claim calls drop; real prepares and all unprepares ship. Named to
+# sort before parse-klog, so it matches the raw klog line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-amd-gpu-dra-healthcheck-prepare
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.system-controllers\.amd-resource-drivers-gpu-k8s-gpu-dra-driver-kubeletplugin-[^.]*\.plugin\.
+  filters:
+    - grep:
+        exclude: 'log ^I\d{4} [\d:.]+ +\d+ driver\.go:\d+\] PrepareResourceClaims is called: number of claims: 0\s*$'
