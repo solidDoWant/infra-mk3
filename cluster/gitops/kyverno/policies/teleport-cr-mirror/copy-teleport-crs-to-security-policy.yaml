@@ -59,15 +59,24 @@ spec:
         # source names should make this rare in practice.
         #
         # Each field falls back to request.oldObject: on DELETE admission
-        # events request.object is null (only oldObject is populated), so
-        # without the fallback the synchronize cleanup resolves to a literal
-        # "{{ request.object.kind }}" GVK, hits "schema not found", and never
-        # deletes the mirror — leaving it orphaned in security.
+        # events request.object is null (only oldObject is populated). In
+        # practice deleting a source still leaves its mirror in security
+        # (Kyverno 1.16): delete the mirror by hand.
         apiVersion: "{{ request.object.apiVersion || request.oldObject.apiVersion }}"
         kind: "{{ request.object.kind || request.oldObject.kind }}"
         name: "{{ request.object.metadata.name || request.oldObject.metadata.name }}"
         namespace: security
         synchronize: true
-        clone:
-          namespace: "{{ request.namespace }}"
-          name: "{{ request.object.metadata.name || request.oldObject.metadata.name }}"
+        # data, not clone: the mirror must carry the operator's deletion
+        # finalizer. A clone matches the source, which has none, so every
+        # sync stripped it, and the operator re-added it and re-upserted the
+        # resource into Teleport (~1.7k times a day). The API server refuses
+        # new finalizers on an object being deleted, so this can't block a
+        # deletion.
+        data:
+          metadata:
+            labels: "{{ request.object.metadata.labels || `{}` }}"
+            annotations: "{{ request.object.metadata.annotations || `{}` }}"
+            finalizers:
+              - resources.teleport.dev/deletion
+          spec: "{{ request.object.spec || `{}` }}"
