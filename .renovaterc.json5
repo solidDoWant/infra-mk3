@@ -235,6 +235,15 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "VictoriaMetrics: regenerate the k8s-stack chart's vendored rules and dashboards",
+      matchPackageNames: ["/victoria-metrics-k8s-stack$/"],
+      postUpgradeTasks: {
+        commands: ["go -C cluster/gitops/monitoring/victoria-metrics/sync-job/tool run ."],
+        fileFilters: ["cluster/gitops/monitoring/victoria-metrics/sync-job/generated/**"],
+        installTools: { golang: {}, helm: {} },
+      },
+    },
+    {
       description: "VictoriaLogs + its Grafana datasource plugin",
       groupName: "victoria-logs",
       matchPackageNames: ["victoriametrics/victoria-logs", "victoriametrics-logs-datasource"],

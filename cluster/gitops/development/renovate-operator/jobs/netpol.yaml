@@ -1,7 +1,7 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
-# Discovery and executor pods spawned by the operator for the "renovate"
-# RenovateJob. Renovate needs to reach every datasource it looks up, so each
+# Discovery and executor pods spawned by the operator for the RenovateJobs in
+# renovatejob.yaml. Renovate needs to reach every datasource it looks up, so each
 # newly managed ecosystem (or vanity Go import host) needs an entry here; a
 # missing host shows up as a lookup failure in the run log and a Hubble drop.
 apiVersion: cilium.io/v2
@@ -11,8 +11,12 @@ metadata:
 specs:
   - description: renovate
     endpointSelector:
-      matchLabels:
-        renovate-operator.mogenius.com/renovatejob: renovate
+      matchExpressions:
+        - key: renovate-operator.mogenius.com/renovatejob
+          operator: In
+          values:
+            - renovate
+            - renovate-infra-mk3
     egress:
       # DNS resolution
       - toEndpoints:
@@ -102,6 +106,9 @@ specs:
           # cspell:words gopkg
           - matchName: gopkg.in
           - matchName: go.uber.org
+
+          # Helm install for postUpgradeTasks (victoria-metrics k8s-stack sync-job)
+          - matchName: get.helm.sh
 
           # Terraform providers (Coder templates)
           - matchName: registry.terraform.io
