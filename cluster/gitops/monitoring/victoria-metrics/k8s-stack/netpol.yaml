@@ -101,8 +101,10 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
-      # Access to the k8s API server for service discovery
-      - toEntities:
+      # Access to the k8s API server for service discovery, and for the
+      # config-reloader to read the config Secret
+      - &to_apiserver
+        toEntities:
           - kube-apiserver
         toPorts:
           - ports:
@@ -130,6 +132,19 @@ specs:
           - ports:
               - port: http
                 protocol: TCP
+      # Operator-injected config-reloader sidecar: kubelet probes and metrics
+      - &config_reloader_probes
+        fromEntities:
+          - host
+        toPorts: &config_reloader_ports
+          - ports:
+              - port: reloader-http
+                protocol: TCP
+      - &config_reloader_metrics
+        fromEndpoints:
+          - matchLabels:
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *config_reloader_ports
   - description: vmalert
     endpointSelector: &vmalert_matcher
       matchLabels:
@@ -175,6 +190,8 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+      - *config_reloader_probes
+      - *config_reloader_metrics
   - description: vmalertmanager
     endpointSelector: &alertmanager_matcher
       matchLabels:
@@ -182,6 +199,8 @@ specs:
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
     egress:
       - *dns_resolution
+      # config-reloader reads the config Secret
+      - *to_apiserver
       # Gossip protocol between peers
       - toEndpoints:
           - *alertmanager_matcher
@@ -227,6 +246,8 @@ specs:
       - fromEndpoints:
           - *alertmanager_matcher
         toPorts: *alertmanager_ports
+      - *config_reloader_probes
+      - *config_reloader_metrics
   - description: vmclusterlb-vmauth-balancer
     endpointSelector:
       matchLabels:

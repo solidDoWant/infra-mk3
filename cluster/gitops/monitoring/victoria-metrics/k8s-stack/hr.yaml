@@ -28,6 +28,10 @@ spec:
       crds:
         enabled: false
         plain: false
+        # Pre-delete hook that runs `kubectl delete` on every VM CR kind in the
+        # namespace (VMCluster included) when the release is uninstalled.
+        cleanup:
+          enabled: false
       operator:
         # Delete the VM version of prom resources if the prom resources are deleted
         enable_converter_ownership: true
@@ -43,8 +47,8 @@ spec:
         #
         # These are the PER-COMPONENT variants deliberately. The cluster-wide
         # VM_VMCLUSTERDEFAULT_USEDEFAULTRESOURCES would also strip defaults from
-        # requestsLoadBalancer (vmclusterlb), which has no explicit resources here
-        # and would silently drop to BestEffort.
+        # vminsert and vmstorage. requestsLoadBalancer (vmclusterlb) takes the
+        # VM_VMAUTHDEFAULT_* defaults instead.
         - name: VM_VMCLUSTERDEFAULT_VMSELECTDEFAULT_USEDEFAULTRESOURCES
           value: "false"
         - name: VM_VMAGENTDEFAULT_USEDEFAULTRESOURCES
@@ -69,6 +73,9 @@ spec:
         enabled: true
         minAvailable: 1
       admissionWebhooks:
+        # The chart defaults to Ignore so that installs don't race the webhook
+        # server. Fail keeps invalid CRs from being admitted.
+        policy: Fail
         certManager:
           enabled: true
           issuer:
@@ -79,6 +86,23 @@ spec:
             # cert-manager ca injector will handle updating the webhook
             # Kyverno will reload the actual deployment
             duration: 4h
+            commonName: VictoriaMetrics operator
+            subject:
+              countries:
+                - US
+              provinces:
+                - ${SECRET_STATE}
+              organizations:
+                - infra-mk3
+            secretTemplate:
+              labels:
+                kyverno.home.arpa/reload: "true"
+    # The sync job downloads the rules and dashboards from unpinned upstream
+    # branches and applies them imperatively. ../sync-job/tool runs it offline
+    # against these values and vendors the output instead. Rerun it after
+    # changing defaultRules or defaultDashboards.
+    syncJob:
+      enabled: false
     defaultRules:
       rules:
         # Disabled - the upstream rule's `histogram_quantile(0.01, ...)` design
@@ -96,6 +120,39 @@ spec:
         etcdDatabaseHighFragmentationRatio:
           create: false
     defaultDashboards:
+      dashboards:
+        # Same UIDs as ../../grafana/kps-dashboards. Duplicates make
+        # grafana-operator overwrite one with the other.
+        apiserver: &disabled
+          enabled: false
+        cluster-total: *disabled
+        k8s-resources-cluster: *disabled
+        k8s-resources-namespace: *disabled
+        k8s-resources-node: *disabled
+        k8s-resources-nodes-overview: *disabled
+        k8s-resources-pod: *disabled
+        k8s-resources-workload: *disabled
+        k8s-resources-workloads-namespace: *disabled
+        namespace-by-pod: *disabled
+        namespace-by-workload: *disabled
+        persistentvolumesusage: *disabled
+        pod-total: *disabled
+        workload-total: *disabled
+        # Windows/AIX/Darwin/multicluster/Prometheus, and USE-method dashboards
+        # covered by node-exporter-full
+        k8s-resources-multicluster: *disabled
+        k8s-resources-windows-cluster: *disabled
+        k8s-resources-windows-namespace: *disabled
+        k8s-resources-windows-pod: *disabled
+        k8s-windows-cluster-rsrc-use: *disabled
+        k8s-windows-node-rsrc-use: *disabled
+        nodes-aix: *disabled
+        nodes-darwin: *disabled
+        prometheus: *disabled
+        prometheus-remote-write: *disabled
+        node-cluster-rsrc-use: *disabled
+        node-rsrc-use: *disabled
+        nodes: *disabled
       grafanaOperator: &grafana_operator
         enabled: true
         spec:
@@ -128,7 +185,6 @@ spec:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
                   - license.victoriametrics.com
-            # This will not work until https://github.com/VictoriaMetrics/operator/pull/1275 is merged and released
             podMetadata:
               labels:
                 endpoints.netpols.home.arpa/time-series-supplier: "true"
@@ -298,9 +354,6 @@ spec:
                 volumeMode: Filesystem
           extraArgs:
             downsampling.period: 30d:1m,180d:30m,1y:1h,2y:4h,5y:12h,10y:1d
-            # Per-metric-name query usage for vmui's cardinality explorer and
-            # /api/v1/status/metric_names_stats. Off by default in this version.
-            storage.trackMetricNamesStats: "true"
             # retentionFilter: # TODO set retention filters for specific low value, high volume metrics
           volumes:
             - name: victoria-metrics-license-service-serving-cert
@@ -355,9 +408,9 @@ spec:
             endpoints.netpols.home.arpa/alertmanager-server: "true"
       # config: # TODO
       # TODO discord receiver(s). Send different priority and/or labeled alerts to different channels, with different notification settings.
-    # vmagent and vmalert instances point at the wrong service, but there isn't an easy workaround for this.
-    # They should point at the vmclusterlb instance instead of vmselect and vminsert directly. For details, see
-    # https://github.com/VictoriaMetrics/helm-charts/issues/2024
+    # With requestsLoadBalancer enabled, the operator points the vminsert-* and vmselect-*
+    # Services at vmclusterlb, so the chart's defaults already go through it. The explicit
+    # vmclusterlb URLs below are equivalent.
     vmalert:
       spec:
         hostAliases:
@@ -443,6 +496,9 @@ spec:
           # This is because cilium is exporting a ton of metrics, largely due to some pods making IPv6 requests which are unsupported on my network.
           # TODO find the pods and fix them
           promscrape.maxScrapeSize: 32MiB
+          # Keeps per-target original labels out of memory (only shown on /targets).
+          # The chart doesn't set this, and the binary default is false.
+          promscrape.dropOriginalLabels: "true"
         inlineRelabelConfig:
           # Adding the same label on every single metric doesn't add any information
           - action: labeldrop
@@ -488,13 +544,13 @@ spec:
     defaultDatasources:
       grafanaOperator: *grafana_operator
       victoriametrics:
-        # TODO remove this block once the chart is >=0.68.0 (drops the version pin).
-        # Replicates the chart default list purely to override the plugin
-        # version -- the chart pins 0.15.1, which predates the Grafana 13 React
-        # 19 work. 0.23.4 is the first release declaring Grafana 13 support;
-        # 0.25.2 additionally fixes a Grafana 13 variable-editor crash.
-        # Keep in sync with the chart default when bumping the chart.
-        # See https://github.com/VictoriaMetrics/victoriametrics-datasource/issues/532
+        # Replicates the chart default list to pin the plugin version (the chart
+        # installs "latest"). 0.25.2 is the first release that fixes a Grafana 13
+        # variable-editor crash, see
+        # https://github.com/VictoriaMetrics/victoriametrics-datasource/issues/532
+        # The chart default also sets `uid`s; they are left unset so the existing
+        # datasources keep their UIDs. Keep in sync with the chart default when
+        # bumping the chart.
         datasources:
           - name: VictoriaMetrics
             type: prometheus
@@ -504,6 +560,9 @@ spec:
             isDefault: false
             access: proxy
             type: victoriametrics-metrics-datasource
+            # Without this the chart doesn't add the plugin to the GrafanaDatasource,
+            # and grafana-operator uninstalls it.
+            plugin: true
             version: "0.25.2"
     grafana:
       enabled: false
@@ -808,37 +867,19 @@ spec:
           component: ~
       vmScrape: *control_plane_scrape_config
   postRenderers:
-    # Fix the webhook certificate to meet reasonable standards
-    # The added fields will not be needed upon next release
+    # Drop the webhook certificate's DNS names that lack the svc or
+    # svc.cluster.local domains. The chart has no value for these.
     - kustomize:
         patches:
           - patch: |
-              # Set the:
-              # * Subject
-              # * Secret labels
-              # * Common name
-              - op: add
-                path: /spec/subject
-                value:
-                  countries:
-                    - US
-                  provinces:
-                    - ${SECRET_STATE}
-                  organizations:
-                    - infra-mk3
-              - op: add
-                path: /spec/secretTemplate
-                value:
-                  labels:
-                    kyverno.home.arpa/reload: "true"
-              - op: add
-                path: /spec/commonName
-                value: VictoriaMetrics operator
-              # Remove the:
-              # * DNS name without the svc or svc.cluster.local domains
+              - op: test
+                path: /spec/dnsNames/0
+                value: victoria-metrics-operator
               - op: remove
                 path: /spec/dnsNames/0
-              # Because this is the second remove operation, the old second item is now the first
+              - op: test
+                path: /spec/dnsNames/0
+                value: victoria-metrics-operator.monitoring
               - op: remove
                 path: /spec/dnsNames/0
             target:

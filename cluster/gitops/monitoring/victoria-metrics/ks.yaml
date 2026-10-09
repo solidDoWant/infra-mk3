@@ -91,6 +91,30 @@ spec:
     - name: rook-ceph-cluster
     - name: openebs
     - name: fluent-crds
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# The k8s-stack chart's default rules and dashboards, vendored from its sync
+# job by sync-job/tool.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name victoria-metrics-sync-job
+spec:
+  targetNamespace: monitoring
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/monitoring/victoria-metrics/sync-job/generated
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: victoria-metrics-crds
+    - name: grafana-crds
 # Haven't really used this so I'm disabling it.
 # ---
 # # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
