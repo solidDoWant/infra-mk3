@@ -26,5 +26,8 @@ spec:
   monitorAccount: vmagent-victoria-metrics-k8s-stack
   serviceMonitorNamespace: system-controllers
   workloadUpdateStrategy:
-    workloadUpdateMethods:
-      - LiveMigrate
+    # Paused: VMIs started on <=v1.6 negotiated virtio-net USO, which the v1.7+
+    # launcher QEMU rejects, so live migration to a new launcher always fails
+    # (kubevirt/kubevirt#16386). Restore LiveMigrate once every VMI has been
+    # cold-restarted onto a current launcher.
+    workloadUpdateMethods: []
