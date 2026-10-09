@@ -10,8 +10,17 @@ spec:
       rules:
         # Covers every controller-runtime operator. CR status is not a reliable
         # signal: some (e.g. Dragonfly) keep reporting Ready while every reconcile fails.
+        # Terminal errors are excluded: they are never retried, and CNPG emits one for
+        # every reconcile of an already-deleted Backup (nightly dr-job cleanup).
+        # `or ... * 0` keeps operators that lack the terminal metric.
         - alert: OperatorReconcileErrors
-          expr: sum by (namespace, job, controller) (rate(controller_runtime_reconcile_errors_total[15m])) > 0
+          expr: |
+            sum by (namespace, job, controller) (rate(controller_runtime_reconcile_errors_total[15m]))
+              - (
+                sum by (namespace, job, controller) (rate(controller_runtime_terminal_reconcile_errors_total[15m]))
+                or sum by (namespace, job, controller) (rate(controller_runtime_reconcile_errors_total[15m])) * 0
+              )
+              > 0
           # Rides out transient optimistic-lock conflicts during rollouts
           for: 30m
           labels:
