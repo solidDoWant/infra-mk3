@@ -68,6 +68,13 @@ specs:
           - ports:
               - port: "8444"
                 protocol: TCP
+      # Kubelet probes (/healthz, /readyz)
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8444"
+                protocol: TCP
       # Metrics
       - fromEndpoints:
           - matchLabels:
