@@ -22,9 +22,7 @@ spec:
     # undeclared key, key: immich_bull:..."). allow-undeclared-keys restores the
     # Redis-compatible behavior BullMQ relies on (single instance, so it only
     # trades some Lua throughput for compatibility — safe, atomicity preserved).
-    # NOTE: `args` replaces the chart default, so --proactor_threads is repeated.
     args:
-      - --proactor_threads=2
       - --default_lua_flags=allow-undeclared-keys
     certificates:
       serving:
