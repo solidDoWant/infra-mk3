@@ -17,9 +17,9 @@ spec:
   values:
     controllers:
       system-upgrade-controller:
-        replicas: 2
-        podDisruptionBudget:
-          minAvailable: 1
+        # >=v0.15.3 exits at startup without write access to its Plan CRD, which
+        # Flux owns. Restore 2 replicas + PDB once that's optional upstream.
+        replicas: 0
         serviceAccount:
           identifier: *app_name
         pod:
