@@ -12,10 +12,16 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: descheduler-charts
-      version: 0.36.0
+      version: 0.37.0
   values:
     kind: Deployment
     replicas: 2
+    # Chart always renders this, which disables the Kyverno revision-limit policy.
+    revisionHistoryLimit: 1
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+    hostUsers: false
     # Right-sized 2026-08-01 from 14d of metrics. Chart default is 500m/256Mi;
     # measured p95 CPU 5m (p99 7m, max 19m) and peak working set 109Mi. The
     # descheduler only does work on its interval, so it is idle almost always.
