@@ -154,6 +154,23 @@ spec:
                 - create
                 - patch
                 - update
+            # The controller rewrites its embedded Plan CRD on every start and
+            # exits if it can't. The CRD already exists (Flux), so no create.
+            - apiGroups:
+                - apiextensions.k8s.io
+              resources:
+                - customresourcedefinitions
+              verbs:
+                - list
+            - apiGroups:
+                - apiextensions.k8s.io
+              resources:
+                - customresourcedefinitions
+              resourceNames:
+                - plans.upgrade.cattle.io
+              verbs:
+                - get
+                - update
             # Leader election
             - apiGroups:
                 - coordination.k8s.io
