@@ -15,7 +15,8 @@ spec:
         name: infra-mk3
   values:
     clusterName: teleport-audit
-    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
+    teleportCa:
+      optional: true
     certificates:
       client:
         ca:

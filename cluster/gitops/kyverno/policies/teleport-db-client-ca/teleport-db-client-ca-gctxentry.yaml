@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/globalcontextentry_v2beta1.json
+# Teleport's db-client CA bundle, shared by every database chart's CA secret
+# generator policy. One poll per kyverno controller pod, instead of one call
+# per policy evaluation, which tripped Teleport's webapi rate limiter (429).
+apiVersion: kyverno.io/v2beta1
+kind: GlobalContextEntry
+metadata:
+  name: teleport-db-client-ca
+spec:
+  apiCall:
+    method: GET
+    service:
+      url: https://teleport.${SECRET_PUBLIC_DOMAIN_NAME}/webapi/auth/export?type=db-client&format=json
+    refreshInterval: 1m
+    retryLimit: 3
+  # Load-bearing: without a projection, kyverno never clears a failed refresh's
+  # error, so one failure poisons the entry until the controller restarts.
+  projections:
+    - name: pem
+      jmesPath: >-
+        [].data |
+        [*].base64_decode(@) |
+        join('', @)

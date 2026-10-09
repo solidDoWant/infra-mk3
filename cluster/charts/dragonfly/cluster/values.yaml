@@ -27,7 +27,12 @@ certificates:
         - ${SECRET_STATE}
       organizations:
         - infra-mk3
-teleportDomainName: ""
+teleportCa:
+  # Kyverno GlobalContextEntry holding Teleport's db-client CA bundle
+  globalContextEntry: teleport-db-client-ca
+  # Fall back to no Teleport CA when the entry is unavailable. Only for
+  # databases Teleport itself depends on.
+  optional: false
 users:
   # example-application:
   #   username: application_username

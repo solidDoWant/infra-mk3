@@ -15,7 +15,6 @@ spec:
         name: infra-mk3
   values:
     serviceName: immich
-    teleportDomainName: teleport.${SECRET_PUBLIC_DOMAIN_NAME}
     # Immich's job queue (BullMQ) runs Lua scripts that access keys without
     # declaring them in KEYS[]. Dragonfly rejects this by default, which breaks
     # the bull-board dashboard at /admin/queues ("script tried accessing
