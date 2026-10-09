@@ -28,10 +28,10 @@ specs:
           - ports:
               - port: "9090"
                 protocol: TCP
-      # Kubelet readiness probe (tcpSocket on 9090)
+      # Kubelet probes (controller-runtime health server)
       - fromEntities:
           - host
         toPorts:
           - ports:
-              - port: "9090"
+              - port: "8081"
                 protocol: TCP
