@@ -94,6 +94,10 @@ spec:
                 metadata:
                   name: placeholder-value-does-not-matter
                 spec:
+                  # Release secrets are cached (decoded) by every apiserver, so
+                  # each revision kept costs apiserver memory. 2 keeps a rollback
+                  # target.
+                  maxHistory: 2
                   install:
                     remediation:
                       retries: 5
