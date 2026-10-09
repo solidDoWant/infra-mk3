@@ -75,7 +75,7 @@ RUN helm plugin install https://github.com/jkroepke/helm-secrets --version v4.6.
     helm plugin install https://github.com/databus23/helm-diff --version v3.9.11
 
 # kustomize
-COPY --from=registry.k8s.io/kustomize/kustomize:v5.8.1 /app/kustomize /usr/local/bin/kustomize
+COPY --from=registry.k8s.io/kustomize/kustomize:v5.8.3 /app/kustomize /usr/local/bin/kustomize
 
 # Cilium CLI
 RUN mkdir -pv /tmp/cilium && \
