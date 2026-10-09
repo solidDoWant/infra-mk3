@@ -24,8 +24,11 @@ spec:
       NodeFeatureGroupAPI: true
     prometheus:
       enable: true
+    # The chart renders `revisionHistoryLimit: null` when unset, which resets the
+    # Kyverno-applied limit to the API default (10) on every upgrade.
     master:
       replicaCount: 2
+      revisionHistoryLimit: 1
       hostUsers: false
       podDisruptionBudget:
         enable: true
@@ -37,6 +40,7 @@ spec:
         limits:
           memory: 64Mi
     worker:
+      revisionHistoryLimit: 1
       resources:
         requests:
           cpu: 5m
@@ -45,6 +49,7 @@ spec:
           memory: 64Mi
     gc:
       replicaCount: 1
+      revisionHistoryLimit: 1
       hostUsers: false
       resources:
         requests:
