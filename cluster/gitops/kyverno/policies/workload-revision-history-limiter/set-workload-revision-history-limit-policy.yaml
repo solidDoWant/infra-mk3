@@ -5,17 +5,41 @@ kind: ClusterPolicy
 metadata:
   name: set-workload-revision-history-limit
 spec:
+  # A webhook outage must not block workload creation.
+  failurePolicy: Ignore
   rules:
+    # The creator owns the API-defaulted value (10), so the background rules'
+    # ownership precondition never matches a new workload. Set it at admission
+    # instead. CREATE only: a manager that later writes the field (a chart value,
+    # an operator rewriting its spec) wins, with no fight loop.
+    - name: set-revision-history-limit-on-create
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - StatefulSet
+                - DaemonSet
+              operations:
+                - CREATE
+      preconditions:
+        all:
+          - key: "{{ request.object.spec.revisionHistoryLimit || `10` }}"
+            operator: Equals
+            value: 10
+      mutate:
+        patchStrategicMerge:
+          spec:
+            revisionHistoryLimit: 1
     - name: set-deployment-revision-history-limit
       match:
         any:
           - resources:
               kinds:
                 - Deployment
-      # Skip when any non-Kyverno field manager owns spec.revisionHistoryLimit,
-      # so we don't fight operators / charts that template the field. Allows
-      # mutation when only Kyverno's background-controller owns it, or when no
-      # manager claims it (e.g. brand-new resources on CREATE).
+      # Skip when any non-Kyverno manager owns spec.revisionHistoryLimit, so we
+      # don't fight operators / charts that set it. Note the creator owns the
+      # defaulted value, so this only reaches workloads Kyverno already owns.
       preconditions:
         all:
           - key: '{{ request.object.metadata.managedFields[?fieldsV1."f:spec"."f:revisionHistoryLimit" != null && manager != ''background-controller''] | length(@) }}'

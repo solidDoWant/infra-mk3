@@ -29,6 +29,8 @@ spec:
       # RenovateJobs only live in this namespace.
       ownNamespaceOnly: true
     deployment:
+      # The chart renders 10, which the Kyverno revision-limit policy won't override.
+      revisionHistoryLimit: 1
       podLabels:
         # Ingress allow into the openid-configuration-proxy.
         endpoints.netpols.home.arpa/oidc-querier: "true"
