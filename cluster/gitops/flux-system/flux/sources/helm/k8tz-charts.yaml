@@ -6,4 +6,5 @@ metadata:
   name: k8tz-charts
   namespace: flux-system # Needed for https://kubesearch.dev/ indexing
 spec:
-  url: https://k8tz.github.io/k8tz
+  url: oci://ghcr.io/k8tz/k8tz/charts
+  type: oci
