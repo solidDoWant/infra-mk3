@@ -21,13 +21,12 @@ specs:
               - port: "6443"
                 protocol: TCP
     ingress:
-      # NOTE: v0.18 will combine the port names to a shared "http" port
       # Kubelet for healthcheck
       - fromEntities:
           - host
         toPorts:
           - ports:
-              - port: health
+              - port: http
                 protocol: TCP
       # Metrics
       - fromEndpoints:
@@ -36,7 +35,7 @@ specs:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: metrics
+              - port: http
                 protocol: TCP
   - <<: *nfd_master
     description: node-feature-discovery-worker
@@ -53,6 +52,13 @@ specs:
       # Access to k8s api to cleanup stale NFD resources
       - *to_k8s_api_server
     ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
       # Metrics
       - fromEndpoints:
           - matchLabels:
@@ -60,5 +66,5 @@ specs:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
         toPorts:
           - ports:
-              - port: metrics
+              - port: http
                 protocol: TCP
