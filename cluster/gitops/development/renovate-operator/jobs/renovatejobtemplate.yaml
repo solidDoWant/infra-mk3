@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/renovatejobtemplate_v1alpha1.json
+# Shared by the RenovateJobs in renovatejob.yaml. Fields set on a job replace
+# the template's field entirely (no deep merge).
+apiVersion: renovate-operator.mogenius.com/v1alpha1
+kind: RenovateJobTemplate
+metadata:
+  name: renovate
+spec:
+  schedule: "0 * * * *"
+  # Slim image: tools (Go, Terraform, Python, Nix, ...) are installed on demand
+  # (binarySource: install).
+  image: ghcr.io/renovatebot/renovate:44.148.4
+  provider:
+    name: github
+  # The operator mints a short-lived installation token from these and injects
+  # it as RENOVATE_TOKEN. The token covers every repository the App is
+  # installed on.
+  githubAppReference:
+    secretName: renovate-github-app
+    appIdSecretKey: app-id
+    installationIdSecretKey: installation-id
+    pemSecretKey: private-key.pem
+  skipForks: true
+  parallelism: 2
+  # VM-level isolation: the pods run package-manager hooks and tools
+  # downloaded at run time.
+  runtimeClassName: kata
+  metadata:
+    annotations:
+      # k8tz's timezone mounts break kata pods (Ubuntu-based image).
+      k8tz.io/inject: "false"
+  resources:
+    requests:
+      cpu: 500m
+      memory: &memory 2Gi
+    limits:
+      memory: *memory
+  # Configured as the GitHub App's own webhook (Issues + Pull request events),
+  # so no per-repo webhook sync is needed. The operator routes each event to
+  # the job that discovered the repository.
+  webhook:
+    enabled: true
+    authentication:
+      enabled: true
+      secretRef:
+        name: renovate-webhook-token
+        key: token
+  renovateConfig:
+    fileName: config.json5
+    inline: |
+      {
+        binarySource: "install",
+        onboarding: true,
+        // Commits are made through the GitHub API, so GitHub signs them as
+        // the App.
+        platformCommit: "enabled",
+      }

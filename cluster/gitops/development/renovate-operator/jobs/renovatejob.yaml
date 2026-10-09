@@ -1,56 +1,32 @@
 ---
 # yaml-language-server: $schema=../../../../../schemas/crds/renovatejob_v1alpha1.json
-# Scope is whatever repositories the GitHub App is installed on (autodiscovery,
-# no filters).
+# Every repository the GitHub App is installed on, except infra-mk3. No
+# postUpgradeTasks commands are allowed here: the command is matched by string,
+# but the code it runs comes from the repository being processed.
 apiVersion: renovate-operator.mogenius.com/v1alpha1
 kind: RenovateJob
 metadata:
   name: renovate
 spec:
-  schedule: "0 * * * *"
-  # Slim image: tools (Go, Terraform, Python, Nix, ...) are installed on demand
-  # (binarySource: install).
-  image: ghcr.io/renovatebot/renovate:44.148.4
-  provider:
-    name: github
-  # The operator mints a short-lived installation token from these and injects
-  # it as RENOVATE_TOKEN.
-  githubAppReference:
-    secretName: renovate-github-app
-    appIdSecretKey: app-id
-    installationIdSecretKey: installation-id
-    pemSecretKey: private-key.pem
-  skipForks: true
-  parallelism: 2
-  # VM-level isolation: the pods run package-manager hooks and tools
-  # downloaded at run time.
-  runtimeClassName: kata
-  metadata:
-    annotations:
-      # k8tz's timezone mounts break kata pods (Ubuntu-based image).
-      k8tz.io/inject: "false"
-  resources:
-    requests:
-      cpu: 500m
-      memory: &memory 2Gi
-    limits:
-      memory: *memory
-  # Configured as the GitHub App's own webhook (Issues + Pull request events),
-  # so no per-repo webhook sync is needed.
-  webhook:
-    enabled: true
-    authentication:
-      enabled: true
-      secretRef:
-        name: renovate-webhook-token
-        key: token
-  renovateConfig:
-    fileName: config.json5
-    inline: |
-      {
-        binarySource: "install",
-        onboarding: true,
-        // Commits are made through the GitHub API, so GitHub signs them as
-        // the App.
-        platformCommit: "enabled",
-      }
+  templateRef:
+    name: renovate
+  # Case-insensitive, like the glob in renovate-infra-mk3, so the two jobs
+  # never both pick up the repository.
+  discoveryFilters:
+    - "!/^soliddowant\\/infra-mk3$/i"
+---
+# yaml-language-server: $schema=../../../../../schemas/crds/renovatejob_v1alpha1.json
+# infra-mk3 only, with postUpgradeTasks commands allowed. Anyone who can push to
+# infra-mk3 already controls the cluster through Flux.
+apiVersion: renovate-operator.mogenius.com/v1alpha1
+kind: RenovateJob
+metadata:
+  name: renovate-infra-mk3
+spec:
+  templateRef:
+    name: renovate
+  discoveryFilters:
+    - solidDoWant/infra-mk3
+  extraEnv:
+    - name: RENOVATE_ALLOWED_COMMANDS
+      value: '["^go -C cluster/gitops/monitoring/victoria-metrics/sync-job/tool run \\.$"]'
