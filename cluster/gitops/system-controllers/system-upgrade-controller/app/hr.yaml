@@ -38,6 +38,8 @@ spec:
               SYSTEM_UPGRADE_JOB_KUBECTL_IMAGE: registry.k8s.io/kubectl:v1.37.1
               #   SYSTEM_UPGRADE_JOB_POD_REPLACEMENT_POLICY: Failed # Required for Talos
               SYSTEM_UPGRADE_CONTROLLER_NAME: *app_name
+              # Off unless set; required with replicas > 1.
+              SYSTEM_UPGRADE_CONTROLLER_LEADER_ELECT: "true"
               SYSTEM_UPGRADE_CONTROLLER_NODE_NAME:
                 valueFrom:
                   fieldRef:
@@ -113,6 +115,7 @@ spec:
                 - patch
                 - update
                 - watch
+            # Drain jobs run as this service account
             - apiGroups:
                 - ""
               resources:
@@ -120,12 +123,16 @@ spec:
               verbs:
                 - get
                 - list
+                - delete
             - apiGroups:
                 - apps
               resources:
                 - daemonsets
+                - replicasets
+                - statefulsets
               verbs:
                 - get
+                - list
             - apiGroups:
                 - ""
               resources:
@@ -138,6 +145,31 @@ spec:
                 - jobs/status
               verbs:
                 - get
+            - apiGroups:
+                - ""
+              resources:
+                - events
+              verbs:
+                - get
+                - create
+                - patch
+                - update
+            # Leader election
+            - apiGroups:
+                - coordination.k8s.io
+              resources:
+                - leases
+              verbs:
+                - create
+            - apiGroups:
+                - coordination.k8s.io
+              resources:
+                - leases
+              resourceNames:
+                - system-upgrade-controller
+              verbs:
+                - get
+                - update
       bindings:
         system-upgrade-role:
           type: ClusterRoleBinding
