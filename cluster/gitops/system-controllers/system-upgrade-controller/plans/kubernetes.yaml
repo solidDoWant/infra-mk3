@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schemas/crds/plan_v1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/upgrade.cattle.io/plan_v1.json
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
@@ -25,8 +25,9 @@ spec:
     # converted
     - name: upgrade-scripts
       path: /scripts
+      defaultMode: 0500
   exclusive: true
-  # TODO enable this after next controller/crd release
+  # TODO set an upgrade window
   # window:
   prepare: &prepare
     image: alpine/k8s:1.37.1
@@ -43,21 +44,12 @@ spec:
         value: ${TALOS_VERSION}
       - name: KUBERNETES_VERSION
         value: ${KUBERNETES_VERSION}
-    # Needed until https://github.com/rancher/system-upgrade-controller/pull/337 is merged
     command:
-      - bash
+      - /scripts/kubernetes.sh
     args:
-      - -c
-      - >-
-        cp -rv /scripts /tmp/scripts &&
-        chmod -R 500 /tmp/scripts &&
-        /tmp/scripts/kubernetes.sh prepare
+      - prepare
   drain: {}
   upgrade:
     <<: *prepare
     args:
-      - -c
-      - >-
-        cp -rv /scripts /tmp/scripts &&
-        chmod -R 500 /tmp/scripts &&
-        /tmp/scripts/kubernetes.sh upgrade
+      - upgrade
