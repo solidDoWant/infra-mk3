@@ -67,12 +67,14 @@ netpol:
       # - matchLabels:
       #     app: some-application-2
 
+# Dragonfly exits unless maxmemory (80% of the memory limit) >= 256MB per thread
+proactorThreads: 1
 resources:
   requests:
     cpu: 100m
-    # Needs (thread_count * 256Mi) / 0.8
-    memory: 640Mi
+    # (proactorThreads * 256Mi) / 0.8 = 320Mi lands exactly on the floor; 5% margin
+    memory: 336Mi
   limits:
-    memory: 640Mi
-args:
-  - --proactor_threads=2 # Dragonfly requires 256MB of RAM per core
+    memory: 336Mi
+# Extra server flags
+args: []

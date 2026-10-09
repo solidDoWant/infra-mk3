@@ -6,14 +6,14 @@ metadata:
   name: {{ include "cluster-resource-name" . }}
 spec:
   # Pinned so operator bumps don't change the server version
-  image: ghcr.io/dragonflydb/dragonfly:v1.33.1
+  image: ghcr.io/dragonflydb/dragonfly:v1.40.2
   replicas: {{ .Values.instances }}
-  env:
-    # Block version checks, see
-    # https://github.com/dragonflydb/dragonfly/blob/555d6b518a1cc0fe1332e98cb895077af666e967/src/server/version_monitor.cc#L133
-    - name: DFLY_DEV_ENV
-      value: "true"
-  args: {{ .Values.args | toYaml | nindent 4 }}
+  args:
+    - --proactor_threads={{ .Values.proactorThreads }}
+    - --version_check=false
+    {{- with .Values.args }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
   authentication:
     clientCaCertSecret:
       key: ca.crt
