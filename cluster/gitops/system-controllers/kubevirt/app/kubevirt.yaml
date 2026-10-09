@@ -8,9 +8,27 @@ spec:
   configuration:
     developerConfiguration:
       featureGates:
-        - EnableVirtioFsConfigVolumes
         - EnableVirtioFsStorageVolumes
         - CPUManager
+      # v1.9 enables every Beta gate by default; opt out of all of them, per
+      # upstream's production guidance. Opt in by moving a gate to featureGates.
+      disabledFeatureGates:
+        - DeclarativeHotplugVolumes
+        - ExternalNetResourceInjection
+        - GPUsWithDRA
+        - HostDevicesWithDRA
+        - ImageVolume
+        - KubevirtSeccompProfile
+        - LibvirtHooksServerAndClient
+        - NodeRestriction
+        - OptOutRoleAggregation
+        - PasstBinding
+        - PodSecondaryInterfaceNamingUpgrade
+        - RebootPolicy
+        - Snapshot
+        - Template
+        - VmiMemoryOverheadReport
+        - WorkloadEncryptionSEV
     evictionStrategy: LiveMigrate
     migrations:
       allowAutoConverge: true
