@@ -51,13 +51,22 @@ spec:
             namespace: "{{ request.namespace }}"
           - <<: *target
             kind: StatefulSet
+            # The Dragonfly operator owns its StatefulSet pod template and strips
+            # the tag, so each write is a new revision and a replica restart.
+            # restart-dragonfly-on-secret-change tags the CR instead.
+            selector:
+              matchExpressions:
+                - key: app.kubernetes.io/managed-by
+                  operator: NotIn
+                  values:
+                    - dragonfly-operator
           - <<: *target
             kind: DaemonSet
         patchStrategicMerge:
           spec:
             template: &template
               metadata:
-                annotations:
+                annotations: &reload_annotations
                   # This MUST be deterministic (a pure function of the trigger
                   # object), not random.
                   #
@@ -207,3 +216,22 @@ spec:
               <<: *template
               spec:
                 initContainers: *secret_envfrom_change
+    - <<: *secret_rule
+      name: restart-dragonfly-on-secret-change
+      mutate:
+        targets:
+          - apiVersion: dragonflydb.io/v1alpha1
+            kind: Dragonfly
+            namespace: "{{ request.namespace }}"
+            preconditions:
+              any:
+                - key: "{{ target.spec.tlsSecretRef.name || '' }}"
+                  operator: Equals
+                  value: *object_name
+                - key: "{{ target.spec.authentication.clientCaCertSecret.name || '' }}"
+                  operator: Equals
+                  value: *object_name
+        patchStrategicMerge:
+          spec:
+            podMetadata:
+              annotations: *reload_annotations

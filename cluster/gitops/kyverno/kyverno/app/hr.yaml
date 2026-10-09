@@ -105,6 +105,18 @@ spec:
               resources:
                 - "*"
               verbs: *all_common_verbs
+            # restart-workload-on-config-changes restarts Dragonfly through
+            # its CR, as the operator owns the StatefulSet pod template.
+            - apiGroups:
+                - dragonflydb.io
+              resources:
+                - dragonflies
+              verbs:
+                - get
+                - list
+                - patch
+                - update
+                - watch
             # Read-only, and only the reports controller actually needs these:
             # its resource-report controller opens a watch on every kind
             # matched by any policy, and a missing grant leaves that kind with
