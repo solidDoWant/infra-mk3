@@ -23,10 +23,22 @@ resource "coder_agent" "main" {
   os   = "linux"
   arch = "amd64"
 
+  # Container-scoped (cgroup) usage. With the kubelet's static CPU manager a
+  # Guaranteed pod gets exclusive cores via cpuset and no CFS quota, so
+  # `coder stat cpu` finds no limit; fall back to nproc, which honours cpuset.
   metadata {
     display_name = "CPU Usage"
     key          = "0_cpu_usage"
-    script       = "coder stat cpu --host"
+    script       = <<-EOT
+      coder stat cpu -o json | tr -d ' \n' | awk -v n="$(nproc)" -F'[{:,}]' '{
+        for (i = 1; i < NF; i++) {
+          if ($i == "\"used\"") u = $(i + 1)
+          if ($i == "\"total\"") t = $(i + 1)
+        }
+        if (t == "null") t = n
+        printf "%.2f/%g cores (%d%%)", u, t, u / t * 100
+      }'
+    EOT
     interval     = 10
     timeout      = 1
   }
@@ -34,7 +46,7 @@ resource "coder_agent" "main" {
   metadata {
     display_name = "RAM Usage"
     key          = "1_ram_usage"
-    script       = "coder stat mem --host"
+    script       = "coder stat mem"
     interval     = 10
     timeout      = 1
   }
@@ -53,9 +65,9 @@ resource "coder_agent" "main" {
   metadata {
     display_name = "Load Average (Host)"
     key          = "${length(local.pvcs) + 2}_load_host"
-    # get load avg scaled by number of cores
+    # Host load avg scaled by the host's core count (nproc is the pod's cpuset)
     script   = <<-EOT
-      echo "$(cat /proc/loadavg | awk '{ print $1 }') $(nproc)" | awk '{ printf "%0.2f", $1/$2 }'
+      echo "$(cat /proc/loadavg | awk '{ print $1 }') $(grep -c ^processor /proc/cpuinfo)" | awk '{ printf "%0.2f", $1/$2 }'
     EOT
     interval = 60
     timeout  = 1
