@@ -26,7 +26,7 @@ locals {
 }
 
 # Resources
-data "kubernetes_secret" "claude_oauth_token" {
+data "kubernetes_secret_v1" "claude_oauth_token" {
   count = local.allow_claude_access ? 1 : 0
 
   metadata {
@@ -62,5 +62,5 @@ module "claude_code" {
 
   # mcp = "" # TODO
 
-  claude_code_oauth_token = data.kubernetes_secret.claude_oauth_token[0].data["CLAUDE_CODE_OAUTH_TOKEN"]
+  claude_code_oauth_token = data.kubernetes_secret_v1.claude_oauth_token[0].data["CLAUDE_CODE_OAUTH_TOKEN"]
 }

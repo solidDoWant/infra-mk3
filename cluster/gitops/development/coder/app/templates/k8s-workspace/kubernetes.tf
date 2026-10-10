@@ -47,7 +47,7 @@ locals {
   # the internal service URL (coder.development.svc.cluster.local), not the
   # public domain. teleport.<public-domain> resolves to the internal ingress
   # gateway (allowed by the netpol egress rule below).
-  public_domain  = data.kubernetes_config_map.cluster_info.data["public_domain_name"]
+  public_domain  = data.kubernetes_config_map_v1.cluster_info.data["public_domain_name"]
   teleport_proxy = "teleport.${local.public_domain}:443"
 
   env_vars = {
@@ -238,7 +238,7 @@ provider "kubernetes" {}
 
 # Flux-substituted cluster values (e.g. the public domain) for use in the
 # template. See the coder-workspace-cluster-info ConfigMap.
-data "kubernetes_config_map" "cluster_info" {
+data "kubernetes_config_map_v1" "cluster_info" {
   metadata {
     name      = "coder-workspace-cluster-info"
     namespace = local.namespace
@@ -286,7 +286,7 @@ provider "kubectl" {
   token                  = local.is_in_cluster ? file("/var/run/secrets/kubernetes.io/serviceaccount/token") : null
 }
 
-resource "kubernetes_persistent_volume_claim" "pvcs" {
+resource "kubernetes_persistent_volume_claim_v1" "pvcs" {
   for_each = local.pvcs
 
   metadata {
@@ -409,7 +409,7 @@ resource "kubectl_manifest" "deployment" {
               [for k, v in local.pvcs : {
                 name = k
                 persistentVolumeClaim = {
-                  claimName = kubernetes_persistent_volume_claim.pvcs[k].metadata[0].name
+                  claimName = kubernetes_persistent_volume_claim_v1.pvcs[k].metadata[0].name
                 }
               }],
               local.enable_nfs ? [{

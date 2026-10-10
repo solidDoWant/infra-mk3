@@ -74,7 +74,7 @@ resource "kubectl_manifest" "root_datavolume" {
 # KubeVirt reads the `userdata` key (it also accepts `userData`). The token
 # changes on every workspace build, so this is updated in place each time; the
 # VMI is recreated on start, which is when KubeVirt reads it.
-resource "kubernetes_secret" "cloudinit" {
+resource "kubernetes_secret_v1" "cloudinit" {
   metadata {
     name        = "${local.name}-cloudinit"
     namespace   = local.namespace
@@ -121,7 +121,7 @@ resource "kubectl_manifest" "vm" {
   # to finish importing before it boots the VMI.
   depends_on = [
     kubectl_manifest.root_datavolume,
-    kubernetes_secret.cloudinit,
+    kubernetes_secret_v1.cloudinit,
   ]
 
   server_side_apply = true
@@ -245,7 +245,7 @@ resource "kubectl_manifest" "vm" {
             {
               name = "persistent"
               persistentVolumeClaim = {
-                claimName = kubernetes_persistent_volume_claim.persistent.metadata[0].name
+                claimName = kubernetes_persistent_volume_claim_v1.persistent.metadata[0].name
               }
             },
             {
@@ -274,7 +274,7 @@ resource "kubectl_manifest" "vm" {
               # IS spelled out, which makes the asymmetry easy to trip over.)
               cloudInitNoCloud = {
                 secretRef = {
-                  name = kubernetes_secret.cloudinit.metadata[0].name
+                  name = kubernetes_secret_v1.cloudinit.metadata[0].name
                 }
               }
             }

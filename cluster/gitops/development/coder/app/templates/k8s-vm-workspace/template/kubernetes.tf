@@ -58,7 +58,7 @@ locals {
   # the internal service URL (coder.development.svc.cluster.local), not the
   # public domain. teleport.<public-domain> resolves to the internal ingress
   # gateway (allowed by the netpol egress rule below).
-  public_domain  = data.kubernetes_config_map.cluster_info.data["public_domain_name"]
+  public_domain  = data.kubernetes_config_map_v1.cluster_info.data["public_domain_name"]
   teleport_proxy = "teleport.${local.public_domain}:443"
 
   # Immutable base-image tag this template version deploys. The image build
@@ -271,7 +271,7 @@ provider "kubernetes" {}
 
 # Flux-substituted cluster values (e.g. the public domain) for use in the
 # template. See the coder-workspace-cluster-info ConfigMap.
-data "kubernetes_config_map" "cluster_info" {
+data "kubernetes_config_map_v1" "cluster_info" {
   metadata {
     name      = "coder-workspace-cluster-info"
     namespace = local.namespace
@@ -312,7 +312,7 @@ provider "kubectl" {
 # live-migratable (RWO would pin the VMI to one node). RBD (ssd-replicated-3x)
 # supports RWX in raw-block mode, and only one VMI mounts the filesystem at a
 # time, so there is no concurrent-writer hazard.
-resource "kubernetes_persistent_volume_claim" "persistent" {
+resource "kubernetes_persistent_volume_claim_v1" "persistent" {
   metadata {
     name        = "${local.name}-persistent"
     namespace   = local.namespace
