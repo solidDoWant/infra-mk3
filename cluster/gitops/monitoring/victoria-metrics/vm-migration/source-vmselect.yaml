@@ -41,6 +41,9 @@ spec:
             - -replicationFactor=2
             - -dedup.minScrapeInterval=20s
             - -downsampling.period=7d:1m,14d:5m,30d:15m,90d:1h,2y:4h,5y:12h,10y:1d
+            # Day-long exports of busy, not yet downsampled metrics exceed the
+            # default 1e9.
+            - -search.maxSamplesPerQuery=20000000000
             - -storageNode=vmstorage-victoria-metrics-k8s-stack-0.vmstorage-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8401,vmstorage-victoria-metrics-k8s-stack-1.vmstorage-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8401,vmstorage-victoria-metrics-k8s-stack-2.vmstorage-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8401
           ports:
             - name: http
