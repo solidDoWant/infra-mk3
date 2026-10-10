@@ -126,6 +126,7 @@ spec:
             expr: count(label_replace(node_cpu_seconds_total{mode="idle",job="node-exporter",namespace="monitoring"}, "node", "$1", "instance", "(.+)")) by(cluster,node)
         # Excludes rules that are empty while nothing is wrong: no targets
         # down, no scheduling in 5m, no KubeVirt migrations/restores/guest load.
+        # count:up0: VictoriaMetrics/helm-charts#3274, fixed by #3275 (after 0.95.2).
         RecordingRulesNoData:
           spec:
             expr: sum(vmalert_recording_rules_last_evaluation_samples{recording!~"count:up0|cluster_quantile:scheduler_.+|kubevirt_vmi_migration_data_total_bytes|kubevirt_vmi_guest_vcpu_queue|vmi:kubevirt_vmi_guest_queue_length:sum|kubevirt_vmsnapshot_.+|.+:kubevirt_vmsnapshot_.+"}) without(id) < 1
@@ -670,6 +671,7 @@ spec:
         # The default plus pod volumes, which the scrape drops anyway. A kubelet
         # restart stacks a second mount on each existing pod volume; the
         # duplicate mountpoints fail every scrape with "collected before".
+        # Stacking: siderolabs/talos#13352, fixed in Talos v1.13.3.
         - --collector.filesystem.mount-points-exclude=^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+|var/lib/containers/storage/.+|var/lib/kubelet/pods/.+)($|/)
       sidecarVolumeMount:
         # Auto-creates an in-memory emptyDir volume named "textfile" and mounts

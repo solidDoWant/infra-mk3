@@ -254,7 +254,8 @@ spec:
       existingSecret:
         secretName: authentik-geoip-credentials
     # The chart's recording rules use pre-`_total` django-prometheus names and
-    # metrics authentik doesn't export. Its alerts are in alerts.yaml.
+    # metrics authentik doesn't export (goauthentik/helm#491). Its alerts are
+    # in alerts.yaml.
     prometheus:
       rules:
         enabled: false
