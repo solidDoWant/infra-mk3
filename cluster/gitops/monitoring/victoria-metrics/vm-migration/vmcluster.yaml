@@ -35,10 +35,11 @@ spec:
                 app.kubernetes.io/instance: vm-migration
             topologyKey: kubernetes.io/hostname
     resources:
-      # Test copies at 8 streams with the CPU cap below ran within 8Gi. The
-      # nodes have little memory left while the k8s-stack vmstorage is at 20Gi.
+      # Building the index for 2025's ~7M series/day reached 83% of 8Gi
+      # (~4Gi heap + ~2.6Gi caches). Memory comes from lowering the k8s-stack
+      # vmstorage to 12Gi, so node totals stay the same.
       requests:
-        memory: &vmstorage_memory 8Gi
+        memory: &vmstorage_memory 16Gi
         cpu: "1"
       limits:
         memory: *vmstorage_memory
