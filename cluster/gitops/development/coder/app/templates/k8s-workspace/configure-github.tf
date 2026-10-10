@@ -26,7 +26,7 @@ data "coder_parameter" "github_external_auth_permissions" {
   name         = "github_external_auth_permissions"
   display_name = "GitHub workspace permissions"
   description  = "Select the GitHub external auth to use within the workspace. WARNING: This will expose your GitHub access token to Claude Code if enabled."
-  default      = "github"
+  default      = "github-restricted"
   type         = "string"
   form_type    = "radio"
   icon         = "/icon/github.svg"
@@ -34,8 +34,8 @@ data "coder_parameter" "github_external_auth_permissions" {
   order        = local.github_integration_order_start + 1
 
   option {
-    name  = "Default"
-    value = "github"
+    name  = "Restricted - basic repo access only"
+    value = "github-restricted"
   }
 
   option {
@@ -48,7 +48,7 @@ locals {
   github_enable_in_workspace_auth = tobool(data.coder_parameter.enable_github_integration.value) && data.coder_parameter.github_external_auth_permissions[0].value != ""
   github_workspace_auth_id        = local.github_enable_in_workspace_auth ? data.coder_parameter.github_external_auth_permissions[0].value : ""
   github_workspace_token = local.github_enable_in_workspace_auth ? (
-    local.github_workspace_auth_id == "github" ? data.coder_external_auth.github_in_workspace_full[0].access_token :
+    local.github_workspace_auth_id == "github-restricted" ? data.coder_external_auth.github_in_workspace_restricted[0].access_token :
     ""
   ) : ""
 }
@@ -91,11 +91,10 @@ data "coder_external_auth" "github_provisioner" {
   id = "github"
 }
 
-# For some weird reason there needs to be a data source for each option
-data "coder_external_auth" "github_in_workspace_full" {
+data "coder_external_auth" "github_in_workspace_restricted" {
   count = local.enable_github_integration ? 1 : 0
 
-  id = "github"
+  id = "github-restricted"
 }
 
 module "git_commit_signing" {
