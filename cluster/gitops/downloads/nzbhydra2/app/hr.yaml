@@ -24,6 +24,10 @@ spec:
               repository: ghcr.io/home-operations/nzbhydra2
               tag: 7.19.2
             env:
+              # Overrides the image's -Xmx256M (nzbhydra.yml `xmx` is only read
+              # by the upstream wrapper, which the image doesn't use). Heap OOM
+              # inside H2 mid-write corrupts the database.
+              JAVA_TOOL_OPTIONS: -Xmx768M
               # Console layout for fluent-bit (parse-nzbhydra2-logs): no ANSI
               # colors or padding, full logger name. NZBHydra2 has no JSON
               # console option; its logback config reads this variable, and
