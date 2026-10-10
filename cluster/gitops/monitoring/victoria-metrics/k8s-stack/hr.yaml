@@ -119,6 +119,16 @@ spec:
         # also requires the DB to use >50% of its quota.
         etcdDatabaseHighFragmentationRatio:
           create: false
+        # Upstream joins on the real pod name; the node-exporter scrape
+        # rewrites `pod` to <service>-<node> and `instance` to the node name.
+        "node:node_num_cpu:sum":
+          spec:
+            expr: count(label_replace(node_cpu_seconds_total{mode="idle",job="node-exporter",namespace="monitoring"}, "node", "$1", "instance", "(.+)")) by(cluster,node)
+        # Excludes rules that are empty while nothing is wrong: no targets
+        # down, no scheduling in 5m, no KubeVirt migrations/restores/guest load.
+        RecordingRulesNoData:
+          spec:
+            expr: sum(vmalert_recording_rules_last_evaluation_samples{recording!~"count:up0|cluster_quantile:scheduler_.+|kubevirt_vmi_migration_data_total_bytes|kubevirt_vmi_guest_vcpu_queue|vmi:kubevirt_vmi_guest_queue_length:sum|kubevirt_vmsnapshot_.+|.+:kubevirt_vmsnapshot_.+"}) without(id) < 1
     defaultDashboards:
       dashboards:
         # Same UIDs as ../../grafana/kps-dashboards. Duplicates make
