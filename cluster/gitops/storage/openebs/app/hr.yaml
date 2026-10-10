@@ -135,7 +135,7 @@ spec:
             # the Deployment. They are derived scheduling hints only; no volume
             # or PVC state lives in them.
             - --capacity-ownerref-level=2
-      plugin:
+      zfsPlugin:
         image:
           # ghcr.io mirrors docker.io/openebs; trailing slash required by the chart
           registry: ghcr.io/
