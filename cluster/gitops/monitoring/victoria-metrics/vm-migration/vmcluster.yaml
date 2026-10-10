@@ -1,0 +1,114 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/operator.victoriametrics.com/vmcluster_v1beta1.json
+# Temporary target for rebuilding the k8s-stack VMCluster's storage, which
+# carries a pre-v1.133 legacy indexdb. History is copied in with vmctl, then
+# each node's ZFS dataset is renamed under the k8s-stack vmstorage PV on the
+# same node. Remove this directory and its Kustomization afterwards.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMCluster
+metadata:
+  name: vm-migration
+spec:
+  # Must match the k8s-stack VMCluster.
+  retentionPeriod: "10y"
+  replicationFactor: 2
+  license:
+    keyRef:
+      name: victoria-metrics-license-key
+      key: licenseKey
+  vmstorage:
+    replicaCount: 3
+    # Same uid/gid (65534) as the k8s-stack vmstorage, so the files stay
+    # writable after the swap.
+    useStrictSecurity: true
+    podMetadata:
+      labels: &enterprise_labels
+        endpoints.netpols.home.arpa/victoriametrics-enterprise-component: "true"
+    # One per node: each node's dataset is swapped with the k8s-stack
+    # vmstorage dataset on the same node.
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: vmstorage
+                app.kubernetes.io/instance: vm-migration
+            topologyKey: kubernetes.io/hostname
+    resources:
+      # Test copies at 8 streams with the CPU cap below ran within 8Gi. The
+      # nodes have little memory left while the k8s-stack vmstorage is at 20Gi.
+      requests:
+        memory: &vmstorage_memory 8Gi
+        cpu: "1"
+      limits:
+        memory: *vmstorage_memory
+        # Keeps the copy from starving the control plane on these nodes (an
+        # uncapped test copy timed out kube-apiserver).
+        cpu: "4"
+    hostAliases: &license_host
+      - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+        hostnames:
+          - license.victoriametrics.com
+    volumes: &license_ca_volumes
+      - name: victoria-metrics-license-service-serving-cert
+        secret:
+          secretName: victoria-metrics-license-service-serving-cert
+          defaultMode: 0440
+          items:
+            - key: ca.crt
+              path: ca.crt
+    volumeMounts: &license_ca_mounts
+      - name: victoria-metrics-license-service-serving-cert
+        mountPath: /etc/ssl/certs/ca.crt
+        subPath: ca.crt
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              # Same as the k8s-stack vmstorage PVs, so the dataset quota
+              # matches after the swap.
+              storage: 392Gi
+          storageClassName: victoria-metrics-vmstorage
+    extraArgs:
+      # Must match the k8s-stack vmstorage.
+      downsampling.period: &downsampling_period 7d:1m,14d:5m,30d:15m,90d:1h,2y:4h,5y:12h,10y:1d
+      dedup.minScrapeInterval: &dedup_interval 20s
+  vminsert:
+    replicaCount: 4
+    useStrictSecurity: true
+    podMetadata:
+      labels: *enterprise_labels
+    resources:
+      requests:
+        memory: &vminsert_memory 1Gi
+        cpu: 250m
+      limits:
+        memory: *vminsert_memory
+        cpu: "2"
+    hostAliases: *license_host
+    volumes: *license_ca_volumes
+    volumeMounts: *license_ca_mounts
+    extraArgs:
+      # Must match the k8s-stack vminsert, or imported series with more labels
+      # are rejected.
+      maxLabelsPerTimeseries: "150"
+  vmselect:
+    replicaCount: 1
+    useStrictSecurity: true
+    podMetadata:
+      labels: *enterprise_labels
+    resources:
+      requests:
+        memory: &vmselect_memory 2Gi
+        cpu: 250m
+      limits:
+        memory: *vmselect_memory
+    hostAliases: *license_host
+    volumes: *license_ca_volumes
+    volumeMounts: *license_ca_mounts
+    extraArgs:
+      downsampling.period: *downsampling_period
+      dedup.minScrapeInterval: *dedup_interval

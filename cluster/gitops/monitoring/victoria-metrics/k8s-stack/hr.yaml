@@ -520,6 +520,9 @@ spec:
           # or here: https://docs.victoriametrics.com/operator/resources/vmcluster/
           # Point this at the application-aware LB instead of the insert service directly.
           - url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/insert/0/prometheus/api/v1/write
+          # Temporary dual-write into the vm-migration VMCluster. Remove before
+          # deleting it.
+          - url: http://vminsert-vm-migration.monitoring.svc.cluster.local.:8480/insert/0/prometheus/api/v1/write
         statefulMode:
         statefulStorage:
           # Temporarily store queued data when the process or pod is restarted.
