@@ -314,8 +314,7 @@ spec:
           # Sized for exporting history during the vmstorage migration: idle
           # ~3.7Gi (startup holds ~1.2Gi of deleted-series sets copied from the
           # legacy pre-v1.133 indexdb into every partition), export peaks
-          # ~8.2Gi. The rest of the node memory goes to the vm-migration
-          # vmstorage.
+          # ~8.2Gi.
           resources:
             requests:
               memory: 12Gi
@@ -367,7 +366,9 @@ spec:
             dedup.minScrapeInterval: *dedup_interval
             # Caches only; the rest of the limit is migration headroom.
             memory.allowedBytes: 6GiB
-            # retentionFilter: # TODO set retention filters for specific low value, high volume metrics
+            # Per-pool harbor_task_concurrency series (~529k/day) are kept for a day.
+            # TODO set retention filters for other low value, high volume metrics
+            retentionFilter: '{__name__="harbor_task_concurrency",pool!=""}:1d'
           volumes:
             - name: victoria-metrics-license-service-serving-cert
               secret:
@@ -521,9 +522,6 @@ spec:
           # or here: https://docs.victoriametrics.com/operator/resources/vmcluster/
           # Point this at the application-aware LB instead of the insert service directly.
           - url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/insert/0/prometheus/api/v1/write
-          # Temporary dual-write into the vm-migration VMCluster. Remove before
-          # deleting it.
-          - url: http://vminsert-vm-migration.monitoring.svc.cluster.local.:8480/insert/0/prometheus/api/v1/write
         statefulMode:
         statefulStorage:
           # Temporarily store queued data when the process or pod is restarted.
