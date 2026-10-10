@@ -77,6 +77,9 @@ spec:
       # Must match the k8s-stack vmstorage.
       downsampling.period: &downsampling_period 7d:1m,14d:5m,30d:15m,90d:1h,2y:4h,5y:12h,10y:1d
       dedup.minScrapeInterval: &dedup_interval 20s
+      # Purges the copied harbor_task_concurrency per-pool series (~529k/day)
+      # during merges, without delete_series tombstones.
+      retentionFilter: '{__name__="harbor_task_concurrency",pool!=""}:1d'
   vminsert:
     replicaCount: 4
     useStrictSecurity: true
