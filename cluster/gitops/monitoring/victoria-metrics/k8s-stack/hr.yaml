@@ -667,6 +667,10 @@ spec:
         - --no-collector.nfsd
         - --no-collector.rapl
         - --no-collector.tapestats
+        # The default plus pod volumes, which the scrape drops anyway. A kubelet
+        # restart stacks a second mount on each existing pod volume; the
+        # duplicate mountpoints fail every scrape with "collected before".
+        - --collector.filesystem.mount-points-exclude=^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+|var/lib/containers/storage/.+|var/lib/kubelet/pods/.+)($|/)
       sidecarVolumeMount:
         # Auto-creates an in-memory emptyDir volume named "textfile" and mounts
         # it readOnly on node-exporter; the sidecar writes to it below.
