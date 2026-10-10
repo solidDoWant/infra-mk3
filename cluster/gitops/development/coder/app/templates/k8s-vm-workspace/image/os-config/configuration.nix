@@ -17,6 +17,19 @@
     config = {
       allowUnfree = true;
     };
+    # The baked-in agent must speak the server's agent API version, and nixpkgs
+    # lags Coder releases. Keep in step with the server (../../../../hr.yaml).
+    overlays = [
+      (final: prev: {
+        coder = prev.coder.overrideAttrs (old: rec {
+          version = "2.38.0";
+          src = prev.fetchurl {
+            url = "https://github.com/coder/coder/releases/download/v${version}/coder_${version}_linux_amd64.tar.gz";
+            hash = "sha256-bJAmr0XxAZBReqMX0C0H89zlDIwVRIIv1lMVlsQ47XY=";
+          };
+        });
+      })
+    ];
   };
 
   nix = {
@@ -115,8 +128,7 @@
       # NFS client helpers (for the optional bulk-pool mount)
       nfs-utils
       # The Coder agent/CLI. The coder-agent service runs `coder agent`; users
-      # also get the `coder` CLI. Pinned via flake.lock - keep roughly in sync
-      # with the Coder server version.
+      # also get the `coder` CLI. Version pinned by the overlay above.
       coder
     ];
 
