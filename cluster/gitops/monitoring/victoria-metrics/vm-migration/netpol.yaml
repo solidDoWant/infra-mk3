@@ -148,6 +148,9 @@ specs:
               app.kubernetes.io/name: vmselect
               app.kubernetes.io/instance: victoria-metrics-k8s-stack
           - *vmselect_selector
+          - &source_vmselect
+            matchLabels:
+              app.kubernetes.io/name: vm-migration-source
         toPorts:
           - ports:
               - port: "8481"
@@ -166,4 +169,41 @@ specs:
         toPorts:
           - ports:
               - port: "8481"
+                protocol: TCP
+  - description: vm-migration-source vmselect, reading the k8s-stack vmstorage
+    endpointSelector: *source_vmselect
+    egress:
+      - *dns_resolution
+      - *to_license_service
+      - toEndpoints:
+          - &k8s_stack_vmstorage
+            matchLabels:
+              app.kubernetes.io/name: vmstorage
+              app.kubernetes.io/instance: victoria-metrics-k8s-stack
+        toPorts:
+          - ports:
+              - port: "8401"
+                protocol: TCP
+    ingress:
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8481"
+                protocol: TCP
+      - fromEndpoints:
+          - *vmctl_selector
+          - *metrics_scraper
+        toPorts:
+          - ports:
+              - port: "8481"
+                protocol: TCP
+  - description: k8s-stack vmstorage, from vm-migration-source
+    endpointSelector: *k8s_stack_vmstorage
+    ingress:
+      - fromEndpoints:
+          - *source_vmselect
+        toPorts:
+          - ports:
+              - port: "8401"
                 protocol: TCP

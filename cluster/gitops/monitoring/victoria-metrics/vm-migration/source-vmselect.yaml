@@ -1,0 +1,97 @@
+---
+# Temporary: vmselect reading the k8s-stack vmstorage, used only by the vmctl
+# copy. JSON export deduplicates replicas in vmselect, which needs far more
+# memory than queries do; the k8s-stack vmselect pods OOM-looped exporting
+# 2025 data, taking queries and alerting down with them.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vm-migration-source
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels: &labels
+      app.kubernetes.io/name: vm-migration-source
+  template:
+    metadata:
+      labels:
+        <<: *labels
+        endpoints.netpols.home.arpa/victoriametrics-enterprise-component: "true"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      hostAliases:
+        - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
+          hostnames:
+            - license.victoriametrics.com
+      containers:
+        - name: vmselect
+          image: victoriametrics/vmselect:v1.153.0-enterprise-cluster
+          args:
+            - -httpListenAddr=:8481
+            - -cacheDataPath=/select-cache
+            - -licenseFile=/etc/vm/secrets/victoria-metrics-license-key/licenseKey
+            # Same as the k8s-stack vmselect.
+            - -replicationFactor=2
+            - -dedup.minScrapeInterval=20s
+            - -downsampling.period=7d:1m,14d:5m,30d:15m,90d:1h,2y:4h,5y:12h,10y:1d
+            - -storageNode=vmstorage-victoria-metrics-k8s-stack-0.vmstorage-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8401,vmstorage-victoria-metrics-k8s-stack-1.vmstorage-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8401,vmstorage-victoria-metrics-k8s-stack-2.vmstorage-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8401
+          ports:
+            - name: http
+              containerPort: 8481
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            requests:
+              memory: &memory 10Gi
+              cpu: 500m
+            limits:
+              memory: *memory
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: cache
+              mountPath: /select-cache
+            - name: license
+              mountPath: /etc/vm/secrets/victoria-metrics-license-key
+              readOnly: true
+            - name: victoria-metrics-license-service-serving-cert
+              mountPath: /etc/ssl/certs/ca.crt
+              subPath: ca.crt
+      volumes:
+        - name: cache
+          emptyDir: {}
+        - name: license
+          secret:
+            secretName: victoria-metrics-license-key
+        - name: victoria-metrics-license-service-serving-cert
+          secret:
+            secretName: victoria-metrics-license-service-serving-cert
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm-migration-source
+spec:
+  selector:
+    app.kubernetes.io/name: vm-migration-source
+  ports:
+    - name: http
+      port: 8481
+      targetPort: http
