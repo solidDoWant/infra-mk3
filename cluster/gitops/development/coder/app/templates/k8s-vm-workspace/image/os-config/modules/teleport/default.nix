@@ -24,7 +24,9 @@
 let
   version = "18.11.0";
 
-  teleport = pkgs.callPackage ./nixpkgs-build-support { } {
+  # pnpm_10 is pinned at 10.34.0, which nixpkgs marks insecure; 10_latest carries
+  # the fixes.
+  teleport = pkgs.callPackage ./nixpkgs-build-support { pnpm_10 = pkgs.pnpm_10_latest; } {
     inherit version;
     hash = "sha256-6e+ViJfNzFMqJ7WsENQuy7cB6pAe+0EflHFGqQq+l2A=";
     vendorHash = "sha256-9W/4Rkq8+Vq8GggOaJq6aopqnAENCF5Ono3rUYwk23g=";

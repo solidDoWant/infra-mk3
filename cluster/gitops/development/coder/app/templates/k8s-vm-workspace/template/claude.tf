@@ -64,22 +64,3 @@ module "claude_code" {
 
   claude_code_oauth_token = data.kubernetes_secret.claude_oauth_token[0].data["CLAUDE_CODE_OAUTH_TOKEN"]
 }
-
-# ***************************************
-# TODO enable these in the future once tasks work better. Not enabling this now because task parameters cannot be configured yet, except for the prompt.
-# ***************************************
-# data "coder_parameter" "ai_prompt" {
-#   count = local.enable_claude_code ? 1 : 0
-#
-#   type = "string"
-#   name = "AI Prompt"
-#   # default     = ""
-#   # description = "Initial task prompt for Claude Code."
-#   # mutable     = true
-# }
-#
-# resource "coder_ai_task" "task" {
-#   count = local.enable_claude_code ? 1 : 0
-#
-#   app_id = module.claude_code.task_app_id
-# }

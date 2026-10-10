@@ -44,7 +44,7 @@ specs:
           - ports:
               - port: "5432"
                 protocol: TCP
-      # Access replicas for health check
+      # Access replicas for health check (8080) and embedded NATS pubsub (6222)
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: coder
@@ -52,6 +52,8 @@ specs:
         toPorts:
           - ports:
               - port: "8080"
+                protocol: TCP
+              - port: "6222"
                 protocol: TCP
       # Send emails via SMTP relay
       - toEndpoints:
@@ -102,6 +104,15 @@ specs:
         toPorts:
           - ports:
               - port: "8080"
+                protocol: TCP
+      # Embedded NATS pubsub between replicas
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: coder
+              app.kubernetes.io/instance: coder
+        toPorts:
+          - ports:
+              - port: "6222"
                 protocol: TCP
       # Allow traffic from coder-workspace pods
       - fromEndpoints:

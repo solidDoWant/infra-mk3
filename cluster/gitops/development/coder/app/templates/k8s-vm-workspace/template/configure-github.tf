@@ -34,11 +34,6 @@ data "coder_parameter" "github_external_auth_permissions" {
   order        = local.github_integration_order_start + 1
 
   option {
-    name  = "Default"
-    value = "github"
-  }
-
-  option {
     name  = "Restricted - basic repo access only"
     value = "github-restricted"
   }
@@ -53,7 +48,6 @@ locals {
   github_enable_in_workspace_auth = tobool(data.coder_parameter.enable_github_integration.value) && data.coder_parameter.github_external_auth_permissions[0].value != ""
   github_workspace_auth_id        = local.github_enable_in_workspace_auth ? data.coder_parameter.github_external_auth_permissions[0].value : ""
   github_workspace_token = local.github_enable_in_workspace_auth ? (
-    local.github_workspace_auth_id == "github" ? data.coder_external_auth.github_in_workspace_full[0].access_token :
     local.github_workspace_auth_id == "github-restricted" ? data.coder_external_auth.github_in_workspace_restricted[0].access_token :
     ""
   ) : ""
@@ -92,13 +86,6 @@ provider "github" {
 }
 
 data "coder_external_auth" "github_provisioner" {
-  count = local.enable_github_integration ? 1 : 0
-
-  id = "github"
-}
-
-# For some weird reason there needs to be a data source for each option
-data "coder_external_auth" "github_in_workspace_full" {
   count = local.enable_github_integration ? 1 : 0
 
   id = "github"
