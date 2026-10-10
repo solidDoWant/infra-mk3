@@ -221,9 +221,8 @@ spec:
             # came close to filling even the old limit, so this is headroom, not
             # a regression. CPU keeps request < limit: CPU is compressible, so
             # over-committing it costs throttling rather than an OOM kill.
-            # 8Gi while history is exported for the vmstorage migration.
             requests:
-              memory: &vmselect_memory 8Gi
+              memory: &vmselect_memory 3Gi
               cpu: 500m
             limits:
               # No CPU limit: CPU is compressible, so the request already sets a
