@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
+# Routes Renovate's ghcr.io lookups through a retrying proxy (envoy.yaml):
+# adds it to the executor pods as a native sidecar, plus the global config
+# that points lookups at it. The RenovateJobTemplate has no field for extra
+# containers, and a RenovateJob's extraEnv replaces the template's.
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: inject-renovate-ghcr-proxy
+spec:
+  # An unmutated pod looks up ghcr.io directly, as before this policy.
+  failurePolicy: Ignore
+  background: false
+  rules:
+    - name: inject-renovate-ghcr-proxy
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              # CREATE only: a pod spec is immutable, so mutating UPDATEs
+              # deadlocks finalizer removal on completed Job pods.
+              operations:
+                - CREATE
+              selector:
+                matchLabels:
+                  renovate-operator.mogenius.com/type: executor
+      mutate:
+        patchStrategicMerge:
+          spec:
+            initContainers:
+              - name: ghcr-proxy
+                image: envoyproxy/envoy:contrib-v1.39.3
+                restartPolicy: Always
+                securityContext:
+                  readOnlyRootFilesystem: true
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                      - ALL
+                  runAsNonRoot: true
+                resources:
+                  requests:
+                    cpu: 25m
+                    memory: 64Mi
+                  limits:
+                    memory: 64Mi
+                volumeMounts:
+                  - name: ghcr-proxy-config
+                    mountPath: /etc/envoy
+            containers:
+              - name: renovate
+                env:
+                  # Lookup only: the image references in files keep ghcr.io.
+                  # `\{{` stops Kyverno reading the Handlebars template.
+                  - name: RENOVATE_PACKAGE_RULES
+                    value: |-
+                      [{"matchDatasources":["docker"],"matchPackageNames":["ghcr.io/**"],"registryUrls":["http://localhost:10000"],"overridePackageName":"localhost:10000/\{{replace '^ghcr\\.io/' '' packageName}}"}]
+                  # allowInternal: loopback is an internal host. Credentials are
+                  # picked by request URL, so ghcr.io's would not apply here.
+                  # RENOVATE_TOKEN (GitHub App) comes from the operator's envFrom
+                  # Secret; Kubernetes expands it. `\$(` stops Kyverno reading
+                  # it as a $() reference.
+                  - name: RENOVATE_HOST_RULES
+                    value: |-
+                      [{"matchHost":"http://localhost:10000","hostType":"docker","allowInternal":true,"username":"x-access-token","password":"\$(RENOVATE_TOKEN)"}]
+                  # Renovate reads every GHCR page only when the host is
+                  # literally ghcr.io; through the proxy, the default 20-page cap
+                  # drops the newest tags (GHCR lists oldest-first).
+                  - name: RENOVATE_DOCKER_MAX_PAGES
+                    value: "100"
+            volumes:
+              - name: ghcr-proxy-config
+                configMap:
+                  name: renovate-ghcr-proxy-config
+                  defaultMode: 0444

@@ -1,0 +1,111 @@
+---
+# Plain-HTTP forward proxy on 127.0.0.1:10000 to ghcr.io, injected into the
+# Renovate executor pods by inject-ghcr-proxy-policy.yaml, which also routes
+# all ghcr.io lookups here.
+#
+# GHCR burst-limits with 429 and no Retry-After header; Renovate retries page
+# requests only twice, never retries its auth probe, and one failed page
+# discards the whole lookup as "no-result". Images with tens of thousands of
+# tags (immich: 30+ pages) hit it most. Envoy retries harder.
+admin:
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 8000
+
+# JSON lines for fluent-bit (promote-envoy-sidecar-message). %j escapes the
+# message for JSON.
+application_log_config:
+  log_format:
+    json_format:
+      time: "%Y-%m-%dT%T.%e%z"
+      level: "%l"
+      logger: "%n"
+      source: "%g:%#"
+      msg: "%j"
+
+node:
+  id: envoy-renovate-ghcr-proxy
+  cluster: development
+
+static_resources:
+  listeners:
+    - name: ghcr_listener
+      address:
+        socket_address:
+          address: 127.0.0.1
+          port_value: 10000
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ghcr
+                access_log:
+                  - name: envoy.access_loggers.stdout
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                      log_format:
+                        json_format:
+                          time: "%START_TIME%"
+                          method: "%REQ(:METHOD)%"
+                          path: "%REQ(:PATH)%"
+                          status: "%RESPONSE_CODE%"
+                          attempts: "%UPSTREAM_REQUEST_ATTEMPT_COUNT%"
+                          flags: "%RESPONSE_FLAGS%"
+                          duration_ms: "%DURATION%"
+                route_config:
+                  virtual_hosts:
+                    - name: ghcr
+                      domains:
+                        - "*"
+                      routes:
+                        - match:
+                            prefix: /
+                          route:
+                            cluster: ghcr
+                            host_rewrite_literal: ghcr.io
+                            # Under Renovate's 60s request timeout, so Envoy's
+                            # final answer arrives before Renovate gives up.
+                            timeout: 50s
+                            retry_policy:
+                              retry_on: retriable-status-codes,5xx,reset,connect-failure
+                              retriable_status_codes:
+                                - 429
+                              num_retries: 8
+                              per_try_timeout: 20s
+                              retry_back_off:
+                                base_interval: 0.25s
+                                max_interval: 5s
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    - name: ghcr
+      connect_timeout: 5s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: ghcr
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ghcr.io
+                      port_value: 443
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          sni: ghcr.io
+          common_tls_context:
+            validation_context:
+              trusted_ca:
+                filename: /etc/ssl/certs/ca-certificates.crt
+              match_typed_subject_alt_names:
+                - san_type: DNS
+                  matcher:
+                    exact: ghcr.io
