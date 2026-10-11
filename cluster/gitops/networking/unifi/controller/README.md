@@ -5,7 +5,7 @@ see the TODO in [`hr.yaml`](./hr.yaml).
 
 - LoadBalancer IP: `10.34.0.4` (Cilium LB-IPAM)
 - Inform URL for APs: `http://10.34.0.4/inform` (svc port 80 → container 8080)
-- Mongo: bundled MongoDB 3.6, listens only on `127.0.0.1:27117` inside the pod
+- Mongo: bundled MongoDB 8.0, listens only on `127.0.0.1:27117` inside the pod
 
 ## Recovering a factory-reset access point
 
@@ -85,7 +85,6 @@ forgetting/re-adopting it from scratch.
 
 The controller image ships only `mongod` (no `mongo`/`mongosh` shell), and Mongo
 binds to the pod's loopback, so the script `kubectl port-forward`s `27117` (which
-reaches the pod loopback) and queries it with `pymongo<4` via `uv` — modern
-pymongo refuses to talk to the ancient MongoDB 3.6 the controller bundles.
+reaches the pod loopback) and queries it with `pymongo` via `uv`.
 
 Requires `kubectl` (pointed at the cluster) and `uv`.
