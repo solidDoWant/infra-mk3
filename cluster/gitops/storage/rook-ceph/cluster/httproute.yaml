@@ -14,7 +14,27 @@ spec:
   rules:
     - backendRefs:
         - name: *app_name
-          port: 7000
+          port: 8443
+---
+# Re-encrypt to the dashboard (serving cert: dashboard-cert.yaml), validated
+# against the root CA.
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: rook-ceph-mgr-dashboard
+  labels:
+    app.kubernetes.io/part-of: rook-ceph-cluster
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: rook-ceph-mgr-dashboard
+  validation:
+    caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: root-ca-pub-cert
+    hostname: rook-ceph-mgr-dashboard.storage.svc.cluster.local
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

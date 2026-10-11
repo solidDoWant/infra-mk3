@@ -1,0 +1,140 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-ceph-dashboard-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Must be a Secret (not secretGenerator) so Flux substitution applies inside.
+  authentik-ceph-dashboard-application-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: Ceph dashboard application
+      labels:
+        blueprints.goauthentik.io/description: Resources for Ceph dashboard SSO
+    entries:
+      # Dependencies
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Implicit provider authentication
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Password authentication flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Invalidation flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Blueprint library
+          required: true
+      # The dashboard's SAML SP cert (public half of dashboard-saml-sp.sops.yaml).
+      # Authentik verifies the signed AuthnRequests with it and encrypts
+      # assertions to it. Ceph only requires signed responses once it has an SP
+      # keypair, so this is what keeps unsigned (forged) logins out.
+      - model: authentik_crypto.certificatekeypair
+        id: ceph-dashboard-sp-cert
+        identifiers:
+          name: Ceph dashboard SAML SP
+        attrs:
+          name: Ceph dashboard SAML SP
+          certificate_data: |
+            -----BEGIN CERTIFICATE-----
+            MIIEZTCCAs2gAwIBAgIUY/MIXOqWBluuC+IVkYJAX4ikE9wwDQYJKoZIhvcNAQEL
+            BQAwQjELMAkGA1UEBhMCVVMxEjAQBgNVBAoMCWluZnJhLW1rMzEfMB0GA1UEAwwW
+            Y2VwaC1kYXNoYm9hcmQtc2FtbC1zcDAeFw0yNjEwMTEyMDExMjRaFw0zNjEwMDgy
+            MDExMjRaMEIxCzAJBgNVBAYTAlVTMRIwEAYDVQQKDAlpbmZyYS1tazMxHzAdBgNV
+            BAMMFmNlcGgtZGFzaGJvYXJkLXNhbWwtc3AwggGiMA0GCSqGSIb3DQEBAQUAA4IB
+            jwAwggGKAoIBgQCZeFI3ARZtAGiv64OfJUXpdNE1EKlMocIEp1rP6QWSvL7Kt+kL
+            04qW/M67tHY6LGY39DdnPkn80r9u5LwTAmkgeheGxioPLLwH9ZihZdNGLJ/MERsI
+            6yMZ6rY0AeXZFQ4a8CDJK8XpPi67LdVIK4w+KbzY4MfD33HQ9II0g0Km8UmviZOY
+            kK3QeopMNyFTvE6ex+kFJp+diyDOa5+Ec8JlIGzVtagoXacaLU96wnAXZb3cJhEk
+            mHBuhaxGlN/NWhqqkcndvmNf/JUDSTBcQ8yN7SX8HjemWPU2IvcHgQFaZ/33cVOV
+            3/oBoOooubhZK/ZOJz4v8L1X7O96+UI+YPvZthdb7Pe3xxB/egsmpnRx8BUq3Yn1
+            jlvC1PonJFmHTEaL/Qaqg0HoWW4BsSWrY3NAPUyithYBOkQNRGXB///WXss+76J0
+            ewiCDt+zvFLrVy58UFFwJplnWHv0BkubEdUXhL8H+0QIcayDnjd0zpLhDUrVuLEp
+            8x7FxJk2I1sgCVkCAwEAAaNTMFEwHQYDVR0OBBYEFFTZEW9jcQ07KC1jtpXYhObl
+            4+d9MB8GA1UdIwQYMBaAFFTZEW9jcQ07KC1jtpXYhObl4+d9MA8GA1UdEwEB/wQF
+            MAMBAf8wDQYJKoZIhvcNAQELBQADggGBAA/1s9/1fuCjZIfkvFhs8mbiXW7C7TlN
+            f/Pwv8+y9lgwWanyYCfn2cokiit2dnJH6TcJR7JS9F0ggWw9lTA/gxNDlTTTrNTN
+            F2/vP2ZcT72+3ip/hreqa3lIFWoLnVS+EqJOloQ8d9v3qro8ha8v51SWXZ1x+VyT
+            NbiF6IUfrRSdpwsVqOKdrdcvLdGeGXUr7vWEwBHdcRGZ8ws6blTCSgG50UHmLEVa
+            6owv4ZdXFmmDIgh1AQDse3d0udq6wYzsR2EqYJMk4bZjYNmmde6Cjl0Jpr7zD3g8
+            9dOsE5xWxQI26QG53piNYtF0Pg+5MyJnP8hdYuLOUbDSMy+S7sljgieDMxW2OA8P
+            Do2IStMwgkf/5wfgPtq+YfFL05Hk351kapFvSj0WtD10637JhODhB9dZXiUtC/8j
+            +zfgMhOyULONSdS6N6GuuFeeG05X/VbYvNLEnkCOZef38FP8CKin3qPJdjU6UZZ0
+            cj/IwCDnW3sDQtCxV8JTATfQw+4zsHbSOg==
+            -----END CERTIFICATE-----
+      # Application
+      - model: authentik_providers_saml.samlprovider
+        id: ceph-dashboard-provider
+        identifiers:
+          name: Ceph dashboard
+        attrs:
+          name: Ceph dashboard
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          # Ceph builds these from the base URL passed to `sso setup saml2`
+          acs_url: https://rook.${SECRET_PUBLIC_DOMAIN_NAME}/auth/saml2
+          audience: https://rook.${SECRET_PUBLIC_DOMAIN_NAME}/auth/saml2/metadata
+          sp_binding: post
+          signing_kp:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          sign_assertion: true
+          sign_response: true
+          verification_kp: !KeyOf ceph-dashboard-sp-cert
+          encryption_kp: !KeyOf ceph-dashboard-sp-cert
+          property_mappings:
+            - !Find [
+                authentik_providers_saml.samlpropertymapping,
+                [managed, goauthentik.io/providers/saml/username],
+              ]
+            - !Find [
+                authentik_providers_saml.samlpropertymapping,
+                [managed, goauthentik.io/providers/saml/email],
+              ]
+          name_id_mapping:
+            !Find [
+              authentik_providers_saml.samlpropertymapping,
+              [managed, goauthentik.io/providers/saml/username],
+            ]
+      - model: authentik_core.application
+        id: ceph-dashboard-application
+        identifiers:
+          slug: ceph-dashboard
+        attrs:
+          name: Ceph dashboard
+          slug: ceph-dashboard
+          group: Infra access
+          provider: !KeyOf ceph-dashboard-provider
+          policy_engine_mode: any
+          meta_launch_url: https://rook.${SECRET_PUBLIC_DOMAIN_NAME}
+      # Groups
+      - model: authentik_core.group
+        id: ceph-admins-group
+        identifiers:
+          name: Ceph admins
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_CEPH_ADMINS_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf ceph-admins-group
+          target: !KeyOf ceph-dashboard-application

@@ -157,6 +157,18 @@ specs:
           - ports:
               - port: "9093"
                 protocol: TCP
+      # Authentik via the internal gateway, for the dashboard's SAML IdP
+      # metadata
+      - toEndpoints:
+          - &gateway_selector
+            matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
       # Prometheus access for the dashboard
       - toEndpoints:
           - matchLabels:
@@ -191,11 +203,7 @@ specs:
         toPorts: *mgr_ports
       # Dashboard
       - fromEndpoints:
-          - &gateway_selector
-            matchLabels:
-              io.kubernetes.pod.namespace: networking
-              app.kubernetes.io/name: ingress-gateways
-              gateway.networking.k8s.io/gateway-name: internal-gateway
+          - *gateway_selector
         toPorts:
           - ports:
               - port: dashboard
