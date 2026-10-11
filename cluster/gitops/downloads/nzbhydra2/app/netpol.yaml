@@ -61,6 +61,17 @@ specs:
               # Readarr instances port
               - port: "8787"
                 protocol: TCP
+      # OIDC back-channel via the openid-configuration-proxy (the canonical
+      # in-cluster OIDC origin; see security/authentik/openid-configuration-proxy).
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: security
+              app.kubernetes.io/name: openid-configuration-proxy
+              app.kubernetes.io/instance: openid-configuration-proxy
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
     ingress:
       # Kubelet for healthcheck
       - fromEntities:

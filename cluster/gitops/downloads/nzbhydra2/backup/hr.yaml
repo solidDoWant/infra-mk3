@@ -38,3 +38,5 @@ spec:
               - glob: logs
               - glob: lost+found
               - glob: restore
+              # Pre-migration DB copies kept for 14 days by the H2 upgrade (9.0.0)
+              - glob: database/nzbhydra.mv.db.old.bak.*

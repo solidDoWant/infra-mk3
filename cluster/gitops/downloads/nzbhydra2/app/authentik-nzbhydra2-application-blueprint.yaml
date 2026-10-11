@@ -39,35 +39,56 @@ stringData:
           identifiers:
             name: Blueprint library
           required: true
-      # Application
+      # Replaced by the OAuth2 provider below; provider names are unique
+      # across provider types, so this must be removed first.
       - model: authentik_providers_proxy.proxyprovider
+        state: absent
+        identifiers:
+          name: NZBHydra 2
+      # Hydra only accepts OIDC logins for usernames in its own config, so
+      # every user the application admits maps to its single `admin` user
+      # (see init-scripts/init-config.sh).
+      - model: authentik_providers_oauth2.scopemapping
+        id: nzbhydra2-user-scope
+        identifiers:
+          name: NZBHydra 2 user
+        attrs:
+          name: NZBHydra 2 user
+          scope_name: nzbhydra2
+          description: NZBHydra 2 username
+          expression: |
+            return {"nzbhydra2_user": "admin"}
+      # Application
+      - model: authentik_providers_oauth2.oauth2provider
         id: nzbhydra2-provider
         identifiers:
           name: NZBHydra 2
         attrs:
           name: NZBHydra 2
-          mode: forward_single
-          external_host: https://nzbhydra2.${SECRET_PUBLIC_DOMAIN_NAME}
-          intercept_header_auth: true
-          authentication_flow:
-            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
           authorization_flow:
             !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+          client_type: confidential
+          # Required: the model default is an empty list, which rejects every
+          # login. Hydra keeps its own session and never refreshes tokens.
+          grant_types:
+            - authorization_code
+          client_id: "${SECRET_NZBHYDRA2_AUTHENTIK_OIDC_CLIENT_ID}"
+          client_secret: "${SECRET_NZBHYDRA2_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          # Spring Security's default `{baseUrl}/login/oauth2/code/{registrationId}`.
+          redirect_uris:
+            - url: https://nzbhydra2.${SECRET_PUBLIC_DOMAIN_NAME}/login/oauth2/code/nzbhydra2
+              matching_mode: strict
+          signing_key:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
           invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
-          # Long-lived to avoid mid-session proxy-cookie renewal, which breaks the
-          # SPA's XHR/SignalR traffic via CORS on stock authentik (no PR #17233).
-          # Renewal then happens on a normal page load instead.
-          access_token_validity: days=7
-          refresh_token_validity: days=30
+          access_code_validity: minutes=1
+          access_token_validity: minutes=5
           property_mappings:
-            - !Find [
-                authentik_providers_oauth2.scopemapping,
-                [name, "authentik default OAuth Mapping: Application Entitlements"],
-              ]
-            - !Find [
-                authentik_providers_oauth2.scopemapping,
-                [name, "authentik default OAuth Mapping: OpenID 'email'"],
-              ]
             - !Find [
                 authentik_providers_oauth2.scopemapping,
                 [name, "authentik default OAuth Mapping: OpenID 'openid'"],
@@ -76,10 +97,10 @@ stringData:
                 authentik_providers_oauth2.scopemapping,
                 [name, "authentik default OAuth Mapping: OpenID 'profile'"],
               ]
-            - !Find [
-                authentik_providers_oauth2.scopemapping,
-                [name, "authentik default OAuth Mapping: Proxy outpost reduced"],
-              ]
+            - !KeyOf nzbhydra2-user-scope
+          sub_mode: hashed_user_id
+          include_claims_in_id_token: true
+          issuer_mode: per_provider
       - model: authentik_core.application
         id: nzbhydra2-application
         identifiers:

@@ -22,12 +22,16 @@ spec:
           nzbhydra2:
             image: &image
               repository: ghcr.io/home-operations/nzbhydra2
-              tag: 7.19.2
+              tag: 9.1.1
             env:
               # Overrides the image's -Xmx256M (nzbhydra.yml `xmx` is only read
               # by the upstream wrapper, which the image doesn't use). Heap OOM
-              # inside H2 mid-write corrupts the database.
-              JAVA_TOOL_OPTIONS: -Xmx768M
+              # inside H2 mid-write corrupts the database. The trust store adds
+              # the cluster root CA (OIDC back-channel) to the JDK's public CAs.
+              JAVA_TOOL_OPTIONS: >-
+                -Xmx768M
+                -Djavax.net.ssl.trustStore=/truststore/cacerts
+                -Djavax.net.ssl.trustStorePassword=changeit
               # Console layout for fluent-bit (parse-nzbhydra2-logs): no ANSI
               # colors or padding, full logger name. NZBHydra2 has no JSON
               # console option; its logback config reads this variable, and
@@ -42,6 +46,13 @@ spec:
                 enabled: true
               liveness:
                 enabled: true
+              # The port opens only after startup DB work, e.g. the one-time
+              # H2 2.1→2.4 migration in 9.0.0 (minutes for a large DB).
+              startup:
+                enabled: true
+                spec:
+                  periodSeconds: 10
+                  failureThreshold: 60
             securityContext: &container_security_context
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
@@ -70,14 +81,49 @@ spec:
               liveness:
                 enabled: true
                 type: HTTP
+                port: *metrics_port
+                # Answers 200 without querying Hydra (only /metrics does).
+                path: /
+            securityContext: *container_security_context
+        initContainers:
+          # Builds a trust store of the JDK's public CAs plus the cluster root
+          # CA, which signs the openid-configuration-proxy's serving cert.
+          truststore:
+            image: *image
+            command:
+              - sh
+              - -c
+              - >-
+                cp "$$JAVA_HOME/lib/security/cacerts" /truststore/cacerts &&
+                keytool -importcert -noprompt -alias cluster-root-ca
+                -file /etc/root-ca/ca.crt -keystore /truststore/cacerts
+                -storepass changeit
+            securityContext: *container_security_context
+          # Asserts the OIDC auth settings in nzbhydra.yml on every start, so
+          # auth changes made in the UI are reverted.
+          init-config:
+            image:
+              repository: docker.io/mikefarah/yq
+              tag: 4.54.1@sha256:4b3d9475d65571d28cbb19544d3820ec2945e4c8b2f18279394282b8dc3a592e
+            envFrom:
+              - secret: nzbhydra2-oidc
+            env:
+              # Flux substitution is disabled on the script ConfigMap.
+              PUBLIC_DOMAIN_NAME: ${SECRET_PUBLIC_DOMAIN_NAME}
+            command:
+              - sh
+              - /etc/init/init-config.sh
             securityContext: *container_security_context
         pod:
+          # Hydra compacts its H2 database on shutdown.
+          terminationGracePeriodSeconds: 120
           annotations:
             k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0
           labels:
             endpoints.netpols.home.arpa/download-searcher: "true"
             endpoints.netpols.home.arpa/nzbget-client: "true"
             endpoints.netpols.home.arpa/qbittorrent-client: "true"
+            endpoints.netpols.home.arpa/oidc-querier: "true"
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -97,6 +143,8 @@ spec:
         advancedMounts:
           nzbhydra2:
             nzbhydra2:
+              - path: /config
+            init-config:
               - path: /config
             # Read for NZBHydra2's API key
             exporter:
@@ -127,6 +175,35 @@ spec:
           nzbhydra2:
             nzbhydra2:
               - path: /tmp
+      truststore:
+        type: emptyDir
+        sizeLimit: 5Mi
+        advancedMounts:
+          nzbhydra2:
+            truststore:
+              - path: /truststore
+            nzbhydra2:
+              - path: /truststore
+                readOnly: true
+      # Cluster root CA, distributed to every namespace by the
+      # extract-root-ca-certificate Kyverno policy.
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        advancedMounts:
+          nzbhydra2:
+            truststore:
+              - path: /etc/root-ca
+                readOnly: true
+      init-scripts:
+        type: configMap
+        name: nzbhydra2-init-scripts
+        advancedMounts:
+          nzbhydra2:
+            init-config:
+              - path: /etc/init
+                readOnly: true
       exporter-scripts:
         type: configMap
         name: nzbhydra2-exporter
@@ -160,12 +237,3 @@ spec:
           - backendRefs:
               - identifier: nzbhydra2
                 port: *web_port
-          # Send auth requests to the authentik outpost
-          - backendRefs:
-              - name: authentik-server
-                namespace: security
-                port: 80
-            matches:
-              - path:
-                  type: PathPrefix
-                  value: /outpost.goauthentik.io
