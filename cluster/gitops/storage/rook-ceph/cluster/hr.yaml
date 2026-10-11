@@ -25,9 +25,8 @@ spec:
       version: v1.20.8
   values:
     operatorNamespace: storage
-    # Pinned so Rook minors don't silently bump the Ceph major (rook 1.20
-    # defaults to Tentacle 20.2.x). Ceph is not downgradable, and the
-    # repo-wide rollback remediation would try.
+    # Pinned so Rook minors don't silently bump the Ceph major. Ceph is not
+    # downgradable, and the repo-wide rollback remediation would try.
     cephImage:
       repository: quay.io/ceph/ceph
       tag: v20.2.4
@@ -220,7 +219,7 @@ spec:
         #    `ceph dashboard sso setup saml2 https://rook.${SECRET_PUBLIC_DOMAIN_NAME} https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/api/v3/providers/saml/3/metadata/?download
         #    `ceph dashboard sso enable saml2`
         #    SSO doesn't create users: each needs a matching dashboard account.
-        #    Docs: https://docs.ceph.com/en/squid/mgr/dashboard/#dashboard-sso-support
+        #    Docs: https://docs.ceph.com/en/tentacle/mgr/dashboard/#dashboard-sso-support
         ssl: false
         # TODO prom deployment
         # prometheusEndpoint:
