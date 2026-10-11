@@ -225,6 +225,9 @@ specs:
           - *rook_ceph_exporter_selector
           - *rook_ceph_tools_selector
           - *rook_ceph_crashcollector_selector
+          - &osd_prepare_selector
+            matchLabels:
+              app: rook-ceph-osd-prepare
         toPorts: &mon_ports
           - ports:
               - port: "3300"
@@ -287,3 +290,9 @@ specs:
       - *to_managers
       - *to_osds
       - *to_mds
+  # Rook >= 1.21 checks `ceph osd tree` while preparing OSDs (automated
+  # replacement), so the prepare jobs need the mons
+  - description: rook-ceph-osd-prepare
+    endpointSelector: *osd_prepare_selector
+    egress:
+      - *to_monitors
