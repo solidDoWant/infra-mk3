@@ -20,7 +20,7 @@ spec:
       byparr:
         defaultContainerOptions:
           securityContext:
-            # This must run with a writable filesystem, see https://github.com/ThePhaseless/Byparr/issues/249
+            # Root filesystem must be writable: the browser is baked into /cache and the GeoIP mmdb is refreshed there on every launch
             allowPrivilegeEscalation: false
             capabilities:
               drop:
@@ -29,14 +29,12 @@ spec:
           byparr:
             image:
               repository: ghcr.io/thephaseless/byparr
-              tag: 2.1.0
+              tag: 3.0.4
             ports:
               - name: web
                 containerPort: 8191
             probes:
-              # Because of a lack of synchronization between threads, probes must be performed in series
-              # until the first one succeeds or the MaxMind database download will be corrupted.
-              # This will take forever because the image is missing some required files, and downloads them on startup.
+              # /health launches the browser and loads google.com; the first launch also downloads the GeoIP mmdb
               startup:
                 enabled: true
                 custom: true
@@ -63,8 +61,11 @@ spec:
           annotations:
             # Egress via a single gateway so that the external IP address is consistent
             k8s.v1.cni.cncf.io/networks: networking/gateway-network-single-router-client-pods@vpn-gw-veth0
-          # This must run as UID 0, see https://github.com/ThePhaseless/Byparr/issues/248
           hostUsers: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
           dnsConfig:
             options:
               - name: ndots
