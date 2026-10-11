@@ -182,6 +182,11 @@
       allowedVersions: "!/^1\\.30\\.1[01]$/",
     },
     {
+      description: "smartctl-exporter 0.15.0 skipped (closed #128/#188/#195); the group PR is immortal, so closing it does not stick",
+      matchPackageNames: ["prometheus-community/smartctl_exporter", "quay.io/prometheuscommunity/smartctl-exporter"],
+      allowedVersions: "!/^v?0\\.15\\.0$/",
+    },
+    {
       description: "Kubernetes may not outrun what the deployed Talos supports; raise alongside Talos upgrades",
       matchDatasources: ["docker"],
       matchPackageNames: ["ghcr.io/siderolabs/kubelet"],
