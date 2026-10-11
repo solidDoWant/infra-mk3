@@ -33,6 +33,8 @@ spec:
               # console option; its logback config reads this variable, and
               # keeps its API key/password scrubbing on the result. %mdc is
               # `[ID: <search>, Host: <ip>, User: <user>] ` when set.
+              # The image runs the jar directly, with no upstream wrapper.
+              NZBHYDRA_DISABLE_WRAPPER_CHECK: "true"
               CONSOLE_LOG_PATTERN: "%d{yyyy-MM-dd HH:mm:ss.SSS} %level [%thread] %logger : %mdc%replace(%marker: ){'^: ',''}%m%n%wEx{15}"
             ports:
               - name: web
@@ -68,6 +70,11 @@ spec:
               - /scripts/metrics.sh
             env:
               NZBHYDRA2_URL: http://localhost:5076
+              # nzbhydra.yml holds the key obfuscated (8.0+).
+              API_KEY:
+                secretKeyRef:
+                  name: nzbhydra2-api-key
+                  key: API_KEY
             ports:
               - name: metrics
                 containerPort: &metrics_port 8080
@@ -90,6 +97,7 @@ spec:
               tag: 4.54.1@sha256:4b3d9475d65571d28cbb19544d3820ec2945e4c8b2f18279394282b8dc3a592e
             envFrom:
               - secret: nzbhydra2-oidc
+              - secret: nzbhydra2-api-key
             env:
               # Flux substitution is disabled on the script ConfigMap.
               PUBLIC_DOMAIN_NAME: ${SECRET_PUBLIC_DOMAIN_NAME}
@@ -129,10 +137,6 @@ spec:
               - path: /config
             init-config:
               - path: /config
-            # Read for NZBHydra2's API key
-            exporter:
-              - path: /config
-                readOnly: true
       logs:
         type: emptyDir
         medium: Memory

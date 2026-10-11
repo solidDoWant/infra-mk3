@@ -1,6 +1,9 @@
 #!/bin/sh
-# Sets OIDC auth in nzbhydra.yml; the rest of the file stays UI-managed.
+# Sets OIDC auth and the API key in nzbhydra.yml; the rest of the file stays
+# UI-managed.
 #
+# - The API key comes from a Secret so the exporter can read it: Hydra stores
+#   it obfuscated in nzbhydra.yml, and accepts a plaintext value.
 # - Every user Authentik admits maps to the single `admin` user via the
 #   `nzbhydra2_user` claim (nzbhydra2 scope, see the Authentik blueprint).
 #   Hydra rejects OIDC logins for usernames not in `users`.
@@ -17,6 +20,7 @@ if [ ! -f "$config" ]; then
 fi
 
 yq -i '
+  .main.apiKey                   = strenv(API_KEY) |
   .auth.authType                 = "OIDC" |
   .auth.restrictSearch           = true |
   .auth.restrictAdmin            = true |

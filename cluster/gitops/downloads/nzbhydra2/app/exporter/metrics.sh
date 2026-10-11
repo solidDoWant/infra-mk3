@@ -9,7 +9,7 @@ while read -r line && [ -n "${line%?}" ]; do :; done
 printf 'HTTP/1.0 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\nConnection: close\r\n\r\n'
 [ "$path" = /metrics ] || exit 0
 
-api_key=$(sed -n '/^main:/,/^[^ ]/s/^  apiKey: "\(.*\)"$/\1/p' /config/nzbhydra.yml)
+api_key=$API_KEY
 
 api() {
   curl -sSf --max-time 30 -H 'Content-Type: application/json' -d "$2" "${NZBHYDRA2_URL}$1"
