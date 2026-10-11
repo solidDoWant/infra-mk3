@@ -63,7 +63,7 @@ spec:
         repository: temporalio/server
         # When bumping: if the release includes temporalio/temporal#11429 (PR #11431),
         # drop the Temporal excludeFilters in cilium/cilium/app/helm-bootstrap-values.yaml.
-        tag: 1.32.0
+        tag: 1.32.1
       # Default replicas for every server component (frontend/history/matching/worker).
       replicaCount: 2
       # Applied to every server pod (frontend/internal-frontend/history/matching/
@@ -377,7 +377,7 @@ spec:
       enabled: true
       image:
         repository: temporalio/admin-tools
-        tag: 1.32.0
+        tag: 1.32.1
       # Same fsGroup reasoning as schema.securityContext — admintools mounts the
       # same postgres TLS secrets, and its image runs as user 1000.
       securityContext:
