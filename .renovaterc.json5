@@ -627,10 +627,33 @@
       matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl", "ghcr.io/siderolabs/installer"],
       separateMinorPatch: true,
     },
+    // Kubernetes and Rook upgrades step through every minor on its latest
+    // patch, so each minor needs its own PR (merge them in order).
     {
-      description: "Talos patches carry minor-sized changes: handle them as minors",
+      description: "Kubernetes and Rook patches and each minor get their own PR",
+      matchPackageNames: [
+        "ghcr.io/siderolabs/kubelet",
+        "registry.k8s.io/kubectl",
+        "alpine/k8s",
+        "rook-ceph",
+        "rook-ceph-cluster",
+      ],
+      separateMinorPatch: true,
+      separateMultipleMinor: true,
+    },
+    {
+      description: "Kubernetes, Talos and Rook patches carry minor-sized changes: handle them as minors",
       matchUpdateTypes: ["patch"],
-      matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl", "ghcr.io/siderolabs/installer"],
+      matchPackageNames: [
+        "ghcr.io/siderolabs/kubelet",
+        "registry.k8s.io/kubectl",
+        "alpine/k8s",
+        "siderolabs/talos",
+        "ghcr.io/siderolabs/talosctl",
+        "ghcr.io/siderolabs/installer",
+        "rook-ceph",
+        "rook-ceph-cluster",
+      ],
       semanticCommitType: "feat",
       labels: ["type/minor"],
     },
