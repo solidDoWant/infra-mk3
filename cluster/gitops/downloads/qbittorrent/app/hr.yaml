@@ -33,7 +33,7 @@ spec:
             ports:
               - name: web
                 containerPort: 8080
-            probes: &probes
+            probes:
               readiness:
                 enabled: true
               liveness:
@@ -41,15 +41,23 @@ spec:
           exporter:
             image:
               repository: ghcr.io/martabal/qbittorrent-exporter
-              tag: v1.13.4
+              tag: v2.0.3
             env:
               ENABLE_HIGH_CARDINALITY: true
               ENABLE_INCREASED_CARDINALITY: true
-              ENABLE_LABEL_WITH_TAG: true
+              ENABLE_LABEL_WITH_TAGS: true
             ports:
               - name: metrics
                 containerPort: 8090
-            probes: *probes
+            probes:
+              liveness: &exporter-probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: 8090
+              readiness: *exporter-probe
         pod:
           annotations:
             k8s.v1.cni.cncf.io/networks: networking/gateway-network-client-pods-forwarded-port-1@vpn-gw-veth0

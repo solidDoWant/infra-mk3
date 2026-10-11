@@ -15,9 +15,11 @@ specs:
       # Kubelet for healthcheck
       - fromEntities:
           - host
-        toPorts: &webservice_ports
+        toPorts:
           - ports:
               - port: "8080"
+                protocol: TCP
+              - port: "8090"
                 protocol: TCP
       # Gateway to webservice
       - fromEndpoints:
@@ -25,7 +27,10 @@ specs:
               io.kubernetes.pod.namespace: networking
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
-        toPorts: *webservice_ports
+        toPorts: &webservice_ports
+          - ports:
+              - port: "8080"
+                protocol: TCP
       # Metrics
       - fromEndpoints:
           - matchLabels:
