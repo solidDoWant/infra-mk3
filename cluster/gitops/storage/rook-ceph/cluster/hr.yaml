@@ -107,7 +107,6 @@ spec:
           # Default value is 2 weeks.
           mgr/crash/warn_recent_interval: "7200" # 2 hours
           mgr/dashboard/ALERTMANAGER_API_HOST: http://vmalertmanager-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:9093
-          mgr/dashboard/PROMETHEUS_API_HOST: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/select/0/prometheus/
         mon:
           # Log volume control. Rook forces mon_cluster_log_to_stderr=true, so every
           # cluster-log entry is duplicated onto container stderr and shipped. Measured
@@ -230,8 +229,9 @@ spec:
         # Docs: https://docs.ceph.com/en/tentacle/mgr/dashboard/#dashboard-sso-support
         ssl: true
         sslCertificateRef: rook-ceph-dashboard-tls
-        # TODO prom deployment
-        # prometheusEndpoint:
+        # Rook owns mgr/dashboard/PROMETHEUS_API_HOST and resets it to this
+        # value on every reconcile, so it can't go in cephConfig.
+        prometheusEndpoint: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/select/0/prometheus/
       network:
         # Encryption implies msgr2 (requireMsgr2 is also the chart default):
         # Rook points the CSI mon addresses at :3300 and sets the CephFS kernel
