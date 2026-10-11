@@ -175,6 +175,11 @@ spec:
           nzbhydra2:
             nzbhydra2:
               - path: /tmp
+            # yq -i stages its output in $TMPDIR; keytool's JVM writes here too
+            init-config:
+              - path: /tmp
+            truststore:
+              - path: /tmp
       truststore:
         type: emptyDir
         sizeLimit: 5Mi
