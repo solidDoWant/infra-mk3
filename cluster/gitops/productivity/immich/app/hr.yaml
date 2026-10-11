@@ -40,7 +40,7 @@ spec:
           main:
             image:
               repository: ghcr.io/immich-app/immich-server
-              tag: v2.7.5
+              tag: v3.3.1
             env:
               # This controller only runs the api worker. See the microservices
               # controller for the job processor.
@@ -152,7 +152,7 @@ spec:
           main:
             image:
               repository: ghcr.io/immich-app/immich-server
-              tag: v2.7.5
+              tag: v3.3.1
             env:
               # Run every worker EXCEPT the api (i.e. the job processor).
               IMMICH_WORKERS_EXCLUDE: api
@@ -252,7 +252,7 @@ spec:
           main:
             image:
               repository: ghcr.io/immich-app/immich-machine-learning
-              tag: v2.7.5-openvino
+              tag: v3.3.1-openvino
             env:
               # Bind IPv4 only — the ML service defaults to immich_host "[::]",
               # which fails to bind on the IPv6-disabled host kernel.
