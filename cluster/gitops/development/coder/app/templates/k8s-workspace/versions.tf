@@ -13,8 +13,8 @@ terraform {
     }
 
     kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = "~> 1.19"
+      source  = "alekc/kubectl"
+      version = "~> 2.4"
     }
 
     kubernetes = {
