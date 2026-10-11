@@ -509,8 +509,10 @@ resource "kubernetes_pod_disruption_budget_v1" "main" {
 }
 
 # CiliumNetworkPolicy for coder-workspace
+# Not gated on start_count: deleting it on stop raced the pod/VM shutdown, and
+# the cluster default-deny then dropped the agent's final reports to coderd.
+# It selects nothing while the workspace is stopped.
 resource "kubectl_manifest" "netpol" {
-  count             = data.coder_workspace.me.start_count
   server_side_apply = true
   # cilium-operator-generic co-manages parts of .specs (it writes derived policy
   # state back via the status subresource), so a plain SSA update conflicts. Force

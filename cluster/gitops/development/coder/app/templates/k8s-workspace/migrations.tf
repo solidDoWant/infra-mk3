@@ -26,3 +26,10 @@ import {
   to = kubernetes_persistent_volume_claim_v1.pvcs[each.key]
   id = "${local.namespace}/${local.name}-${each.key}"
 }
+
+# The workspace CNP was count-gated on start_count. This one can stay after the
+# other migrations are removed.
+moved {
+  from = kubectl_manifest.netpol[0]
+  to   = kubectl_manifest.netpol
+}

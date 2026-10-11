@@ -338,8 +338,10 @@ resource "kubernetes_persistent_volume_claim_v1" "persistent" {
 # which are set on the VirtualMachine's spec.template.metadata.labels and so
 # propagate to the virt-launcher pod - masquerade networking makes the VM behave
 # like a normal pod, so the same egress/ingress rules apply unchanged.
+# Not gated on start_count: deleting it on stop raced the pod/VM shutdown, and
+# the cluster default-deny then dropped the agent's final reports to coderd.
+# It selects nothing while the workspace is stopped.
 resource "kubectl_manifest" "netpol" {
-  count             = data.coder_workspace.me.start_count
   server_side_apply = true
   # cilium-operator-generic co-manages parts of .specs (it writes derived policy
   # state back via the status subresource), so a plain SSA update conflicts. Force

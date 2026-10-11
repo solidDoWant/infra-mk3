@@ -47,3 +47,10 @@ import {
   to = kubernetes_secret_v1.cloudinit
   id = "${local.namespace}/${local.name}-cloudinit"
 }
+
+# The workspace CNP was count-gated on start_count. This one can stay after the
+# other migrations are removed.
+moved {
+  from = kubectl_manifest.netpol[0]
+  to   = kubectl_manifest.netpol
+}
