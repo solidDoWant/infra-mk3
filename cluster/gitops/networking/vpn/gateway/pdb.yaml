@@ -6,7 +6,7 @@ metadata:
   labels: &labels
     app.kubernetes.io/name: vpn-gateway
     app.kubernetes.io/instance: vpn-gateway
-    app.kubernetes.io/component: vpn-gateway
+    app.kubernetes.io/controller: vpn-gateway
 spec:
   minAvailable: 1
   selector:

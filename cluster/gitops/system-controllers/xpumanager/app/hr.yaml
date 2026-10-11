@@ -80,6 +80,9 @@ spec:
         pod:
           securityContext:
             fsGroup: 1000
+          resourceClaims:
+            - name: gpu
+              resourceClaimTemplateName: xpumanager-gpu
     service:
       app:
         controller: xpumanager
@@ -118,18 +121,3 @@ spec:
             metrics:
               - path: /tmp
                 subPath: gunicorn-heartbeat
-  postRenderers:
-    # This is not currently supported by the app-template chart (TODO).
-    - kustomize:
-        patches:
-          - patch: |
-              - op: add
-                path: /spec/template/spec/resourceClaims
-                value:
-                  - name: gpu
-                    resourceClaimTemplateName: xpumanager-gpu
-            target:
-              group: apps
-              version: v1
-              kind: DaemonSet
-              name: xpumanager

@@ -22,6 +22,8 @@ spec:
         serviceAccount:
           identifier: whereabouts-cni
         pod:
+          # API access for IPAM; token-watcher builds the CNI kubeconfig from it
+          automountServiceAccountToken: true
           hostNetwork: true
           priorityClassName: system-node-critical
           tolerations:

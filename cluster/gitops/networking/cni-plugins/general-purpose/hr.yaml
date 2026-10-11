@@ -71,6 +71,8 @@ spec:
         pod:
           annotations:
             k8tz.io/inject: "false"
+          # Labeler talks to the k8s API
+          automountServiceAccountToken: true
           nodeSelector:
             cni-plugins.home.arpa/node.general-purpose-plugins-enabled: "true"
           # After the pod succeeds once for a given version, it will no longer match this selector.

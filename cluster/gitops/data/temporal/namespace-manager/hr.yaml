@@ -81,6 +81,8 @@ spec:
               limits:
                 memory: 64Mi
     defaultPodOptions:
+      # manager.sh lists labeled namespaces via the k8s API with the SA token.
+      automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

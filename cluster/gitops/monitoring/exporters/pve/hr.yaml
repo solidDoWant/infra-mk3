@@ -76,8 +76,10 @@ spec:
       # by this config, but only one pod is scraped for
       # actual proxmox metrics.
       pve-exporter-self:
-        nameOverride: self
-        serviceName: pve-exporter
+        # Default name collides with the VMServiceScrape in service-scrape.yaml
+        forceRename: pve-exporter-self
+        service:
+          identifier: pve-exporter
         endpoints:
           - interval: 1m
             scrapeTimeout: 10s

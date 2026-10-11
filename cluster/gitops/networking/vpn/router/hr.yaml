@@ -388,6 +388,8 @@ spec:
         controller: vpn-router-single
     serviceMonitor:
       gateway-route-manager: &service_monitor
+        # Keep `job` = service name so the two routers stay separate jobs
+        jobLabel: app.kubernetes.io/service
         service:
           identifier: metrics
         endpoints:

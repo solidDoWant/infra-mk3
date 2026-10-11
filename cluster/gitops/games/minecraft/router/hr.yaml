@@ -74,6 +74,8 @@ spec:
                 containerPort: 80
             probes: *probes
         pod:
+          # Watches Services via the k8s API
+          automountServiceAccountToken: true
           labels:
             endpoints.netpols.home.arpa/minecraft-router: "true"
             endpoints.netpols.home.arpa/external-ingress-enabled: "true"

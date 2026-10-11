@@ -97,6 +97,9 @@ spec:
       # unprivileged host user. Safe here: no NFS mounts and no other
       # features incompatible with userns remapping.
       hostUsers: false
+      # tbot joins Teleport with the SA token (kubernetes join method) and
+      # writes the JWT-SVID Secret via the API.
+      automountServiceAccountToken: true
       securityContext:
         # Distroless tbot image's non-root user (65532).
         runAsNonRoot: true

@@ -324,12 +324,16 @@ spec:
             primary: true
 
     serviceMonitor:
+      # job = Service name (the chart default is app.kubernetes.io/name, which
+      # collapses both scrapes into job="immich").
       server:
         serviceName: immich-server
+        jobLabel: app.kubernetes.io/service
         endpoints:
           - port: metrics-api
       microservices:
         serviceName: immich-microservices
+        jobLabel: app.kubernetes.io/service
         endpoints:
           - port: metrics-ms
 

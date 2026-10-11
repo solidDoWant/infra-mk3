@@ -23,6 +23,7 @@ spec:
         serviceAccount:
           identifier: *app_name
         pod:
+          automountServiceAccountToken: true
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534

@@ -10,7 +10,7 @@ specs:
       matchLabels:
         app.kubernetes.io/name: vpn-gateway
         app.kubernetes.io/instance: vpn-gateway
-        app.kubernetes.io/component: vpn-gateway
+        app.kubernetes.io/controller: vpn-gateway
     egress:
       # Allow traffic to the VPN endpoints.
       - toCIDRSet:

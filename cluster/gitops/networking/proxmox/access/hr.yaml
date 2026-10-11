@@ -16,6 +16,9 @@ spec:
         name: bjw-s-charts
       version: 5.3.0
   values:
+    defaultPodOptions:
+      # kubectl writes the pinned ConfigMap.
+      automountServiceAccountToken: true
     controllers:
       # One-shot bootstrap so the pin exists immediately rather than only after the
       # CronJob's first tick. A Helm hook re-runs it each install/upgrade and cleans

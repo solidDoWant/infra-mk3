@@ -38,6 +38,9 @@ spec:
         job:
           backoffLimit: 1
           ttlSecondsAfterFinished: 500
+        # Hooks run before the chart's ServiceAccount exists.
+        serviceAccount:
+          name: default
         defaultContainerOptions:
           image: &image
             repository: ghcr.io/soliddowant/openarc

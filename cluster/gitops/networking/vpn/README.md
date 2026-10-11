@@ -622,7 +622,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.2.0
+      version: 5.3.0
   values:
     controllers:
       vpn-gateway:
@@ -766,7 +766,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.2.0
+      version: 5.3.0
   values:
     controllers:
       vpn-gateway:

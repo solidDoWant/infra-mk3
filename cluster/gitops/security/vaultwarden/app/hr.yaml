@@ -84,6 +84,7 @@ spec:
     persistence:
       data:
         type: persistentVolumeClaim
+        forceRename: vaultwarden-data # Pinned; the dr-job backup references this name
         # This is needed for HA
         accessMode: ReadWriteMany
         size: 5Gi

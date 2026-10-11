@@ -64,7 +64,6 @@ spec:
                 memory: &memory 4Gi
               limits:
                 memory: *memory
-                # GPU is attached via the postRenderer below
               claims:
                 - name: gpu
             securityContext:

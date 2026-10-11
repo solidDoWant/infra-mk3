@@ -9,7 +9,7 @@ specs:
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: pve-exporter
-        app.kubernetes.io/component: pve-exporter
+        app.kubernetes.io/controller: pve-exporter
         app.kubernetes.io/instance: pve-exporter
     egress:
       # To Proxmox

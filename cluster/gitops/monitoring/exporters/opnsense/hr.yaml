@@ -19,6 +19,8 @@ spec:
     controllers:
       router-01: &router_controller
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         containers:
           app: &router_app
             image:

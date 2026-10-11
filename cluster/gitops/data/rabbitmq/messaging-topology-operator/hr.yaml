@@ -54,6 +54,7 @@ spec:
                 drop:
                   - ALL
         pod:
+          automountServiceAccountToken: true
           securityContext:
             runAsUser: 1001
             runAsGroup: 1001
@@ -77,7 +78,7 @@ spec:
           - path: /etc/ssl/certs/root-ca.crt
             subPath: ca.crt
     serviceAccount:
-      create: true
+      default: {}
     rbac:
       roles:
         rabbitmq-messaging-topology-operator:

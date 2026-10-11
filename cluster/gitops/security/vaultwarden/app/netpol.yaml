@@ -10,7 +10,7 @@ specs:
       matchLabels:
         app.kubernetes.io/name: vaultwarden
         app.kubernetes.io/instance: vaultwarden
-        app.kubernetes.io/component: vaultwarden
+        app.kubernetes.io/controller: vaultwarden
     egress:
       # DNS resolution
       - toEndpoints:

@@ -5,7 +5,7 @@ metadata:
   name: pve-exporter
   labels: &labels
     app.kubernetes.io/name: pve-exporter
-    app.kubernetes.io/component: pve-exporter
+    app.kubernetes.io/controller: pve-exporter
     app.kubernetes.io/instance: pve-exporter
 spec:
   minAvailable: 1

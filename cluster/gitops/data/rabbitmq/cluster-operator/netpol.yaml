@@ -10,7 +10,7 @@ specs:
       matchLabels:
         app.kubernetes.io/name: rabbitmq-cluster-operator
         app.kubernetes.io/instance: rabbitmq-cluster-operator
-        app.kubernetes.io/component: cluster-operator
+        app.kubernetes.io/controller: cluster-operator
     egress:
       # k8s API for resource management
       - toEntities:
