@@ -377,6 +377,18 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "Ubuntu: base image + images tagged by Ubuntu release",
+      groupName: "ubuntu",
+      matchDatasources: ["docker"],
+      matchPackageNames: [
+        "ubuntu",
+        "docker.io/library/ubuntu",
+        "mcr.microsoft.com/devcontainers/base",
+        "ghcr.io/gameservermanagers/steamcmd",
+      ],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
       description: "Envoy: same image referenced with and without the docker.io prefix",
       groupName: "envoy",
       matchPackageNames: ["/^(docker\\.io/)?envoyproxy/envoy$/"],
