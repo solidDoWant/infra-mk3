@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: rook-ceph-charts
-      version: v1.20.8
+      version: v1.21.0
   values:
     resources:
       limits:
@@ -25,5 +25,10 @@ spec:
     pspEnable: false
     priorityClassName: system-cluster-critical
     obcAllowAdditionalConfigFields: maxObjects,maxSize,bucketMaxObjects,bucketMaxSize,bucketPolicy,bucketLifecycle,bucketOwner
+    csi:
+      # The chart renders this setting but never defines it, so it reaches the
+      # operator as an empty string. Rook only creates the CephConnection and
+      # ClientProfile CRs when it is "true".
+      createCsiOperatorResources: true
     monitoring:
       enabled: true
