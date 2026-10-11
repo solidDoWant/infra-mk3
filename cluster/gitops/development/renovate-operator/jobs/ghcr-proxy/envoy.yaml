@@ -1,7 +1,10 @@
 ---
-# Plain-HTTP forward proxy on 127.0.0.1:10000 to ghcr.io, injected into the
-# Renovate executor pods by inject-ghcr-proxy-policy.yaml, which also routes
-# all ghcr.io lookups here.
+# Forward proxy on 127.0.0.1:10000 for the Renovate executor pods, injected by
+# inject-ghcr-proxy-policy.yaml as their HTTP_PROXY. ghcr.io lookups arrive as
+# plain HTTP (insecureRegistry) and go upstream over TLS with retries; all
+# other traffic arrives as CONNECT and is tunnelled untouched. Renovate's
+# proxy agent sends HTTPS to HTTP_PROXY when HTTPS_PROXY is unset, so the
+# tunnel is required.
 #
 # GHCR burst-limits with 429 and no Retry-After header; Renovate retries page
 # requests only twice, never retries its auth probe, and one failed page
@@ -49,6 +52,7 @@ static_resources:
                         json_format:
                           time: "%START_TIME%"
                           method: "%REQ(:METHOD)%"
+                          authority: "%REQ(:AUTHORITY)%"
                           path: "%REQ(:PATH)%"
                           status: "%RESPONSE_CODE%"
                           attempts: "%UPSTREAM_REQUEST_ATTEMPT_COUNT%"
@@ -56,15 +60,17 @@ static_resources:
                           duration_ms: "%DURATION%"
                 route_config:
                   virtual_hosts:
+                    # Port-less authority: plain-HTTP registry requests only.
+                    # CONNECT ghcr.io:443 (the token realm) falls through to
+                    # the tunnel.
                     - name: ghcr
                       domains:
-                        - "*"
+                        - ghcr.io
                       routes:
                         - match:
                             prefix: /
                           route:
                             cluster: ghcr
-                            host_rewrite_literal: ghcr.io
                             # Under Renovate's 60s request timeout, so Envoy's
                             # final answer arrives before Renovate gives up.
                             timeout: 50s
@@ -77,7 +83,28 @@ static_resources:
                               retry_back_off:
                                 base_interval: 0.25s
                                 max_interval: 5s
+                    - name: tunnel
+                      domains:
+                        - "*"
+                      routes:
+                        - match:
+                            connect_matcher: {}
+                          route:
+                            cluster: dynamic_forward_proxy
+                            # Tunnels outlive any request timeout (git clones).
+                            timeout: 0s
+                            upgrade_configs:
+                              - upgrade_type: CONNECT
+                                connect_config: {}
+                upgrade_configs:
+                  - upgrade_type: CONNECT
                 http_filters:
+                  - name: envoy.filters.http.dynamic_forward_proxy
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
+                      dns_cache_config: &dns_cache
+                        name: tunnel
+                        dns_lookup_family: V4_ONLY
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -109,3 +136,12 @@ static_resources:
                 - san_type: DNS
                   matcher:
                     exact: ghcr.io
+
+    - name: dynamic_forward_proxy
+      connect_timeout: 5s
+      lb_policy: CLUSTER_PROVIDED
+      cluster_type:
+        name: envoy.clusters.dynamic_forward_proxy
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
+          dns_cache_config: *dns_cache

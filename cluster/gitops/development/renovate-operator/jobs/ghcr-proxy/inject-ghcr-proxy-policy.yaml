@@ -1,9 +1,10 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
-# Routes Renovate's ghcr.io lookups through a retrying proxy (envoy.yaml):
-# adds it to the executor pods as a native sidecar, plus the global config
-# that points lookups at it. The RenovateJobTemplate has no field for extra
-# containers, and a RenovateJob's extraEnv replaces the template's.
+# Routes Renovate's traffic through a proxy that retries ghcr.io lookups
+# (envoy.yaml): adds it to the executor pods as a native sidecar, plus the
+# global config that points Renovate at it. The RenovateJobTemplate has no
+# field for extra containers, and a RenovateJob's extraEnv replaces the
+# template's.
 apiVersion: kyverno.io/v1
 kind: Policy
 metadata:
@@ -52,22 +53,24 @@ spec:
             containers:
               - name: renovate
                 env:
-                  # Lookup only: the image references in files keep ghcr.io.
-                  # `\{{` stops Kyverno reading the Handlebars template.
-                  - name: RENOVATE_PACKAGE_RULES
-                    value: |-
-                      [{"matchDatasources":["docker"],"matchPackageNames":["ghcr.io/**"],"registryUrls":["http://localhost:10000"],"overridePackageName":"localhost:10000/\{{replace '^ghcr\\.io/' '' packageName}}"}]
-                  # allowInternal: loopback is an internal host. Credentials are
-                  # picked by request URL, so ghcr.io's would not apply here.
+                  # insecureRegistry: ghcr.io lookups go out as plain HTTP so
+                  # the proxy can retry them; it adds TLS upstream. Package
+                  # names keep ghcr.io, so repo packageRules match unchanged.
                   # RENOVATE_TOKEN (GitHub App) comes from the operator's envFrom
                   # Secret; Kubernetes expands it. `\$(` stops Kyverno reading
                   # it as a $() reference.
                   - name: RENOVATE_HOST_RULES
                     value: |-
-                      [{"matchHost":"http://localhost:10000","hostType":"docker","allowInternal":true,"username":"x-access-token","password":"\$(RENOVATE_TOKEN)"}]
+                      [{"matchHost":"ghcr.io","hostType":"docker","insecureRegistry":true,"username":"x-access-token","password":"\$(RENOVATE_TOKEN)"}]
+                  # Also carries HTTPS (as CONNECT): Renovate's proxy agent
+                  # falls back to HTTP_PROXY when HTTPS_PROXY is unset.
+                  - name: HTTP_PROXY
+                    value: http://127.0.0.1:10000
+                  - name: NO_PROXY
+                    value: localhost,127.0.0.1,.svc,.cluster.local
                   # Renovate reads up to 1000 GHCR pages only when the host is
-                  # literally ghcr.io; through the proxy, the default 20-page cap
-                  # drops the newest tags (GHCR lists oldest-first).
+                  # literally https://ghcr.io; over plain HTTP, the default
+                  # 20-page cap drops the newest tags (GHCR lists oldest-first).
                   # immich-machine-learning alone is 200+ pages.
                   - name: RENOVATE_DOCKER_MAX_PAGES
                     value: "1000"
