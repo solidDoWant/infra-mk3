@@ -619,6 +619,21 @@
       additionalBranchPrefix: "major-",
       labels: ["type/major"],
     },
+    // Without separateMinorPatch the latest minor (a major here) supersedes
+    // the patch, so no patch PR is opened. No matchUpdateTypes: Renovate
+    // reads this flag before update types are known.
+    {
+      description: "Talos patches get their own PR",
+      matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl", "ghcr.io/siderolabs/installer"],
+      separateMinorPatch: true,
+    },
+    {
+      description: "Talos patches carry minor-sized changes: handle them as minors",
+      matchUpdateTypes: ["patch"],
+      matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl", "ghcr.io/siderolabs/installer"],
+      semanticCommitType: "feat",
+      labels: ["type/minor"],
+    },
     {
       matchDatasources: ["docker"],
       addLabels: ["renovate/container"],
