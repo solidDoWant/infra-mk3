@@ -36,12 +36,51 @@ spec:
     monitoring:
       enabled: true
       createPrometheusRules: true
+      prometheusRuleOverrides:
+        # Compares every node-exporter target per device name, including the
+        # non-Ceph hosts (ubuntu-development-01 eth0 1500 vs
+        # ubuntu-storage-host-01 eth0 9000), so it fires on unrelated networks.
+        CephNodeInconsistentMTU:
+          disabled: true
     pspEnable: false
     cephClusterSpec:
       labels:
         mgr:
           endpoints.netpols.home.arpa/alertmanager-client: "true"
           endpoints.netpols.home.arpa/time-series-querier: "true"
+      # CVE-2025-30156: Ceph >= 19.2.6 reports HEALTH_ERR
+      # (AUTH_INSECURE_SERVICE_KEY_TYPE) until daemon keys are rotated to
+      # aes256k. Rotation restarts the daemons, so it rides along with Ceph
+      # version bumps. Bump keyGeneration to rotate again.
+      # https://rook.io/docs/rook/latest/Storage-Configuration/Advanced/cephx-key-rotation/
+      security:
+        cephx:
+          daemon:
+            keyRotationPolicy: KeyGeneration
+            keyGeneration: 2
+          csi:
+            # Kernel krbd/CephFS mounts need Linux >= 7.0 for aes256k keys.
+            # TODO once all nodes run kernel >= 7.0:
+            # 1. Set keyRotationPolicy: KeyGeneration, keyGeneration: 3,
+            #    keepPriorKeyCountMax: 1, keyType: aes256k. Wait for
+            #    status.cephx.csi.keyGeneration to match.
+            # 2. Drain + uncordon each node so PVCs remount with the new keys.
+            # 3. Set keepPriorKeyCountMax: 0.
+            # 4. Unmute AUTH_INSECURE_CLIENT_KEY_TYPE below.
+            # 5. Optionally set allowedCiphers: [aes256k], only after
+            #    `ceph auth dump-keys` shows no aes keys (otherwise outage).
+            keyType: aes
+      healthCheck:
+        # Unavoidable while CSI keys are aes (see security.cephx.csi). Ceph
+        # clears AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE 2-3h after daemon key
+        # rotation, so it is left unmuted.
+        muteHealthWarning:
+          AUTH_INSECURE_CLIENT_KEY_TYPE:
+            policy: mute
+          AUTH_INSECURE_KEYS_ALLOWED:
+            policy: mute
+          AUTH_INSECURE_KEYS_CREATABLE:
+            policy: mute
       cephConfig:
         # Allow the pool to operate when one node is offline
         global:
@@ -146,8 +185,11 @@ spec:
           debug_rgw_access: "0/5"
       mgr:
         modules:
+          # Unsupported by Rook, and leaks/crashes the mgr on Ceph 20.2.2-20.2.4
+          # (rook/rook#18213). Disabling only hides the dashboard's Physical
+          # Disks, Services and Upgrade pages.
           - name: rook
-            enabled: true
+            enabled: false
           - name: diskprediction_local
             enabled: true
           - name: insights
