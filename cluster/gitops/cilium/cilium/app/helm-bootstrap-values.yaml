@@ -42,6 +42,13 @@ dashboards: &dashboards
   label: "" # Remove the label, and use operator resources to load the dashboards.
 debug:
   enabled: false
+dnsProxy:
+  # How long the DNS proxy may hold a response while the datapath learns the
+  # new FQDN IPs. The 100ms default is well under the identity updater's
+  # latency here (p50 ~0.5s, p99 ~2.3s), so responses were released early and
+  # the first SYN to a fresh CDN IP was policy-dropped (retransmit succeeded).
+  # Only responses carrying not-yet-programmed IPs are delayed.
+  proxyResponseMaxDelay: 3s
 # Looks like the X710 NICs in the Kubernetes nodes do not support GRO :(
 # enableIPv4BIGTCP: true
 # This is a tradeoff between performance (not where you'd think) and security
