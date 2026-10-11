@@ -11,9 +11,6 @@ metadata:
 spec:
   interval: 5m
   releaseName: ceph-csi-drivers
-  # The rook-ceph chart installs the ceph-csi-operator and its CRDs
-  dependsOn:
-    - name: rook-ceph
   chart:
     spec:
       chart: ceph-csi-drivers
@@ -23,36 +20,21 @@ spec:
         name: ceph-csi-operator-charts
       version: 1.0.4
   values:
+    # Defaults the operator fills into any Driver field left unset
     operatorConfig:
       namespace: storage
-      driverSpecDefaults: &driver_defaults
+      driverSpecDefaults:
         imageSet:
           name: rook-csi-operator-image-set-configmap
         clusterName: rook-ceph-cluster
-        # Rotation writes logs to a hostPath file instead of stdout
-        log:
-          verbosity: 0
-          rotation:
-            enabled: false
-        grpcTimeout: 150
         # TODO figure out whether I should encrypt volumes (tradeoffs)
         # encryption:
         #   configMapRef:
         #     name: ...
-        enableMetadata: false
-        # `none` (the chart default) drops the csi-snapshotter sidecar
-        snapshotPolicy: volumeSnapshot
         nodePlugin:
           priorityClassName: system-node-critical
-          updateStrategy:
-            type: RollingUpdate
         controllerPlugin:
           priorityClassName: system-cluster-critical
-          # The controller plugins run on the pod network (netpol-covered)
-          hostNetwork: false
-          replicas: 2
-          deploymentStrategy:
-            type: Recreate
     # Right-sized 2026-08-01 from 14d of metrics: p95 <2m CPU, peak working
     # sets 38-123Mi. Memory request == limit throughout (incompressible: a
     # request below the limit lets the node fill to 100% of requests while pods
@@ -60,14 +42,16 @@ spec:
     # the overcommitter). Values are ~2x the observed peak.
     drivers:
       rbd:
-        <<: *driver_defaults
-        enabled: true
         # Must match the StorageClass/VolumeSnapshotClass provisioner names
         name: storage.rbd.csi.ceph.com
+        grpcTimeout: 150
+        # `none` (the chart default) drops the csi-snapshotter sidecar
+        snapshotPolicy: volumeSnapshot
+        # Rotation writes logs to a hostPath file instead of stdout
+        log: &log
+          rotation:
+            enabled: false
         nodePlugin:
-          priorityClassName: system-node-critical
-          updateStrategy:
-            type: RollingUpdate
           resources:
             registrar: &resources_64mi
               requests:
@@ -81,12 +65,15 @@ spec:
                 memory: 256Mi
               limits:
                 memory: 256Mi
-        controllerPlugin:
-          priorityClassName: system-cluster-critical
-          hostNetwork: false
+        controllerPlugin: &controller_plugin
           replicas: 2
+          # The pods have a required per-host anti-affinity, so a surge pod
+          # can't schedule while a node is out. Replace one at a time instead.
           deploymentStrategy:
-            type: Recreate
+            type: RollingUpdate
+            rollingUpdate:
+              maxSurge: 0
+              maxUnavailable: 1
           resources:
             provisioner: &resources_96mi
               requests:
@@ -105,14 +92,11 @@ spec:
                 memory: 128Mi
             omapGenerator: *resources_128mi
       cephfs:
-        <<: *driver_defaults
-        enabled: true
         name: storage.cephfs.csi.ceph.com
+        grpcTimeout: 150
         snapshotPolicy: volumeGroupSnapshot
+        log: *log
         nodePlugin:
-          priorityClassName: system-node-critical
-          updateStrategy:
-            type: RollingUpdate
           resources:
             registrar: *resources_64mi
             plugin: &resources_192mi
@@ -122,11 +106,7 @@ spec:
               limits:
                 memory: 192Mi
         controllerPlugin:
-          priorityClassName: system-cluster-critical
-          hostNetwork: false
-          replicas: 2
-          deploymentStrategy:
-            type: Recreate
+          <<: *controller_plugin
           resources:
             provisioner: *resources_96mi
             resizer: *resources_96mi

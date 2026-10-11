@@ -169,6 +169,15 @@
       allowedVersions: "/^ubuntu-?\\d[02468]\\.04$/",
     },
     {
+      // Rook flags data corruption in Tentacle 20.2.0 with csi.readAffinity on
+      // (enabled here): take Tentacle at >= 20.2.2.
+      description: "Ceph: X.0.Z is dev and X.1.Z is RC, so only X.2.0+ is stable. One PR per major",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/(^|/)ceph/ceph$/"],
+      allowedVersions: "/^v\\d+\\.([2-9]|\\d{2,})\\.\\d+$/",
+      separateMultipleMajor: true,
+    },
+    {
       description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
       matchDatasources: ["github-releases"],
       matchPackageNames: ["kubernetes/autoscaler"],

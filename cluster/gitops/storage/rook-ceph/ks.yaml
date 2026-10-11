@@ -25,6 +25,28 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
+  name: &app_name rook-ceph-csi-drivers
+spec:
+  targetNamespace: storage
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/storage/rook-ceph/csi-drivers
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # Installs the ceph-csi-operator and its CRDs
+    - name: rook-ceph-app
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
   name: &app_name rook-ceph-cluster
 spec:
   targetNamespace: storage
@@ -41,5 +63,5 @@ spec:
   dependsOn:
     - name: prometheus-crds
     - name: volume-snapshot-crds
-    - name: rook-ceph-app
+    - name: rook-ceph-csi-drivers
     - name: fluent-crds
