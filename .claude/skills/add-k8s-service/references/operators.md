@@ -150,20 +150,27 @@ persistence:
 Not an operator — just a shared backing service already deployed in the `email` namespace.
 
 Configure apps to use it directly:
-- Host: `docker-postfix.email.svc.cluster.local`
-- Port: `587` (STARTTLS)
+- Host: `docker-postfix-mail.email.svc.cluster.local`
+- Port: `25` (STARTTLS offered; the Service maps 25 to the pod's 587)
 - From address: `${SECRET_EMAIL_ADDRESS}`
 
-Add egress to the network policy:
+The relay's ingress only admits pods labelled `endpoints.netpols.home.arpa/email-sender: "true"`. Add it to the pod labels (app-template: `controllers.<name>.pod.labels`):
 ```yaml
-# Allow SMTP relay access for sending emails
+pod:
+  labels:
+    endpoints.netpols.home.arpa/email-sender: "true"
+```
+
+Add egress to the network policy (Cilium enforces the pod port, so `smtp` = 587):
+```yaml
+# Emails via SMTP relay
 - toEndpoints:
     - matchLabels:
-        app.kubernetes.io/name: docker-postfix
         io.kubernetes.pod.namespace: email
+        endpoints.netpols.home.arpa/email-relay: "true"
   toPorts:
     - ports:
-        - port: "587"
+        - port: smtp
           protocol: TCP
 ```
 

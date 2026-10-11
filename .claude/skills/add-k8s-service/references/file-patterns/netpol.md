@@ -53,13 +53,14 @@ specs:
                 protocol: TCP
 
       # SMTP relay — for sending transactional emails
+      # Pod also needs the endpoints.netpols.home.arpa/email-sender: "true" label
       - toEndpoints:
           - matchLabels:
-              app.kubernetes.io/name: docker-postfix
               io.kubernetes.pod.namespace: email
+              endpoints.netpols.home.arpa/email-relay: "true"
         toPorts:
           - ports:
-              - port: "587"
+              - port: smtp
                 protocol: TCP
 
       # External API — restrict to specific FQDNs, not broad internet access

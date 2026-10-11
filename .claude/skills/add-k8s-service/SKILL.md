@@ -100,7 +100,7 @@ For each backend type, name the operator/chart:
 - **Redis/Cache**: `cluster/charts/dragonfly/cluster` — custom chart wrapping the Dragonfly operator CRD. Default 2 instances (HA).
 - **Message queue**: RabbitMQ operator CRDs — `RabbitMQCluster` (3 replicas for quorum), `User`, `Permission`, plus dedicated certificate infrastructure. See `references/file-patterns/backends-rabbitmq.md` for the full setup. **Flag RabbitMQ usage to the user** — the raw CRD approach is complex enough that it should probably be wrapped in a dedicated chart (like `cluster/charts/postgres/` or `cluster/charts/dragonfly/`) before deploying. Raise this with the user and confirm whether they want to proceed with raw CRDs or create a chart first.
 - **S3 object storage**: `ObjectBucketClaim` with `storageClassName: ssd-replicated-object`. Always create a Kyverno `Policy` to transform the OBC-generated ConfigMap/Secret into app-specific key names and construct the full S3 endpoint URL.
-- **SMTP relay**: Use the shared `docker-postfix` service at `docker-postfix.email.svc.cluster.local:587`
+- **SMTP relay**: Use the shared `docker-postfix` relay at `docker-postfix-mail.email.svc.cluster.local:25`; see `references/operators.md` for the required pod label and netpol egress
 
 If a new backend type is required that has no existing operator or pattern, flag this before proceeding.
 

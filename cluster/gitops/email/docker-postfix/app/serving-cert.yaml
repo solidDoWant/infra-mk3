@@ -7,8 +7,8 @@ metadata:
 spec:
   commonName: Docker Postfix serving cert
   dnsNames:
-    - docker-postfix.email.svc
-    - docker-postfix.email.svc.cluster.local
+    - docker-postfix-mail.email.svc
+    - docker-postfix-mail.email.svc.cluster.local
   subject:
     countries:
       - US
@@ -54,8 +54,8 @@ spec:
     dnsNames:
       required: true
       values:
-        - docker-postfix.email.svc
-        - docker-postfix.email.svc.cluster.local
+        - docker-postfix-mail.email.svc
+        - docker-postfix-mail.email.svc.cluster.local
     subject:
       countries:
         required: true
