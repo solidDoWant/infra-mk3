@@ -224,14 +224,17 @@ spec:
         # TODO prom deployment
         # prometheusEndpoint:
       network:
+        # Encryption implies msgr2 (requireMsgr2 is also the chart default):
+        # Rook points the CSI mon addresses at :3300 and sets the CephFS kernel
+        # mount option ms_mode=secure. Existing kernel mounts keep the
+        # protocol they were mounted with until remounted. The ms_*_mode
+        # settings are startup-only, so daemons enforce them after a restart.
         connections:
-          # CephFS kernel mounts here are msgr1 (mon_addr :6789, no ms_mode).
-          # requireMsgr2 (the chart default since rook 1.21) drops msgr1 from
-          # mons recreated on failover, stranding those mounts.
-          # TODO migrate CephFS mounts to msgr2, then enable encryption,
-          # compression and requireMsgr2.
-          # TODO consider "offloading" encryption to istio
-          requireMsgr2: false
+          # TODO consider "offloading" this to istio
+          encryption:
+            enabled: true
+          compression:
+            enabled: true
       placement:
         all:
           nodeAffinity:

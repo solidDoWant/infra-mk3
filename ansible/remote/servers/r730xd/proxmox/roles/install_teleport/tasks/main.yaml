@@ -6,12 +6,19 @@
       {{ key_path }}
     checksum: sha256:58958584ca95d311f8b040b010259c7a92cf97e7f0bc850793564c576812eef5
 
+- name: Remove the legacy one-line Teleport repository file
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/teleport.list
+    state: absent
+
 - name: Add the Teleport repository
-  ansible.builtin.apt_repository:
-    repo: deb [signed-by={{ key_path }}] https://{{ domain_name }}/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable/rolling
-    state: present
-    filename: teleport
-    update_cache: true
+  ansible.builtin.deb822_repository:
+    name: teleport
+    uris: https://{{ domain_name }}/{{ ansible_distribution | lower }}
+    suites: "{{ ansible_distribution_release }}"
+    components: stable/rolling
+    signed_by: "{{ key_path }}"
+  register: teleport_repo
 
 - name: Limit the repo to only install teleport and teleport-ent packages 
   ansible.builtin.blockinfile:
@@ -32,7 +39,7 @@
     name: teleport-ent
     state: latest
     update_cache: true
-    cache_valid_time: 600
+    cache_valid_time: "{{ 0 if teleport_repo.changed else 600 }}"
     autoclean: true
     autoremove: true
 

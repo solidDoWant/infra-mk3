@@ -33,6 +33,13 @@
 
 - name: Allow access to commands that democratic-csi needs for ZFS
   block:
+    # sudo-rs (default sudo since 26.04) rejects regex args and drops the
+    # whole rule, leaving democratic-csi with no sudo rights.
+    - name: Use the original sudo implementation
+      community.general.alternatives:
+        name: sudo
+        path: /usr/bin/sudo.ws
+      when: ansible_distribution_version is version('26.04', '>=')
     - name: Look up full command path for sudo commands
       ansible.builtin.command: which "{{ item }}"
       register: command_paths
