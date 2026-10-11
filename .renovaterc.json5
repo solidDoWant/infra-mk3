@@ -169,6 +169,15 @@
       allowedVersions: "/^ubuntu-?\\d[02468]\\.04$/",
     },
     {
+      // Rook flags data corruption in Tentacle 20.2.0 with csi.readAffinity on
+      // (enabled here): take Tentacle at >= 20.2.2.
+      description: "Ceph: X.0.Z is dev and X.1.Z is RC, so only X.2.0+ is stable. One PR per major",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/(^|/)ceph/ceph$/"],
+      allowedVersions: "/^v\\d+\\.([2-9]|\\d{2,})\\.\\d+$/",
+      separateMultipleMajor: true,
+    },
+    {
       description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
       matchDatasources: ["github-releases"],
       matchPackageNames: ["kubernetes/autoscaler"],
@@ -612,6 +621,10 @@
         "rook-ceph",
         "rook-ceph-cluster",
         "/(^|/)ceph/ceph$/",
+        // Each minor adds CRD fields and must match the ceph-csi-operator
+        // subchart bundled by rook-ceph (rook 1.20 -> 1.0.x, 1.21 -> 1.1.x).
+        // Bump it by hand in the Rook minor PR. Patches are backports only.
+        "ceph-csi-drivers",
       ],
       dependencyDashboardApproval: true,
       semanticCommitType: "feat",
@@ -623,8 +636,13 @@
     // the patch, so no patch PR is opened. No matchUpdateTypes: Renovate
     // reads this flag before update types are known.
     {
-      description: "Talos patches get their own PR",
-      matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl", "ghcr.io/siderolabs/installer"],
+      description: "Talos and ceph-csi-drivers patches get their own PR",
+      matchPackageNames: [
+        "siderolabs/talos",
+        "ghcr.io/siderolabs/talosctl",
+        "ghcr.io/siderolabs/installer",
+        "ceph-csi-drivers",
+      ],
       separateMinorPatch: true,
     },
     // Kubernetes and Rook upgrades step through every minor on its latest
