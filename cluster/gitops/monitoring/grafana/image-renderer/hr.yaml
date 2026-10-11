@@ -25,6 +25,8 @@ spec:
               repository: grafana/grafana-image-renderer
               tag: v5.12.5
             env:
+              LOG_FORMAT: json
+              API_SILENCE_REQUEST_LOG_PATH: /healthz,/metrics
               AUTH_TOKEN:
                 secretKeyRef:
                   name: grafana-image-renderer-auth-token
@@ -73,6 +75,10 @@ spec:
             path: /metrics
             interval: 1m
             scrapeTimeout: 10s
+            # Upstream dashboard 12203 hardcodes this job name
+            relabelings:
+              - targetLabel: job
+                replacement: image-renderer
     persistence:
       # Browser profile and XDG dirs are created under the temp dir
       tmp:
