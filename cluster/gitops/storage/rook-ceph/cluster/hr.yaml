@@ -25,6 +25,12 @@ spec:
       version: v1.20.8
   values:
     operatorNamespace: storage
+    # Pinned so Rook minors don't silently bump the Ceph major (rook 1.20
+    # defaults to Tentacle 20.2.x). Ceph is not downgradable, and the
+    # repo-wide rollback remediation would try.
+    cephImage:
+      repository: quay.io/ceph/ceph
+      tag: v19.2.6
     clusterName: *app_name
     toolbox:
       enabled: true

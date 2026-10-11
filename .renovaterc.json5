@@ -612,6 +612,10 @@
         "rook-ceph",
         "rook-ceph-cluster",
         "/(^|/)ceph/ceph$/",
+        // Each minor adds CRD fields and must match the ceph-csi-operator
+        // subchart bundled by rook-ceph (rook 1.20 -> 1.0.x, 1.21 -> 1.1.x).
+        // Bump it by hand in the Rook minor PR. Patches are backports only.
+        "ceph-csi-drivers",
       ],
       dependencyDashboardApproval: true,
       semanticCommitType: "feat",
@@ -623,8 +627,13 @@
     // the patch, so no patch PR is opened. No matchUpdateTypes: Renovate
     // reads this flag before update types are known.
     {
-      description: "Talos patches get their own PR",
-      matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl", "ghcr.io/siderolabs/installer"],
+      description: "Talos and ceph-csi-drivers patches get their own PR",
+      matchPackageNames: [
+        "siderolabs/talos",
+        "ghcr.io/siderolabs/talosctl",
+        "ghcr.io/siderolabs/installer",
+        "ceph-csi-drivers",
+      ],
       separateMinorPatch: true,
     },
     // Kubernetes and Rook upgrades step through every minor on its latest

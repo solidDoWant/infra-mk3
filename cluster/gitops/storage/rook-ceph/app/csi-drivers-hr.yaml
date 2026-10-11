@@ -1,0 +1,139 @@
+---
+# Rook >= 1.20 no longer deploys the CSI drivers. This chart owns the
+# OperatorConfig/Driver CRs (adopted from Rook, which pre-labelled them for a
+# release named exactly `ceph-csi-drivers`) plus the plugin RBAC.
+# The chart version MUST match the ceph-csi-operator subchart bundled by the
+# rook-ceph chart (its Chart.yaml dependencies) -- minors add CRD fields.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ceph-csi-drivers
+spec:
+  interval: 5m
+  releaseName: ceph-csi-drivers
+  # The rook-ceph chart installs the ceph-csi-operator and its CRDs
+  dependsOn:
+    - name: rook-ceph
+  chart:
+    spec:
+      chart: ceph-csi-drivers
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: ceph-csi-operator-charts
+      version: 1.0.4
+  values:
+    operatorConfig:
+      namespace: storage
+      driverSpecDefaults: &driver_defaults
+        imageSet:
+          name: rook-csi-operator-image-set-configmap
+        clusterName: rook-ceph-cluster
+        # Rotation writes logs to a hostPath file instead of stdout
+        log:
+          verbosity: 0
+          rotation:
+            enabled: false
+        grpcTimeout: 150
+        # TODO figure out whether I should encrypt volumes (tradeoffs)
+        # encryption:
+        #   configMapRef:
+        #     name: ...
+        enableMetadata: false
+        # `none` (the chart default) drops the csi-snapshotter sidecar
+        snapshotPolicy: volumeSnapshot
+        nodePlugin:
+          priorityClassName: system-node-critical
+          updateStrategy:
+            type: RollingUpdate
+        controllerPlugin:
+          priorityClassName: system-cluster-critical
+          # The controller plugins run on the pod network (netpol-covered)
+          hostNetwork: false
+          replicas: 2
+          deploymentStrategy:
+            type: Recreate
+    # Right-sized 2026-08-01 from 14d of metrics: p95 <2m CPU, peak working
+    # sets 38-123Mi. Memory request == limit throughout (incompressible: a
+    # request below the limit lets the node fill to 100% of requests while pods
+    # grow into their limits, and the OOM killer's victim is not necessarily
+    # the overcommitter). Values are ~2x the observed peak.
+    drivers:
+      rbd:
+        <<: *driver_defaults
+        enabled: true
+        # Must match the StorageClass/VolumeSnapshotClass provisioner names
+        name: storage.rbd.csi.ceph.com
+        nodePlugin:
+          priorityClassName: system-node-critical
+          updateStrategy:
+            type: RollingUpdate
+          resources:
+            registrar: &resources_64mi
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 64Mi
+            plugin:
+              requests:
+                cpu: 10m
+                memory: 256Mi
+              limits:
+                memory: 256Mi
+        controllerPlugin:
+          priorityClassName: system-cluster-critical
+          hostNetwork: false
+          replicas: 2
+          deploymentStrategy:
+            type: Recreate
+          resources:
+            provisioner: &resources_96mi
+              requests:
+                cpu: 10m
+                memory: 96Mi
+              limits:
+                memory: 96Mi
+            resizer: *resources_96mi
+            attacher: *resources_96mi
+            snapshotter: *resources_96mi
+            plugin: &resources_128mi
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            omapGenerator: *resources_128mi
+      cephfs:
+        <<: *driver_defaults
+        enabled: true
+        name: storage.cephfs.csi.ceph.com
+        snapshotPolicy: volumeGroupSnapshot
+        nodePlugin:
+          priorityClassName: system-node-critical
+          updateStrategy:
+            type: RollingUpdate
+          resources:
+            registrar: *resources_64mi
+            plugin: &resources_192mi
+              requests:
+                cpu: 10m
+                memory: 192Mi
+              limits:
+                memory: 192Mi
+        controllerPlugin:
+          priorityClassName: system-cluster-critical
+          hostNetwork: false
+          replicas: 2
+          deploymentStrategy:
+            type: Recreate
+          resources:
+            provisioner: *resources_96mi
+            resizer: *resources_96mi
+            attacher: *resources_96mi
+            snapshotter: *resources_96mi
+            plugin: *resources_192mi
+      nfs:
+        enabled: false
+      nvmeof:
+        enabled: false
