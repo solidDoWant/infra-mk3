@@ -23,9 +23,8 @@ spec:
           app:
             image:
               repository: grafana/grafana-image-renderer
-              tag: 3.12.9
+              tag: v5.12.5
             env:
-              ENABLE_METRICS: "true"
               AUTH_TOKEN:
                 secretKeyRef:
                   name: grafana-image-renderer-auth-token
@@ -38,22 +37,18 @@ spec:
                 enabled: true
                 type: HTTP
                 port: *process_port
-                path: /
+                path: /healthz
               readiness: *probe
             securityContext:
               allowPrivilegeEscalation: false
-              # TODO figure out what's being written to and mount it to a temp dir,
-              # to limit what can be changed
-              # readOnlyRootFilesystem: true
+              readOnlyRootFilesystem: true
               capabilities:
                 drop:
                   - ALL
         pod:
           securityContext:
-            # Image uses non-numeric user/group which isn't compatible with
-            # runAsNonRoot. Explicitly set the user/group to the same value
-            # as the image.
-            runAsUser: &uid 472
+            # Matches the image's nonroot user
+            runAsUser: &uid 65532
             runAsGroup: *uid
             fsGroup: *uid
             fsGroupChangePolicy: OnRootMismatch
@@ -79,20 +74,10 @@ spec:
             interval: 1m
             scrapeTimeout: 10s
     persistence:
-      config:
-        type: configMap
-        identifier: config
-        items:
-          - key: config.json
-            path: config.json
+      # Browser profile and XDG dirs are created under the temp dir
+      tmp:
+        type: emptyDir
         advancedMounts:
           grafana-image-renderer:
             app:
-              - path: /usr/src/app/config.json
-                subPath: config.json
-                readOnly: true
-    configMaps:
-      config:
-        data:
-          config.json: |
-            {}
+              - path: /tmp

@@ -32,10 +32,8 @@ specs:
                 protocol: TCP
             rules:
               dns:
-                # This is for request monitoring with Hubble.
-                # The image renderer calls "accounts.google.com" for some reason
-                # (chrome maybe?).
-                - matchPattern: "*" # TODO
+                # Chromium's background Google lookups (GCM etc.) are refused
+                - matchName: grafana-service.monitoring.svc.cluster.local
     ingress:
       # Kubelet to exporter for healthcheck
       - fromEntities:
