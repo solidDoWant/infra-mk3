@@ -225,12 +225,14 @@ spec:
         # TODO prom deployment
         # prometheusEndpoint:
       network:
-        connection:
-          encryption:
-            # TODO consider "offloading" this to istio
-            enabled: true
-          compression:
-            enabled: true
+        connections:
+          # CephFS kernel mounts here are msgr1 (mon_addr :6789, no ms_mode).
+          # requireMsgr2 (the chart default since rook 1.21) drops msgr1 from
+          # mons recreated on failover, stranding those mounts.
+          # TODO migrate CephFS mounts to msgr2, then enable encryption,
+          # compression and requireMsgr2.
+          # TODO consider "offloading" encryption to istio
+          requireMsgr2: false
       placement:
         all:
           nodeAffinity:
