@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.6.2
+      version: 5.3.0
   values:
     controllers:
       insurgency-fastdl:
@@ -151,11 +151,9 @@ spec:
       # config -- FASTDL_SERVERS in the tug2 Makefile decides which servers have an
       # image to mount at all. Today that is `test` only; `main` runs stock content.
       fastdl-test:
-        type: custom
-        volumeSpec:
-          image:
-            reference: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test-fastdl:0.0.16-dev
-            pullPolicy: IfNotPresent
+        type: image
+        image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test-fastdl:0.0.16-dev
+        pullPolicy: IfNotPresent
         advancedMounts:
           insurgency-fastdl:
             envoy:

@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.6.2
+      version: 5.3.0
   values:
     controllers:
       whereabouts:
@@ -22,6 +22,8 @@ spec:
         serviceAccount:
           identifier: whereabouts-cni
         pod:
+          # API access for IPAM; token-watcher builds the CNI kubeconfig from it
+          automountServiceAccountToken: true
           hostNetwork: true
           priorityClassName: system-node-critical
           tolerations:

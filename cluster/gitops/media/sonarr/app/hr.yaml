@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.6.2
+      version: 5.3.0
   values:
     controllers:
       sonarr:
@@ -78,6 +78,8 @@ spec:
         # Run this as a separate deployment so that I can try deploying multiple Radarr instances
         # at once without screwing up the metrics
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         strategy: RollingUpdate
         containers:
           exportarr:

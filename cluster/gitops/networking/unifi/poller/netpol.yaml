@@ -9,7 +9,7 @@ specs:
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: unifi-poller
-        app.kubernetes.io/component: unifi-poller
+        app.kubernetes.io/controller: unifi-poller
     egress:
       # DNS resolution
       - toEndpoints:

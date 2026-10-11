@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.6.2
+      version: 5.3.0
   values:
     controllers:
       project-zomboid:
@@ -43,8 +43,8 @@ spec:
         # node on purpose, delete the pod: eviction is what the budget blocks, and a plain
         # delete still gets the full grace period, so the server saves and quits cleanly.
         #
-        # maxUnavailable: 0 would state the intent more directly, but app-template 4.6.2
-        # silently drops a zero here and renders a PDB with no budget in it at all, which
+        # maxUnavailable: 0 would state the intent more directly, but app-template (through
+        # 5.3.0) silently drops a zero here and renders a PDB with no budget in it at all, which
         # allows every eviction -- the opposite of what it looks like.
         podDisruptionBudget:
           minAvailable: 1

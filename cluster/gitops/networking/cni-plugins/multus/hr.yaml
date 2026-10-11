@@ -14,12 +14,14 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.6.2
+      version: 5.3.0
   values:
     controllers:
       multus:
         type: daemonset
         pod:
+          # Daemon reads pods/NADs via in-cluster config
+          automountServiceAccountToken: true
           hostNetwork: true
           # This is required per https://github.com/k8snetworkplumbingwg/multus-cni/commit/fb31217e2cf376f9e7f00857b443c7f8cc473775
           hostPID: true
@@ -74,42 +76,36 @@ spec:
             probes:
               startup:
                 enabled: true
-                custom: true
+                command: &probe-command
+                  - perl
+                  - -MIO::Socket::UNIX
+                  - -e
+                  - &probe-script >-
+                    alarm 8;
+                    $s = IO::Socket::UNIX->new(Peer => "/host/run/multus/multus.sock") or exit 1;
+                    print $s "GET /$ARGV[0] HTTP/1.0\r\n\r\n";
+                    <$s> =~ m{^HTTP/\S+ 200 } or exit 1
+                  - healthz
                 spec:
-                  exec:
-                    command: &probe-command
-                      - perl
-                      - -MIO::Socket::UNIX
-                      - -e
-                      - &probe-script >-
-                        alarm 8;
-                        $s = IO::Socket::UNIX->new(Peer => "/host/run/multus/multus.sock") or exit 1;
-                        print $s "GET /$ARGV[0] HTTP/1.0\r\n\r\n";
-                        <$s> =~ m{^HTTP/\S+ 200 } or exit 1
-                      - healthz
                   periodSeconds: 2
                   timeoutSeconds: 10
                   failureThreshold: 30
               liveness:
                 enabled: true
-                custom: true
+                command: *probe-command
                 spec:
-                  exec:
-                    command: *probe-command
                   periodSeconds: 10
                   timeoutSeconds: 10
                   failureThreshold: 3
               readiness:
                 enabled: true
-                custom: true
+                command:
+                  - perl
+                  - -MIO::Socket::UNIX
+                  - -e
+                  - *probe-script
+                  - readyz
                 spec:
-                  exec:
-                    command:
-                      - perl
-                      - -MIO::Socket::UNIX
-                      - -e
-                      - *probe-script
-                      - readyz
                   periodSeconds: 10
                   timeoutSeconds: 10
                   failureThreshold: 1

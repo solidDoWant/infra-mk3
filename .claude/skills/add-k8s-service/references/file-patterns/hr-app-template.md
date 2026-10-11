@@ -19,7 +19,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.6.2
+      version: 5.3.0
   values:
     controllers:
       <service>:
@@ -249,12 +249,18 @@ See `operators.md` for storage class selection guidance.
 
 ## ServiceAccount and RBAC
 
-Use the root-level `serviceAccount` and `rbac` keys. `serviceAccount: create: true` enables a default ServiceAccount for the release; `rbac` defines Roles/ClusterRoles and their bindings. Bindings reference the serviceAccount via `identifier: default`.
+Use the root-level `serviceAccount` and `rbac` keys. `serviceAccount` is a map keyed by identifier; `rbac` defines Roles/ClusterRoles and their bindings, which reference a serviceAccount by that identifier. Without a `serviceAccount` entry the chart creates an unprivileged one named after the release.
+
+The pod's ServiceAccount token is **not** mounted by default. Anything that calls the Kubernetes API (operators, controllers, kubectl scripts, in-cluster-config clients, tbot `kubernetes` join) must opt in with `defaultPodOptions.automountServiceAccountToken: true` (or per-controller `pod.automountServiceAccountToken: true`). Leave it off otherwise.
+
+Pre-install/pre-upgrade hook controllers run before the chart's ServiceAccount exists — give them `serviceAccount.name: default` (or an SA created outside the release).
 
 ```yaml
     # Root-level — same indentation as controllers:, persistence:, etc.
     serviceAccount:
       <service>: {}
+    defaultPodOptions:
+      automountServiceAccountToken: true   # Required for API access
     rbac:
       roles:
         <service>:

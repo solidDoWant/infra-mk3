@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 4.6.2
+      version: 5.3.0
   values:
     controllers:
       installer:
@@ -71,6 +71,8 @@ spec:
         pod:
           annotations:
             k8tz.io/inject: "false"
+          # Labeler talks to the k8s API
+          automountServiceAccountToken: true
           nodeSelector:
             cni-plugins.home.arpa/node.general-purpose-plugins-enabled: "true"
           # After the pod succeeds once for a given version, it will no longer match this selector.

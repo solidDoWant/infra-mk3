@@ -14,11 +14,13 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bjw-s-charts
-      version: 3.7.3
+      version: 5.3.0
   values:
     controllers:
       pve-exporter:
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         containers:
           app:
             image:
@@ -76,8 +78,10 @@ spec:
       # by this config, but only one pod is scraped for
       # actual proxmox metrics.
       pve-exporter-self:
-        nameOverride: self
-        serviceName: pve-exporter
+        # Default name collides with the VMServiceScrape in service-scrape.yaml
+        forceRename: pve-exporter-self
+        service:
+          identifier: pve-exporter
         endpoints:
           - interval: 1m
             scrapeTimeout: 10s

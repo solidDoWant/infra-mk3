@@ -87,7 +87,7 @@ Multiple Flux Kustomizations are needed when the service has:
 
 ### 2c: Helm Chart
 
-**Default: `app-template` v4.6.2** from `bjw-s-charts`. Use this for almost everything. Only deviate when the upstream chart provides substantial value that would require significant duplication to replicate in app-template (complex operator-managed resources, multi-component deployments with complex inter-service wiring, etc.). If proposing an external chart, name it and explain specifically why.
+**Default: `app-template` v5.3.0** from `bjw-s-charts`. Use this for almost everything. Only deviate when the upstream chart provides substantial value that would require significant duplication to replicate in app-template (complex operator-managed resources, multi-component deployments with complex inter-service wiring, etc.). If proposing an external chart, name it and explain specifically why.
 
 If using an external chart that isn't already in `cluster/gitops/flux-system/flux/sources/helm/`, a new HelmRepository file is needed (see `references/file-patterns/flux-sources.md`).
 
@@ -170,7 +170,7 @@ Write files group by group: flux source (if new), backend KS + resources, then a
 
 ### Standards for every service
 
-**Helm chart version**: Use `app-template` 4.6.2. Pin all images and chart versions to specific version tags (not `latest`). Checksums are ideal but tags are acceptable for readability.
+**Helm chart version**: Use `app-template` 5.3.0. Pin all images and chart versions to specific version tags (not `latest`). Checksums are ideal but tags are acceptable for readability.
 
 **Container images**: Prefer non-Docker Hub registries. Selection order:
 1. `ghcr.io/home-operations/<name>` if it exists — these run rootless and have stronger security controls.
