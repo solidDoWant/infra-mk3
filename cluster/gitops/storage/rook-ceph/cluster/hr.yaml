@@ -204,23 +204,27 @@ spec:
       dashboard:
         # SSO requires the dashboard to serve HTTPS itself: the SAML handler takes
         # the scheme from the incoming connection and ignores X-Forwarded-Proto
-        # (https://tracker.ceph.com/issues/48306). Re-encrypting from the gateway
-        # via a BackendTLSPolicy needs a cert with a SAN, which rook's self-signed
-        # cert lacks. `dashboard.sslCertificateRef` (rook PR #17985, rook >=1.21)
-        # loads a cert-manager Secret instead.
-        # TODO after upgrading to rook v1.21:
-        # 1. Storage intermediary CA (components/issuers) + a Certificate for
-        #    rook-ceph-mgr-dashboard.storage.svc. Set `ssl: true` and
-        #    `sslCertificateRef`, and point the HTTPRoute at 8443.
-        # 2. BackendTLSPolicy against root-ca-pub-cert (see temporal's).
-        # 3. Authentik SAML provider + application. ACS URL is
-        #    https://rook.${SECRET_PUBLIC_DOMAIN_NAME}/auth/saml2
-        # 4. Via the toolbox pod:
-        #    `ceph dashboard sso setup saml2 https://rook.${SECRET_PUBLIC_DOMAIN_NAME} https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/api/v3/providers/saml/3/metadata/?download
-        #    `ceph dashboard sso enable saml2`
-        #    SSO doesn't create users: each needs a matching dashboard account.
-        #    Docs: https://docs.ceph.com/en/tentacle/mgr/dashboard/#dashboard-sso-support
-        ssl: false
+        # (https://tracker.ceph.com/issues/48306). The gateway re-encrypts to a
+        # cert-manager cert (dashboard-cert.yaml, BackendTLSPolicy in
+        # httproute.yaml).
+        #
+        # SAML (Authentik provider in the ceph-dashboard application blueprint)
+        # lives in the dashboard's SSO DB, so it is set imperatively. The SP
+        # keypair is mandatory: without it Ceph accepts unsigned responses. The
+        # mgr reads the key files itself, so copy dashboard-saml-sp.sops.yaml's
+        # tls.crt/tls.key into the ACTIVE mgr's /tmp first (Ceph stores their
+        # contents; delete them after), then from the toolbox:
+        #   ceph dashboard sso setup saml2 \
+        #     --ceph_dashboard_base_url https://rook.${SECRET_PUBLIC_DOMAIN_NAME} \
+        #     --idp_metadata https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/saml/ceph-dashboard/metadata/ \
+        #     --idp_username_attribute http://schemas.goauthentik.io/2021/02/saml/username \
+        #     --sp_x_509_cert /tmp/sp.crt --sp_private_key /tmp/sp.key
+        #   ceph dashboard sso enable saml2
+        # SSO doesn't create users: each Authentik username needs a dashboard
+        # account (`ceph dashboard ac-user-create <user> -i <pw> administrator`).
+        # Docs: https://docs.ceph.com/en/tentacle/mgr/dashboard/#dashboard-sso-support
+        ssl: true
+        sslCertificateRef: rook-ceph-dashboard-tls
         # TODO prom deployment
         # prometheusEndpoint:
       network:
