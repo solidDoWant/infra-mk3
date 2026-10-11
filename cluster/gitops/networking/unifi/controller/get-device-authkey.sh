@@ -7,8 +7,6 @@
 #   - UniFi's bundled Mongo binds to 127.0.0.1:27117 inside the pod, so nothing
 #     else in the cluster can reach it. `kubectl port-forward` does reach the pod
 #     loopback, so we forward the port and query it from here.
-#   - The controller runs an ancient MongoDB (3.6, wire v6); modern pymongo
-#     refuses to talk to it, so we pin `pymongo<4`.
 #
 # Requires: kubectl (with context pointed at the cluster) and uv.
 #
@@ -37,7 +35,7 @@ for _ in $(seq 1 20); do
   sleep 0.5
 done
 
-MAC="$MAC" PORT="$PORT" uv run --quiet --with 'pymongo<4' --no-project python3 - <<'PY'
+MAC="$MAC" PORT="$PORT" uv run --quiet --with pymongo --no-project python3 - <<'PY'
 import json, os
 from pymongo import MongoClient
 
