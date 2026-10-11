@@ -65,11 +65,12 @@ spec:
                   - name: RENOVATE_HOST_RULES
                     value: |-
                       [{"matchHost":"http://localhost:10000","hostType":"docker","allowInternal":true,"username":"x-access-token","password":"\$(RENOVATE_TOKEN)"}]
-                  # Renovate reads every GHCR page only when the host is
+                  # Renovate reads up to 1000 GHCR pages only when the host is
                   # literally ghcr.io; through the proxy, the default 20-page cap
                   # drops the newest tags (GHCR lists oldest-first).
+                  # immich-machine-learning alone is 200+ pages.
                   - name: RENOVATE_DOCKER_MAX_PAGES
-                    value: "100"
+                    value: "1000"
             volumes:
               - name: ghcr-proxy-config
                 configMap:
