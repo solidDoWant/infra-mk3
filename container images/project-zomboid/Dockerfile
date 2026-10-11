@@ -4,7 +4,7 @@
 # private registry.
 
 ARG STEAMCMD_IMAGE=ghcr.io/gameservermanagers/steamcmd:ubuntu-24.04
-ARG RUNTIME_IMAGE=ubuntu:24.04
+ARG RUNTIME_IMAGE=ubuntu:26.04
 
 FROM ${STEAMCMD_IMAGE} AS server-builder
 

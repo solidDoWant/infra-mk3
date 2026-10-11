@@ -1,4 +1,4 @@
-BASE_IMAGE = ubuntu:24.04
+BASE_IMAGE = ubuntu:26.04
 XPUMANAGER_VERSION = v1.3.2
 
 NEW_IMAGE = ghcr.io/soliddowant/xpumanager
