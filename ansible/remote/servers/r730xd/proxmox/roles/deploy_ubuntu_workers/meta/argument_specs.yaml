@@ -4,6 +4,7 @@ argument_specs:
     options:
       ubuntu_version:
         type: str
+        # renovate: datasource=docker depName=ubuntu
         default: "24.04"
       vm_count:
         type: int

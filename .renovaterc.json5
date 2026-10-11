@@ -111,6 +111,15 @@
     },
     {
       customType: "regex",
+      description: "Literal image refs assigned to *_IMAGE Makefile variables",
+      managerFilePatterns: ["/(^|/)Makefile$/"],
+      matchStrings: [
+        "(?:^|\\n)\\w*_IMAGE\\s*[?:]?=\\s*(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)\\s*(?:\\n|$)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
       description: "Tagged raw files (CRDs, manifests, dashboards, values schema refs)",
       managerFilePatterns: ["/^cluster/.+\\.(ya?ml|json)$/"],
       matchStrings: [
@@ -151,6 +160,13 @@
       matchDatasources: ["docker"],
       matchPackageNames: ["ubuntu", "docker.io/library/ubuntu"],
       allowedVersions: "/^\\d[02468]\\.04$/",
+    },
+    {
+      description: "Images tagged by Ubuntu release: LTS only. devcontainers dropped the dash from 26.04 on",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["mcr.microsoft.com/devcontainers/base", "ghcr.io/gameservermanagers/steamcmd"],
+      versioning: "regex:^ubuntu-?(?<major>\\d+)\\.(?<minor>\\d+)$",
+      allowedVersions: "/^ubuntu-?\\d[02468]\\.04$/",
     },
     {
       description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
