@@ -20,21 +20,26 @@
     group: root
     mode: 0644
 
+- name: Remove the legacy one-line fluent-bit repository file
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/fluent-bit.list
+    state: absent
+
 - name: Add the fluent-bit repository
-  ansible.builtin.apt_repository:
-    repo: >-
-      deb [signed-by=/etc/apt/keyrings/fluentbit.asc]
-      {{ fluent_bit_apt_repo_base }}/{{ ansible_distribution_release }}
-      {{ ansible_distribution_release }} main
-    state: present
-    filename: fluent-bit
-    update_cache: true
+  ansible.builtin.deb822_repository:
+    name: fluent-bit
+    uris: "{{ fluent_bit_apt_repo_base }}/{{ ansible_distribution_release }}"
+    suites: "{{ ansible_distribution_release }}"
+    components: main
+    signed_by: /etc/apt/keyrings/fluentbit.asc
+  register: fluent_bit_repo
 
 - name: Install fluent-bit
   ansible.builtin.apt:
     name: fluent-bit
     state: latest
-    cache_valid_time: 600
+    update_cache: true
+    cache_valid_time: "{{ 0 if fluent_bit_repo.changed else 600 }}"
 
 # The package does not create a state home; both the journald cursor DB and
 # the filesystem buffer live here.

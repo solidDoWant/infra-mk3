@@ -9,14 +9,20 @@
     group: root
     mode: 0644
 
+- name: Remove the legacy one-line Docker repository file
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/docker.list
+    state: absent
+
 - name: Add the Docker repository
-  ansible.builtin.apt_repository:
-    repo: >-
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
-      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
-    state: present
-    filename: docker
-    update_cache: true
+  ansible.builtin.deb822_repository:
+    name: docker
+    uris: https://download.docker.com/linux/ubuntu
+    suites: "{{ ansible_distribution_release }}"
+    components: stable
+    architectures: amd64
+    signed_by: /etc/apt/keyrings/docker.asc
+  register: docker_repo
 
 - name: Install packages
   ansible.builtin.apt:
@@ -31,7 +37,7 @@
       - lsscsi
     state: latest
     update_cache: true
-    cache_valid_time: 600
+    cache_valid_time: "{{ 0 if docker_repo.changed else 600 }}"
     autoclean: true
     autoremove: true
 
