@@ -19,6 +19,8 @@ spec:
     controllers:
       grafana-image-renderer:
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         containers:
           app:
             image:

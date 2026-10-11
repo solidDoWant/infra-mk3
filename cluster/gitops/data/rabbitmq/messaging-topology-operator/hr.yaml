@@ -25,6 +25,8 @@ spec:
     controllers:
       messaging-topology-operator:
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         containers:
           operator:
             image:

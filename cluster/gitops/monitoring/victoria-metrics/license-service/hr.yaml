@@ -27,6 +27,8 @@ spec:
     controllers:
       victoria-metrics-license-service:
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         containers:
           app:
             image:

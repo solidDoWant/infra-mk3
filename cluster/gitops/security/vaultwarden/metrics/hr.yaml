@@ -19,6 +19,8 @@ spec:
     controllers:
       vaultwarden-metrics:
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         strategy: RollingUpdate
         containers:
           vwmetrics:

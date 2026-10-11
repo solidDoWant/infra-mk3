@@ -19,6 +19,8 @@ spec:
     controllers:
       pve-exporter:
         replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         containers:
           app:
             image:
