@@ -220,6 +220,11 @@ spec:
         #     --idp_username_attribute http://schemas.goauthentik.io/2021/02/saml/username \
         #     --sp_x_509_cert /tmp/sp.crt --sp_private_key /tmp/sp.key
         #   ceph dashboard sso enable saml2
+        # Ceph bug: if the active mgr loaded an SSO DB saved as protocol `local`,
+        # setup attaches the settings to that object and saves `saml2: {}`
+        # (login then 500s on get_username_attribute). Check
+        # `ceph config-key get mgr/dashboard/ssodb_v1`; if saml2 is empty,
+        # `ceph mgr fail` and rerun setup on the new active mgr.
         # SSO doesn't create users: each Authentik username needs a dashboard
         # account (`ceph dashboard ac-user-create <user> -i <pw> administrator`).
         # Docs: https://docs.ceph.com/en/tentacle/mgr/dashboard/#dashboard-sso-support
