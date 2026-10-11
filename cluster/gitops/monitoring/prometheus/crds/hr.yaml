@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: prometheus-community-charts
-      version: 16.0.1
+      version: 32.0.1
   # Only the types the VM operator converts are needed. Each served CRD costs
   # apiserver memory (OpenAPI specs, schemas, watch cache).
   postRenderers:
