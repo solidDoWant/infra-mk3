@@ -25,6 +25,10 @@ spec:
               tag: v5.5.1
             env:
               UP_INFLUXDB_DISABLE: "true"
+              # Poll live per scrape. The background cache serves the last good
+              # snapshot when the controller is unreachable, freezing
+              # controller_up and device metrics, which blinds alerts.yaml.
+              UP_PROMETHEUS_INTERVAL: "0"
               UP_UNIFI_DEFAULT_ROLE: infra-mk3
               UP_UNIFI_DEFAULT_URL: https://unifi-controller.networking.svc.cluster.local
               # TODO after deploying vmlogs
