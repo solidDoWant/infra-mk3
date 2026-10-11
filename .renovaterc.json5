@@ -196,7 +196,7 @@
       description: "mail 5.0.0-5.1.0 crash with metrics enabled (sed -i on the subPath-mounted logrotate.conf, bokysan/docker-postfix#278); fix #266 is unreleased",
       matchDatasources: ["helm"],
       matchPackageNames: ["mail"],
-      allowedVersions: "!/^5\\.(0\\.[01]|1\\.0)$/",
+      allowedVersions: "!/^v?5\\.(0\\.[01]|1\\.0)$/",
     },
     {
       description: "smartctl-exporter 0.15.0 skipped (closed #128/#188/#195); the group PR is immortal, so closing it does not stick",
