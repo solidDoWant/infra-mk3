@@ -22,7 +22,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: rook-ceph-charts
-      version: v1.20.8
+      version: v1.21.0
   values:
     operatorNamespace: storage
     # Pinned so Rook minors don't silently bump the Ceph major (rook 1.20
