@@ -26,12 +26,8 @@ spec:
             env:
               # Overrides the image's -Xmx256M (nzbhydra.yml `xmx` is only read
               # by the upstream wrapper, which the image doesn't use). Heap OOM
-              # inside H2 mid-write corrupts the database. The trust store adds
-              # the cluster root CA (OIDC back-channel) to the JDK's public CAs.
-              JAVA_TOOL_OPTIONS: >-
-                -Xmx768M
-                -Djavax.net.ssl.trustStore=/truststore/cacerts
-                -Djavax.net.ssl.trustStorePassword=changeit
+              # inside H2 mid-write corrupts the database.
+              JAVA_TOOL_OPTIONS: -Xmx768M
               # Console layout for fluent-bit (parse-nzbhydra2-logs): no ANSI
               # colors or padding, full logger name. NZBHydra2 has no JSON
               # console option; its logback config reads this variable, and
@@ -86,19 +82,6 @@ spec:
                 path: /
             securityContext: *container_security_context
         initContainers:
-          # Builds a trust store of the JDK's public CAs plus the cluster root
-          # CA, which signs the openid-configuration-proxy's serving cert.
-          truststore:
-            image: *image
-            command:
-              - sh
-              - -c
-              - >-
-                cp "$$JAVA_HOME/lib/security/cacerts" /truststore/cacerts &&
-                keytool -importcert -noprompt -alias cluster-root-ca
-                -file /etc/root-ca/ca.crt -keystore /truststore/cacerts
-                -storepass changeit
-            securityContext: *container_security_context
           # Asserts the OIDC auth settings in nzbhydra.yml on every start, so
           # auth changes made in the UI are reverted.
           init-config:
@@ -175,31 +158,25 @@ spec:
           nzbhydra2:
             nzbhydra2:
               - path: /tmp
-            # yq -i stages its output in $TMPDIR; keytool's JVM writes here too
+            # yq -i stages its output in $TMPDIR
             init-config:
               - path: /tmp
-            truststore:
-              - path: /tmp
-      truststore:
-        type: emptyDir
-        sizeLimit: 5Mi
-        advancedMounts:
-          nzbhydra2:
-            truststore:
-              - path: /truststore
-            nzbhydra2:
-              - path: /truststore
-                readOnly: true
-      # Cluster root CA, distributed to every namespace by the
-      # extract-root-ca-certificate Kyverno policy.
+      # Cluster root CA (distributed to every namespace by the
+      # extract-root-ca-certificate Kyverno policy); signs the
+      # openid-configuration-proxy's serving cert. Hydra ignores
+      # javax.net.ssl.trustStore: it builds the default SSLContext from its
+      # bundled CAs plus every file in <data folder>/certificates. A single
+      # subPath file, as a directory mount's `..data` entries would fail
+      # that load.
       root-ca:
         type: secret
         name: root-ca-pub-cert
         defaultMode: 0444
         advancedMounts:
           nzbhydra2:
-            truststore:
-              - path: /etc/root-ca
+            nzbhydra2:
+              - path: /config/certificates/infra-mk3-root-ca.crt
+                subPath: ca.crt
                 readOnly: true
       init-scripts:
         type: configMap
