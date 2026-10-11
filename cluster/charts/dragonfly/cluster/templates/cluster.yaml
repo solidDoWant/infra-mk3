@@ -6,7 +6,7 @@ metadata:
   name: {{ include "cluster-resource-name" . }}
 spec:
   # Pinned so operator bumps don't change the server version
-  image: ghcr.io/dragonflydb/dragonfly:v1.40.2
+  image: ghcr.io/dragonflydb/dragonfly:v2.0.2
   replicas: {{ .Values.instances }}
   args:
     - --proactor_threads={{ .Values.proactorThreads }}
