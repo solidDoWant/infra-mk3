@@ -1,8 +1,9 @@
 ---
-# No $schema: `machine.time` is deprecated (TimeSyncConfig replaces it) and
-# absent from the schema.
-# Use NTP server running on the gateway
-machine:
-  time:
-    servers:
-      - 10.3.0.254
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
+# Use NTP server running on the gateway. NTS requires hostnames, so it is off.
+apiVersion: v1alpha1
+kind: TimeSyncConfig
+ntp:
+  servers:
+    - 10.3.0.254
+  useNTS: false

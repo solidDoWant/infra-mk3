@@ -1,14 +1,19 @@
 ---
-# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
 # Talos built-ins that are replaced or unwanted.
-cluster:
-  # Use Cilium's kube-proxy replacement
-  proxy:
-    disabled: true
-  # Disable Talos-installed coredns, and instead install it manually
-  coreDNS:
-    disabled: true
-  # Disable discovery service completely
-  # Sidero rug pulled in-cluster discovery, see https://github.com/siderolabs/talos/issues/9980
-  discovery:
-    enabled: false
+# Use Cilium's kube-proxy replacement
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+enabled: false
+---
+# Disable Talos-installed coredns, and instead install it manually
+apiVersion: v1alpha1
+kind: KubeCoreDNSConfig
+enabled: false
+---
+# Disable discovery service completely
+# Sidero rug pulled in-cluster discovery, see https://github.com/siderolabs/talos/issues/9980
+apiVersion: v1alpha1
+kind: DiscoveryServiceConfig
+name: default
+$patch: delete
