@@ -149,7 +149,7 @@ spec:
       initContainers: &envoy_init_containers
         - name: envoy
           # Contrib image is required for the postgres_proxy filter
-          image: envoyproxy/envoy:contrib-v1.39.3
+          image: envoyproxy/envoy:contrib-v1.39.4
           restartPolicy: Always
           ports:
             - name: envoy-admin
