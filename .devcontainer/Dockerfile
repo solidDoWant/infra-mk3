@@ -43,7 +43,7 @@ COPY --from=hairyhenderson/gomplate:stable /gomplate /usr/local/bin/gomplate
 COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6 /usr/local/bin/dive /usr/local/bin/dive
 
 # talosctl
-COPY --from=ghcr.io/siderolabs/talosctl:v1.13.11 /talosctl /usr/local/bin/talosctl
+COPY --from=ghcr.io/siderolabs/talosctl:v1.14.2 /talosctl /usr/local/bin/talosctl
 
 # topf
 COPY --from=ghcr.io/postfinance/topf:v0.6.1 /usr/local/bin/topf /usr/local/bin/topf
