@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+machine:
+  install:
+    diskSelector:
+      # Selects the Inland QN322 boot drive, which reports its model as the
+      # gloriously unhelpful "PCIe SSD". Unambiguous anyway: the only other two
+      # drives in every one of these chassis are a KINGSTON SKC3000D2048G (ZFS
+      # local-storage pool) and a SAMSUNG MZQL21T9HCJR (Ceph OSD).
+      #
+      # This deliberately does NOT match on `busPath`. A busPath looks stable
+      # but only its root-port component is -- the segment after it is a
+      # secondary bus number the firmware assigns while enumerating, and it
+      # shifts whenever anything earlier in the walk consumes an extra bus (BIOS
+      # revision, a hotplug port reserving a range for an empty slot, a bridge
+      # behind an adapter). These boxes do not even agree with each other: the
+      # boot drive has been seen at both `0000:0c:00.0` and `0000:0d:00.0`
+      # behind the same root port, in identical chassis, with the drive in the
+      # same physical slot.
+      #
+      # For reference, all three NVMe drives hang off separate root ports:
+      #   0000:00:01.2  SAMSUNG MZQL21T9HCJR     (Ceph OSD, on an M.2->U.2 adapter)
+      #   0000:00:01.3  "PCIe SSD"               (boot)
+      #   0000:00:01.4  KINGSTON SKC3000D2048G   (ZFS local-storage pool)
+      # The root ports are identical on every node; only the bus numbers behind
+      # them differ, which is exactly what this selector does not depend on.
+      #
+      # Failure mode if this ever stops matching is safe -- the installer
+      # errors out rather than picking a different drive -- but "safe" still
+      # means a reinstall that dies partway, so keep it matching.
+      model: PCIe SSD

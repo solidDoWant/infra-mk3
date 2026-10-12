@@ -1,0 +1,16 @@
+---
+# Boot ISO only (`task talos:download-iso`): merged over schematic.yaml, so
+# these kernel args REPLACE its list rather than extending it. ${NODE_IP} and
+# ${NODE_HOST} are substituted per node from topf.yaml.
+#
+# These args exist only so the node reaches maintenance mode on a predictable
+# static IP before it has a config; the bond that survives the install is the
+# one in patches/all/02-network.yaml.tpl, and the interface names here have to
+# be kept in sync with it by hand. If the ISO ever comes up with no network,
+# drop the bond= and ip= args and let it DHCP on enp3s0/enp4s0.
+customization:
+  extraKernelArgs:
+    - bond=bond0:enp5s0f0np0,enp5s0f1np1:mode=802.3ad,xmit_hash_policy=layer3+4:9000
+    - ip=${NODE_IP}::10.3.0.254:255.255.0.0:${NODE_HOST}:bond0:off:10.3.0.254::10.3.0.254
+    # Negated to allow the installer to run. Needed for recovery
+    - -talos.halt_if_installed

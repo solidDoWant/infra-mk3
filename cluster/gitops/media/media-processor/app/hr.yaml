@@ -274,7 +274,7 @@ spec:
             resourceClaims:
               - name: gpu
                 resourceClaimTemplateName: media-processor-transcode-gpu
-            # The cluster-level PodTopologySpread default in talconfig.yaml only
+            # The cluster-level PodTopologySpread default (talos/patches/) only
             # auto-derives a labelSelector from Service / RC / ReplicaSet /
             # StatefulSet owners — Jobs (and therefore KEDA ScaledJob pods) are
             # not in that list, so the scheduler attaches no constraint to these

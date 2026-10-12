@@ -790,7 +790,7 @@ spec:
               tlsConfig:
                 # TODO pin these certs or generate them all from the same root CA.
                 # These appear to be generated for each separate node, and aren't
-                # rooted by the talsecret values.
+                # rooted by the talos/secrets.sops.yaml values.
                 insecureSkipVerify: true
     kubelet:
       vmScrapes:

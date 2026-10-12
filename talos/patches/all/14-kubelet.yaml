@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+# Configure kubelet
+machine:
+  kubelet:
+    extraConfig:
+      # Equivalent of `rotate-server-certificates` arg, but config instead
+      serverTLSBootstrap: true
+      imageMaximumGCAge: 168h # One week
+      imageGCHighThresholdPercent: 50
+      imageGCLowThresholdPercent: 20
+      maxPods: 256
+      serializeImagePulls: false
+      allowedUnsafeSysctls:
+        # These are needed for the VPN router pods
+        # This is scoped wider than I'd like but it's needed until
+        # https://github.com/kubernetes/kubernetes/issues/134003 is addressed
+        - net.ipv4.conf.*
+        - net.ipv4.fib_multipath_hash_seed
+        - net.ipv4.fib_multipath_hash_policy
+        - net.ipv4.vs.*
+        # I'm not using these yet, but they might be useful in future
+        # - net.ipv4.fib_multipath_hash_fields
+        # - net.ipv4.ip_forward
+      # Allow pinning CPUs for workloads when QoS is Guaranteed
+      cpuManagerPolicy: static
+    extraArgs:
+      # Feature enablement
+      feature-gates: DRAAdminAccess=true,ImageVolume=true,EnvFiles=true
+    nodeIP:
+      validSubnets:
+        - 10.3.1.0/16

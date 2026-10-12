@@ -1,0 +1,8 @@
+---
+# No $schema: `machine.time` is deprecated (TimeSyncConfig replaces it) and
+# absent from the schema.
+# Use NTP server running on the gateway
+machine:
+  time:
+    servers:
+      - 10.3.0.254

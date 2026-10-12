@@ -2,7 +2,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on kube-apiserver, kube-controller-manager and kube-scheduler to
 # `msg` instead of the JSON envelope. They run with `--logging-format=json`
-# (talconfig.yaml), whose records have no level: info records carry `v`, and
+# (talos/patches/all/), whose records have no level: info records carry `v`, and
 # everything else is error-level. klog warnings land there too, so they show
 # as errors. The API server's etcd client logs zap JSON, which has its own
 # level. Runs after `kubernetes`, which populates `log_fields`.

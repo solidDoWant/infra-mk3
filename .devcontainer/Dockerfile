@@ -45,8 +45,8 @@ COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6 /usr/local/bin/dive /usr
 # talosctl
 COPY --from=ghcr.io/siderolabs/talosctl:v1.13.11 /talosctl /usr/local/bin/talosctl
 
-# talhelper
-COPY --from=ghcr.io/budimanjojo/talhelper:v3.1.17 /bin/talhelper /usr/local/bin/talhelper
+# topf
+COPY --from=ghcr.io/postfinance/topf:v0.6.1 /usr/local/bin/topf /usr/local/bin/topf
 
 # helmfile
 COPY --from=ghcr.io/helmfile/helmfile:v1.0.0-rc.7 /usr/local/bin/helmfile /usr/local/bin/helmfile
@@ -173,7 +173,7 @@ ENV TALOSCONFIG=talos/talosconfig
 RUN \
     yq completion bash | sudo tee /etc/bash_completion.d/yq.bash > /dev/null && \
     talosctl completion bash | sudo tee /etc/bash_completion.d/talosctl.bash > /dev/null && \
-    talhelper completion bash | sudo tee /etc/bash_completion.d/talhelper.bash > /dev/null && \
+    topf completion bash | sudo tee /etc/bash_completion.d/topf.bash > /dev/null && \
     helmfile completion bash | sudo tee /etc/bash_completion.d/helmfile.bash > /dev/null && \
     kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl.bash > /dev/null && \
     helm completion bash | sudo tee /etc/bash_completion.d/helm.bash > /dev/null && \

@@ -92,7 +92,7 @@ spec:
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
           # Exclude nodes the pod cannot be placed on (e.g. an unreachable
-          # node) from the skew calculation; see talos/talconfig.yaml.
+          # node) from the skew calculation; see talos/patches/.
           nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:

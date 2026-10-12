@@ -1,0 +1,50 @@
+---
+# Rendered and applied with topf (https://github.com/postfinance/topf).
+# Patches under patches/ merge in order: all/, then <role>/, then node/<host>/.
+#
+# All three nodes are identical Minisforum MS-A2 boxes (AMD Ryzen 9 9955HX), so
+# every patch is shared. The only genuinely per-node values are the hostname,
+# the IP and the secondary bond address below; everything else derives from
+# them in templates.
+#
+# ⚠ The boot drive is NOT safe, and re-installing a node is destructive beyond
+# the OS. EPHEMERAL lives on the install disk and holds /var/lib/rook -- the
+# CephCluster's `dataDirHostPath`, including that node's mon store -- plus
+# /var/lib/etcd. Recover a node by applying config to the running system over
+# the network, not by booting the ISO: `-talos.halt_if_installed` is negated
+# in iso-schematic.yaml, so the ISO runs the installer and wipes EPHEMERAL.
+# `topf apply` never reinstalls, and `topf upgrade` preserves EPHEMERAL
+# (wiping requires an explicit reset).
+#
+# ⚠ The slot holding the Samsung U.2 must be pinned to PCIe Gen3. At Gen4 the
+# link threw ~17 correctable RxErr/sec while completely idle (with BadTLP 0 --
+# pure signal-integrity marginality, no data loss) and flushed the kernel ring
+# buffer. Gen3 took it to a clean 0, including under sustained Ceph backfill.
+# This lives in BIOS only and is NOT in git, so a BIOS reset or reflash silently
+# loses it.
+clusterName: infra-mk3
+clusterEndpoint: https://10.34.254.1:6443
+# On a minor bump, also bump the versioned `$schema` URL in patches/**/*.yaml.
+talosVersion: v1.13.11
+# renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.36.5
+schematicId: "@schematic.yaml"
+secureboot: true
+patchesDir: patches
+secretsPath: secrets.sops.yaml
+nodes:
+  - host: talos-k8s-mixed-01
+    ip: 10.3.1.1
+    role: control-plane
+    data:
+      bondSecondaryAddress: 10.3.2.1
+  - host: talos-k8s-mixed-02
+    ip: 10.3.1.2
+    role: control-plane
+    data:
+      bondSecondaryAddress: 10.3.2.2
+  - host: talos-k8s-mixed-03
+    ip: 10.3.1.3
+    role: control-plane
+    data:
+      bondSecondaryAddress: 10.3.2.3

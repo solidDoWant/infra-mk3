@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+# Configure DNS resolution
+machine:
+  features:
+    hostDNS:
+      enabled: true
+      # This is broken with Cilium, see 
+      # * https://github.com/cilium/cilium/issues/35153
+      # * https://github.com/siderolabs/talos/pull/9200
+      forwardKubeDNSToHost: false
+      resolveMemberNames: true

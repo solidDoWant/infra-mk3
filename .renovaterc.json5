@@ -221,7 +221,7 @@
 
     // --- Groups (one PR for components that must move together) ------------
     {
-      description: "Talos: talconfig + talosctl",
+      description: "Talos: topf.yaml + talosctl",
       groupName: "talos",
       matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl"],
       group: { commitMessageTopic: "{{{groupName}}} group" },

@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+# API server configuration
+cluster:
+  apiServer:
+    extraArgs:
+      # Load balance requests to metrics-server and other API server
+      # services/extensions by sending traffic to each endpoint instead of the
+      # service cluster IP
+      enable-aggregator-routing: "true"
+      # Feature enablement
+      feature-gates: kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:ImageVolume=true,kube:MutatingAdmissionPolicy=true,kube:EnvFiles=true
+      # Resource enablement
+      # Enable everything but alpha and legacy features
+      runtime-config: "api/all=true,api/legacy=false"
+      # Text output splits multi-line values (e.g. `err=<...>`) across log
+      # records.
+      logging-format: json

@@ -1,0 +1,8 @@
+---
+# No $schema: it wrongly types `endpoint` as an object; Talos takes a URL string.
+# Ship logs to each node's agent
+machine:
+  logging:
+    destinations:
+      - endpoint: tcp://127.0.0.1:5170
+        format: json_lines

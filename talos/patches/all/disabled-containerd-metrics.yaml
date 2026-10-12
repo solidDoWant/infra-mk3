@@ -1,0 +1,12 @@
+---
+# Disabled: comment-only, topf skips it.
+# Configure containerd metrics
+# Disabled for now, this destroyed my cluster somehow last time it was enabled
+# machine:
+#   files:
+#     - op: create
+#       path: /etc/cri/conf.d/30-metrics.part
+#       permissions: 0o644
+#       content: |
+#         [metrics]
+#           address = '0.0.0.0:11234'

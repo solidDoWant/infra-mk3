@@ -6,97 +6,58 @@ vars:
   TALOS_BOOTSTRAP_NODE_IP: 10.3.1.1
 env:
   TALOSCONFIG: "{{ .ROOT_DIR }}/talos/talosconfig"
+  TOPFCONFIG: "{{ .ROOT_DIR }}/talos/topf.yaml"
 
 tasks:
   download-iso:
     silent: true
+    desc: Downloads each node's boot ISO from the image factory
     vars:
       OUTPUT_DIR:
         ref: default .USER_WORKING_DIR .OUTPUT_DIR
-      HOSTNAME_ARG:
-        ref: default "" (printf "--node %s" .HOSTNAME_ARG)
     dir: "{{ .ROOT_DIR }}/talos"
-    sources:
-      - talconfig.yaml
     cmd: |
-      ensure_exists() {
-        local URL_INFO="${1}"
-        local NODE_NAME="${URL_INFO%%: *}"
-        local ISO_URL="${URL_INFO##*: }"
-        local FILE_NAME="${NODE_NAME}.iso"
-        local FILE_PATH={{ shellQuote .OUTPUT_DIR }}/"${FILE_NAME}"
+      TALOS_VERSION="$(yq -r '.talosVersion' topf.yaml)"
 
-        if [ -f "${FILE_PATH}" ]; then
-          return 0
-        fi
+      yq -r '.nodes[] | .host + " " + .ip' topf.yaml |
+      while read -r NODE_HOST NODE_IP; do
+        FILE_PATH={{ shellQuote .OUTPUT_DIR }}/"${NODE_HOST}.iso"
+        [ -f "${FILE_PATH}" ] && continue
 
-        echo "Downloading ${FILE_NAME}..."
-        curl -fsSL -o "${FILE_PATH}" "${ISO_URL}" &
-      }
+        SCHEMATIC_ID="$(
+          NODE_HOST="${NODE_HOST}" NODE_IP="${NODE_IP}" \
+            yq eval-all \
+              '. as $d ireduce ({}; . * $d) | ... comments="" | (.. | select(tag == "!!str")) |= envsubst(nu,ne)' \
+              schematic.yaml iso-schematic.yaml |
+          curl -fsSL -X POST --data-binary @- https://factory.talos.dev/schematics |
+          jq -r .id
+        )"
 
-      talhelper genurl iso |
-      while read line; do ensure_exists "${line}"; done
+        echo "Downloading ${NODE_HOST}.iso (schematic ${SCHEMATIC_ID})..."
+        curl -fsSL -o "${FILE_PATH}" \
+          "https://factory.talos.dev/image/${SCHEMATIC_ID}/${TALOS_VERSION}/metal-amd64-secureboot.iso" &
+      done
 
       wait
       echo "Completed"
 
+  diff-config:
+    silent: true
+    desc: Shows the config changes `apply-config` would make (exit code 2 = changes)
+    dir: "{{ .ROOT_DIR }}/talos"
+    cmd: topf apply --dry-run {{ .CLI_ARGS }}
+
   apply-config:
     silent: true
-    desc: Applies talconfig.yaml changes to all nodes
+    desc: Applies topf.yaml and patch changes to all nodes, one at a time
     dir: "{{ .ROOT_DIR }}/talos"
-    cmds:
-      - |
-        # Generate/update config files if needed
-        if talhelper genconfig -o . -n | grep -q '^@@'; then
-          talhelper genconfig -o .
-        fi
-      - |
-        # set -x
-        apply_cmd() {
-          local IP_ADDRESS="${1}"
-          local FILE_NAME="${2}"
-          shift 2
+    cmd: topf apply {{ .CLI_ARGS }}
 
-          talosctl apply-config -n "${IP_ADDRESS}" --file "${FILE_NAME}" "${@}" 2>&1
-        }
-
-        apply_config_if_changed() {
-          local CMD_OUTPUT="$(apply_cmd "${@}" --dry-run)"
-
-          if ! echo "${CMD_OUTPUT}" | grep -q 'No changes'; then
-            apply_cmd "${@}"
-
-            # Wait for the node to become available
-            until talosctl get rd -n "${1}" 2>&1 > /dev/null; do
-              printf '.'
-            done
-            echo ' node online'
-
-          else
-            echo "no change"
-          fi
-        }
-
-        CLUSTER_NAME="$(yq -r '.clusterName' talconfig.yaml)"
-
-        # Apply config for each node
-        yq -r '.nodes[] | (.hostname + ":" + .ipAddress)' talconfig.yaml |
-        while read line; do 
-          HOSTNAME="$(echo "${line}" | cut -d':' -f1)"
-          IP_ADDRESS="$(echo "${line}" | cut -d':' -f2)"
-          FILE_NAME="${CLUSTER_NAME}-${HOSTNAME}.yaml"
-          
-          # First attempt with insecure connection (no client cert)
-          CMD_OUTPUT="$(apply_config_if_changed "${IP_ADDRESS}" "${FILE_NAME}" -i)" || EC="$?"
-
-          if [[ "${EC}" != 0 ]] && echo "${CMD_OUTPUT}" | grep -qE '(expired certificate|certificate required)' ; then
-            CMD_OUTPUT="$(apply_config_if_changed "${IP_ADDRESS}" "${FILE_NAME}")" \
-              && EC='0' || EC="$?"
-          fi
-
-          echo "${HOSTNAME}: ${CMD_OUTPUT}"
-          [[ "${EC}" == 0 ]] || exit "${EC}"
-        done
+  generate-talosconfig:
+    silent: true
+    desc: Regenerates the talosctl client config from the secrets bundle
+    dir: "{{ .ROOT_DIR }}/talos"
+    cmd: topf talosconfig > talosconfig
 
   download-kubeconfig:
     silent: true
@@ -111,16 +72,8 @@ tasks:
     silent: true
     dir: "{{ .ROOT_DIR }}/talos"
     cmds:
-      - task: apply-config
-      - |
-        talosctl bootstrap -e {{ shellQuote .TALOS_BOOTSTRAP_NODE_IP }} -n {{ shellQuote .TALOS_BOOTSTRAP_NODE_IP }}
-
-        echo "Waiting for node to come back online"
-        sleep 10
-        until talosctl get rd -n {{ shellQuote .TALOS_BOOTSTRAP_NODE_IP }} 2>&1 > /dev/null; do
-          printf '.'
-        done
-        echo
+      - task: generate-talosconfig
+      - topf apply --auto-bootstrap
       - task: download-kubeconfig
       - task: apply-helmfile
       - echo "Bootstrap complete"

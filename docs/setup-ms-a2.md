@@ -26,7 +26,7 @@ Intel I226-V) and the NVMe slots.
 
 ## Install media creation and OS configuration
 
-The OS and boot media is entirely controlled by [these files](../talos/). Install ISOs (specific to each node) can be built via `task talos:setup:download-iso`, and burned to a USB flash drive.
+The OS and boot media is entirely controlled by [these files](../talos/). Install ISOs (specific to each node) can be built via `task talos:download-iso`, and burned to a USB flash drive.
 
 >[!WARNING] Rufus users
 > When using Rufus to create flash drives from the ISO, an additional step must be taken until a Talos bug is fixed. After "burning" the ISO to a flash drive, rename the file at
@@ -70,6 +70,6 @@ With secure boot enabled and the Talos installer online, the OS can be configure
 removed.
 
 >[!WARNING]
-> Booting the ISO runs the installer, because `-talos.halt_if_installed` is negated in [`talconfig.yaml`](../talos/talconfig.yaml). The installer wipes `EPHEMERAL`, which holds `/var/lib/rook` (the CephCluster's `dataDirHostPath`, including this node's mon store) and `/var/lib/etcd`.
+> Booting the ISO runs the installer, because `-talos.halt_if_installed` is negated in [`iso-schematic.yaml`](../talos/iso-schematic.yaml). The installer wipes `EPHEMERAL`, which holds `/var/lib/rook` (the CephCluster's `dataDirHostPath`, including this node's mon store) and `/var/lib/etcd`.
 >
-> This procedure is for a **new or rebuilt** node. To change the configuration of a node that is already running, use `talosctl apply-config`, which never reinstalls. `talosctl upgrade` also preserves `EPHEMERAL`.
+> This procedure is for a **new or rebuilt** node. To change the configuration of a node that is already running, use `task talos:apply-config` (`topf apply`), which never reinstalls. `talosctl upgrade` also preserves `EPHEMERAL`.
