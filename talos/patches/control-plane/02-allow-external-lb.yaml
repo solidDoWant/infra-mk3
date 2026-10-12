@@ -1,9 +1,0 @@
----
-# No $schema: it rejects the `$patch: delete` directive.
-# Talos labels control plane nodes as excluded from external load balancers.
-# Every node here is a control plane node that also runs workloads, so the
-# label is removed.
-machine:
-  nodeLabels:
-    node.kubernetes.io/exclude-from-external-load-balancers:
-      $patch: delete

@@ -1,13 +1,11 @@
 ---
-# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
 # Enable Talos API access from k8s pods
 # Needed for OS upgrades
-machine:
-  features:
-    kubernetesTalosAPIAccess:
-      enabled: true # Enable Talos API access from Kubernetes pods.
-      allowedRoles:
-        - os:reader
-        - os:admin
-      allowedKubernetesNamespaces:
-        - system-controllers
+apiVersion: v1alpha1
+kind: KubeTalosAPIAccessConfig
+allowedRoles:
+  - os:reader
+  - os:admin
+allowedKubernetesNamespaces:
+  - system-controllers

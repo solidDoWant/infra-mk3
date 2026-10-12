@@ -1,7 +1,8 @@
 ---
-# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
 # Set user namespace sysctls
 # See https://www.talos.dev/v1.9/kubernetes-guides/configuration/usernamespace/#enabling-usernamespaces
-machine:
-  sysctls:
-    user.max_user_namespaces: "11255"
+apiVersion: v1alpha1
+kind: SysctlConfig
+params:
+  user.max_user_namespaces: "11255"

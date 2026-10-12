@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
+# Every node here is a control plane node that also runs workloads, so the
+# default control plane taint and the external load balancer exclusion label
+# are removed.
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+labels:
+  node.kubernetes.io/exclude-from-external-load-balancers:
+    $patch: delete
+taints:
+  node-role.kubernetes.io/control-plane:
+    $patch: delete

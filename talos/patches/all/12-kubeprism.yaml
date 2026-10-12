@@ -1,7 +1,6 @@
 ---
-# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.13/schemas/config.schema.json
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
 # Disable KubePrism which relies on the discovery service that Sidero forces through their SaaS
-machine:
-  features:
-    kubePrism:
-      enabled: false
+apiVersion: v1alpha1
+kind: KubePrismConfig
+$patch: delete
