@@ -659,8 +659,10 @@ spec:
       # main exporter.
       extraArgs:
         - --collector.textfile.directory=/textfile
-        # No NFS server or tape drives on the nodes. RAPL's energy_uj is
-        # root-only (0400), which the exporter (uid 65534) can't read.
+        # No NFS server, tape drives or RDMA devices on the nodes. RAPL's
+        # energy_uj is root-only (0400), which the exporter (uid 65534) can't
+        # read.
+        - --no-collector.infiniband
         - --no-collector.nfsd
         - --no-collector.rapl
         - --no-collector.tapestats
