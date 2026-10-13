@@ -228,13 +228,12 @@ spec:
 
         authorization:
           jwtKeyProvider:
-            # Both URLs reach pods labeled `oidc-supplier` and the worker netpol
-            # allows direct egress to those pods (no ingress-gateway hop):
-            #   - Authentik: in-cluster service URL → authentik-server pods
-            #   - Teleport:  public hostname → teleport proxy LoadBalancer →
-            #     teleport-proxy pods (proxy isn't behind the ingress gateway
-            #     because of TLS routing; resolves to its own LB IP via the
-            #     coredns.io/hostname annotation on the proxy Service)
+            # Unset = keys fetched once at startup, never retried. One failed
+            # source discards every key, so a startup blip rejects all JWTs
+            # until restart. A failed refresh keeps the previous keys.
+            refreshInterval: 1m
+            # Authentik: in-cluster service URL → authentik-server pods.
+            # Teleport: public hostname → internal gateway → teleport proxy.
             keySourceURIs:
               - http://authentik-server.security.svc.cluster.local/application/o/temporal/jwks/
               # Service workers (e.g. media-processor) present these JWTs to the frontend.

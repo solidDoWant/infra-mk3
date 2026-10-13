@@ -86,10 +86,10 @@ specs:
               - port: "443"
                 protocol: TCP
       # JWKS polling for JWT validation. All five server services init the
-      # JWT key provider when authorization is configured; each pod refreshes
-      # JWKS on its own cycle. Hits any in-cluster pod labeled as an OIDC
-      # supplier (Authentik server pod port 9000, Teleport proxy pod port
-      # 3080).
+      # JWT key provider when authorization is configured, and a failure on
+      # ANY key source discards ALL keys. Authentik is reached directly (server
+      # pod port 9000); Teleport's public hostname resolves to the internal
+      # gateway.
       - &jwks_egress
         toEndpoints:
           - matchLabels:
@@ -101,7 +101,15 @@ specs:
           - ports:
               - port: "9000"
                 protocol: TCP
-              - port: "3080"
+      - &teleport_jwks_egress
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
                 protocol: TCP
       # Ringpop membership gossip to all sister services. Each service uses a
       # distinct membership port: frontend 6933, history 6934, matching 6935,
@@ -266,6 +274,7 @@ specs:
               - port: "443"
                 protocol: TCP
       - *jwks_egress
+      - *teleport_jwks_egress
       - *ringpop_egress
     ingress:
       # Internal callers: Frontend (redirects internal calls), sister
@@ -361,6 +370,7 @@ specs:
               - port: "443"
                 protocol: TCP
       - *jwks_egress
+      - *teleport_jwks_egress
       - *ringpop_egress
     ingress:
       # gRPC from Frontend / Internal Frontend (forwarded workflow ops) and
@@ -436,6 +446,7 @@ specs:
               - port: "7235"
                 protocol: TCP
       - *jwks_egress
+      - *teleport_jwks_egress
       - *ringpop_egress
     ingress:
       # gRPC from Frontend / Internal Frontend, History, and sister matching
@@ -513,6 +524,7 @@ specs:
               - port: "7234"
                 protocol: TCP
       - *jwks_egress
+      - *teleport_jwks_egress
       - *ringpop_egress
     ingress:
       # Ringpop membership ingress only — no service gRPC port.
