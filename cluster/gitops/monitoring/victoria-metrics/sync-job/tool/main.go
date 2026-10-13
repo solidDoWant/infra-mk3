@@ -41,8 +41,10 @@ const (
 	chartRepo = "https://github.com/VictoriaMetrics/helm-charts"
 )
 
-// Sync job log lines that don't indicate a skipped source or object.
-var expectedLog = regexp.MustCompile(` (applied (vmrule|dashboard) |skipping disabled rule group |warning: resource name .* truncated)`)
+// Sync job log lines that don't indicate a skipped source or object. The PSI
+// line is logged at startup by the metrics package when the cgroup has no
+// cpu.pressure, as in Renovate's job pod.
+var expectedLog = regexp.MustCompile(` (applied (vmrule|dashboard) |skipping disabled rule group |warning: resource name .* truncated|INFO: metrics: disable exposing PSI metrics )`)
 
 func main() {
 	log.SetFlags(0)

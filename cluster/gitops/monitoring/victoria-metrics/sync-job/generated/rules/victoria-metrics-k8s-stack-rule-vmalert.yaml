@@ -43,7 +43,7 @@ spec:
             dashboard: '{{ $externalURL }}/d/LzldHAVnz?viewPanel=33&var-file={{ $labels.file }}&var-group={{ $labels.group }}'
             description: Recording rule "{{ $labels.recording }}" from group "{{ $labels.group }} in file "{{ $labels.file }}" produces 0 samples over the last 30min. It might be caused by a misconfiguration or incorrect query expression.
             summary: Recording rule {{ $labels.recording }} ({{ $labels.group }}) produces no data
-          expr: sum(vmalert_recording_rules_last_evaluation_samples{recording!~"count:up0|cluster_quantile:scheduler_.+|kubevirt_vm_created_total|kubevirt_vmi_migration_data_total_bytes|kubevirt_vmi_guest_vcpu_queue|vmi:kubevirt_vmi_guest_queue_length:sum|kubevirt_vmsnapshot_.+|.+:kubevirt_vmsnapshot_.+"}) without(id) < 1
+          expr: sum(vmalert_recording_rules_last_evaluation_samples{recording!~"cluster_quantile:scheduler_.+|kubevirt_vm_created_total|kubevirt_vmi_migration_data_total_bytes|kubevirt_vmi_guest_vcpu_queue|vmi:kubevirt_vmi_guest_queue_length:sum|kubevirt_vmsnapshot_.+|.+:kubevirt_vmsnapshot_.+"}) without(id) < 1
           for: 30m
           labels:
             severity: info
