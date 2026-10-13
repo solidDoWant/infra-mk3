@@ -1,0 +1,134 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: xgs-pon-exporter
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 5.3.0
+  values:
+    controllers:
+      xgs-pon-exporter:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          app:
+            image:
+              # Upstream publishes here; no home-operations image exists
+              repository: quay.io/prometheuscommunity/json-exporter
+              tag: v0.8.0
+            args:
+              - --config.file=/etc/json_exporter/config.yml
+              - --log.format=json
+            ports:
+              - name: metrics
+                containerPort: 7979
+            probes:
+              liveness: &probe
+                enabled: true
+                port: metrics
+              readiness: *probe
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 64Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+    configMaps:
+      config:
+        data:
+          # Source: the 8311 firmware's /cgi-bin/luci/8311/metrics endpoint.
+          # Every probe makes the module re-read all values and do a full TLS
+          # handshake (~1.2s of its single CPU), so keep the scrape interval long.
+          config.yml: |
+            modules:
+              xgs_pon:
+                valid_status_codes: [200]
+                http_client_config:
+                  tls_config:
+                    # Self-signed cert without a SAN, which Go cannot verify
+                    insecure_skip_verify: true
+                metrics:
+                  - name: xgs_pon_ploam_state
+                    valuetype: gauge
+                    path: "{ .ploam_state }"
+                    help: PLOAM state; 51 (O5.1) is operational
+                  - name: xgs_pon_rx_power_dbm
+                    valuetype: gauge
+                    path: "{ .rx_power_dBm }"
+                    help: Received optical power; -Inf with no light
+                  - name: xgs_pon_tx_power_dbm
+                    valuetype: gauge
+                    path: "{ .tx_power_dBm }"
+                    help: Transmitted optical power
+                  - name: xgs_pon_tx_bias_milliamps
+                    valuetype: gauge
+                    path: "{ .tx_bias_mA }"
+                    help: Laser bias current
+                  - name: xgs_pon_module_voltage_volts
+                    valuetype: gauge
+                    path: "{ .module_voltage }"
+                    help: Module supply voltage
+                  - name: xgs_pon_optic_temperature_celsius
+                    valuetype: gauge
+                    path: "{ .optic_tempC }"
+                    help: Optic temperature
+                  # Separate names: two entries with one name register duplicate descriptors
+                  - name: xgs_pon_cpu1_temperature_celsius
+                    valuetype: gauge
+                    path: "{ .cpu1_tempC }"
+                    help: CPU thermal zone 0 temperature
+                  - name: xgs_pon_cpu2_temperature_celsius
+                    valuetype: gauge
+                    path: "{ .cpu2_tempC }"
+                    help: CPU thermal zone 1 temperature
+    persistence:
+      config:
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /etc/json_exporter
+            readOnly: true
+    service:
+      xgs-pon-exporter:
+        controller: xgs-pon-exporter
+        ports:
+          metrics:
+            port: 7979
+    serviceMonitor:
+      # Exporter self-metrics from every pod. Module metrics are scraped
+      # from one pod only, by service-scrape.yaml.
+      xgs-pon-exporter-self:
+        # Default name collides with the VMServiceScrape in service-scrape.yaml
+        forceRename: xgs-pon-exporter-self
+        service:
+          identifier: xgs-pon-exporter
+        endpoints:
+          - interval: 1m
+            scrapeTimeout: 10s

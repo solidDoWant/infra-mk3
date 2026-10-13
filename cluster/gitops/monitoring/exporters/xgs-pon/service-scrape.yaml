@@ -1,0 +1,38 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: xgs-pon-exporter
+  labels:
+    app.kubernetes.io/part-of: xgs-pon-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: xgs-pon-exporter
+      app.kubernetes.io/service: xgs-pon-exporter
+      app.kubernetes.io/instance: xgs-pon-exporter
+  endpoints:
+    # WAS-110 XGS-PON module. json_exporter disables keep-alive, so every
+    # probe costs the module a full TLS handshake; don't shorten the interval.
+    - port: metrics
+      interval: 1m
+      scrapeTimeout: 10s
+      path: /probe
+      params:
+        module:
+          - xgs_pon
+        target:
+          - https://192.168.11.1/cgi-bin/luci/8311/metrics
+      relabelConfigs:
+        # See pve-exporter's service-scrape.yaml
+        - sourceLabels: [__address__]
+          regex: '(.+)\.svc(:\d+)?'
+          targetLabel: __address__
+          replacement: "$${1}.svc.cluster.local$${2}"
+        - targetLabel: instance
+          replacement: xgs-pon
+  jobLabel: xgs-pon-exporter
+  # Exporters are HA, and will always return the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service

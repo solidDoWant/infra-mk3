@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: xgs-pon-exporter
+spec:
+  groups:
+    - name: xgs-pon
+      rules:
+        # PLOAM state 51 = O5.1 (operational)
+        - alert: XGSPONNotOperational
+          expr: xgs_pon_ploam_state != 51
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: XGS-PON module is not registered with the OLT
+            description: |
+              PLOAM state has been {{ $value }} (not 51/O5.1) for 5m, so the WAN
+              link is down. Check fibre, RX power, and `pon psg` on the module.
+        - alert: XGSPONUnreachable
+          expr: up{instance="xgs-pon"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: XGS-PON module metrics cannot be scraped
+            description: |
+              xgs-pon-exporter has failed to fetch the module's metrics endpoint
+              for 15m. The module may be rebooting or hung, or its web server is
+              failing (HTTP 500 on an EEPROM read error). Details:
+              `kubectl logs -n monitoring deploy/xgs-pon-exporter`.
+        - alert: XGSPONLowRxPower
+          expr: xgs_pon_rx_power_dbm < -27
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: XGS-PON RX power is low ({{ $value | humanize }} dBm)
+            description: |
+              Received optical power has been below -27 dBm for 15m, close to the
+              receiver's sensitivity limit. Check for a dirty or bent fibre.
+        - alert: XGSPONHighTemperature
+          expr: xgs_pon_optic_temperature_celsius > 70
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: XGS-PON optic is hot ({{ $value | humanize }} °C)
+            description: |
+              The optic has been above 70 °C for 15m. Check airflow around the
+              SFP+ cage.

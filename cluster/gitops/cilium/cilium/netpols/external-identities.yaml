@@ -66,6 +66,14 @@ spec:
 apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
+  name: xgs-pon
+spec:
+  externalCIDRs:
+    - 192.168.11.1/32 # WAS-110 XGS-PON module management IP
+---
+apiVersion: cilium.io/v2
+kind: CiliumCIDRGroup
+metadata:
   name: proxmox-nodes
 spec:
   externalCIDRs:
