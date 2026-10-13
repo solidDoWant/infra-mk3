@@ -1,0 +1,10 @@
+---
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
+# Online xfs_scrub of the XFS volumes (EPHEMERAL, STATE); metadata only, not
+# file data. ZFS pools are scrubbed by zfs/pool-scrubber, Ceph scrubs itself.
+# interval is required: without it scrubbing stays off.
+# Watch etcd fsync latency during runs (`talosctl get fsscrubstatus`), as
+# EPHEMERAL holds etcd.
+apiVersion: v1alpha1
+kind: FilesystemScrubConfig
+interval: 720h
