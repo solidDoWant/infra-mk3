@@ -1,4 +1,8 @@
 ---
+# The module has no Python, so remote tasks use `raw`. State is read and
+# compared before anything is written; the module only reboots when an ISP
+# authentication value changed. `--check` reports pending changes without
+# writing anything.
 - hosts: r730xd:&xgs_pon
   gather_facts: false
 
@@ -7,68 +11,136 @@
     connection_string: "{{ ansible_user }}@{{ inventory_hostname }}"
 
   tasks:
-    - name: Remove existing SSH keys for the host
+    - name: Trust the host's SSH key
       delegate_to: localhost
-      ansible.builtin.command: ssh-keygen -R "{{ inventory_hostname }}"
-    - name: Update the local SSH key
-      delegate_to: localhost
-      ansible.builtin.shell: >-
-        ssh-keyscan "{{ inventory_hostname }}"
-        >> ~/.ssh/known_hosts
+      block:
+        - name: Get the host's SSH key
+          ansible.builtin.command: ssh-keyscan -t ed25519 "{{ inventory_hostname }}"
+          register: host_key
+          changed_when: false
+          check_mode: false
+        - name: Update the local SSH known hosts
+          ansible.builtin.known_hosts:
+            name: "{{ inventory_hostname }}"
+            key: "{{ host_key.stdout }}"
+            hash_host: true
 
-    - name: Load public SSH key onto the server
+    - name: Configure SSH key authentication
       delegate_to: localhost
-      ansible.builtin.command: >-
-        sshpass -e
-        ssh-copy-id
-        -i "{{ ssh_public_key_path }}"
-        {{ connection_string }}
+      block:
+        - name: Check if SSH key authentication works
+          ansible.builtin.command: >-
+            ssh -o BatchMode=yes -o ConnectTimeout=10
+            {{ connection_string }} true
+          register: key_auth
+          changed_when: false
+          failed_when: false
+          check_mode: false
+        - name: Load public SSH key onto the server
+          ansible.builtin.command: >-
+            sshpass -e
+            ssh-copy-id
+            -i "{{ ssh_public_key_path }}"
+            {{ connection_string }}
+          when: key_auth.rc != 0
 
-    - name: Update the user's password
-      delegate_to: localhost
-      vars:
-        shell_command: >-
-          echo "root:{{ root_password }}" |
-          chpasswd;
-          8311-persist-root-password.sh
-      ansible.builtin.command: >-
-        sshpass -e
-        ssh {{ connection_string }}
-        '{{ shell_command }}'
-      no_log: true
+    - name: Configure the root password
+      block:
+        - name: Read the current root password hashes
+          ansible.builtin.raw: >-
+            awk -F: '$1 == "root" {print $2}' /etc/shadow;
+            fw_printenv -n 8311_root_pwhash 2>/dev/null || echo
+          register: current_password_hashes
+          changed_when: false
+          check_mode: false
+          no_log: true
+        - name: Parse the current root password hashes
+          ansible.builtin.set_fact:
+            shadow_password_hash: "{{ current_password_hashes.stdout_lines[0] | default('') | trim }}"
+            persisted_password_hash: "{{ current_password_hashes.stdout_lines[1] | default('') | trim }}"
+          no_log: true
+        - name: Hash the root password with the current salt
+          delegate_to: localhost
+          ansible.builtin.command:
+            cmd: openssl passwd -6 -salt "{{ shadow_password_hash.split('$')[2] }}" -stdin
+            stdin: "{{ root_password }}"
+          register: expected_password_hash
+          changed_when: false
+          check_mode: false
+          no_log: true
+          when: shadow_password_hash is match('\$6\$[^$]+\$') and 'rounds=' not in shadow_password_hash
+        - name: Determine whether the root password needs updating
+          ansible.builtin.set_fact:
+            update_password: "{{ expected_password_hash.stdout | default('') != shadow_password_hash }}"
+            persist_password: >-
+              {{
+                expected_password_hash.stdout | default('') != shadow_password_hash
+                or persisted_password_hash != shadow_password_hash
+              }}
 
-    - name: Set the firmware variables for ISP authentication
-      delegate_to: localhost
-      ansible.builtin.command: >-
-        sshpass -e
-        ssh {{ connection_string }}
-        'fwenv_set -8 {{ item.key }} {{ item.value }}'
-      loop: "{{ firmware_attributes | dict2items }}"
-      no_log: true
+        - name: Hash the new root password
+          delegate_to: localhost
+          ansible.builtin.command:
+            cmd: openssl passwd -6 -stdin
+            stdin: "{{ root_password }}"
+          register: new_password_hash
+          changed_when: false
+          no_log: true
+          when: update_password | bool
+        - name: Update the user's password
+          ansible.builtin.raw: echo {{ ('root:' ~ new_password_hash.stdout) | quote }} | chpasswd -e
+          no_log: true
+          when: update_password | bool
+        - name: Persist the user's password across reboots
+          ansible.builtin.raw: 8311-persist-root-password.sh
+          no_log: true
+          when: persist_password | bool
 
-    - name: Reboot
-      delegate_to: localhost
-      ansible.builtin.command: >-
-        sshpass -e
-        ssh {{ connection_string }}
-        'reboot'
-      ignore_errors: true
+    - name: Configure the firmware variables for ISP authentication
+      block:
+        - name: Read the current firmware variables
+          ansible.builtin.raw: fwenv_get -8 {{ item.key | quote }}
+          loop: "{{ firmware_attributes | dict2items }}"
+          register: current_firmware_attributes
+          changed_when: false
+          check_mode: false
+          no_log: true
+        - name: Determine which firmware variables need updating
+          ansible.builtin.set_fact:
+            changed_firmware_attributes: "{{ changed_firmware_attributes | default([]) + [item.item.key] }}"
+          loop: "{{ current_firmware_attributes.results }}"
+          when: item.stdout | trim != item.item.value | string
+          no_log: true
+        - name: Show which firmware variables need updating
+          ansible.builtin.debug:
+            var: changed_firmware_attributes | default([])
+        - name: Set the firmware variables
+          ansible.builtin.raw: >-
+            fwenv_set -8 {{ item | quote }} {{ firmware_attributes[item] | string | quote }}
+          loop: "{{ changed_firmware_attributes | default([]) }}"
+          no_log: true
 
-    - name: Wait until devices stops replying to pings
+    - name: Reboot to apply the ISP authentication changes
+      when: changed_firmware_attributes | default([]) | length > 0
       delegate_to: localhost
-      ansible.builtin.command: ping -c 1 -n -w 1 "{{ inventory_hostname }}"
-      register: result
-      retries: 100
-      delay: 5
-      until: result.rc != 0
-      timeout: "{{ 2 * 60 * 60 }}"
-      ignore_errors: true
+      block:
+        - name: Reboot
+          ansible.builtin.command: ssh {{ connection_string }} reboot
+          ignore_errors: true
 
-    - name: Wait for reboot
-      delegate_to: localhost
-      ansible.builtin.command: ping -c 1 -n -w 1 "{{ inventory_hostname }}"
-      register: result
-      retries: 100
-      delay: 5
-      until: result.rc == 0
-      timeout: "{{ 2 * 60 * 60 }}"
+        - name: Wait until devices stops replying to pings
+          ansible.builtin.command: ping -c 1 -n -w 1 "{{ inventory_hostname }}"
+          register: result
+          retries: 100
+          delay: 5
+          until: result.rc != 0
+          timeout: "{{ 2 * 60 * 60 }}"
+          ignore_errors: true
+
+        - name: Wait for reboot
+          ansible.builtin.command: ping -c 1 -n -w 1 "{{ inventory_hostname }}"
+          register: result
+          retries: 100
+          delay: 5
+          until: result.rc == 0
+          timeout: "{{ 2 * 60 * 60 }}"
