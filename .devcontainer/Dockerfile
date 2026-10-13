@@ -87,7 +87,7 @@ COPY --from=registry.k8s.io/kustomize/kustomize:v5.8.3 /app/kustomize /usr/local
 
 # Cilium CLI
 # renovate: datasource=github-releases depName=cilium/cilium-cli
-ARG CILIUM_CLI_VERSION=v0.16.19
+ARG CILIUM_CLI_VERSION=v0.20.1
 RUN mkdir -pv /tmp/cilium && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
