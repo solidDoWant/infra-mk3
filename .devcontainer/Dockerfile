@@ -8,7 +8,7 @@ RUN apt update && apt install --no-install-recommends -y \
 
 # Install debs from sources that don't provide an apt repo
 # renovate: datasource=github-releases depName=go-task/task
-ARG TASK_VERSION=v3.39.2
+ARG TASK_VERSION=v3.54.0
 # renovate: datasource=github-releases depName=getsops/sops
 ARG SOPS_VERSION=v3.9.0
 # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
