@@ -6,7 +6,9 @@
 # Or maybe just a new address resource + nftableschain resource
 cluster:
   etcd:
+    # Host addresses only; a /16 also matches the 10.3.2.x BGP speaker addresses.
+    # Also sets the listen addresses, as listenSubnets is unset.
     advertisedSubnets:
-      - 10.3.1.0/16
+      - 10.3.1.0/24
     extraArgs:
       listen-metrics-urls: http://0.0.0.0:2381
