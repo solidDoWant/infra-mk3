@@ -2,9 +2,10 @@
 mhvtl_repo: https://github.com/markh794/mhvtl.git
 # Pin the exact commit that was built/validated; bump deliberately.
 # renovate: datasource=git-refs depName=markh794/mhvtl branch=master
-mhvtl_version: 8e79aa898381797afac596160dae2b74533e426d
-# DKMS package version (matches the source MHVTL_VERSION).
-mhvtl_pkg_version: "1.8.0"
+mhvtl_version: a9b9ae5678f4e364c435816e433f59aacfd55421
+# DKMS package version: the module's MHVTL_VERSION (kernel/mhvtl.c). A new
+# value is what triggers the DKMS rebuild; a commit bump alone does not.
+mhvtl_pkg_version: "0.18.43"
 mhvtl_src_dir: /usr/local/src/mhvtl
 # Virtual media lives on the bulk pool: dry runs write real data volumes and
 # would fill the root disk. Under the tape-staging dataset (sync=standard).

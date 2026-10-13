@@ -10,6 +10,12 @@
       - build-essential
       - zlib1g-dev
       - liblzo2-dev
+      # Block compression codecs and the raw-bay hot-plug monitor, found
+      # via pkg-config; the userland build fails without them.
+      - pkg-config
+      - liblz4-dev
+      - libzstd-dev
+      - libudev-dev
       - git
       # Kernel headers for the out-of-tree module build.
       - linux-headers-{{ ansible_kernel }}
@@ -44,6 +50,7 @@
     chdir: "{{ mhvtl_src_dir }}"
     target: install
   when: mhvtl_userland_build.changed | default(false)
+  notify: Reload mhvtl module
 
 # The shipped units are NOT installed by `make install` (only the generator
 # is); install them explicitly. The generator fabricates
@@ -112,6 +119,35 @@
     group: root
     mode: 0644
 
+# Each PACKAGE_VERSION is a separate DKMS registration; a stale one would
+# still AUTOINSTALL on the next kernel upgrade and race the current one for
+# updates/dkms/mhvtl.ko.
+- name: List registered DKMS mhvtl versions
+  ansible.builtin.command: dkms status mhvtl
+  register: mhvtl_dkms_all
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Find stale DKMS mhvtl versions
+  ansible.builtin.set_fact:
+    mhvtl_dkms_stale: >-
+      {{ mhvtl_dkms_all.stdout_lines
+         | select('match', '^mhvtl/')
+         | map('regex_replace', '^mhvtl/([^,:]+).*$', '\1')
+         | unique | reject('eq', mhvtl_pkg_version) | list }}
+
+- name: Remove stale DKMS mhvtl versions
+  ansible.builtin.command: dkms remove mhvtl/{{ item }} --all
+  changed_when: true
+  loop: "{{ mhvtl_dkms_stale }}"
+
+- name: Remove stale DKMS source links
+  ansible.builtin.file:
+    path: /usr/src/mhvtl-{{ item }}
+    state: absent
+  loop: "{{ mhvtl_dkms_stale }}"
+
 - name: Check DKMS module status for the running kernel
   ansible.builtin.command: dkms status mhvtl/{{ mhvtl_pkg_version }} -k {{ ansible_kernel }}
   register: mhvtl_dkms_status
@@ -124,6 +160,7 @@
 - name: Build and install the module via DKMS
   ansible.builtin.command: dkms install mhvtl/{{ mhvtl_pkg_version }} -k {{ ansible_kernel }}
   when: "'installed' not in mhvtl_dkms_status.stdout"
+  notify: Reload mhvtl module
 
 # The pre-DKMS manual install (kernel/drivers/scsi/mhvtl.ko) would shadow
 # confusion at best; DKMS installs to updates/dkms which depmod prefers, but
