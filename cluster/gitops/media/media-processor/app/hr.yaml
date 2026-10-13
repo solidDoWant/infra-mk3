@@ -159,9 +159,9 @@ spec:
               endpoints.netpols.home.arpa/temporal-frontend-client: "true"
               # Egress allow to the teleport-cluster proxy TLS-routing port.
               endpoints.netpols.home.arpa/teleport-bot-client: "true"
-          # Native sidecar (initContainer with restartPolicy: Always) — k8s
-          # blocks the watcher container until tbot has started, guaranteeing
-          # the JWT exists before the watcher tries to call Temporal.
+          # Native sidecar (initContainer with restartPolicy: Always). k8s holds
+          # the app container until tbot's startup probe passes, which happens
+          # once the JWT has been written.
           initContainers:
             tbot: &tbot_container
               dependsOn: []
@@ -202,6 +202,16 @@ spec:
                 readiness:
                   <<: *probe
                   path: /readyz
+                # /wait/{service} holds the response until the service reports
+                # its first status, then returns 200 only if healthy. The JWT
+                # service reports healthy only after writing the file.
+                startup:
+                  <<: *probe
+                  path: /wait/temporal-jwt
+                  spec:
+                    periodSeconds: 2
+                    timeoutSeconds: 10
+                    failureThreshold: 60
               securityContext:
                 readOnlyRootFilesystem: true
                 allowPrivilegeEscalation: false

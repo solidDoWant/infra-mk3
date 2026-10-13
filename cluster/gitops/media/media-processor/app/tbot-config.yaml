@@ -25,6 +25,8 @@ data:
       type: memory
     services:
       - type: workload-identity-jwt
+        # Probed by the sidecar's startup probe at /wait/temporal-jwt.
+        name: temporal-jwt
         selector:
           name: media-processor
         audiences:
