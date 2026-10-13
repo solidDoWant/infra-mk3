@@ -1,6 +1,6 @@
-# Tracks the upstream commit pinned in flake.nix (currently main HEAD).
-# Update both together; the short SHA is what shows up in the image tag.
-OPENARC_VERSION = main-e3618c07
+# Tracks the upstream release pinned in flake.nix; Renovate bumps both together.
+# renovate: datasource=github-releases depName=SearchSavior/OpenArc
+OPENARC_VERSION = v3.0.0
 # Bump when the build logic changes (extraCommands, env, deps) — distinct
 # from OPENARC_VERSION so consumers can pick up packaging fixes without
 # waiting on upstream.

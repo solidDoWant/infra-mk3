@@ -23,12 +23,12 @@ OV_CACHE_DIR="${OPENARC_CACHE_DIR}/${MODEL_TYPE}/${MODEL_NAME}/${HF_REPO}/cache"
 
 mkdir -p "${MODEL_PATH}" "${OV_CACHE_DIR}" "$(dirname "${OPENARC_CONFIG_FILE}")"
 
-# huggingface-cli is idempotent (etag skip + resume on partials), so we
+# hf download is idempotent (etag skip + resume on partials), so we
 # always invoke it. The xet-backed transport can deadlock on connection
 # drops and never return; wrap each attempt with a hard timeout and
 # retry so a hung download eventually progresses on the resume.
 for attempt in 1 2 3 4 5; do
-  if timeout 240 huggingface-cli download "${HF_REPO}" --local-dir "${MODEL_PATH}"; then
+  if timeout 240 hf download "${HF_REPO}" --local-dir "${MODEL_PATH}"; then
     break
   fi
   if [[ "${attempt}" -eq 5 ]]; then

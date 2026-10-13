@@ -28,53 +28,12 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
 
-        openarcSrc = pkgs.applyPatches {
-          src = pkgs.fetchFromGitHub {
-            owner = "SearchSavior";
-            repo = "OpenArc";
-            # renovate: datasource=git-refs depName=SearchSavior/OpenArc branch=main
-            rev = "9adbb88884e344c7778e4ee124628898e8565834";
-            hash = "sha256-N932tjSjqxUfMeeRk7c6+gI6YXxA7et37Xfm7do/wZg=";
-          };
-          # Each entry is the .diff of an open upstream PR, fetched
-          # straight from GitHub. When a PR is updated, the hash
-          # changes — set `hash = lib.fakeHash;` to discover the new
-          # value, then paste it back. Drop the entry once the PR
-          # merges and the rev pin advances past it.
-          patches = [
-            # Fix wheel builds not containing any src/ files (uses
-            # [tool.setuptools.packages.find] so subpackages are picked
-            # up). Required — uv2nix builds the venv from a wheel.
-            (pkgs.fetchpatch {
-              name = "pr-113-wheel-build.patch";
-              url = "https://github.com/SearchSavior/OpenArc/pull/113.diff";
-              hash = "sha256-WG9qV43N6yWehSN5+DQATEbXAqG++4iN48g/Mcr0kaA=";
-            })
-            # Enable OpenVINO model caching: adds cache_dir +
-            # runtime_config fields to ModelLoadConfig and threads
-            # them through every engine's ov.Core.set_property call.
-            (pkgs.fetchpatch {
-              name = "pr-118-ov-caching.patch";
-              url = "https://github.com/SearchSavior/OpenArc/pull/118.diff";
-              hash = "sha256-wA720DAjkGOjvQt5Lzi+Mmwxf/iIU4ZaRDhZopTM86A=";
-            })
-            # Add Qwen3-ASR segments to verbose_json / diarized_json
-            # responses; refactors transcribe() to return a tuple and
-            # propagates segments through worker_registry.
-            (pkgs.fetchpatch {
-              name = "pr-130-qwen3-asr-segments.patch";
-              url = "https://github.com/SearchSavior/OpenArc/pull/130.diff";
-              hash = "sha256-S3NPr4E3E45nal7VkT32/Zn5tpQsnonUF+oKetS7Ah4=";
-            })
-            # Fix `openarc serve start` failing due to optimum/torch
-            # version mismatch — full uv.lock regen with optimum 2.x
-            # and optimum-onnx (the new split-out package).
-            (pkgs.fetchpatch {
-              name = "pr-120-uv-lock.patch";
-              url = "https://github.com/SearchSavior/OpenArc/pull/120.diff";
-              hash = "sha256-EG/05QepcIreBNQE9Gm5nkIFtdYfTzwuy7+v57ZP5X8=";
-            })
-          ];
+        openarcSrc = pkgs.fetchFromGitHub {
+          owner = "SearchSavior";
+          repo = "OpenArc";
+          # renovate: datasource=github-releases depName=SearchSavior/OpenArc
+          rev = "v3.0.0";
+          hash = "sha256-4LnHivZTSg/j+PQtj7XKUZquIF7VHJcNQO4Zr5iol5E=";
         };
 
         python = pkgs.python312;
@@ -91,8 +50,7 @@
               # (read-only here). Symlink to /app/config; superseded by
               # OPENARC_CONFIG_FILE for the server path but kept for CLI
               # commands that still call ServerConfig() with no override.
-              # The hardcoded log path is handled by openarc-config-path.patch
-              # which makes it OPENARC_LOG_FILE-overridable.
+              # The hardcoded log path is overridable via OPENARC_LOG_FILE.
               openarc = prev.openarc.overrideAttrs (old: {
                 postInstall = (old.postInstall or "") + ''
                   ln -s /app/config/openarc_config.json \
@@ -105,8 +63,13 @@
               openvino = prev.openvino.overrideAttrs (old: {
                 buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.ocl-icd ];
               });
+
+              # numba's optional TBB threading layer (tbbpool) links libtbb.so.12.
+              numba = prev.numba.overrideAttrs (old: {
+                buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.tbb ];
+              });
             })
-            # These wheels link to libopenvino.so.2530 (bundled in the openvino
+            # These wheels link to libopenvino.so.2631 (bundled in the openvino
             # wheel under .../site-packages/openvino/libs) and libtbb.so.12.
             # appendRunpaths bakes the right RPATH for runtime; auto-patchelf's
             # build-time scan can't see into nested site-packages dirs, so the
@@ -120,7 +83,7 @@
                 "${final.openvino}/lib/python3.12/site-packages/openvino/libs"
               ];
               autoPatchelfIgnoreMissingDeps = (old.autoPatchelfIgnoreMissingDeps or [ ]) ++ [
-                "libopenvino.so.2530"
+                "libopenvino.so.2631"
               ];
             })))
             # Same shape, but for wheels linking into torch's bundled libs.
@@ -142,7 +105,6 @@
             # auto-resolve the missing build dep.
             (final: prev: lib.genAttrs [
               "docopt"
-              "grapheme"
             ] (name: prev.${name}.overrideAttrs (old: {
               nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ final.setuptools ];
             })))
@@ -169,7 +131,7 @@
         });
 
         # gpu_metrics is an out-of-tree pybind11 extension shipped at
-        # gpu-metrics/ in the OpenArc repo, but the root pyproject.toml
+        # src/utilities/gpu_metrics/ in the OpenArc repo, but the root pyproject.toml
         # doesn't reference it (no workspace member, no path source), so
         # uv2nix never sees it. Build it as its own derivation here and
         # hand it to the image via PYTHONPATH. setup.py hardcodes
@@ -179,7 +141,7 @@
           pname = "gpu-metrics";
           version = "0.1.0";
           pyproject = true;
-          src = "${openarcSrc}/gpu-metrics";
+          src = "${openarcSrc}/src/utilities/gpu_metrics";
           build-system = with python.pkgs; [ setuptools pybind11 ];
           buildInputs = [ pkgs.level-zero ];
           postPatch = ''
