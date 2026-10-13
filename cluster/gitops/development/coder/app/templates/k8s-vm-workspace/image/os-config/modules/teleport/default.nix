@@ -23,7 +23,7 @@
 # still needs the version-file fixup in postPatch below.
 let
   # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
-  version = "18.11.0";
+  version = "18.11.3";
 
   # pnpm_10 is pinned at 10.34.0, which nixpkgs marks insecure; 10_latest carries
   # the fixes.

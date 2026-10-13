@@ -12,7 +12,7 @@ ARG TASK_VERSION=v3.39.2
 # renovate: datasource=github-releases depName=getsops/sops
 ARG SOPS_VERSION=v3.9.0
 # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
-ARG TELEPORT_VERSION=18.1.4
+ARG TELEPORT_VERSION=18.11.3
 # renovate: datasource=github-releases depName=google/go-jsonnet
 ARG JSONNET_VERSION=v0.20.0
 RUN mkdir -pv /tmp/debs && \
