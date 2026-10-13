@@ -8,7 +8,7 @@ RUN apt update && apt install --no-install-recommends -y \
 
 # Install debs from sources that don't provide an apt repo
 # renovate: datasource=github-releases depName=go-task/task
-ARG TASK_VERSION=v3.39.2
+ARG TASK_VERSION=v3.54.0
 # renovate: datasource=github-releases depName=getsops/sops
 ARG SOPS_VERSION=v3.13.3
 # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
@@ -20,7 +20,7 @@ RUN mkdir -pv /tmp/debs && \
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     # Taskfile
-    curl -fsSL -o /tmp/debs/taskfile.deb "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_${KERNEL}_${PRETTY_ARCH}.deb" && \
+    curl -fsSL -o /tmp/debs/taskfile.deb "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_${TASK_VERSION#v}_${KERNEL}_${PRETTY_ARCH}.deb" && \
     # SOPS
     curl -fsSL -o /tmp/debs/sops.deb "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops_${SOPS_VERSION#v}_${PRETTY_ARCH}.deb" && \
     # Teleport
@@ -161,7 +161,6 @@ RUN curl -fsSL https://nixos.org/releases/nix/nix-install.sh | sh -s -- --daemon
 ENV SOPS_AGE_KEY_FILE=keys/primary.key
 
 # Taskfile experiments
-ENV TASK_X_MAP_VARIABLES=2
 ENV TASK_X_ENV_PRECEDENCE=1
 
 # Ansible vars
