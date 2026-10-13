@@ -1,0 +1,20 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPPeerConfig
+metadata:
+  name: talos-local
+spec:
+  timers:
+    connectRetryTimeSeconds: 3
+    holdTimeSeconds: 9
+    keepAliveTimeSeconds: 3
+  transport:
+    # Source from the veth address; Talos only accepts this peer.
+    sourceInterface: veth-cilium
+  # No graceful restart: Talos BGP doesn't negotiate it.
+  families:
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          cilium.home.arpa/bgpadvertisement.opnsense-peer: "true"

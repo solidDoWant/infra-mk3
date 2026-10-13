@@ -7,6 +7,7 @@
 #   * Enable
 #   * ASN: 64512
 #   * Graceful restart
+#   * BFD enabled (Routing > BFD)
 #   * Log neighbor changes
 #   * Prefix list:
 #     - name: k8s-cilium-service-ip-announcements
@@ -22,7 +23,9 @@
 #     - name: talos-k8s-mixed-01
 #       peer IP: 10.3.1.1
 #       Remote ASN: 64513
-#       Password: <password>
+#       Password: <password> (bgpMode `direct` nodes only; Talos BGP has no
+#         TCP-MD5 support, see talos/patches/all/26-bgp.yaml.tpl)
+#       BFD: enabled (bgpMode `talos` nodes)
 #       Weight: 20
 #       Initiator IP: 10.3.0.1
 #       Next-hop-self
@@ -912,6 +915,34 @@
                             _:
                               - network: (self)
                               - port: "179"
+              loop: "{{ network.physical | dict2items }}"
+              when: item.value.firewall.allow_firewall_ntp_access | default(false)
+            # Single-hop BFD control packets (RFC 5881). Each side sends from its
+            # own ephemeral port, so the router's outbound state doesn't cover these.
+            - name: Allow access to firewall BFD port
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow access to firewall for BFD with BGP peers
+                        - direction: in
+                        - quick: "1"
+                        - protocol: udp
+                        - category: Firewall management
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+                              - port: "3784"
               loop: "{{ network.physical | dict2items }}"
               when: item.value.firewall.allow_firewall_ntp_access | default(false)
             # There is an automatically generated/managed rule that handles

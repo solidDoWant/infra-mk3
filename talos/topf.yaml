@@ -4,8 +4,12 @@
 #
 # All three nodes are identical Minisforum MS-A2 boxes (AMD Ryzen 9 9955HX), so
 # every patch is shared. The only genuinely per-node values are the hostname,
-# the IP and the secondary bond address below; everything else derives from
-# them in templates.
+# the IP, the secondary bond address and the BGP mode below; everything else
+# derives from them in templates.
+#
+# bgpMode: `direct` = Cilium peers with the routers itself. `talos` = Cilium
+# peers with a local Talos BGP instance, which advertises to the routers with
+# BFD (patches/all/26-bgp.yaml.tpl). Switch one node at a time; see that file.
 #
 # ⚠ The boot drive is NOT safe, and re-installing a node is destructive beyond
 # the OS. EPHEMERAL lives on the install disk and holds /var/lib/rook -- the
@@ -38,13 +42,16 @@ nodes:
     role: control-plane
     data:
       bondSecondaryAddress: 10.3.2.1
+      bgpMode: direct
   - host: talos-k8s-mixed-02
     ip: 10.3.1.2
     role: control-plane
     data:
       bondSecondaryAddress: 10.3.2.2
+      bgpMode: direct
   - host: talos-k8s-mixed-03
     ip: 10.3.1.3
     role: control-plane
     data:
       bondSecondaryAddress: 10.3.2.3
+      bgpMode: direct

@@ -4,6 +4,8 @@ apiVersion: v1alpha1
 kind: KubeNodeConfig
 labels:
   cilium.home.arpa/node.bgp-enabled: "true"
+  # Selects the CiliumBGPClusterConfig: direct to the routers, or via Talos.
+  cilium.home.arpa/node.bgp-mode: "{{ .Node.Data.bgpMode }}"
   root-ceph.flux.home.arpa/node.cluster-enabled: "true"
   katacontainers.io/kata-runtime: "true"
   # Topology labels should contain the label name in the value to ensure

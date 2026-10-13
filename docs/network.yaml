@@ -533,6 +533,14 @@ ip-space:
         vlan: 300
         10.35.0.1/16:
           description: Cluster API endpoint
+      10.63.255.254/31:
+        description: >-
+          Node-local veth between Cilium and Talos BGP, reused on every node
+          (talos/patches/all/26-bgp.yaml.tpl). Never route or assign elsewhere.
+        10.63.255.254/32:
+          description: Cilium end (veth-cilium)
+        10.63.255.255/32:
+          description: Talos end (veth-crouter, in vrf-cilium)
   192.168.11.0/24:
     description: XGS-PON subnet
 autonomous-systems:
@@ -543,8 +551,21 @@ autonomous-systems:
     peer:
       - 64513
   64513:
-    description: Kubernetes
+    description: >-
+      Kubernetes. Cilium on bgpMode `direct` nodes, the Talos "fabric" BGP
+      instance on bgpMode `talos` nodes
     prefixes:
       - 10.32.0.0/11
     peer:
       - 64512
+  64514:
+    description: Talos "cilium" BGP instance, node-local (bgpMode `talos`)
+    peer:
+      - 64515
+  64515:
+    description: Cilium on bgpMode `talos` nodes, peers with the local Talos instance
+    prefixes:
+      - 10.33.0.0/16
+      - 10.34.0.0/16
+    peer:
+      - 64514

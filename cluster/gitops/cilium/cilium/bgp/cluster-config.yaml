@@ -4,9 +4,12 @@ kind: CiliumBGPClusterConfig
 metadata:
   name: cilium-bgp
 spec:
+  # Nodes peering with the routers directly. Nodes with bgp-mode `talos` use
+  # cilium-bgp-talos instead (talos/patches/all/26-bgp.yaml.tpl).
   nodeSelector:
     matchLabels:
       cilium.home.arpa/node.bgp-enabled: "true"
+      cilium.home.arpa/node.bgp-mode: direct
   bgpInstances:
     - name: opnsense-as
       localASN: 0xFC01
@@ -22,3 +25,25 @@ spec:
         - <<: *opnsense_peer
           name: router-02
           peerAddress: 10.3.0.2
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: cilium-bgp-talos
+spec:
+  # Peers with the node-local Talos BGP instance, which re-advertises to the
+  # routers with BFD. See talos/patches/all/26-bgp.yaml.tpl.
+  nodeSelector:
+    matchLabels:
+      cilium.home.arpa/node.bgp-enabled: "true"
+      cilium.home.arpa/node.bgp-mode: talos
+  bgpInstances:
+    - name: talos-local
+      localASN: 64515
+      peers:
+        - name: talos
+          peerASN: 64514
+          # Talos end of the veth-cilium pair, same on every node.
+          peerAddress: 10.63.255.255
+          peerConfigRef:
+            name: talos-local
