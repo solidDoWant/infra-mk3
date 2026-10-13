@@ -15,8 +15,8 @@
 #   AVC/USER_*/CRED_*/PATH/CWD  ~25  <-- the security signal (auth + SELinux denials)
 #
 # What we KEEP (validated: 25/hr survive, 0 security events dropped):
-#   - type=AVC       SELinux denials from ANY process (dropped only by comm on
-#                    SYSCALL, never on AVC -- a denial from cilium/runc still ships).
+#   - type=AVC       SELinux denials from ANY process, except the unlabeled-write
+#                    noise below (a denial from cilium/runc still ships).
 #                    Currently: immich-api / libuv-worker denials on the NFS media
 #                    mount (network_fs_t, permissive=1).
 #   - type=USER_*/CRED_*  PAM auth/session/credential events (e.g. root cron logins).
@@ -37,6 +37,18 @@
 # denials regardless of who caused them. To retain runc's container-runtime
 # syscall trail instead (~93% cut rather than ~99.9%), drop `runc` from the last
 # exclude's alternation.
+#
+#
+# Unlabeled-write denials (since the 2026-10-11 Talos 1.13.11 upgrade):
+# ~60 AVC/s/node of `denied { write }` by pods (pod_containerd_t) and kubelet
+# (kubelet_t) into `unlabeled_t` dirs -- fluent-bit/fluentd buffers on ZFS,
+# k8tz zoneinfo and containerd dirs on EPHEMERAL. SELinux is permissive, so
+# nothing is blocked; the files simply carry no label. Dropped as a group:
+#   - the AVC itself (only write-to-unlabeled_t:dir from those two domains),
+#   - its SYSCALL (by comm, as above),
+#   - its PATH records, which all have name=(null) (no path, inode only),
+#   - its CWD, always cwd="/".
+# Any other denial (other tcontext, perm or domain) still ships.
 #
 # Same mechanics as talos-drop-cri-portforward / talos-drop-machined-authz: the
 # talos-service filter chain ends in a rewrite_tag (`$talos['service'] ^(.+)$
@@ -67,3 +79,12 @@ spec:
     # and AVC denials are never touched (this matches type=SYSCALL lines only).
     - grep:
         exclude: 'log type=SYSCALL .* comm="(cilium-agent|iptables|runc)"'
+    # Unlabeled-write denials: see the header.
+    - grep:
+        exclude: 'log type=AVC .*denied +\{ write \} for .* scontext=system_u:system_r:(pod_containerd_t|kubelet_t):s0 tcontext=system_u:object_r:unlabeled_t:s0 tclass=dir '
+    - grep:
+        exclude: 'log type=SYSCALL .* comm="(flb-pipeline|enqueue_thread|flush_thread_[0-9]+|event_loop|kubelet|containerd)" .*subj=system_u:system_r:(pod_containerd_t|kubelet_t):s0'
+    - grep:
+        exclude: 'log type=PATH .* name=\(null\) .*(obj=system_u:object_r:unlabeled_t:s0 |nametype=CREATE )'
+    - grep:
+        exclude: 'log type=CWD .*cwd="/"$'
