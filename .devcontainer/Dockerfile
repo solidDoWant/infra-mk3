@@ -80,9 +80,9 @@ COPY --from=alpine/helm:4.3.0 /usr/bin/helm /usr/local/bin/helm
 ## Plugins
 ### Required for helmfile
 # renovate: datasource=github-releases depName=jkroepke/helm-secrets
-ARG HELM_SECRETS_VERSION=v4.6.2
+ARG HELM_SECRETS_VERSION=v4.7.9
 # renovate: datasource=github-releases depName=databus23/helm-diff
-ARG HELM_DIFF_VERSION=v3.9.11
+ARG HELM_DIFF_VERSION=v3.15.15
 RUN helm plugin install https://github.com/jkroepke/helm-secrets --version "${HELM_SECRETS_VERSION}" && \
     helm plugin install https://github.com/databus23/helm-diff --version "${HELM_DIFF_VERSION}"
 
