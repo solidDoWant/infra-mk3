@@ -98,7 +98,7 @@ RUN mkdir -pv /tmp/cilium && \
 
 # openspi2jsonschema CRD to schema converter
 # renovate: datasource=github-tags depName=yannh/kubeconform
-ARG KUBECONFORM_VERSION=v0.6.7
+ARG KUBECONFORM_VERSION=v0.8.0
 RUN curl -fsSL -o /usr/local/bin/openapi2jsonschema "https://raw.githubusercontent.com/yannh/kubeconform/refs/tags/${KUBECONFORM_VERSION}/scripts/openapi2jsonschema.py" && \
     chmod +x /usr/local/bin/openapi2jsonschema
 
