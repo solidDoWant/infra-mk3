@@ -1,11 +1,9 @@
 ---
 # SDS configuration for Postgres serving certificate validation
-# Envoy will watch /mnt/root-ca for changes and automatically reload
+# Envoy polls /mnt/root-ca for changes (poll_interval in envoy-config.yaml)
 resources:
   - "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
     name: postgres_serving_cert
     validation_context:
       trusted_ca:
         filename: /mnt/root-ca/ca.crt
-      watched_directory:
-        path: /mnt/root-ca

@@ -56,24 +56,21 @@ static_resources:
                 signature_algorithms:
                   - ed25519
                   - rsa_pss_rsae_sha512
-              # Unfortunately this doesn't currently work due to https://github.com/envoyproxy/envoy/issues/41850.
-              # Leaving this here for when/if it is addressed.
+              # Polled: virtiofs has no inotify, so watched_directory never fires.
               tls_certificate_sds_secret_configs:
                 - name: postgres_client_cert
                   sds_config:
                     resource_api_version: V3
                     path_config_source:
                       path: /etc/envoy/postgres-client-cert-sds.yaml
-                      watched_directory:
-                        path: /mnt/postgres
+                      poll_interval: 60s
               validation_context_sds_secret_config:
                 name: postgres_serving_cert
                 sds_config:
                   resource_api_version: V3
                   path_config_source:
                     path: /etc/envoy/postgres-validation-context-sds.yaml
-                    watched_directory:
-                      path: /mnt/root-ca
+                    poll_interval: 60s
             auto_host_sni: true
             auto_sni_san_validation: true
       close_connections_on_host_health_failure: true
@@ -113,24 +110,21 @@ static_resources:
                 signature_algorithms:
                   - ed25519
                   - rsa_pss_rsae_sha512
-              # Unfortunately this doesn't currently work due to https://github.com/envoyproxy/envoy/issues/41850.
-              # Leaving this here for when/if it is addressed.
+              # Polled: virtiofs has no inotify, so watched_directory never fires.
               tls_certificate_sds_secret_configs:
                 - name: postgres_test_client_cert
                   sds_config:
                     resource_api_version: V3
                     path_config_source:
                       path: /etc/envoy/postgres-test-client-cert-sds.yaml
-                      watched_directory:
-                        path: /mnt/postgres-test
+                      poll_interval: 60s
               validation_context_sds_secret_config:
                 name: postgres_serving_cert
                 sds_config:
                   resource_api_version: V3
                   path_config_source:
                     path: /etc/envoy/postgres-validation-context-sds.yaml
-                    watched_directory:
-                      path: /mnt/root-ca
+                    poll_interval: 60s
             auto_host_sni: true
             auto_sni_san_validation: true
       close_connections_on_host_health_failure: true
