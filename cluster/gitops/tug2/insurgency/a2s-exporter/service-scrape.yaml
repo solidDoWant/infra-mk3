@@ -19,6 +19,12 @@ spec:
             - __meta_kubernetes_service_name
           regex: insurgency-a2s-exporter-(.+)
           targetLabel: server
+      metricRelabelConfigs:
+        # The hostname embeds live game state (e.g. "[Cap 1/8]"), so as a label it
+        # starts new series on every objective. Keep it only on the info metric.
+        - action: labeldrop
+          if: '{__name__!="a2s_server_info"}'
+          regex: server_name
   jobLabel: app.kubernetes.io/name
   # Replicas of each exporter query the same server and return the same data.
   # Only scrape one of them to prevent duplicate metrics.
