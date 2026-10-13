@@ -10,7 +10,7 @@ RUN apt update && apt install --no-install-recommends -y \
 # renovate: datasource=github-releases depName=go-task/task
 ARG TASK_VERSION=v3.39.2
 # renovate: datasource=github-releases depName=getsops/sops
-ARG SOPS_VERSION=v3.9.0
+ARG SOPS_VERSION=v3.13.3
 # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
 ARG TELEPORT_VERSION=18.11.3
 # renovate: datasource=github-releases depName=google/go-jsonnet
