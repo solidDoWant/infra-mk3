@@ -1,0 +1,9 @@
+---
+# No $schema: it rejects `$patch: delete`.
+# Each Talos trim discards all free space on XFS in one pass, which causes
+# etcd latency spikes (siderolabs/talos#14461). EPHEMERAL holds etcd, so stay
+# off until chunked trim (siderolabs/talos#14469) ships in a release. The
+# fstrim CronJob in system-controllers still trims EPHEMERAL monthly.
+apiVersion: v1alpha1
+kind: FilesystemTrimConfig
+$patch: delete
