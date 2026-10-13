@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: insurgency-a2s-exporter
+specs:
+  - description: insurgency-a2s-exporter
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: insurgency-a2s-exporter
+        app.kubernetes.io/instance: insurgency-a2s-exporter
+    egress:
+      # DNS resolution (used to resolve the game server service FQDN)
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # A2S queries to the game servers
+      - toEndpoints:
+          - matchLabels:
+              kubevirt.io/vm: insurgency-server
+        toPorts:
+          - ports:
+              # tug2-insurgency-main
+              - port: "27000"
+                protocol: UDP
+              # tug2-insurgency-test
+              - port: "27001"
+                protocol: UDP
+    ingress:
+      # Kubelet for liveness/readiness probes
+      - fromEntities:
+          - host
+        toPorts: &metrics_port
+          - ports:
+              - port: "9841"
+                protocol: TCP
+      # Prometheus metrics scraping
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *metrics_port

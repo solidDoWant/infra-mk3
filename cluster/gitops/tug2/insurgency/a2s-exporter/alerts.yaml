@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: insurgency-a2s-exporter
+spec:
+  groups:
+    - name: insurgency-server
+      rules:
+        - alert: InsurgencyServerDown
+          expr: a2s_server_up{job="insurgency-a2s-exporter"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Insurgency server {{ $labels.server }} is not responding
+            description: |
+              The {{ $labels.server }} server has not answered A2S queries for 5m.
+              Check the container on the insurgency-server VM (crashed, restart
+              loop, or stuck loading a map).
+
+        - alert: InsurgencyA2SExporterDown
+          expr: up{job="insurgency-a2s-exporter"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Insurgency A2S exporter for {{ $labels.server }} is unreachable
+            description: |
+              The A2S exporter for {{ $labels.server }} has not been scraped for
+              10m, so InsurgencyServerDown cannot fire for that server.
