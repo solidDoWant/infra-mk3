@@ -137,7 +137,7 @@ RUN find /usr/local/krew -type d -exec chmod 777 {} \; && \
 
 # diffoci
 # renovate: datasource=github-releases depName=reproducible-containers/diffoci
-ARG DIFFOCI_VERSION=v0.1.5
+ARG DIFFOCI_VERSION=v0.1.8
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     curl -fsSL -o /usr/local/bin/diffoci "https://github.com/reproducible-containers/diffoci/releases/download/${DIFFOCI_VERSION}/diffoci-${DIFFOCI_VERSION}.${KERNEL}-${PRETTY_ARCH}" && \
