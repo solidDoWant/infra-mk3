@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: snmp-exporter
+specs:
+  - description: snmp-exporter
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: snmp-exporter
+        app.kubernetes.io/controller: snmp-exporter
+        app.kubernetes.io/instance: snmp-exporter
+    egress:
+      # SNMP polling of the UPS and PDU
+      - toCIDRSet:
+          - cidrGroupRef: power-devices
+        toPorts:
+          - ports:
+              - port: "161"
+                protocol: UDP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "9116"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9116"
+                protocol: TCP

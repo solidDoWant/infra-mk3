@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+# RFC 1628 UPS-MIB enums are exported as raw values by the ups_mib module.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: snmp-exporter
+spec:
+  groups:
+    - name: ups
+      rules:
+        # upsOutputSource 5 = battery
+        - alert: UPSOnBattery
+          expr: upsOutputSource == 5
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: UPS {{ $labels.instance }} is running on battery
+            description: |
+              {{ $labels.instance }} has been on battery for at least 1m. Runtime
+              at the current load is short (about 10 minutes at full charge).
+        # upsBatteryStatus 3 = low, 4 = depleted
+        - alert: UPSBatteryLow
+          expr: upsBatteryStatus >= 3 or upsEstimatedMinutesRemaining < 5
+          labels:
+            severity: critical
+          annotations:
+            summary: UPS {{ $labels.instance }} battery is low
+            description: |
+              {{ $labels.instance }} reports a low or depleted battery, or under 5
+              minutes of runtime. Loss of power to the rack is imminent if it is on
+              battery; otherwise the batteries likely need replacing.
+        - alert: UPSAlarm
+          expr: upsAlarmsPresent > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: UPS {{ $labels.instance }} has {{ $value }} active alarm(s)
+            description: |
+              Check the alarm list on the UPS network card web UI (UPS > Properties
+              > Alarms).
+        - alert: UPSUnreachable
+          expr: up{instance="ups-01"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: UPS {{ $labels.instance }} cannot be polled over SNMP
+            description: |
+              snmp-exporter has failed to walk {{ $labels.instance }} for 15m. The
+              network card may be hung (it stops responding under port scans), have
+              changed IP, or have changed SNMPv3 credentials. Details:
+              `kubectl logs -n monitoring deploy/snmp-exporter`.

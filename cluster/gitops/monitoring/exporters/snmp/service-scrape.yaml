@@ -1,0 +1,39 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: snmp-exporter
+  labels:
+    app.kubernetes.io/part-of: snmp-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: snmp-exporter
+      app.kubernetes.io/service: snmp-exporter
+      app.kubernetes.io/instance: snmp-exporter
+  endpoints:
+    # ups-01 (Eaton Network-MS card)
+    - port: metrics
+      interval: 1m
+      scrapeTimeout: 10s
+      path: /snmp
+      params:
+        module:
+          - ups_mib
+        auth:
+          - power_devices
+        target:
+          - 10.1.3.1
+      relabelConfigs:
+        # See pve-exporter's service-scrape.yaml
+        - sourceLabels: [__address__]
+          regex: '(.+)\.svc(:\d+)?'
+          targetLabel: __address__
+          replacement: "$${1}.svc.cluster.local$${2}"
+        - targetLabel: instance
+          replacement: ups-01
+  jobLabel: snmp-exporter
+  # Exporters are HA, and will always return the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service

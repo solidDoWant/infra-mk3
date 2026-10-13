@@ -23,4 +23,13 @@ If the login is lost, connect to the card's serial port at 9600 baud, 8N1, no fl
 2. Assign a static DHCP lease in OPNsense, using the card's MAC address (printed on the card and shown on the web UI's "About" page).
 3. Log in to the web UI and change the default password under Settings > Access Control.
 
-<!-- TODO SNMPv3 setup -->
+# SNMP configuration
+
+The card supports only MD5 authentication and DES privacy for SNMPv3. Under Settings > SNMP:
+
+1. Set SNMP Version to V3, which disables the `public` community.
+2. Set the Read-Only user's security level to Auth&Priv, and set a new username and password.
+3. Change the Read-Write user's password. The default `writeuser`/`writeuser` account can shut off the UPS output.
+4. Put the read-only credentials in `cluster/gitops/monitoring/exporters/snmp/snmp-exporter-auth.sops.yaml`.
+
+The card uses the same password for authentication and privacy.

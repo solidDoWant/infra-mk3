@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: snmp-exporter
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: app-template
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: bjw-s-charts
+      version: 5.3.0
+  values:
+    controllers:
+      snmp-exporter:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        containers:
+          app:
+            image:
+              repository: quay.io/prometheus/snmp-exporter
+              tag: v0.30.1
+            args:
+              # Built-in modules (ups_mib, liebert_pdu, ...). Auth names must not
+              # collide with the built-in public_v1/public_v2.
+              - --config.file=/etc/snmp_exporter/snmp.yml
+              - --config.file=/etc/snmp_exporter/auth/auth.yml
+            ports:
+              - name: metrics
+                containerPort: 9116
+            probes:
+              liveness: &probe
+                enabled: true
+                port: metrics
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+        pod:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+    persistence:
+      auth:
+        type: secret
+        name: snmp-exporter-auth
+        globalMounts:
+          - path: /etc/snmp_exporter/auth
+            readOnly: true
+    service:
+      snmp-exporter:
+        controller: snmp-exporter
+        ports:
+          metrics:
+            port: 9116
+    serviceMonitor:
+      # Exporter self-metrics from every pod. Device metrics are scraped
+      # from one pod only, by service-scrape.yaml.
+      snmp-exporter-self:
+        # Default name collides with the VMServiceScrape in service-scrape.yaml
+        forceRename: snmp-exporter-self
+        service:
+          identifier: snmp-exporter
+        endpoints:
+          - interval: 1m
+            scrapeTimeout: 10s

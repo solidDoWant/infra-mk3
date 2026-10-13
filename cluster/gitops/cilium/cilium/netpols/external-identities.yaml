@@ -57,6 +57,15 @@ spec:
 apiVersion: cilium.io/v2
 kind: CiliumCIDRGroup
 metadata:
+  name: power-devices
+spec:
+  externalCIDRs:
+    - 10.1.3.1/32 # ups-01
+    - 10.1.3.128/32 # pdu-01
+---
+apiVersion: cilium.io/v2
+kind: CiliumCIDRGroup
+metadata:
   name: proxmox-nodes
 spec:
   externalCIDRs:
