@@ -8,8 +8,11 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  grafanaCom:
-    id: 25293
+  # Fork of grafana.com 25293 rev 1: ups_mib already scales upsBatteryVoltage
+  # to volts, so the battery voltage panels drop their unit conversions.
+  configMapRef:
+    key: dashboard.json
+    name: ups-dashboard
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
