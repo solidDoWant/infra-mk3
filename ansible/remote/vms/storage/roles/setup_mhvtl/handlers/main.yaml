@@ -14,3 +14,37 @@
     state: restarted
   register: mhvtl_restart
   failed_when: false
+
+# Stopping mhvtl.target leaves the module loaded (mhvtl-load-modules has no
+# ExecStop), so a rebuilt module or new daemons only take effect after an
+# explicit unload. Dry-run data is disposable; the real TS3200 is untouched.
+- name: Stop mhvtl for module reload
+  listen: Reload mhvtl module
+  ansible.builtin.systemd:
+    name: mhvtl.target
+    state: stopped
+
+- name: Unload the mhvtl module
+  listen: Reload mhvtl module
+  community.general.modprobe:
+    name: mhvtl
+    state: absent
+  register: mhvtl_unload
+  ignore_errors: true
+
+- name: Start mhvtl after module reload
+  listen: Reload mhvtl module
+  ansible.builtin.systemd:
+    name: mhvtl.target
+    state: started
+  register: mhvtl_reload_start
+  ignore_errors: true
+
+- name: Warn when the mhvtl module reload was incomplete
+  listen: Reload mhvtl module
+  ansible.builtin.debug:
+    msg: >-
+      mhvtl module reload incomplete (unload failed: {{ mhvtl_unload.failed | default(false) }},
+      start failed: {{ mhvtl_reload_start.failed | default(false) }}). The old module may still
+      be loaded; check `modinfo -F version mhvtl` vs `cat /sys/module/mhvtl/version`.
+  when: (mhvtl_unload.failed | default(false)) or (mhvtl_reload_start.failed | default(false))
