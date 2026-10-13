@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: xgs-pon-exporter
+specs:
+  - description: xgs-pon-exporter
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: xgs-pon-exporter
+        app.kubernetes.io/controller: xgs-pon-exporter
+        app.kubernetes.io/instance: xgs-pon-exporter
+    egress:
+      # Metrics endpoint on the XGS-PON module's web server
+      - toCIDRSet:
+          - cidrGroupRef: xgs-pon
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "7979"
+                protocol: TCP
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "7979"
+                protocol: TCP
