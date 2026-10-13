@@ -151,20 +151,6 @@ RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/${CMCTL_VERSION}/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/cmtool
 
-# jsonnet-builder
-# renovate: datasource=github-releases depName=jsonnet-bundler/jsonnet-bundler
-ARG JB_VERSION=v0.6.0
-RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
-    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
-    curl -fsSL -o /usr/local/bin/jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/${JB_VERSION}/jb-${KERNEL}-${PRETTY_ARCH}" && \
-    chmod +x /usr/local/bin/jb
-
-# Packer
-RUN curl -fsSL https://apt.releases.hashicorp.com/gpg > /etc/apt/keyrings/hashicorp-archive-keyring.asc && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.asc] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list && \
-    apt update && \
-    DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y packer
-
 # Nix
 RUN curl -fsSL https://nixos.org/releases/nix/nix-install.sh | sh -s -- --daemon && \
     mkdir -p /etc/nix && \
