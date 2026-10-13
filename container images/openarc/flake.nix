@@ -33,7 +33,7 @@
             owner = "SearchSavior";
             repo = "OpenArc";
             # renovate: datasource=git-refs depName=SearchSavior/OpenArc branch=main
-            rev = "e3618c0719c59d05d904e315d453e403cf757e03";
+            rev = "9adbb88884e344c7778e4ee124628898e8565834";
             hash = "sha256-N932tjSjqxUfMeeRk7c6+gI6YXxA7et37Xfm7do/wZg=";
           };
           # Each entry is the .diff of an open upstream PR, fetched
