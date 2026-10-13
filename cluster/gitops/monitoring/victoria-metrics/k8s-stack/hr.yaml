@@ -402,6 +402,10 @@ spec:
         # If these components fail then there will be no notification that something is going wrong
         priorityClassName: system-cluster-critical
         externalURL: https://alertmanager.${SECRET_PUBLIC_DOMAIN_NAME}
+        extraArgs:
+          # Peers are re-resolved by DNS every 15s. The 6h default keeps dialing a rescheduled
+          # peer's old IP, which netpols drop once another pod reuses it.
+          cluster.reconnect-timeout: 5m
         # Upstream alertmanager storage requirements and usage is really poorly documented.
         # Based on https://groups.google.com/g/prometheus-developers/c/KQ5UbAbaYnU, it looks
         # like storage is used for recording:
