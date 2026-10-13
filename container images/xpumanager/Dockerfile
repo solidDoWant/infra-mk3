@@ -5,7 +5,7 @@ ARG BASE_IMAGE=ubuntu:rolling
 FROM ${BASE_IMAGE}
 
 # renovate: datasource=github-releases depName=intel/xpumanager
-ARG XPUMANAGER_VERSION=v1.3.2
+ARG XPUMANAGER_VERSION=v1.3.8
 
 RUN \
     export DEBIAN_FRONTEND=noninteractive && \

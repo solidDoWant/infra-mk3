@@ -1,6 +1,6 @@
 BASE_IMAGE = ubuntu:26.04
 # renovate: datasource=github-releases depName=intel/xpumanager
-XPUMANAGER_VERSION = v1.3.2
+XPUMANAGER_VERSION = v1.3.8
 
 NEW_IMAGE = ghcr.io/soliddowant/xpumanager
 NEW_IMAGE_FULL = $(NEW_IMAGE):$(XPUMANAGER_VERSION:v%=%)
