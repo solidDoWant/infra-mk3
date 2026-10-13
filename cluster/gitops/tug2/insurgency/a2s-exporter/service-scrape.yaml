@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/operator.victoriametrics.com/vmservicescrape_v1beta1.json
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: insurgency-a2s-exporter
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: insurgency-a2s-exporter
+      app.kubernetes.io/instance: insurgency-a2s-exporter
+  endpoints:
+    - port: metrics
+      relabelConfigs:
+        # Stable per-server label. The exporter's server_name label is the server's
+        # hostname, which changes whenever that does.
+        - action: replace
+          sourceLabels:
+            - __meta_kubernetes_service_name
+          regex: insurgency-a2s-exporter-(.+)
+          targetLabel: server
+  jobLabel: app.kubernetes.io/name
+  # Replicas of each exporter query the same server and return the same data.
+  # Only scrape one of them to prevent duplicate metrics.
+  discoveryRole: service

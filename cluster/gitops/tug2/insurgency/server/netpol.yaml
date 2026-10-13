@@ -130,6 +130,17 @@ specs:
               # tug2-insurgency-test
               - port: "27001"
                 protocol: UDP
+      # A2S queries from the metrics exporter (in-cluster pods are not `world`)
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: insurgency-a2s-exporter
+              app.kubernetes.io/instance: insurgency-a2s-exporter
+        toPorts:
+          - ports:
+              - port: "27000"
+                protocol: UDP
+              - port: "27001"
+                protocol: UDP
       # Local network for administrative access to game server
       - fromCIDRSet:
           - cidrGroupRef: intranet
