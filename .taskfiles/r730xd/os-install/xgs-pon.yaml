@@ -7,7 +7,9 @@ tasks:
     internal: true
     silent: true
     vars:
-      FIRMWARE_URL: https://github.com/djGrrr/8311-was-110-firmware-builder/releases/download/v2.6.5/WAS-110_8311_firmware_mod_v2.6.5_basic.7z
+      # renovate: datasource=github-releases depName=djGrrr/8311-was-110-firmware-builder
+      FIRMWARE_VERSION: v2.6.5
+      FIRMWARE_URL: https://github.com/djGrrr/8311-was-110-firmware-builder/releases/download/{{ .FIRMWARE_VERSION }}/WAS-110_8311_firmware_mod_{{ .FIRMWARE_VERSION }}_basic.7z
       OUTPUT_PATH:
         ref: default (printf "%s/xgs-pon-firmware.7z" .USER_WORKING_DIR) .OUTPUT_PATH
     cmd: |

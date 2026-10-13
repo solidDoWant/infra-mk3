@@ -22,6 +22,7 @@
 # turn and take the "got:" value from the build failure. Check whether the release
 # still needs the version-file fixup in postPatch below.
 let
+  # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
   version = "18.11.0";
 
   # pnpm_10 is pinned at 10.34.0, which nixpkgs marks insecure; 10_latest carries

@@ -19,7 +19,8 @@ argument_specs:
         default: https://github.com/markh794/mhvtl.git
       mhvtl_version:
         type: str
-        default: 8e79aa8
+        # renovate: datasource=git-refs depName=markh794/mhvtl branch=master
+        default: 8e79aa898381797afac596160dae2b74533e426d
         description: Pinned upstream commit; bump deliberately.
       mhvtl_src_dir:
         type: str

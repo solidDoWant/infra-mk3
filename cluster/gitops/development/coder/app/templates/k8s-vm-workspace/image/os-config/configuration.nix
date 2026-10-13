@@ -22,6 +22,7 @@
     overlays = [
       (final: prev: {
         coder = prev.coder.overrideAttrs (old: rec {
+          # renovate: datasource=github-releases depName=coder/coder
           version = "2.38.0";
           src = prev.fetchurl {
             url = "https://github.com/coder/coder/releases/download/v${version}/coder_${version}_linux_amd64.tar.gz";

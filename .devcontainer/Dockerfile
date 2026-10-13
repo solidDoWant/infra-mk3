@@ -7,18 +7,26 @@ RUN apt update && apt install --no-install-recommends -y \
     inotify-tools uuid-runtime postgresql-common
 
 # Install debs from sources that don't provide an apt repo
+# renovate: datasource=github-releases depName=go-task/task
+ARG TASK_VERSION=v3.39.2
+# renovate: datasource=github-releases depName=getsops/sops
+ARG SOPS_VERSION=v3.9.0
+# renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
+ARG TELEPORT_VERSION=18.1.4
+# renovate: datasource=github-releases depName=google/go-jsonnet
+ARG JSONNET_VERSION=v0.20.0
 RUN mkdir -pv /tmp/debs && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     # Taskfile
-    curl -fsSL -o /tmp/debs/taskfile.deb "https://github.com/go-task/task/releases/download/v3.39.2/task_${KERNEL}_${PRETTY_ARCH}.deb" && \
+    curl -fsSL -o /tmp/debs/taskfile.deb "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_${KERNEL}_${PRETTY_ARCH}.deb" && \
     # SOPS
-    curl -fsSL -o /tmp/debs/sops.deb "https://github.com/getsops/sops/releases/download/v3.9.0/sops_3.9.0_${PRETTY_ARCH}.deb" && \
+    curl -fsSL -o /tmp/debs/sops.deb "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops_${SOPS_VERSION#v}_${PRETTY_ARCH}.deb" && \
     # Teleport
-    curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_18.1.4_${PRETTY_ARCH}.deb" && \
+    curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_${TELEPORT_VERSION}_${PRETTY_ARCH}.deb" && \
     # jsonnet
-    curl -fsSL -o /tmp/debs/jsonnet.deb "https://github.com/google/go-jsonnet/releases/download/v0.20.0/jsonnet-go_0.20.0_${KERNEL}_${PRETTY_ARCH}.deb" && \
+    curl -fsSL -o /tmp/debs/jsonnet.deb "https://github.com/google/go-jsonnet/releases/download/${JSONNET_VERSION}/jsonnet-go_${JSONNET_VERSION#v}_${KERNEL}_${PRETTY_ARCH}.deb" && \
     dpkg -i /tmp/debs/*.deb && \
     rm -rvf /tmp/debs
 
@@ -71,23 +79,31 @@ ENV HELM_DATA_HOME=/usr/local/share/helm
 COPY --from=alpine/helm:4.3.0 /usr/bin/helm /usr/local/bin/helm
 ## Plugins
 ### Required for helmfile
-RUN helm plugin install https://github.com/jkroepke/helm-secrets --version v4.6.2 && \
-    helm plugin install https://github.com/databus23/helm-diff --version v3.9.11
+# renovate: datasource=github-releases depName=jkroepke/helm-secrets
+ARG HELM_SECRETS_VERSION=v4.6.2
+# renovate: datasource=github-releases depName=databus23/helm-diff
+ARG HELM_DIFF_VERSION=v3.9.11
+RUN helm plugin install https://github.com/jkroepke/helm-secrets --version "${HELM_SECRETS_VERSION}" && \
+    helm plugin install https://github.com/databus23/helm-diff --version "${HELM_DIFF_VERSION}"
 
 # kustomize
 COPY --from=registry.k8s.io/kustomize/kustomize:v5.8.3 /app/kustomize /usr/local/bin/kustomize
 
 # Cilium CLI
+# renovate: datasource=github-releases depName=cilium/cilium-cli
+ARG CILIUM_CLI_VERSION=v0.16.19
 RUN mkdir -pv /tmp/cilium && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
-    curl -fsSL -o /tmp/cilium/cilium.tar.gz "https://github.com/cilium/cilium-cli/releases/download/v0.16.19/cilium-${KERNEL}-${PRETTY_ARCH}.tar.gz" && \
+    curl -fsSL -o /tmp/cilium/cilium.tar.gz "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-${KERNEL}-${PRETTY_ARCH}.tar.gz" && \
     tar -xzvf /tmp/cilium/cilium.tar.gz -C /usr/local/bin cilium && \
     rm -rvf /tmp/cilium
 
 # openspi2jsonschema CRD to schema converter
-RUN curl -fsSL -o /usr/local/bin/openapi2jsonschema https://raw.githubusercontent.com/yannh/kubeconform/refs/tags/v0.6.7/scripts/openapi2jsonschema.py && \
+# renovate: datasource=github-tags depName=yannh/kubeconform
+ARG KUBECONFORM_VERSION=v0.6.7
+RUN curl -fsSL -o /usr/local/bin/openapi2jsonschema "https://raw.githubusercontent.com/yannh/kubeconform/refs/tags/${KUBECONFORM_VERSION}/scripts/openapi2jsonschema.py" && \
     chmod +x /usr/local/bin/openapi2jsonschema
 
 # istioctl
@@ -98,12 +114,14 @@ COPY --from=istio/istioctl:1.31.1 /usr/local/bin/istioctl /usr/local/bin/istioct
 
 # krew
 ENV KREW_ROOT=/usr/local/krew
+# renovate: datasource=github-releases depName=kubernetes-sigs/krew
+ARG KREW_VERSION=v0.4.4
 RUN mkdir -pv /tmp/krew && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     KREW_FILE_NAME="krew-${KERNEL}_${PRETTY_ARCH}" && \
-    curl -fsSL -o /tmp/krew/krew.tar.gz "https://github.com/kubernetes-sigs/krew/releases/download/v0.4.4/krew-${KERNEL}_${PRETTY_ARCH}.tar.gz" && \
+    curl -fsSL -o /tmp/krew/krew.tar.gz "https://github.com/kubernetes-sigs/krew/releases/download/${KREW_VERSION}/krew-${KERNEL}_${PRETTY_ARCH}.tar.gz" && \
     tar -xzvf /tmp/krew/krew.tar.gz -C /tmp/krew "./${KREW_FILE_NAME}" && \
     "/tmp/krew/${KREW_FILE_NAME}" install krew && \
     rm -rvf /tmp/krew
@@ -118,28 +136,36 @@ RUN find /usr/local/krew -type d -exec chmod 777 {} \; && \
     find /usr/local/krew -type f -exec chmod ugo+w {} \;
 
 # diffoci
+# renovate: datasource=github-releases depName=reproducible-containers/diffoci
+ARG DIFFOCI_VERSION=v0.1.5
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
-    curl -fsSL -o /usr/local/bin/diffoci "https://github.com/reproducible-containers/diffoci/releases/download/v0.1.5/diffoci-v0.1.5.${KERNEL}-${PRETTY_ARCH}" && \
+    curl -fsSL -o /usr/local/bin/diffoci "https://github.com/reproducible-containers/diffoci/releases/download/${DIFFOCI_VERSION}/diffoci-${DIFFOCI_VERSION}.${KERNEL}-${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/diffoci
 
 # cmtool
+# renovate: datasource=github-releases depName=cert-manager/cmctl
+ARG CMCTL_VERSION=v2.1.1
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
-    curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
+    curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/${CMCTL_VERSION}/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/cmtool
 
 # jsonnet-builder
+# renovate: datasource=github-releases depName=jsonnet-bundler/jsonnet-bundler
+ARG JB_VERSION=v0.6.0
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
-    curl -fsSL -o /usr/local/bin/jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.6.0/jb-${KERNEL}-${PRETTY_ARCH}" && \
+    curl -fsSL -o /usr/local/bin/jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/${JB_VERSION}/jb-${KERNEL}-${PRETTY_ARCH}" && \
     chmod +x /usr/local/bin/jb
 
 # hatchet
+# renovate: datasource=github-releases depName=hatchet-dev/hatchet
+ARG HATCHET_VERSION=v0.83.48
 RUN mkdir -pv /tmp/hatchet && \
     KERNEL="$(uname -s)" && \
     ARCH="$(uname -m)" && \
-    curl -fsSL -o /tmp/hatchet/hatchet.tar.gz "https://github.com/hatchet-dev/hatchet/releases/download/v0.83.48/hatchet_0.83.48_${KERNEL}_${ARCH}.tar.gz" && \
+    curl -fsSL -o /tmp/hatchet/hatchet.tar.gz "https://github.com/hatchet-dev/hatchet/releases/download/${HATCHET_VERSION}/hatchet_${HATCHET_VERSION#v}_${KERNEL}_${ARCH}.tar.gz" && \
     tar -xzvf /tmp/hatchet/hatchet.tar.gz -C /usr/local/bin && \
     rm -rvf /tmp/hatchet
 

@@ -48,6 +48,9 @@
   // The flux manager already extracts HelmRelease values images; helm-values
   // would extract every hr.yaml image a second time.
   "helm-values": { enabled: false },
+  // Off by default upstream. Locked flake inputs only move through
+  // lockFileMaintenance (`nix flake update`, weekly by default).
+  nix: { enabled: true, lockFileMaintenance: { enabled: true } },
 
   customDatasources: {
     "grafana-plugins": {
@@ -57,6 +60,12 @@
       transformTemplates: [
         '{"releases": $map(items, function($i) { {"version": $i.version, "releaseTimestamp": $i.createdAt} }), "sourceUrl": items[0].url}',
       ],
+    },
+    // Directory index of the installer ISOs; every link is a release candidate,
+    // extractVersion (packageRules) keeps the proxmox-ve_X.Y-Z.iso ones.
+    "proxmox-iso": {
+      defaultRegistryUrlTemplate: "https://enterprise.proxmox.com/iso/",
+      format: "html",
     },
   },
 
@@ -133,6 +142,33 @@
     },
     {
       customType: "regex",
+      description: "Literal image refs assigned to *_IMAGE Taskfile vars",
+      managerFilePatterns: ["/^\\.taskfiles/.+\\.ya?ml$/"],
+      matchStrings: [
+        "\\w*_IMAGE:\\s*[\"']?(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)[\"']?\\s*(?:\\n|$)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "`# renovate: datasource=… depName=…` annotations on `KEY = value` lines (Makefile, Nix); the preset's annotation manager needs `=` directly before the value",
+      managerFilePatterns: ["/(^|/)Makefile$/", "/\\.nix$/"],
+      matchStrings: [
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n[^\\n]*?\\s=\\s*[\"']?(?<currentValue>[^\"'\\s;]+)[\"']?",
+      ],
+    },
+    {
+      customType: "regex",
+      description: "Commit pins following a GitHub branch: `# renovate: datasource=git-refs depName=<owner>/<repo> branch=<branch>` above the full SHA",
+      managerFilePatterns: ["/^ansible/.+\\.ya?ml$/", "/\\.nix$/"],
+      matchStrings: [
+        "datasource=git-refs depName=(?<depName>\\S+) branch=(?<currentValue>\\S+)\\n[^\\n]*?(?::\\s*|=\\s*)[\"']?(?<currentDigest>[0-9a-f]{40})[\"']?",
+      ],
+      datasourceTemplate: "git-refs",
+      packageNameTemplate: "https://github.com/{{{depName}}}",
+    },
+    {
+      customType: "regex",
       description: "Tagged raw files (CRDs, manifests, dashboards, values schema refs)",
       managerFilePatterns: ["/^cluster/.+\\.(ya?ml|json)$/"],
       matchStrings: [
@@ -203,10 +239,36 @@
       versioning: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-victorialogs)?$",
     },
     {
-      description: "Release tags are vX.Y.Z; the Ansible var is bare",
+      description: "Release tags are vX.Y.Z; the Ansible/Nix vars are bare",
       matchDatasources: ["github-releases"],
-      matchPackageNames: ["prometheus-community/smartctl_exporter"],
+      matchPackageNames: ["prometheus-community/smartctl_exporter", "coder/coder"],
       extractVersion: "^v(?<version>.+)$",
+    },
+    {
+      description: "OPNsense: an installer ISO only exists for the YY.1/YY.7 releases (no patch, beta or RC builds)",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["opnsense/core"],
+      allowedVersions: "/^\\d+\\.[17]$/",
+    },
+    {
+      description: "Proxmox VE installer ISOs: proxmox-ve_X.Y-Z.iso (amd64 only)",
+      matchDatasources: ["custom.proxmox-iso"],
+      extractVersion: "^(?:\\./)?proxmox-ve_(?<version>\\d+\\.\\d+-\\d+)\\.iso$",
+      versioning: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)-(?<patch>\\d+)$",
+    },
+    {
+      description: "Nix fixed-output hashes sit next to the bumped version and are not updated",
+      matchFileNames: ["**/*.nix"],
+      prBodyNotes: [
+        "⚠️ Update the `hash`/`*Hash` values next to the bumped Nix version: set them to `lib.fakeHash` and take the `got:` value from the build error.",
+      ],
+    },
+    {
+      description: "mhvtl: the DKMS package version is the source's MHVTL_VERSION and gates the DKMS rebuild",
+      matchPackageNames: ["markh794/mhvtl"],
+      prBodyNotes: [
+        "⚠️ Bump `mhvtl_pkg_version` to the new commit's `MHVTL_VERSION`. The DKMS install is skipped while `dkms status` reports the old package version as installed, so a commit bump alone does not rebuild the module.",
+      ],
     },
     {
       description: "Kyverno chart pinned (see kyverno/app/hr.yaml): 3.6.3+ breaks service: apiCall contexts until kyverno/kyverno#16047 ships",
@@ -267,15 +329,15 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "Teleport: charts, tbot sidecars (must not outrun the cluster) and chart schema refs",
+      description: "Teleport: charts, tbot sidecars (must not outrun the cluster), chart schema refs, devcontainer + VM workspace binaries",
       groupName: "teleport",
-      matchPackageNames: ["/^teleport-/", "/gravitational\\/tbot/", "gravitational/teleport"],
+      matchPackageNames: ["/^teleport-/", "/gravitational\\/(tbot|teleport)-distroless$/", "gravitational/teleport"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "VictoriaMetrics: k8s-stack chart (bundles the operator) + operator CRDs",
+      description: "VictoriaMetrics: k8s-stack chart (bundles the operator) + operator CRDs + the metrics datasource plugin it configures",
       groupName: "victoria-metrics-operator",
-      matchPackageNames: ["/victoria-metrics-k8s-stack$/", "VictoriaMetrics/operator"],
+      matchPackageNames: ["/victoria-metrics-k8s-stack$/", "VictoriaMetrics/operator", "victoriametrics-metrics-datasource"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -306,10 +368,39 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "Cilium: chart (HelmRelease + bootstrap helmfile) + values schema ref",
+      description: "Cilium: chart (HelmRelease + bootstrap helmfile) + values schema ref + CLI in the devcontainer",
       groupName: "cilium",
-      matchPackageNames: ["cilium", "cilium/cilium"],
+      matchPackageNames: ["cilium", "cilium/cilium", "cilium/cilium-cli"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "cert-manager: chart + cmctl in the devcontainer",
+      groupName: "cert-manager",
+      matchPackageNames: ["cert-manager", "cert-manager/cmctl"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Helm tooling in the devcontainer: helm, helmfile and the plugins helmfile requires",
+      groupName: "helm-tooling",
+      matchPackageNames: ["alpine/helm", "ghcr.io/helmfile/helmfile", "jkroepke/helm-secrets", "databus23/helm-diff"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "jsonnet + jsonnet-bundler in the devcontainer",
+      groupName: "jsonnet",
+      matchPackageNames: ["google/go-jsonnet", "jsonnet-bundler/jsonnet-bundler"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Goldilocks: chart + image tag override",
+      groupName: "goldilocks",
+      matchPackageNames: ["goldilocks", "us-docker.pkg.dev/fairwinds-ops/oss/goldilocks"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Keep 0.x members on their group branch (the preset routes 0.x minors to major- branches)",
+      matchPackageNames: ["cilium/cilium-cli", "google/go-jsonnet", "jsonnet-bundler/jsonnet-bundler", "victoriametrics-metrics-datasource"],
+      additionalBranchPrefix: "",
     },
     // Exporter/app image + the dashboard pinned to the same release.
     {
@@ -339,10 +430,10 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "Coder: chart + CLI image in the devcontainer",
+      description: "Coder: chart + CLI image in the devcontainer + agent in the VM workspace image",
       groupName: "coder",
-      matchPackageNames: ["coder", "ghcr.io/coder/coder"],
-      matchDatasources: ["helm", "docker"],
+      matchPackageNames: ["coder", "ghcr.io/coder/coder", "coder/coder"],
+      matchDatasources: ["helm", "docker", "github-releases"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {

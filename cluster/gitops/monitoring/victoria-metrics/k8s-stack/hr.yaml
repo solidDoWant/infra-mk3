@@ -587,6 +587,7 @@ spec:
             # Without this the chart doesn't add the plugin to the GrafanaDatasource,
             # and grafana-operator uninstalls it.
             plugin: true
+            # renovate: datasource=custom.grafana-plugins depName=victoriametrics-metrics-datasource
             version: "0.25.2"
     grafana:
       enabled: false
