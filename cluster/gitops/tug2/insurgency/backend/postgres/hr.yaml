@@ -34,9 +34,6 @@ spec:
         username: insurgency
         # Cert will be reloaded on disk automatically, so no need to restart the pod (which would restart the entire VM as well)
         disableReloading: true
-        # Envoy polls the cert over virtiofs (no inotify); renewBefore leaves slack if a reload is missed
-        duration: 24h
-        renewBefore: 12h
       # Test game server. Gets its own schema in each of the existing databases, holding an
       # independent copy of that database's tables. The schema is named after this role, so
       # the default search_path resolves to it with no client-side configuration. The role has
@@ -45,9 +42,6 @@ spec:
       insurgency-test:
         username: insurgency-test
         disableReloading: true
-        # Same rationale as the `insurgency` user above.
-        duration: 24h
-        renewBefore: 12h
         role:
           comment: Test game server
       # Read-only consumer (stats-api)
