@@ -37,6 +37,7 @@ secureboot: true
 patchesDir: patches
 secretsPath: secrets.sops.yaml
 nodes:
+  # BGP is disabled until https://github.com/siderolabs/talos/issues/14625 is fixed
   - host: talos-k8s-mixed-01
     ip: 10.3.1.1
     role: control-plane
