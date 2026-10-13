@@ -759,37 +759,30 @@ Storage:
       Manufacturer: Dell
       Model: NN037
 Power:
-  - Manufacturer: Vertiv
-    Model: Liebert PS1500RT3-120W
+  - Manufacturer: Eaton
+    Model: 5PX 2200 (5PX2200RT)
     Type: UPS
     Hardware:
       Power:
         Inputs:
-          - Connector: 5-15P
+          - Connector: 5-20P
             Voltage: 120 # Volts, AC if `DC: false` (default if unset)
-            Max real current: 12 # Amps
+            Max real current: 16 # Amps
             Count: 1
         Batteries:
           - Type: Sealed lead acid
-            Connector: F2/T2 1/4" terminals
-            Physical:
-              Dimensions: # Inches
-                Height: 3.84
-                Length: 5.95
-                Width: 2.56
-              Weight: 7 # Pounds
             Electrical:
               Nominal voltage: 12 # Volts
               Capacity: 9 # Amp hours
-            Count: 3
+            Count: 4
         Outputs:
-          - Connector: 5-15R
+          - Connector: 5-20R
             Voltage: 120 # Volts, AC if `DC: false` (default if unset)
-            Max real current: 12 # Amps
+            Max real current: 16 # Amps
             Count: 8
       Control board:
-        Manufacturer: Vertiv
-        Model: Intellisense
+        Manufacturer: Eaton
+        Model: Network-MS
         Ports:
           - Connector: RJ-45
             Management: true

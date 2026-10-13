@@ -19,6 +19,7 @@ The following hardware is assembled as documented [here](./hardware.yaml) and ra
 Run through the following guides, in order:
 * [Mellanox SX6036 setup](./setup-sx6036.md)
 * [Brocade ICX 7250 setup](./setup-icx7250.md)
+* [Eaton 5PX setup](./setup-5px.md)
 * [MPR3141 setup](./setup-mpr3141.md)
 * [R730XD setup](./setup-r730xd.md)
 * [MS-A2 setup](./setup-ms-a2.md)
@@ -30,6 +31,5 @@ After all hardware has been deployed and configured, run `task:deploy-flux` to b
 <!-- 
 TODO:
 * Tape library
-* UPS
 * KVM
  -->

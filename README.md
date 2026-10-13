@@ -47,7 +47,7 @@ A full, detailed document describing the hardware used is available [here](./doc
 
 ### Power
 
-Power delivery in a single point of failure in my lab. I "only" have one power company, breaker panel, circuit, [UPS](https://www.vertiv.com/en-us/products-catalog/critical-power/uninterruptible-power-supplies-ups/ps1500rt3-120w/), and [PDU](https://www.vertiv.com/en-us/products-catalog/critical-power/power-distribution/vertiv-mph2-mphr3141/), all wired in series. The UPS helps protect against short power outages, but if it, the PDU, or device power supplies fail, then at least one device will fail.
+Power delivery in a single point of failure in my lab. I "only" have one power company, breaker panel, circuit, [UPS](https://www.eaton.com/us/en-us/skuPage.5PX2200RT.html), and [PDU](https://www.vertiv.com/en-us/products-catalog/critical-power/power-distribution/vertiv-mph2-mphr3141/), all wired in series. The UPS helps protect against short power outages, but if it, the PDU, or device power supplies fail, then at least one device will fail.
 
 Removing any of the single points of failure upstream of the UPS would be prohibitively expensive. I could add another UPS and an automatic transfer switch (ATS) to handle battery and power converter failures, but it's probably not worth the cost. Based on current prices, I could probably get another 1500VA UPS with new batteries, along with an ATS for about $600 to my door. Typically I only have about one power outage per year that lasts for more than 2-3 minutes, and even with older batteries, my UPS can handle this without issue.
 
@@ -58,7 +58,7 @@ flowchart LR
   power[Power grid]
   breaker[Breaker panel]
   circuit[120V, 20A circuit]
-  UPS[Liebert PS1500RT3-120W UPS]
+  UPS[Eaton 5PX2200RT UPS]
   PDU[Vertiv MPH2 MPHR3141 PDU]
   power --> breaker --> circuit --> UPS --> PDU
 ```
@@ -136,7 +136,7 @@ flowchart LR
     direction LR
 
     pdu[Vertiv MPH2 MPHR3141 PDU]
-    ups[Liebert PS1500RT3-120W UPS]
+    ups[Eaton 5PX2200RT UPS]
     tape[IBM TS3200 tape library]
     aps[Unifi U6+ APs]
   end
