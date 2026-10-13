@@ -161,7 +161,7 @@ RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
 
 # hatchet
 # renovate: datasource=github-releases depName=hatchet-dev/hatchet
-ARG HATCHET_VERSION=v0.83.48
+ARG HATCHET_VERSION=v0.110.5
 RUN mkdir -pv /tmp/hatchet && \
     KERNEL="$(uname -s)" && \
     ARCH="$(uname -m)" && \
