@@ -10,9 +10,9 @@ content: |-
     [plugins.'io.containerd.cri.v1.images']
       discard_unpacked_layers = false
     # Enable the Container Device Interface
-    # Important: this matches https://www.talos.dev/v1.10/talos-guides/configuration/containerd/#set-cdi-plugin-spec-dirs-to-writable-directories,
-    # which differs https://github.com/cncf-tags/container-device-interface/blob/fc17f514320237420424663de905720e11b1668b/README.md#containerd-configuration
+    # Talos defaults to ["/run/cdi"]: https://github.com/siderolabs/talos/blob/v1.14.2/hack/cri-plugin.part
+    # See https://docs.siderolabs.com/talos/v1.14/configure-your-talos-cluster/images-container-runtime/containerd
     [plugins."io.containerd.cri.v1.runtime"]
       enable_cdi = true
-      # CDI is now enabled by default on Talos 1.13+, but these directories still need to be separate for the Intel GPU DRA plugin to work
+      # Separate static/dynamic dirs are required by the Intel GPU DRA plugin.
       cdi_spec_dirs = ["/var/cdi/static", "/var/cdi/dynamic"]

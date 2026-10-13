@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
+# No $schema: it requires `image`, which Talos sets.
 apiVersion: v1alpha1
 kind: KubeSchedulerConfig
 extraArgs:
