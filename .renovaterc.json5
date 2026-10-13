@@ -386,12 +386,6 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "jsonnet + jsonnet-bundler in the devcontainer",
-      groupName: "jsonnet",
-      matchPackageNames: ["google/go-jsonnet", "jsonnet-bundler/jsonnet-bundler"],
-      group: { commitMessageTopic: "{{{groupName}}} group" },
-    },
-    {
       description: "Goldilocks: chart + image tag override",
       groupName: "goldilocks",
       matchPackageNames: ["goldilocks", "us-docker.pkg.dev/fairwinds-ops/oss/goldilocks"],
@@ -399,7 +393,7 @@
     },
     {
       description: "Keep 0.x members on their group branch (the preset routes 0.x minors to major- branches)",
-      matchPackageNames: ["cilium/cilium-cli", "google/go-jsonnet", "jsonnet-bundler/jsonnet-bundler", "victoriametrics-metrics-datasource"],
+      matchPackageNames: ["cilium/cilium-cli", "victoriametrics-metrics-datasource"],
       additionalBranchPrefix: "",
     },
     // Exporter/app image + the dashboard pinned to the same release.

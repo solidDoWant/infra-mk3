@@ -13,8 +13,6 @@ ARG TASK_VERSION=v3.54.0
 ARG SOPS_VERSION=v3.13.3
 # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
 ARG TELEPORT_VERSION=18.11.3
-# renovate: datasource=github-releases depName=google/go-jsonnet
-ARG JSONNET_VERSION=v0.20.0
 RUN mkdir -pv /tmp/debs && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
@@ -25,8 +23,6 @@ RUN mkdir -pv /tmp/debs && \
     curl -fsSL -o /tmp/debs/sops.deb "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops_${SOPS_VERSION#v}_${PRETTY_ARCH}.deb" && \
     # Teleport
     curl -fsSL -o /tmp/debs/teleport.deb "https://cdn.teleport.dev/teleport_${TELEPORT_VERSION}_${PRETTY_ARCH}.deb" && \
-    # jsonnet
-    curl -fsSL -o /tmp/debs/jsonnet.deb "https://github.com/google/go-jsonnet/releases/download/${JSONNET_VERSION}/jsonnet-go_${JSONNET_VERSION#v}_${KERNEL}_${PRETTY_ARCH}.deb" && \
     dpkg -i /tmp/debs/*.deb && \
     rm -rvf /tmp/debs
 
