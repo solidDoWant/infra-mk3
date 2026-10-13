@@ -124,13 +124,12 @@ spec:
         "node:node_num_cpu:sum":
           spec:
             expr: count(label_replace(node_cpu_seconds_total{mode="idle",job="node-exporter",namespace="monitoring"}, "node", "$1", "instance", "(.+)")) by(cluster,node)
-        # Excludes rules that are empty while nothing is wrong: no targets
-        # down, no scheduling in 5m, no KubeVirt migrations/restores/guest load, no
-        # VM created since virt-api started (per-pod counter, absent until first create).
-        # count:up0: VictoriaMetrics/helm-charts#3274, fixed by #3275 (after 0.95.2).
+        # Excludes rules that are empty while nothing is wrong: no scheduling in
+        # 5m, no KubeVirt migrations/restores/guest load, no VM created since
+        # virt-api started (per-pod counter, absent until first create).
         RecordingRulesNoData:
           spec:
-            expr: sum(vmalert_recording_rules_last_evaluation_samples{recording!~"count:up0|cluster_quantile:scheduler_.+|kubevirt_vm_created_total|kubevirt_vmi_migration_data_total_bytes|kubevirt_vmi_guest_vcpu_queue|vmi:kubevirt_vmi_guest_queue_length:sum|kubevirt_vmsnapshot_.+|.+:kubevirt_vmsnapshot_.+"}) without(id) < 1
+            expr: sum(vmalert_recording_rules_last_evaluation_samples{recording!~"cluster_quantile:scheduler_.+|kubevirt_vm_created_total|kubevirt_vmi_migration_data_total_bytes|kubevirt_vmi_guest_vcpu_queue|vmi:kubevirt_vmi_guest_queue_length:sum|kubevirt_vmsnapshot_.+|.+:kubevirt_vmsnapshot_.+"}) without(id) < 1
     defaultDashboards:
       dashboards:
         # Same UIDs as ../../grafana/kps-dashboards. Duplicates make
