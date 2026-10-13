@@ -115,7 +115,7 @@ COPY --from=istio/istioctl:1.31.1 /usr/local/bin/istioctl /usr/local/bin/istioct
 # krew
 ENV KREW_ROOT=/usr/local/krew
 # renovate: datasource=github-releases depName=kubernetes-sigs/krew
-ARG KREW_VERSION=v0.4.4
+ARG KREW_VERSION=v0.5.0
 RUN mkdir -pv /tmp/krew && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
