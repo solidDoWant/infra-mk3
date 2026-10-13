@@ -82,6 +82,19 @@
     },
     {
       customType: "regex",
+      description: "Talos config $schema URLs, versioned by minor: tracked as siderolabs/talos so they join the talos group PR",
+      managerFilePatterns: ["/^talos/.+\\.ya?ml(?:\\.tpl)?$/"],
+      matchStrings: [
+        "\\$schema=https://docs\\.siderolabs\\.com/talos/(?<currentValue>v\\d+\\.\\d+)/schemas/",
+      ],
+      depNameTemplate: "siderolabs/talos",
+      datasourceTemplate: "custom.talos-factory",
+      // Collapse vX.Y.Z releases to vX.Y; prereleases don't match and are dropped.
+      extractVersionTemplate: "^(?<version>v\\d+\\.\\d+)\\.\\d+$",
+      versioningTemplate: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)$",
+    },
+    {
+      customType: "regex",
       description: "Kyverno dashboard, tagged kyverno-chart-X.Y.Z: tracked as the kyverno chart so it follows the chart pin",
       managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
       matchStrings: [

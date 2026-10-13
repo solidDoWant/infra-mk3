@@ -1,4 +1,5 @@
 ---
+# No $schema: it rejects the templated addresses.
 # Previously, this used separate VLANs for Talos traffic and for
 # Kubernetes traffic. This worked well for traffic within the same subnet,
 # but caused problems with traffic from other subnets. Requests would come
@@ -41,8 +42,8 @@ xmitHashPolicy: layer3+4
 lacpRate: fast
 mtu: 9000
 addresses:
-  - address: {{ .Node.IP }}/16
-  - address: {{ .Node.Data.bondSecondaryAddress }}/32
+  - address: "{{ .Node.IP }}/16"
+  - address: "{{ .Node.Data.bondSecondaryAddress }}/32"
 routes:
   - gateway: 10.3.0.254
 ---
