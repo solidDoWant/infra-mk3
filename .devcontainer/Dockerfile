@@ -14,7 +14,7 @@ ARG SOPS_VERSION=v3.9.0
 # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
 ARG TELEPORT_VERSION=18.1.4
 # renovate: datasource=github-releases depName=google/go-jsonnet
-ARG JSONNET_VERSION=v0.20.0
+ARG JSONNET_VERSION=v0.22.0
 RUN mkdir -pv /tmp/debs && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
