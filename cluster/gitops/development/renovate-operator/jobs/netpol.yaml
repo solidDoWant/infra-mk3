@@ -124,6 +124,8 @@ specs:
           - matchName: releases.nixos.org
           # Grafana plugin versions (custom.grafana-plugins datasource)
           - matchName: grafana.com
+          # Proxmox VE installer ISO index (custom.proxmox-iso datasource)
+          - matchName: enterprise.proxmox.com
         toPorts:
           - ports:
               - port: "443"
