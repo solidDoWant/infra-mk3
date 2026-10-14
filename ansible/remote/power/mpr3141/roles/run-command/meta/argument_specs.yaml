@@ -4,6 +4,9 @@ argument_specs:
     options:
       command:
         type: str
+      input:
+        type: str
+        description: Line typed into the session after the command starts, for confirmation prompts
       output_var:
         type: str
         default: command_output

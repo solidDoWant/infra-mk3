@@ -53,3 +53,96 @@ spec:
               network card may be hung (it stops responding under port scans), have
               changed IP, or have changed SNMPv3 credentials. Details:
               `kubectl logs -n monitoring deploy/snmp-exporter`.
+    # LIEBERT-GP-PDU-MIB values are exported raw by the liebert_pdu module.
+    - name: pdu
+      rules:
+        # Percent of the input's rated current (lgpPduPsEntryEcInputRated). The
+        # PDU's own warning/alarm thresholds are covered by PDUStatusDegraded.
+        - alert: PDULineCurrentHigh
+          expr: |
+            100 * (lgpPduPsLineEntryEcHundredths / 100)
+              / on(instance, lgpPduEntryIndex, lgpPduPsEntryIndex) group_left()
+              (lgpPduPsEntryEcInputRated / 10)
+            >= 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: PDU {{ $labels.instance }} input is at {{ $value | humanize }}% of its rated current
+            description: |
+              Line {{ $labels.lgpPduPsLineEntryIndex }} of {{ $labels.instance }} has
+              drawn at least 80% of the PDU's rated input current for 5m. The UPS
+              feeding the rack has the same 16 A rating.
+        # lgpPduEntrySysStatus is a bit-field: 1 normal, 2 starting up,
+        # 8 warning, 16 alarm, 32 abnormal
+        - alert: PDUStatusDegraded
+          expr: lgpPduEntrySysStatus >= 8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: PDU {{ $labels.instance }} reports a warning, alarm or abnormal state
+            description: |
+              {{ $labels.instance }} status bit-field is {{ $value }} (8 = warning,
+              16 = alarm, 32 = abnormal). Usually a current threshold configured on
+              the PDU; check `current` and `status` on the PDU CLI.
+        # lgpPduRcpEntryPwrState 2 = on. The join adds the outlet's web UI name
+        # (lgpPduRcpEntryUsrLabel) as `outlet`, minus the " [<serial>]" suffix.
+        # `$${1}` is escaped for Flux substitution.
+        - alert: PDUOutletOff
+          expr: |
+            (lgpPduRcpEntryPwrState != 2)
+            * on(instance, lgpPduEntryIndex, lgpPduRbEntryIndex, lgpPduRcpEntryIndex) group_left(outlet)
+            label_replace(lgpPduRcpEntryUsrLabel, "outlet", "$${1}", "lgpPduRcpEntryUsrLabel", "(.*?)(?: \\[[^]]*\\])?")
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: PDU {{ $labels.instance }} outlet {{ $labels.lgpPduRcpEntryIndex }} ({{ $labels.outlet }}) is not powered
+            description: |
+              Outlet {{ $labels.lgpPduRcpEntryIndex }} on {{ $labels.instance }} has
+              power state {{ $value }} (0 unknown, 1 off, 3 off pending on delay).
+              Anything plugged into it is without power.
+        # lgpPduRcpEntryOperationCondition 1 = normal, 2 = warning, 3 = alarm,
+        # 4 = off but still drawing current
+        - alert: PDUOutletCondition
+          expr: |
+            (lgpPduRcpEntryOperationCondition > 1)
+            * on(instance, lgpPduEntryIndex, lgpPduRbEntryIndex, lgpPduRcpEntryIndex) group_left(outlet)
+            label_replace(lgpPduRcpEntryUsrLabel, "outlet", "$${1}", "lgpPduRcpEntryUsrLabel", "(.*?)(?: \\[[^]]*\\])?")
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: PDU {{ $labels.instance }} outlet {{ $labels.lgpPduRcpEntryIndex }} ({{ $labels.outlet }}) is in condition {{ $value }}
+            description: |
+              Outlet {{ $labels.lgpPduRcpEntryIndex }} on {{ $labels.instance }} reports
+              condition {{ $value }} (2 = over/under-current warning, 3 = alarm,
+              4 = switched off but still drawing current).
+        - alert: PDUUnreachable
+          expr: up{instance="pdu-01"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: PDU {{ $labels.instance }} cannot be polled over SNMP
+            description: |
+              snmp-exporter has failed to walk {{ $labels.instance }} for 15m. The
+              RPC2 card may be restarting or hung, have changed IP, or have changed
+              SNMPv3 credentials. Details:
+              `kubectl logs -n monitoring deploy/snmp-exporter`.
+    - name: snmp
+      rules:
+        # Rejected requests (e.g. authorizationError) end the walk early instead
+        # of failing the scrape, so `up` stays 1.
+        - alert: SNMPWalkEmpty
+          expr: snmp_scrape_pdus_returned{job="snmp-exporter"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: SNMP walk of {{ $labels.instance }} ({{ $labels.module }}) returns no data
+            description: |
+              snmp-exporter can reach {{ $labels.instance }}, but the {{ $labels.module }}
+              walk has returned nothing for 15m. Usually the SNMPv3 user lacks access
+              (on the PDU: a blank `Source`), or the device's agent is still starting.
