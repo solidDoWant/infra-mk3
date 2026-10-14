@@ -8,6 +8,7 @@ spec:
   url: oci://quay.io/jetstack/charts/cert-manager
   ref:
     tag: v1.21.2
+    digest: sha256:634dce9c13b56677a2c05e2ab76c312d0be2664022d5dd05815da67e1fd5f610
 ---
 # This service needs to be highly available.
 # If cert-manager fails then services that need to generate mTLS certs will fail.
