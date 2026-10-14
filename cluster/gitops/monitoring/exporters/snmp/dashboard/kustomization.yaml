@@ -10,3 +10,10 @@ configMapGenerator:
         # The dashboard uses ${DS_PROMETHEUS} grafana inputs
         kustomize.toolkit.fluxcd.io/substitute: disabled
       disableNameSuffixHash: true
+  - name: pdu-dashboard
+    files:
+      - dashboard.json=./pdu-dashboard.json
+    options:
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
+      disableNameSuffixHash: true

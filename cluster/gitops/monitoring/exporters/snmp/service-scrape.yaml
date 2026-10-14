@@ -33,6 +33,25 @@ spec:
           replacement: "$${1}.svc.cluster.local$${2}"
         - targetLabel: instance
           replacement: ups-01
+    # pdu-01 (Vertiv RPC2 card). Walks take ~35s (~1s per request).
+    - port: metrics
+      interval: 2m
+      scrapeTimeout: 90s
+      path: /snmp
+      params:
+        module:
+          - liebert_pdu
+        auth:
+          - pdu
+        target:
+          - 10.1.3.128
+      relabelConfigs:
+        - sourceLabels: [__address__]
+          regex: '(.+)\.svc(:\d+)?'
+          targetLabel: __address__
+          replacement: "$${1}.svc.cluster.local$${2}"
+        - targetLabel: instance
+          replacement: pdu-01
   jobLabel: snmp-exporter
   # Exporters are HA, and will always return the same data.
   # Only scrape one of them to prevent duplicate metrics.

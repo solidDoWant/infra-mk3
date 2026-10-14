@@ -13,4 +13,37 @@
         - network hostname {{ hostname }}
         - time zone {{ local_timezone_id }}
         - system name {{ hostname }}
-        # TODO SNMPv3 setup
+
+    - name: Configure SNMPv3 read-only user
+      vars:
+        command: "{{ item }}"
+      ansible.builtin.include_role:
+        name: run-command
+        apply:
+          no_log: true
+      no_log: true
+      loop:
+        - snmp v3 access username 1 {{ snmp_v3_username }}
+        - snmp v3 access authtype 1 SHA
+        - snmp v3 access authsecret 1 {{ snmp_v3_auth_secret }}
+        - snmp v3 access privacy 1 AES
+        - snmp v3 access privacysecret 1 {{ snmp_v3_privacy_secret }}
+        - snmp v3 access type 1 ReadOnly
+        # Blank source denies all requests with authorizationError
+        - snmp v3 access source 1 0.0.0.0
+        - snmp v3 access userenable 1 enable
+        - snmp v3 enable
+        # v1/v2 communities grant write access (outlet control) from any address
+        - snmp v1v2 disable
+
+    - name: Restart the RPC2 card to apply settings
+      vars:
+        command: reboot
+        # Confirmation prompt, only shown on a TTY. Restarts the RPC2 card, not the outlets.
+        input: "Y"
+      ansible.builtin.include_role:
+        name: run-command
+        # The card restarts but never closes the SSH session
+        apply:
+          timeout: 60
+          ignore_errors: true

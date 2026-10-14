@@ -28,5 +28,15 @@ The device needs some minimal manual configuration. To do so:
 After the initial manual setup is complete, run `task mpr3141:full-configuration`. This will:
 * Set the device name and hostname
 * Set the time zone
+* Create a read-only SNMPv3 user (SHA/AES) in slot 1, from `ansible/remote/power/mpr3141/group_vars/mpr3141.sops.yaml`
+* Disable SNMP v1/v2, whose default communities allow writes (outlet control) from any address
+* Restart the RPC2 card to apply the SNMP settings
 
-<!-- TODO SNMP -->
+The same SNMPv3 credentials are in the `pdu` auth in `cluster/gitops/monitoring/exporters/snmp/snmp-exporter-auth.sops.yaml`.
+
+# SNMP notes
+
+* SNMP settings take effect only after the card restarts. `reboot` asks for confirmation on a TTY, and the card goes down about 2 minutes later. It restarts only the RPC2 card; outlet power is unaffected.
+* A v3 user with a blank `Source` authenticates but gets `authorizationError` for every request. snmp_exporter treats that as an empty walk, not a failure.
+* Full walks are slow (~1s per request, ~35s for the `liebert_pdu` module).
+* The Liebert MIB objects can take a few minutes to appear after a restart.

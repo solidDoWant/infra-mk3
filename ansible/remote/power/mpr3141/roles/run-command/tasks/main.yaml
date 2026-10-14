@@ -6,8 +6,9 @@
   environment:
     SSHPASS: "{{ ansible_password }}"
   ansible.builtin.shell: >-
+    {{ ("{ printf '%%s\r' %s; sleep 20; } |" | format(input | quote)) if input is defined }}
     {{ "sshpass -e" if ansible_password is defined }}
-    ssh{{ (" " ~ ansible_ssh_common_args) if ansible_ssh_common_args is defined }}
+    ssh{{ " -tt" if input is defined }}{{ (" " ~ ansible_ssh_common_args) if ansible_ssh_common_args is defined }}
     {{ ("%s@" | format(ansible_user|string)) if ansible_user is defined }}{{ inventory_hostname }}
     {{ command | quote }}
   failed_when: command.rc != 255
