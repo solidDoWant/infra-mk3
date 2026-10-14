@@ -21,7 +21,7 @@ spec:
     name: istio-ztunnel
   values:
     profile: ambient
-    image: registry.istio.io/release/ztunnel:1.30.5-distroless@sha256:885b9b64d41c750768d9f4e80b01dcd7808dc4ac5de50252671542b72def6e09
+    image: gcr.io/istio-release/ztunnel:1.30.5-distroless@sha256:885b9b64d41c750768d9f4e80b01dcd7808dc4ac5de50252671542b72def6e09
     logAsJson: true
     caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
     # Defaults to the bare `istiod.<istioNamespace>.svc:15012`, which cannot resolve

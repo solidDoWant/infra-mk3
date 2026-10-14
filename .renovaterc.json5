@@ -332,7 +332,7 @@
     },
     {
       description: "Kyverno images: the app versions of the pinned 3.6.0-3.6.2 charts",
-      matchPackageNames: ["/^reg\\.kyverno\\.io/kyverno//"],
+      matchPackageNames: ["/^ghcr\\.io/kyverno/(kyverno|kyvernopre|kyverno-cli|background-controller|cleanup-controller|reports-controller)$/"],
       allowedVersions: "/^v1\\.16\\.[0-2]$/",
     },
     {
@@ -394,7 +394,7 @@
     {
       description: "Istio: charts + images + istioctl",
       groupName: "istio",
-      matchPackageNames: ["/^gcr\\.io/istio-release/charts//", "/^registry\\.istio\\.io/release//", "istio/istioctl"],
+      matchPackageNames: ["/^gcr\\.io/istio-release/charts//", "/^gcr\\.io/istio-release/(pilot|proxyv2|install-cni|ztunnel)$/", "istio/istioctl"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     // CRDs applied from release assets must move with their operator.
@@ -451,7 +451,7 @@
     {
       description: "Kyverno chart + dashboard (same chart version) + images",
       groupName: "kyverno",
-      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno", "/^reg\\.kyverno\\.io/kyverno//"],
+      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno", "/^ghcr\\.io/kyverno/(kyverno|kyvernopre|kyverno-cli|background-controller|cleanup-controller|reports-controller)$/"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -667,7 +667,7 @@
     },
     {
       groupName: "dragonfly-operator",
-      matchPackageNames: ["ghcr.io/dragonflydb/dragonfly-operator/helm/dragonfly-operator", "docker.dragonflydb.io/dragonflydb/operator"],
+      matchPackageNames: ["ghcr.io/dragonflydb/dragonfly-operator/helm/dragonfly-operator", "ghcr.io/dragonflydb/operator"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
