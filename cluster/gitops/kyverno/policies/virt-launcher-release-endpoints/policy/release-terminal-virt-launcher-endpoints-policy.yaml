@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
+# Workaround: the EndpointSlice controller ignores a pod's phase when deciding
+# whether a pod update needs a resync (podEndpointsChanged, k8s release-1.36).
+# A live-migration source virt-launcher pod turns not-ready a few seconds
+# before it becomes Succeeded, so the Succeeded update is skipped and the dead
+# pod IP stays in the Service until the VMI is deleted. Cilium keeps it as a
+# "maintenance" backend and existing UDP flows (A2S queries, players) stay
+# pinned to it.
+#
+# Dropping the label the Service selects on changes the pod's Service
+# membership, which does trigger a resync. Remove this policy once the
+# EndpointSlice controller resyncs on terminal phase changes.
+#
+# Triggered by the migration, not the pod: Kyverno ignores kubelet requests
+# (excludeGroups: system:nodes), so it never sees the pod reach Succeeded.
+# virt-controller writes the migration status.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: release-terminal-virt-launcher-endpoints
+spec:
+  # Migration status updates must never block on Kyverno.
+  failurePolicy: Ignore
+  # Only the transition to Succeeded reaches the webhook.
+  webhookConfiguration:
+    matchConditions:
+      - name: migration-succeeded
+        expression: >-
+          has(object.status) && has(object.status.phase) &&
+          object.status.phase == "Succeeded" &&
+          has(object.status.migrationState) &&
+          has(object.status.migrationState.sourcePod) &&
+          !(has(oldObject.status) && has(oldObject.status.phase) &&
+          oldObject.status.phase == "Succeeded")
+  mutateExistingOnPolicyUpdate: true
+  rules:
+    - name: drop-source-pod-service-selector-label
+      match:
+        any:
+          - resources:
+              kinds:
+                - kubevirt.io/v1/VirtualMachineInstanceMigration/status
+              operations:
+                - UPDATE
+      preconditions:
+        all:
+          - key: "{{ request.object.status.phase || '' }}"
+            operator: Equals
+            value: Succeeded
+          - key: "{{ request.object.status.migrationState.sourcePod || '' }}"
+            operator: NotEquals
+            value: ""
+      mutate:
+        targets:
+          - apiVersion: v1
+            kind: Pod
+            namespace: "{{ request.object.metadata.namespace }}"
+            name: "{{ request.object.status.migrationState.sourcePod }}"
+            selector:
+              matchExpressions:
+                - key: kubevirt.io/vm
+                  operator: Exists
+        patchesJson6902: |-
+          - op: remove
+            path: /metadata/labels/kubevirt.io~1vm
