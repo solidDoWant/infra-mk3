@@ -2,10 +2,15 @@
 # Agentless: sshd on the routers trusts Teleport's CAs, configured by
 # ansible/remote/routers/opnsense/teleport.yaml. The addresses must be among the
 # host certificate principals that playbook issues.
+# The operator copies every CR label onto the node, so Flux's owner labels show
+# up in Teleport alongside these.
 apiVersion: resources.teleport.dev/v1
 kind: TeleportOpenSSHServerV2
 metadata:
   name: router-01
+  labels:
+    type: vm
+    purpose: router
 spec:
   addr: 10.3.0.1:22
   hostname: router-01
@@ -14,6 +19,9 @@ apiVersion: resources.teleport.dev/v1
 kind: TeleportOpenSSHServerV2
 metadata:
   name: router-02
+  labels:
+    type: vm
+    purpose: router
 spec:
   addr: 10.3.0.2:22
   hostname: router-02
