@@ -6,9 +6,6 @@ metadata:
   name: amd-resource-drivers-gpu
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
   # Switch to the official chart once ROCm publishes one (tracker: https://github.com/home-operations/charts-mirror/issues/8).
   url: oci://ghcr.io/home-operations/charts-mirror/k8s-gpu-dra-driver

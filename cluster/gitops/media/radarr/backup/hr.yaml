@@ -6,9 +6,6 @@ metadata:
   name: radarr-backup
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/soliddowant/charts/dr-job
   ref:
     tag: 0.0.19

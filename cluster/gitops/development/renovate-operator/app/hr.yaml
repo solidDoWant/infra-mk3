@@ -6,9 +6,6 @@ metadata:
   name: renovate-operator
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/mogenius/helm-charts/renovate-operator
   ref:
     tag: 6.5.1

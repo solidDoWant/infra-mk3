@@ -13,9 +13,6 @@ metadata:
   name: <service>
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/<org>/charts/<chart>
   ref:
     tag: 1.2.3
@@ -29,6 +26,8 @@ spec:
     kind: OCIRepository
     name: <service>
 ```
+
+Don't set `layerSelector`: a Flux meta-patch (`cluster/gitops/flux-system/flux/cluster/ks.yaml`) adds the Helm chart layer selector to every OCIRepository. An OCI artifact that is not a Helm chart must opt out with the label `patches.flux.home.arpa/ocirepository.helm-chart: "false"`. Keep `interval`: the CRD requires it, so leaving it to a patch would fail schema validation.
 
 Leave `metadata.namespace` and `chartRef.namespace` unset: both resolve to the Kustomization's `targetNamespace`. kubesearch.dev also matches an OCIRepository to its HelmRelease by name when neither sets a namespace. (A HelmRepository is different; see below.)
 

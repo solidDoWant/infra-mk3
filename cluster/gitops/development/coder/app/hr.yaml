@@ -6,9 +6,6 @@ metadata:
   name: coder
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/coder/chart/coder
   ref:
     tag: 2.38.0

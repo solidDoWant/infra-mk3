@@ -6,9 +6,6 @@ metadata:
   name: cloudnative-pg
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg
   ref:
     tag: 0.29.1

@@ -6,9 +6,6 @@ metadata:
   name: k8tz
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/k8tz/k8tz/charts/k8tz
   ref:
     tag: 0.20.0

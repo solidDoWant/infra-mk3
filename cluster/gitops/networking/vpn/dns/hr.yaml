@@ -6,9 +6,6 @@ metadata:
   name: coredns-vpn-dns
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/coredns/charts/coredns
   ref:
     tag: 1.48.2

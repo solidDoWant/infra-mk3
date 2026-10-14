@@ -6,9 +6,6 @@ metadata:
   name: fluent-operator-fluent-bit-crds
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/fluent/helm-charts/fluent-operator-fluent-bit-crds
   ref:
     tag: 4.3.0

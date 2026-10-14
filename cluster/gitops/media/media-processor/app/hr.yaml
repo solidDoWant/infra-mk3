@@ -6,9 +6,6 @@ metadata:
   name: media-processor
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/soliddowant/charts/media-processor
   ref:
     tag: 0.0.39

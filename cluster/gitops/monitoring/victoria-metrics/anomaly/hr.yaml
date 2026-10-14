@@ -6,9 +6,6 @@ metadata:
   name: victoria-metrics-anomaly
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-anomaly
   ref:
     tag: 1.12.19

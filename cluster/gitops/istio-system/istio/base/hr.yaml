@@ -6,9 +6,6 @@ metadata:
   name: istio-base
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://gcr.io/istio-release/charts/base
   ref:
     tag: 1.30.5

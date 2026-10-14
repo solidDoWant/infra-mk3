@@ -6,9 +6,6 @@ metadata:
   name: cilium
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://quay.io/cilium/charts/cilium
   ref:
     tag: 1.20.2

@@ -6,9 +6,6 @@ metadata:
   name: tape-archiver-control-worker
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://ghcr.io/soliddowant/charts/tape-archiver-control-worker
   ref:
     tag: 0.0.13

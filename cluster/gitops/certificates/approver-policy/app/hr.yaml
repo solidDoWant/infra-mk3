@@ -6,9 +6,6 @@ metadata:
   name: approver-policy
 spec:
   interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
   url: oci://quay.io/jetstack/charts/cert-manager-approver-policy
   ref:
     tag: v0.28.0
