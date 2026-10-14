@@ -396,12 +396,6 @@
       matchPackageNames: ["prometheus-community/smartctl_exporter", "quay.io/prometheuscommunity/smartctl-exporter"],
       allowedVersions: "!/^v?0\\.15\\.0$/",
     },
-    {
-      description: "Kubernetes may not outrun what the deployed Talos supports; raise alongside Talos upgrades",
-      matchDatasources: ["docker"],
-      matchPackageNames: ["ghcr.io/siderolabs/kubelet"],
-      allowedVersions: "<1.37",
-    },
 
     // --- Groups (one PR for components that must move together) ------------
     {
