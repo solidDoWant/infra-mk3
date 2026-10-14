@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: renovate-operator
+spec:
+  groups:
+    - name: renovate-operator
+      rules:
+        # Set after each run, so it only moves hourly. `max` so a pod rollout's
+        # overlapping replicas don't produce duplicate series.
+        - alert: RenovateTooManyOpenPRs
+          expr: max by (project) (renovate_operator_open_pull_requests) > 10
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.project }} has {{ $value }} open Renovate PRs"
+            description: |
+              More than 10 Renovate pull requests are open against
+              {{ $labels.project }}. Review and merge or close the backlog.
