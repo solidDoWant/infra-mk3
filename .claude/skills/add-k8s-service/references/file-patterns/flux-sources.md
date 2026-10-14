@@ -30,6 +30,8 @@ spec:
     name: <service>
 ```
 
+Leave `metadata.namespace` and `chartRef.namespace` unset: both resolve to the Kustomization's `targetNamespace`. kubesearch.dev also matches an OCIRepository to its HelmRelease by name when neither sets a namespace. (A HelmRepository is different; see below.)
+
 Verify the tag exists and is a chart before using it — some registries drop the `v` prefix the HTTPS repo uses (e.g. Rook):
 ```bash
 crane manifest <registry>/<path>/<chart>:<tag> | jq -r .config.mediaType   # application/vnd.cncf.helm.config.v1+json
@@ -44,8 +46,13 @@ crane manifest ghcr.io/home-operations/charts-mirror/<chart>:<version> | jq -r .
 ```
 Mirror tags have no `v` prefix even when upstream uses one (e.g. `k8s-gpu-dra-driver` `v1.0.1` → `1.0.1`).
 
-Use the same OCIRepository pattern with `url: oci://ghcr.io/home-operations/charts-mirror/<chart>`, plus cosign verification of the mirror's signing identity:
+Use the same OCIRepository pattern with `url: oci://ghcr.io/home-operations/charts-mirror/<chart>`. Every mirrored OCIRepository **must** have a comment above `url` linking the upstream OCI tracking issue (listed in https://github.com/home-operations/charts-mirror/issues/8; search the upstream repo if the chart isn't listed, and fall back to linking #8). It also needs cosign verification of the mirror's signing identity:
 ```yaml
+  # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
+  # Switch to the official chart once <upstream issue URL> lands.
+  url: oci://ghcr.io/home-operations/charts-mirror/<chart>
+  ref:
+    tag: 1.2.3
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -70,6 +77,8 @@ metadata:
 spec:
   url: https://charts.example.com
 ```
+
+`namespace: flux-system` is required on both the HelmRepository and the HelmRelease `sourceRef`. The HelmRelease lives in another namespace, and kubesearch.dev only links a HelmRelease to a HelmRepository when the two namespaces match exactly.
 
 Reference it from the HelmRelease:
 ```yaml

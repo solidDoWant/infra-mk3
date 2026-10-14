@@ -9,6 +9,8 @@ spec:
   layerSelector:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
+  # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
+  # Switch to the official chart once https://github.com/goharbor/harbor-helm/issues/2265 lands.
   url: oci://ghcr.io/home-operations/charts-mirror/harbor
   ref:
     tag: 1.19.2
