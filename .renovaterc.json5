@@ -893,6 +893,17 @@
       changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/goldilocks",
     },
 
+    // After every group rule, so it takes digest-only updates out of their
+    // package groups.
+    {
+      description: "Digest-only updates (same tag, new digest): one PR, held for Dashboard approval",
+      matchUpdateTypes: ["digest"],
+      groupName: "digest updates",
+      groupSlug: "digest-updates",
+      group: { commitMessageTopic: "digests" },
+      dependencyDashboardApproval: true,
+    },
+
     // --- Labels -----------------------------------------------------------
     // Update-type labels use `labels` (last match wins) so a later rule can
     // relabel; other labels use `addLabels` and accumulate on top.
