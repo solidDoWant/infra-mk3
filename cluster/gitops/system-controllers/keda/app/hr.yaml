@@ -36,6 +36,18 @@ spec:
     metricsServer:
       enabled: false
 
+    # Parent keys aren't `image`, so the flux manager can't see these; a
+    # custom manager in .renovaterc.json5 matches the full repository.
+    image:
+      keda:
+        registry: ""
+        repository: ghcr.io/kedacore/keda
+        tag: 2.21.0@sha256:81fe6547ce8d1cc29273f887b76507e9b853e5bc1f875ec23fe60061a38ed809
+      webhooks:
+        registry: ""
+        repository: ghcr.io/kedacore/keda-admission-webhooks
+        tag: 2.21.0@sha256:e1969628cca6123e32eea13c47c75817091af2657fa68d9d0d58a8620d1b75b1
+
     priorityClassName: system-cluster-critical
 
     logging:

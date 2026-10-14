@@ -26,6 +26,9 @@ spec:
     kind: OCIRepository
     name: amd-resource-drivers-gpu
   values:
+    image:
+      repository: docker.io/rocm/k8s-gpu-dra-driver
+      tag: v1.0.1@sha256:f173c8e78bc819e2b8adc15192afefaf69a11307d49fca5382bda82885975830
     cdi:
       dynamicPath: /var/cdi/dynamic
     kubeletPlugin:

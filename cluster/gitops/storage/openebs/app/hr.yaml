@@ -90,14 +90,32 @@ spec:
         # working. kubernetes.io/hostname is listed so a StorageClass can still
         # constrain by host without needing this value changed first.
         allowedTopologyKeys: kubernetes.io/hostname
+        driverRegistrar:
+          image:
+            registry: registry.k8s.io
+            repository: sig-storage/csi-node-driver-registrar
+            tag: v2.13.0@sha256:d7138bcc3aa5f267403d45ad4292c95397e421ea17a0035888850f424c7de25d
       zfsController:
         replicas: 2
         resources: *resources
         nodeSelector: *node_selector
         resizer:
+          image:
+            registry: registry.k8s.io
+            repository: sig-storage/csi-resizer
+            tag: v1.13.2@sha256:8ddd178ba5d08973f1607f9b84619b58320948de494b31c9d7cd5375b316d6d4
           extraArgs:
             - --v=2
+        snapshotter:
+          image:
+            registry: registry.k8s.io
+            repository: sig-storage/csi-snapshotter
+            tag: v8.2.0@sha256:dd788d79cf4c1b8edee6d9b80b8a1ebfc51a38a365c5be656986b129be9ac784
         provisioner:
+          image:
+            registry: registry.k8s.io
+            repository: sig-storage/csi-provisioner
+            tag: v5.2.0@sha256:d5e46da8aff7d73d6f00c761dae94472bcda6e78f4f17b3802dc89d44de0111b
           extraArgs:
             - --v=2
             # Own CSIStorageCapacity objects from the DEPLOYMENT, not the
@@ -142,8 +160,10 @@ spec:
             - --capacity-ownerref-level=2
       zfsPlugin:
         image:
-          # ghcr.io mirrors docker.io/openebs; trailing slash required by the chart
-          registry: ghcr.io/
+          # ghcr.io mirrors docker.io/openebs
+          registry: ghcr.io
+          repository: openebs/zfs-driver
+          tag: 2.11.2@sha256:0234692bb4a48b3e70d0bc25f3327ca2b6f1c93d57a066eea755a5c0d94bfb2d
       analytics:
         enabled: false
       # Disable zfs-localpv-installed volume snapshot CRDs entirely

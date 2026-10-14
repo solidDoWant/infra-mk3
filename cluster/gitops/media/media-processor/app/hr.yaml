@@ -156,6 +156,11 @@ spec:
 
       controllers:
         watcher:
+          containers:
+            watcher:
+              image:
+                repository: ghcr.io/soliddowant/media-processor/watcher
+                tag: 0.0.39@sha256:aaef29739a608391fce5b80b97982dddfd7d58133b8deeb78e5da727f0202bf8
           serviceAccount:
             identifier: media-processor
           pod:
@@ -260,6 +265,11 @@ spec:
               endpoints.netpols.home.arpa/teleport-bot-client: "true"
           initContainers:
             tbot: *tbot_container
+          containers:
+            main:
+              image:
+                repository: ghcr.io/soliddowant/media-processor/worker
+                tag: 0.0.39@sha256:c637f805c37a083878b6f6400bfe75a3f3d22157a34aa39c7d52edfc495e28fa
 
         transcode:
           type: scaledjob
@@ -339,6 +349,9 @@ spec:
             # The chart names the worker container "main" regardless of the
             # workers.<key>.
             main:
+              image:
+                repository: ghcr.io/soliddowant/media-processor/worker
+                tag: 0.0.39@sha256:c637f805c37a083878b6f6400bfe75a3f3d22157a34aa39c7d52edfc495e28fa
               securityContext:
                 capabilities:
                   add:

@@ -7,8 +7,8 @@ metadata:
     grafana.home.arpa/instance: grafana
 spec:
   # Pinned so that operator upgrades do not implicitly bump Grafana itself.
-  # renovate: datasource=docker depName=docker.io/grafana/grafana
-  version: 13.2.4
+  # renovate: image
+  version: docker.io/grafana/grafana:13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f
   config:
     auth:
       signout_redirect_url: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/grafana/end-session/
@@ -35,6 +35,9 @@ spec:
       mode: console
     server:
       root_url: https://grafana.${SECRET_PUBLIC_DOMAIN_NAME}
+      # The operator sets this for >=13 (grafana/grafana#123017) only when
+      # `version` is a bare semver tag.
+      enable_gzip: "false"
     database:
       type: postgres
       host: grafana-postgres-rw.monitoring.svc.cluster.local.:5432

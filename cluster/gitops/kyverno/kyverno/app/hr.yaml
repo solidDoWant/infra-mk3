@@ -26,6 +26,17 @@ spec:
     kind: OCIRepository
     name: kyverno
   values:
+    crds:
+      migration:
+        image:
+          registry: reg.kyverno.io
+          repository: kyverno/kyverno-cli
+          tag: v1.16.2@sha256:f1a4dd586f118ca24d1fb768b8791a506231748d41cb490dfff04b66b2738079
+    webhooksCleanup:
+      image:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: v1.32.7@sha256:3c526815897478b22becbb5d2eadf0e0c021b41248400b8bcc8c6f32132442d2
     # Global logging for all controllers. The chart default verbosity is 2
     # (trace): the background controller alone emits ~1900 TRC lines (per-UR
     # mutate/generate reconcile traces) on top of startup. 1 keeps INF/WARN/ERR
@@ -53,7 +64,16 @@ spec:
       # `admissionController.resources` here was the wrong key and was silently
       # ignored for admission (it ran chart defaults 128Mi/384Mi) while the `<<:`
       # merge happened to land it on the correct key for the other three.
+      initContainer:
+        image:
+          registry: reg.kyverno.io
+          repository: kyverno/kyvernopre
+          tag: v1.16.2@sha256:ba3a31b25a9e1c6f993d7555158396d87790445ddc785426c249e8320b94b02a
       container:
+        image:
+          registry: reg.kyverno.io
+          repository: kyverno/kyverno
+          tag: v1.16.2@sha256:b0c123d62a1b8e21da707450ef44c4616832434f919d1cd19cfdbe2836277699
         # Right-sized 2026-08-01 from 14d: p95 CPU 52m (max 125m), peak working
         # set 214Mi — which was ABOVE the 128Mi chart-default request.
         # Memory request == limit throughout (incompressible: a request below
@@ -176,6 +196,10 @@ spec:
         enabled: true
     backgroundController:
       <<: *controller_config
+      image:
+        registry: reg.kyverno.io
+        repository: kyverno/background-controller
+        tag: v1.16.2@sha256:736c5da855863a3b15ee0e272f5b9e72c3c1b2f221f8345664354f57a5dc0f25
       # Right-sized 2026-08-01 from 14d. This is an INCREASE and the busiest
       # kyverno controller — likely the "kyverno is choking" this config was
       # originally written for. It is leader-elected, so only ONE of the two
@@ -197,6 +221,10 @@ spec:
         backgroundScanInterval: 1m
     cleanupController:
       <<: *controller_config
+      image:
+        registry: reg.kyverno.io
+        repository: kyverno/cleanup-controller
+        tag: v1.16.2@sha256:1bf6d0501d7f16aa5d36821f907287d8653564c642866c4b597f2e6abc527390
       # Right-sized 2026-08-01 from 14d: p95 CPU 6m (max 8m), peak working set
       # 127Mi. Effectively idle — it only acts on cleanup policy intervals.
       resources:
@@ -207,6 +235,10 @@ spec:
           memory: *cleanup_memory
     reportsController:
       <<: *controller_config
+      image:
+        registry: reg.kyverno.io
+        repository: kyverno/reports-controller
+        tag: v1.16.2@sha256:88d0dfc245a689e9bf3e258159b539f3a1b1a5a89f82b6a07c12762527bb7793
       # Right-sized 2026-08-01 from 14d: p95 CPU 40m (p99 43m, max 74m), peak
       # working set 165Mi.
       resources:

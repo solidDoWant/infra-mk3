@@ -24,6 +24,9 @@ spec:
     kind: OCIRepository
     name: rook-ceph
   values:
+    image:
+      repository: docker.io/rook/ceph
+      tag: v1.21.0@sha256:2c3a65786d3cc85ba15d7f258461c0bf392c6a6ee19dde8011259b8d34eeedd0
     resources:
       limits:
         memory: 256Mi
@@ -42,3 +45,9 @@ spec:
       createCsiOperatorResources: true
     monitoring:
       enabled: true
+    ceph-csi-operator:
+      controllerManager:
+        manager:
+          image:
+            repository: quay.io/cephcsi/ceph-csi-operator
+            tag: v1.1.0@sha256:c42c95c36fa257266571ff7542c3e350bb93b152f8865538c8929eb2e2dbe7c6

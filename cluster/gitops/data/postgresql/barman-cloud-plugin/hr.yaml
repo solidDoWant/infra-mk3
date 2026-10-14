@@ -26,6 +26,15 @@ spec:
   values:
     nameOverride: *app_name
     fullnameOverride: *app_name
+    image:
+      registry: ghcr.io
+      repository: cloudnative-pg/plugin-barman-cloud
+      tag: v0.15.1@sha256:c75acad19a36e8176cfe2885761ff1b836c6ef977d7257e298c99a28b5c302ef
+    # Injected into every Cluster pod using the plugin
+    sidecarImage:
+      registry: ghcr.io
+      repository: cloudnative-pg/plugin-barman-cloud-sidecar
+      tag: v0.15.1@sha256:2287a793a804db751edd0d07d44cd549e357677e98a800eb12e2cf7c0d53f9b0
     # The CNPG-I plugin uses leader election, so run two replicas: if the plugin
     # is down, WAL archival and restore for every cluster using it fails.
     # Both replicas report Ready (probes hit :8081), but only the leader serves

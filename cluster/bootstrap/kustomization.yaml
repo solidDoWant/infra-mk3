@@ -12,6 +12,16 @@ kind: Kustomization
 resources:
   - https://github.com/fluxcd/flux2//manifests/install/?timeout=120&ref=b9c17924adb533d3617ec7de97a7b0f4acc07b39 # v2.9.6
   - ./netpol.yaml
+# Tags must match the ones the manifests above ship.
+images:
+  - name: ghcr.io/fluxcd/helm-controller
+    newTag: v1.6.5@sha256:0d52fff5c4d476277b8fcb6beb9041e269adb5db943fe69f5a806ea0c92b1511
+  - name: ghcr.io/fluxcd/kustomize-controller
+    newTag: v1.9.6@sha256:2ebeaa341da77d52b6abbbba5efcee0450d47f8b42f0e6f33b08f9020262d606
+  - name: ghcr.io/fluxcd/notification-controller
+    newTag: v1.9.4@sha256:840f318265ee26f0d2c48a158bf7896b22aa4e998e320a18646309f0e40b15da
+  - name: ghcr.io/fluxcd/source-controller
+    newTag: v1.9.6@sha256:6a6693172589f8ff26123a231d5fa6ceb194a6efb4dc647cdf057c959f76a2e3
 patches:
   # Don't deploy the image automation controller, or the image reflector controller.
   # Updates will be handled by Renovate.

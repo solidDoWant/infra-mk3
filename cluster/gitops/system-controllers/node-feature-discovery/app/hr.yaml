@@ -29,6 +29,9 @@ spec:
   upgrade:
     crds: CreateReplace
   values:
+    image:
+      repository: registry.k8s.io/nfd/node-feature-discovery
+      tag: v0.19.0@sha256:2fa1c99ad09bdf2c8ad97706a4ad2fd548c84d5ecd70ba32a6152c667b96c4d2
     featureGates:
       NodeFeatureGroupAPI: true
     prometheus:

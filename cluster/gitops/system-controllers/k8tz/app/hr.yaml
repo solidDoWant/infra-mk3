@@ -19,6 +19,10 @@ spec:
     kind: OCIRepository
     name: k8tz
   values:
+    # Also the init container the webhook injects.
+    image:
+      repository: quay.io/k8tz/k8tz
+      tag: 0.20.0@sha256:361628e53fc891ed42a31b32842bfd95e3beef9c98cab526ef11be841e6f96ac
     replicaCount: 2
     namespace: ~
     createNamespace: false

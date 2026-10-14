@@ -47,3 +47,80 @@ patches:
       version: v1
       kind: Deployment
       name: cdi-operator
+  # Operand images are pinned through the operators' *_IMAGE env vars, which
+  # take full refs. VIRT_OPERATOR_IMAGE keeps the bare tag: virt-operator
+  # derives the KubeVirt version from it.
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: virt-operator
+        namespace: kubevirt
+      spec:
+        template:
+          spec:
+            containers:
+              - name: virt-operator
+                image: quay.io/kubevirt/virt-operator:v1.9.0@sha256:d08b5b5ad1c0d694fad13279e44b44b6fad961aa7508acd53b87ce6ef468cbae
+                env:
+                  - name: VIRT_API_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/virt-api:v1.9.0@sha256:42341b1d52699f4bb87f3996151bafe2e3fe065e9146cc64a15959ddf7bf2c69
+                  - name: VIRT_CONTROLLER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/virt-controller:v1.9.0@sha256:7c6034ab39b97c0bb2b31bab2aaf576b616a3d6e59777002d63e2f2bf51e73c2
+                  - name: VIRT_HANDLER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/virt-handler:v1.9.0@sha256:df9f2069924a28ba76f47e7f4fbd9a0be3aa13cfa004a59e7a708bbff2a90424
+                  - name: VIRT_LAUNCHER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/virt-launcher:v1.9.0@sha256:f23102ca00bf12f7962021adfdfdad63c873b01a03001a6d20d5813950254b9c
+                  - name: VIRT_EXPORTPROXY_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/virt-exportproxy:v1.9.0@sha256:042443b8f58246623e440af59cd34c0627f843b6094c41794d16c98c8d0049ea
+                  - name: VIRT_EXPORTSERVER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/virt-exportserver:v1.9.0@sha256:bf805f79151d689431f3e461ad77355acd04b16fe5bde88b00be772ae1edd06c
+                  - name: VIRT_SYNCHRONIZATIONCONTROLLER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/virt-synchronization-controller:v1.9.0@sha256:6163d1108317d2abc4fef3213b4a00acfc8e066625d22882671fcb032859e062
+                  - name: SIDECAR_SHIM_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/sidecar-shim:v1.9.0@sha256:8eb25c016c09366ea4b2bbd524dfbb4872184a9aea67cc34c60ff78a11cb2661
+                  - name: PR_HELPER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/pr-helper:v1.9.0@sha256:4218ea0f78481d27f5876e88c080c867dc49e21761928dc0ee1603f281e6d9e7
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: cdi-operator
+        namespace: cdi
+      spec:
+        template:
+          spec:
+            containers:
+              - name: cdi-operator
+                image: quay.io/kubevirt/cdi-operator:v1.66.1@sha256:470b2997b87c152b2573cdb4a3feb2a7925f60602e16c052de94e8d765b97357
+                env:
+                  - name: CONTROLLER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/cdi-controller:v1.66.1@sha256:0cbf467d04febc5d63b7682524e87be7d775b488cb8b5963706d2ebc3465a72f
+                  - name: IMPORTER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/cdi-importer:v1.66.1@sha256:e22b63872cd04da43c62ad8ebb73cac46958b6e759fcc347752ec2ace1df75f4
+                  - name: CLONER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/cdi-cloner:v1.66.1@sha256:febbe8b265bb6fcf7ab743b780069fbae4a0531119933026de59545ad1bfc7a3
+                  - name: OVIRT_POPULATOR_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/cdi-importer:v1.66.1@sha256:e22b63872cd04da43c62ad8ebb73cac46958b6e759fcc347752ec2ace1df75f4
+                  - name: APISERVER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/cdi-apiserver:v1.66.1@sha256:98b71040e0e8de9397b57b4998641d4d3ea248fc300253b23085838990c4d241
+                  - name: UPLOAD_SERVER_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/cdi-uploadserver:v1.66.1@sha256:d3a6b735efcc914a0c9679fa8f64ab3dda764f7997d53bcafa6e2944f123420a
+                  - name: UPLOAD_PROXY_IMAGE
+                    # renovate: image
+                    value: quay.io/kubevirt/cdi-uploadproxy:v1.66.1@sha256:f2493c0b33140167135110561ff415b8344f33dd53e20b9c8fbdb288e43326c9

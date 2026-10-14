@@ -28,6 +28,10 @@ spec:
     containerRuntime: containerd
     Kubernetes: false # Don't deploy the built-in k8s pipeline
     operator:
+      image:
+        registry: ghcr.io
+        repository: fluent/fluent-operator/fluent-operator
+        tag: 3.10.0@sha256:3108194a4ecc063f55371476775ddb8a36a1c7613fd03cfd13d05141e1b0bd0e
       extraArgs:
         - --leader-elect=true
         # Operator 3.9.0 defaults --metrics-bind-address to "0" (metrics disabled)

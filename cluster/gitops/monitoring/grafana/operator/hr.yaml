@@ -23,6 +23,10 @@ spec:
     kind: OCIRepository
     name: grafana-operator
   values:
+    image:
+      registry: ghcr.io
+      repository: grafana/grafana-operator
+      tag: v5.25.0@sha256:bc572995823fcfc32d2e960a47324a87baae8e4c9f821b8564026243e73624f3
     # Sets CLUSTER_DOMAIN, which makes the operator address the managed Grafana
     # as `grafana-service.monitoring.svc.cluster.local` rather than the bare
     # `grafana-service.monitoring.svc` it hardcoded before. Requires >= v5.17.0

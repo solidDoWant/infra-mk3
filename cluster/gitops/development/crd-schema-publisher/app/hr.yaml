@@ -25,6 +25,9 @@ spec:
     name: crd-schema-publisher
   values:
     fullnameOverride: crd-schema-publisher
+    image:
+      repository: ghcr.io/sholdee/crd-schema-publisher
+      tag: v2026.1010.191442@sha256:2416b9d2754ba1cf22140253253cf228670ae416c9bca6d0cf6b563aec02088a
     # Serve mode requires a single replica; the chart forces Recreate.
     mode: controller
     config:
