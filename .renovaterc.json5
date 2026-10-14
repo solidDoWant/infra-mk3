@@ -201,15 +201,6 @@
     },
     {
       customType: "regex",
-      description: "Digest-pinned `oci://<image>:<tag>@<digest>` refs (WasmPlugin); the preset's oci:// manager reads the digest as part of the tag",
-      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
-      matchStrings: [
-        "oci://(?<depName>[^:@\\s]+):(?<currentValue>\\w[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})",
-      ],
-      datasourceTemplate: "docker",
-    },
-    {
-      customType: "regex",
       description: "Tagged raw files (editor `$schema` refs); deployed raw files are pinned by commit (above)",
       managerFilePatterns: ["/^cluster/.+\\.(ya?ml|json)$/"],
       matchStrings: [
@@ -284,12 +275,6 @@
       matchPackageNames: ["/(^|/)ceph/ceph$/"],
       allowedVersions: "/^v\\d+\\.([2-9]|\\d{2,})\\.\\d+$/",
       separateMultipleMajor: true,
-    },
-    {
-      description: "The preset's oci:// manager reads a pinned digest as part of the tag; the digest-aware manager owns those refs",
-      matchManagers: ["custom.regex"],
-      matchCurrentValue: "/@sha256:/",
-      enabled: false,
     },
     {
       // Full tag as the version: the commit digest is looked up by tag name.
