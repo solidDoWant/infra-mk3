@@ -36,3 +36,16 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: flux-instance-bootstrap-values
+  # The chart always renders `artifact`, and an empty value is null, which the
+  # CRD rejects. Without it the operator uses the manifests in its image.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: fluxcd.controlplane.io
+              version: v1
+              kind: FluxInstance
+              name: flux
+            patch: |
+              - op: remove
+                path: /spec/distribution/artifact
