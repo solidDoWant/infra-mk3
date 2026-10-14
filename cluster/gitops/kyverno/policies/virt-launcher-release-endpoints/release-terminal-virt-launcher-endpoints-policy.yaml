@@ -33,7 +33,10 @@ spec:
           has(object.status.migrationState.sourcePod) &&
           !(has(oldObject.status) && has(oldObject.status.phase) &&
           oldObject.status.phase == "Succeeded")
-  mutateExistingOnPolicyUpdate: true
+  # No effect for this trigger (tested): Kyverno doesn't re-run status
+  # subresource triggers on policy changes. A migration that finished while
+  # Kyverno was unavailable needs its source pod deleted by hand.
+  mutateExistingOnPolicyUpdate: false
   rules:
     - name: drop-source-pod-service-selector-label
       match:
@@ -53,14 +56,23 @@ spec:
             value: ""
       mutate:
         targets:
+          # Listed by selector, then narrowed to the source pod by name. Kyverno
+          # GETs a target that sets a name and ignores its selector, which would
+          # fail the patch on a pod that is gone or already has no label.
           - apiVersion: v1
             kind: Pod
             namespace: "{{ request.object.metadata.namespace }}"
-            name: "{{ request.object.status.migrationState.sourcePod }}"
             selector:
+              matchLabels:
+                kubevirt.io: virt-launcher
               matchExpressions:
                 - key: kubevirt.io/vm
                   operator: Exists
+            preconditions:
+              all:
+                - key: "{{ target.metadata.name }}"
+                  operator: Equals
+                  value: "{{ request.object.status.migrationState.sourcePod }}"
         patchesJson6902: |-
           - op: remove
             path: /metadata/labels/kubevirt.io~1vm
