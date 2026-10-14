@@ -1,0 +1,115 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-flux-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Must be a Secret (not secretGenerator) so Flux substitution applies inside.
+  authentik-flux-application-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: Flux application
+      labels:
+        blueprints.goauthentik.io/description: Resources for Flux web UI SSO
+    entries:
+      # Dependencies
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Implicit provider authentication
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Password authentication flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Invalidation flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Blueprint library
+          required: true
+      # Application
+      - model: authentik_providers_oauth2.oauth2provider
+        id: flux-provider
+        identifiers:
+          name: Flux
+        attrs:
+          name: Flux
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+          client_type: confidential
+          client_id: "${SECRET_FLUX_AUTHENTIK_OIDC_CLIENT_ID}"
+          client_secret: "${SECRET_FLUX_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          # The model default is an empty list, which rejects every login
+          grant_types:
+            - authorization_code
+            - refresh_token
+          redirect_uris:
+            - url: https://flux.${SECRET_PUBLIC_DOMAIN_NAME}/oauth2/callback
+              matching_mode: strict
+          signing_key:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          access_code_validity: minutes=1
+          access_token_validity: hours=8
+          refresh_token_validity: days=7
+          property_mappings:
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "OpenID 'email' (verified)"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+              ]
+            # Includes the `groups` claim used for RBAC impersonation
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'offline_access'"],
+              ]
+          sub_mode: hashed_user_id
+          include_claims_in_id_token: true
+          issuer_mode: per_provider
+      - model: authentik_core.application
+        id: flux-application
+        identifiers:
+          slug: flux
+        attrs:
+          name: Flux
+          slug: flux
+          group: Infrastructure
+          provider: !KeyOf flux-provider
+          policy_engine_mode: any
+          meta_launch_url: https://flux.${SECRET_PUBLIC_DOMAIN_NAME}
+      # Groups. The name is matched by the web UI validation and rbac.yaml.
+      - model: authentik_core.group
+        id: flux-admins-group
+        identifiers:
+          name: Flux admins
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_FLUX_ADMINS_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf flux-admins-group
+          target: !KeyOf flux-application

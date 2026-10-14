@@ -1,0 +1,55 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: flux-web
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: flux-web
+  egress:
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Resolves the openid-configuration-proxy service
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: networking
+            endpoints.netpols.home.arpa/cluster-dns: "true"
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+    # OIDC back-channel via the openid-configuration-proxy (the canonical
+    # in-cluster OIDC origin; see security/authentik/openid-configuration-proxy).
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: security
+            app.kubernetes.io/name: openid-configuration-proxy
+            app.kubernetes.io/instance: openid-configuration-proxy
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: networking
+            app.kubernetes.io/name: ingress-gateways
+            gateway.networking.k8s.io/gateway-name: internal-gateway
+      toPorts:
+        - ports:
+            - port: http-web
+              protocol: TCP
+    # Kubelet for healthcheck
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: http
+              protocol: TCP

@@ -1,0 +1,53 @@
+---
+# Flux web UI as a standalone, web-server-only release of the operator chart.
+# The operator only serves the UI from its leader, and the chart has no replica
+# setting for it. In server-only mode leader election is off and every replica
+# serves.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flux-web
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: flux-operator
+  values:
+    nameOverride: flux-web
+    installCRDs: false
+    image:
+      repository: ghcr.io/controlplaneio-fluxcd/flux-operator
+      tag: v0.61.0@sha256:71041d9fff7f7b05f1a8123ebe73c73b7b156f4aacfe1e8e19b5aa953a98892c
+    commonLabels:
+      endpoints.netpols.home.arpa/oidc-querier: "true"
+    web:
+      enabled: true
+      serverOnly: true
+      serverReplicas: 2
+      # Watched by the server, changes apply without a restart
+      configSecretName: flux-web-config
+      networkPolicy:
+        create: false
+    # TODO right-size once there is usage data
+    resources:
+      limits:
+        cpu: null
+        memory: 256Mi
+      requests:
+        cpu: 25m
+        memory: 256Mi
+    # Trust the cluster root CA for the openid-configuration-proxy cert. Go
+    # loads every file in /etc/ssl/certs, so the public bundle stays intact.
+    extraVolumes:
+      - name: root-ca
+        secret:
+          secretName: root-ca-pub-cert
+          defaultMode: 0444
+          items:
+            - key: ca.pem
+              path: root-ca.pem
+    extraVolumeMounts:
+      - name: root-ca
+        mountPath: /etc/ssl/certs/root-ca.pem
+        subPath: root-ca.pem
+        readOnly: true

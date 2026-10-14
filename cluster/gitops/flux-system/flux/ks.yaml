@@ -33,3 +33,21 @@ spec:
     - name: flux
     - name: prometheus-crds
     - name: fluent-crds
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: flux-web
+spec:
+  interval: 5m
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  path: /cluster/gitops/flux-system/flux/web
+  targetNamespace: flux-system
+  dependsOn:
+    # Provides the flux-operator OCIRepository
+    - name: flux
+    - name: gateway-crds

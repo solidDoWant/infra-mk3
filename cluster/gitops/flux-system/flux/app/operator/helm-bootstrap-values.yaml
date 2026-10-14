@@ -1,7 +1,7 @@
 ---
 # Used both by the bootstrap helmfile and by the HelmRelease
 priorityClassName: system-cluster-critical
-# Not exposed anywhere. If enabled, netpol.yaml needs ingress on 9080.
+# The web UI runs as its own release, see ../../web/hr.yaml
 web:
   enabled: false
 # TODO right-size once there is usage data

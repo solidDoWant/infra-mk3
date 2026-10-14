@@ -1,0 +1,16 @@
+---
+# The web UI impersonates the logged-in user and their Authentik groups.
+# flux-web-admin is created by the flux-web release. It can read every
+# resource in the cluster (Secrets included) and run Flux actions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-web-admins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: flux-web-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: Flux admins
