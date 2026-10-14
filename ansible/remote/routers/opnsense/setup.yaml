@@ -199,6 +199,9 @@
               - passwordauth: "1"
               - permitrootlogin: "1"
               - group: admins
+              - noauto: "1"
+              # opt2 (Kubernetes VLAN) is where the Teleport proxy connects
+              - interfaces: lan,opt2,opt1,opt3
 
     # Not currently needed
     # - name: Add API credentials
@@ -816,6 +819,32 @@
                               - port: "{{ item[1] }}"
               loop: "{{ network.physical | dict2items | product(ports) }}"
               when: item[0].value.firewall.enable_firewall_access | default(false)
+            - name: Allow access to firewall SSH port
+              community.general.xml:
+                path: "{{ local_config_path }}"
+                xpath: "{{ rules_xpath }}"
+                add_children:
+                  - rule:
+                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
+                      _:
+                        - type: pass
+                        - interface: "{{ item.key }}"
+                        - ipprotocol: inet
+                        - statetype: keep state
+                        - descr: Allow access to firewall SSH port
+                        - direction: in
+                        - quick: "1"
+                        - protocol: tcp
+                        - category: Firewall management
+                        - source:
+                            _:
+                              - network: "{{ item.key }}"
+                        - destination:
+                            _:
+                              - network: (self)
+                              - port: "22"
+              loop: "{{ network.physical | dict2items }}"
+              when: item.value.firewall.allow_firewall_ssh_access | default(false)
             - name: Allow pinging the firewall
               community.general.xml:
                 path: "{{ local_config_path }}"
@@ -1142,6 +1171,9 @@
     - name: Copy the config file to the remote host and reload
       ansible.builtin.import_role:
         name: copy_config_remote
+
+- name: Configure Teleport SSH access
+  ansible.builtin.import_playbook: teleport.yaml
 
 - name: Enable the WAN interface on the secondary router
   hosts: r730xd:&proxmox

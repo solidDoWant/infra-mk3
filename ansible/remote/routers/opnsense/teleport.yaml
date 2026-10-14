@@ -1,0 +1,216 @@
+---
+# Registers the routers as agentless Teleport SSH nodes (Teleport doesn't run on
+# FreeBSD). The proxy connects to the stock sshd, which trusts Teleport's OpenSSH
+# user CA and presents a Teleport-signed host certificate. The Teleport side is
+# cluster/gitops/security/teleport/configuration/opnsense.yaml.
+#
+# OPNsense includes sshd_config.d/*.conf before its generated config and leaves
+# the directory alone (opnsense/core#8206, 25.1+), so these files persist across
+# config reloads and firmware upgrades.
+#
+# Needs a `tsh login` with a role that can sign host certs. Skipped when Teleport
+# is unreachable, e.g. while bootstrapping (Teleport can't be up without the routers).
+- name: Configure Teleport SSH access
+  hosts: routers:&opnsense
+  gather_facts: false
+
+  vars:
+    sshd_config_path: /usr/local/etc/ssh/sshd_config
+    sshd_include_path: /usr/local/etc/ssh/sshd_config.d/teleport.conf
+    teleport_ssh_dir: /usr/local/etc/ssh/teleport
+    user_ca_path: "{{ teleport_ssh_dir }}/user_ca.pub"
+    host_key_path: "{{ teleport_ssh_dir }}/host_key"
+    host_cert_path: "{{ host_key_path }}-cert.pub"
+    # The Kubernetes VLAN, where traffic from the Teleport proxy arrives
+    teleport_interface: opt2
+
+  handlers:
+    - name: Restart sshd
+      ansible.builtin.command: configctl openssh restart
+      changed_when: true
+
+  tasks:
+    - name: Check if Teleport is available
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.command: tctl status
+      register: teleport_status
+      changed_when: false
+      failed_when: false
+      check_mode: false
+    - name: Skip when Teleport is unavailable
+      when: teleport_status.rc != 0
+      block:
+        - name: Report why the sshd config is being skipped
+          ansible.builtin.debug:
+            msg: >-
+              Teleport is unavailable (is `tsh login` current?), skipping the sshd
+              config: {{ teleport_status.stderr | default('') | trim }}
+        - name: Skip the remaining tasks
+          ansible.builtin.meta: end_host
+
+    - name: Load network.yaml
+      ansible.builtin.include_vars:
+        file: ../../../../docs/network.yaml
+    - name: Set the host certificate principals
+      ansible.builtin.set_fact:
+        host_cert_principals:
+          - "{{ hostname }}"
+          - "{{ devices[hostname].physical[teleport_interface].ip_address }}"
+
+    # Signs user certs for agentless nodes
+    - name: Export the Teleport OpenSSH CA
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.command: tctl auth export --type=openssh
+      register: openssh_ca
+      changed_when: false
+      check_mode: false
+    - name: Get the Teleport host CA fingerprints
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.shell:
+        cmd: >-
+          set -o pipefail &&
+          tctl auth export --type=host |
+          awk '/^@cert-authority/ {print $3, $4}' |
+          ssh-keygen -l -f -
+        executable: /bin/bash
+      register: host_ca_fingerprints
+      changed_when: false
+      check_mode: false
+
+    - name: Create the Teleport SSH directory
+      ansible.builtin.file:
+        path: "{{ teleport_ssh_dir }}"
+        state: directory
+        owner: root
+        group: wheel
+        mode: "0755"
+    - name: Deploy the Teleport user CA
+      ansible.builtin.copy:
+        # sshd's TrustedUserCAKeys takes bare keys, not authorized_keys entries
+        content: |
+          {% for line in openssh_ca.stdout_lines if line is match('cert-authority ') %}
+          {{ line | regex_replace('^cert-authority ', '') }}
+          {% endfor %}
+        dest: "{{ user_ca_path }}"
+        owner: root
+        group: wheel
+        mode: "0644"
+      notify: Restart sshd
+
+    # Host certs from `tctl auth sign` never expire, so only reissue when the
+    # cert is missing, doesn't match the key, has the wrong principals, or was
+    # signed by a CA that has since been rotated out.
+    # No pipefail: an unreadable cert yields partial output, which triggers a reissue
+    - name: Inspect the current host certificate # noqa: risky-shell-pipe
+      ansible.builtin.shell: |
+        [ -f {{ host_key_path }} ] && [ -f {{ host_cert_path }} ] || exit 0
+        ssh-keygen -l -f {{ host_key_path }} | awk '{print "key: " $2}'
+        ssh-keygen -L -f {{ host_cert_path }} | awk '
+          /Public key:/ {print "cert_key: " $4}
+          /Signing CA:/ {print "signing_ca: " $4}
+          /Critical Options:/ {p = 0}
+          p {print "  - \"" $1 "\""}
+          /Principals:/ {p = 1; print "principals:"}
+        '
+      register: host_cert_info
+      changed_when: false
+      check_mode: false
+    - name: Check if the host certificate needs to be issued
+      vars:
+        current: "{{ host_cert_info.stdout | from_yaml or {} }}"
+        ca_fingerprints: "{{ host_ca_fingerprints.stdout_lines | map('split') | map(attribute=1) }}"
+      ansible.builtin.set_fact:
+        needs_host_cert: >-
+          {{
+            current.key is not defined or
+            current.key != current.cert_key | default('') or
+            current.signing_ca | default('') not in ca_fingerprints or
+            (current.principals | default([]) | sort) != (host_cert_principals | sort)
+          }}
+    - name: Report the host certificate would be issued
+      ansible.builtin.debug:
+        msg: A new host certificate would be issued for {{ host_cert_principals | join(', ') }}
+      changed_when: true
+      when: needs_host_cert | bool and ansible_check_mode
+    - name: Issue a new host certificate
+      when: needs_host_cert | bool and not ansible_check_mode
+      block:
+        - name: Create a temporary directory for the host key
+          delegate_to: localhost
+          ansible.builtin.tempfile:
+            state: directory
+            prefix: teleport-host-cert-
+          register: host_cert_temp_dir
+        - name: Sign a host key
+          delegate_to: localhost
+          ansible.builtin.command: >-
+            tctl auth sign --format=openssh --overwrite
+            --host={{ host_cert_principals | join(',') }}
+            --out={{ host_cert_temp_dir.path }}/host_key
+          changed_when: true
+        - name: Upload the host key and certificate
+          ansible.builtin.copy:
+            src: "{{ host_cert_temp_dir.path }}/{{ item.src }}"
+            dest: "{{ item.dest }}"
+            owner: root
+            group: wheel
+            mode: "{{ item.mode }}"
+          loop:
+            - src: host_key
+              dest: "{{ host_key_path }}"
+              mode: "0600"
+            - src: host_key-cert.pub
+              dest: "{{ host_cert_path }}"
+              mode: "0644"
+          notify: Restart sshd
+      always:
+        - name: Remove the local copy of the host key
+          delegate_to: localhost
+          ansible.builtin.file:
+            path: "{{ host_cert_temp_dir.path }}"
+            state: absent
+          when: host_cert_temp_dir.path is defined
+
+    # The include is read before the generated config, so its HostKeys are
+    # tried first. Repeat OPNsense's keys ahead of Teleport's (duplicates are
+    # harmless) so plain SSH keeps presenting the same ed25519 key and existing
+    # known_hosts entries stay valid.
+    - name: Get the OPNsense host keys
+      ansible.builtin.command: grep '^HostKey ' {{ sshd_config_path }}
+      register: opnsense_host_keys
+      changed_when: false
+      failed_when: opnsense_host_keys.rc > 1
+      check_mode: false
+    - name: Configure sshd
+      block:
+        - name: Deploy the sshd config
+          ansible.builtin.copy:
+            content: |
+              # Managed by Ansible (ansible/remote/routers/opnsense/teleport.yaml)
+              {% for line in opnsense_host_keys.stdout_lines %}
+              {{ line }}
+              {% endfor %}
+              HostKey {{ host_key_path }}
+              HostCertificate {{ host_cert_path }}
+              TrustedUserCAKeys {{ user_ca_path }}
+            dest: "{{ sshd_include_path }}"
+            owner: root
+            group: wheel
+            mode: "0644"
+          notify: Restart sshd
+        - name: Validate the sshd config
+          ansible.builtin.command: /usr/local/sbin/sshd -t
+          changed_when: false
+          check_mode: false
+      rescue:
+        # Don't leave a config that would stop sshd from starting on reboot
+        - name: Remove the invalid sshd config
+          ansible.builtin.file:
+            path: "{{ sshd_include_path }}"
+            state: absent
+        - name: Fail on the invalid sshd config
+          ansible.builtin.fail:
+            msg: sshd rejected {{ sshd_include_path }}, so it was removed
