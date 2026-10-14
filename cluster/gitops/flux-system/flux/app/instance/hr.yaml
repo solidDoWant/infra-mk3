@@ -24,6 +24,12 @@ spec:
   chartRef:
     kind: OCIRepository
     name: flux-instance
+  # Waiting for the FluxInstance to become ready means waiting for the operator
+  # to restart helm-controller, which interrupts the wait
+  install:
+    disableWait: true
+  upgrade:
+    disableWait: true
   # The chart deploys the FluxInstance CR, the CRD comes from the operator chart
   dependsOn:
     - name: flux-operator
