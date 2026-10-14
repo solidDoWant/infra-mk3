@@ -9,7 +9,7 @@ spec:
     matchLabels:
       grafana.home.arpa/instance: grafana
   # The chart's dashboard: grafana.com 18089 predates the 0.6 metric renames.
-  url: https://raw.githubusercontent.com/spegel-org/spegel/refs/tags/v0.7.4/charts/spegel/monitoring/grafana-dashboard.json
+  url: https://raw.githubusercontent.com/spegel-org/spegel/79779e2683ef80a588da97c18423bc45a9415369/charts/spegel/monitoring/grafana-dashboard.json # v0.7.4
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS

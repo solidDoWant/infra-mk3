@@ -9,7 +9,7 @@ resources:
   # Webhook
   # This is large, complex, and coupled closely enough with the operator that I don't want
   # to maintain it myself.
-  - https://raw.githubusercontent.com/rabbitmq/messaging-topology-operator/refs/tags/v1.20.4/config/webhook/manifests.yaml
+  - https://raw.githubusercontent.com/rabbitmq/messaging-topology-operator/cc6d4a3f67146ca481364cae33c17717f4ae5f44/config/webhook/manifests.yaml # v1.20.4
 
 # Update the webhook to target the operator service, and inject the serving cert
 replacements:

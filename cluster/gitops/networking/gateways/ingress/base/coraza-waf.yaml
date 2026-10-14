@@ -9,7 +9,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: external-gateway
-  url: oci://ghcr.io/corazawaf/coraza-proxy-wasm:0.6.0
+  url: oci://ghcr.io/corazawaf/coraza-proxy-wasm:0.6.0@sha256:d66f944831428ea27039207fa4019bea55f9ea0a876d7b0dc8cc7c9e385fa4b1
   imagePullPolicy: IfNotPresent
   phase: AUTHN
   pluginConfig:
