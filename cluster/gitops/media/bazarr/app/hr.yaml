@@ -40,7 +40,7 @@ spec:
         initContainers:
           init-config:
             image:
-              repository: docker.io/mikefarah/yq
+              repository: ghcr.io/mikefarah/yq
               tag: 4.54.1@sha256:4b3d9475d65571d28cbb19544d3820ec2945e4c8b2f18279394282b8dc3a592e
             envFrom:
               - secret: bazarr-api-key
@@ -68,7 +68,7 @@ spec:
             restartPolicy: Always
             # contrib image is required for the postgres_proxy filter
             image:
-              repository: envoyproxy/envoy
+              repository: mirror.gcr.io/envoyproxy/envoy
               tag: contrib-v1.40.0@sha256:366ea8bbbbaded6d95f3a1aafedd12c6def9f0d6eea02f3123b69c41e46e54f5
             ports:
               - name: envoy-admin

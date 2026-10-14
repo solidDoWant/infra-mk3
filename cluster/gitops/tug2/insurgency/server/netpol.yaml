@@ -91,12 +91,9 @@ specs:
           - ports:
               - port: "5432"
                 protocol: TCP
-      # Access to dockerhub to pull Envoy image
+      # Access to mirror.gcr.io to pull the Envoy image (serves blobs directly, no auth)
       - toFQDNs:
-          - matchName: registry-1.docker.io
-          - matchName: production.cloudflare.docker.com
-          - matchName: production.cloudfront.docker.com
-          - matchName: auth.docker.io
+          - matchName: mirror.gcr.io
         toPorts:
           - ports:
               - port: "443"

@@ -20,7 +20,8 @@ Research the "<service>" application for deployment to a Kubernetes cluster. Fin
 2. Container image: Prefer non-Docker Hub registries (ghcr.io, quay.io, registry.k8s.io, public.ecr.aws, etc.) over docker.io. Check in this order and report all that exist with their latest tag:
    a. `ghcr.io/home-operations/<name>` — community-maintained, rootless, hardened.
    b. The project's own GHCR/Quay/upstream-registry image (check the project's README or release docs — many projects publish to ghcr.io/<org>/<name> or quay.io/<org>/<name> in addition to or instead of Docker Hub).
-   c. Only fall back to `docker.io/<org>/<name>` if no non-Docker-Hub source exists.
+   c. Docker Official Images (`ubuntu`, `python`, `postgres`, ...): `public.ecr.aws/docker/library/<name>` (published by Docker, same digests).
+   d. Docker-Hub-only images: `mirror.gcr.io/<org>/<name>` (Google's pull-through cache, same digests; the first `packageRules` entry in `.renovaterc.json5` points Renovate lookups back at Docker Hub, so other rules must name it `docker.io/<org>/<name>`). Never reference `docker.io` directly.
    Note which registry each candidate came from so the implementing agent can pick the best one.
 3. Default port(s) and how the app is configured (env vars, config file, CLI flags).
 4. PostgreSQL support: does it support Postgres? If so, does it support native TLS client certificates? Check in this order:
@@ -175,7 +176,8 @@ Write files group by group: flux source (if new), backend KS + resources, then a
 **Container images**: Prefer non-Docker Hub registries. Selection order:
 1. `ghcr.io/home-operations/<name>` if it exists — these run rootless and have stronger security controls.
 2. The project's own image on a non-Docker-Hub registry (ghcr.io, quay.io, registry.k8s.io, public.ecr.aws, etc.) — many upstream projects publish here in parallel to Docker Hub. Check the project's release notes / README before defaulting to docker.io.
-3. `docker.io/<org>/<name>` only as a last resort when no non-Docker-Hub source publishes the image.
+3. Docker Official Images: `public.ecr.aws/docker/library/<name>`.
+4. `mirror.gcr.io/<org>/<name>` when the image is only published to Docker Hub. Renovate rules matching it use `docker.io/<org>/<name>` (see the override at the top of `packageRules`).
 
 Docker Hub is rate-limited for anonymous pulls and is a single point of failure; pulling from ghcr.io/quay.io/etc. avoids both. When picking a non-default registry, leave a one-line comment on the `repository:` field noting why (e.g., `# upstream publishes here; docker.io image is identical but rate-limited`).
 

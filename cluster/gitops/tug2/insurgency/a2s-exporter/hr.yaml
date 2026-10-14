@@ -36,7 +36,7 @@ spec:
           app: &container
             image:
               # Only published to Docker Hub
-              repository: docker.io/armsnyder/a2s-exporter
+              repository: mirror.gcr.io/armsnyder/a2s-exporter
               tag: v0.4.0@sha256:76c98734c8e56f056d8f5f090601b3b8320a297c4e6f4acadbb153ffe219aaef
             env: &env
               # srcds answers A2S queries on the game port

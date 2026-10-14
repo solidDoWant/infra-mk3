@@ -187,4 +187,5 @@ Selection order:
    - Have stronger security controls (minimal base images, no unnecessary packages)
    - Are maintained in lockstep with upstream releases
 2. **Upstream project's own non-Docker-Hub registry** — most projects publish to `ghcr.io/<org>/<name>` or `quay.io/<org>/<name>` (often in addition to Docker Hub). Check the project's README, release notes, or GitHub Packages tab before falling back. The image is usually byte-identical to the Docker Hub one.
-3. **docker.io** — only when no non-Docker-Hub source exists for the image.
+3. **Docker Official Images** — `public.ecr.aws/docker/library/<name>`.
+4. **mirror.gcr.io** — `mirror.gcr.io/<org>/<name>` when the image is only on Docker Hub (same digests). Renovate rules matching it use `docker.io/<org>/<name>`. Never reference `docker.io` directly.

@@ -56,7 +56,7 @@ spec:
               # Distroless Envoy: non-root by default, no shell. Lua HTTP filter
               # is in stock Envoy; we don't need the contrib build (which Harbor
               # uses only for the postgres protocol filter).
-              repository: envoyproxy/envoy
+              repository: mirror.gcr.io/envoyproxy/envoy
               tag: distroless-v1.40.0@sha256:23b72ac1fa94908b2ca7ebf194cc6083cd0d4913210c7d7453e4b2008ca26c84
             args:
               - -c

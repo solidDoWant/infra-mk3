@@ -70,7 +70,7 @@ spec:
                 enabled: true
           discord-notifier:
             image:
-              repository: python
+              repository: public.ecr.aws/docker/library/python
               tag: 3.15.0-slim
             envFrom:
               - secretRef:

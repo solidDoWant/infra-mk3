@@ -10,7 +10,7 @@ spec:
   # hostNetwork: true
   containers:
     - name: admin
-      image: ubuntu:22.04
+      image: public.ecr.aws/docker/library/ubuntu:22.04
       command:
         - sleep
         - "999999999999"

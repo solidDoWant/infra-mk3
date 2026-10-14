@@ -83,7 +83,7 @@ spec:
             action: labeldrop
     portal:
       image:
-        repository: docker.io/goharbor/harbor-portal
+        repository: ghcr.io/goharbor/harbor-portal
         tag: v2.15.4@sha256:01edf478505b21dba23a83c095f6ecac0c1e705690093edbab41e9a4d6754a75
       replicas: 2
       revisionHistoryLimit: 1
@@ -91,7 +91,7 @@ spec:
         endpoints.netpols.home.arpa/external-ingress-enabled: "true"
     core:
       image:
-        repository: docker.io/goharbor/harbor-core
+        repository: ghcr.io/goharbor/harbor-core
         tag: v2.15.4@sha256:7d2ba5304a729887cdec7cb222a82b500278423de230ae5150c386a6c332b112
       replicas: 2
       revisionHistoryLimit: 1
@@ -107,7 +107,7 @@ spec:
         - &envoy_sidecar
           name: envoy
           # Contrib image is required because the postgres filter extension is only in the contrib build
-          image: envoyproxy/envoy:contrib-v1.40.0@sha256:366ea8bbbbaded6d95f3a1aafedd12c6def9f0d6eea02f3123b69c41e46e54f5
+          image: mirror.gcr.io/envoyproxy/envoy:contrib-v1.40.0@sha256:366ea8bbbbaded6d95f3a1aafedd12c6def9f0d6eea02f3123b69c41e46e54f5
           ports:
             - name: envoy-admin
               containerPort: 8000
@@ -140,7 +140,7 @@ spec:
           restartPolicy: Always
     jobservice:
       image:
-        repository: docker.io/goharbor/harbor-jobservice
+        repository: ghcr.io/goharbor/harbor-jobservice
         tag: v2.15.4@sha256:f143578ef30e2be5c48873298257ed0fca31545025958c534e536a06765d2b82
       replicas: 2
       revisionHistoryLimit: 1
@@ -152,11 +152,11 @@ spec:
     registry:
       registry:
         image:
-          repository: docker.io/goharbor/registry-photon
+          repository: ghcr.io/goharbor/registry-photon
           tag: v2.15.4@sha256:dc0cb388a6445c69c8a0c406679290d2991c9698833d9e6e86a23bdfaf2f83c3
       controller:
         image:
-          repository: docker.io/goharbor/harbor-registryctl
+          repository: ghcr.io/goharbor/harbor-registryctl
           tag: v2.15.4@sha256:30bd1ace4e3bb390d75b84673f98ddb4a69fcc6d116932ea764391df01943fb7
       replicas: 2
       revisionHistoryLimit: 1
@@ -166,7 +166,7 @@ spec:
         existingSecret: harbor-internal-registry-credentials
     trivy:
       image:
-        repository: docker.io/goharbor/trivy-adapter-photon
+        repository: ghcr.io/goharbor/trivy-adapter-photon
         tag: v2.15.4@sha256:813ca81b4a4ea0f44f5fa81cca2645eeb58d4b1f6c66b428df9d506174bb71d9
       replicas: 2
       resources:
@@ -206,7 +206,7 @@ spec:
       type: internal
       internal:
         image:
-          repository: docker.io/goharbor/valkey-photon
+          repository: ghcr.io/goharbor/valkey-photon
           tag: v2.15.4@sha256:bb022e8f236f56f53cee7bb1f609595e497da67d829048e0af2284f97e6eb54f
       # This does not currently work due to https://github.com/envoyproxy/envoy/issues/41659
       # type: external
@@ -216,7 +216,7 @@ spec:
       #   addr: 127.0.0.1:6379
     exporter:
       image:
-        repository: docker.io/goharbor/harbor-exporter
+        repository: ghcr.io/goharbor/harbor-exporter
         tag: v2.15.4@sha256:9ffede33dc519b4be035596a72f00f354754a22a3769077731f81ee7d6852f4f
       revisionHistoryLimit: 1
       # TODO, this will require changing the ServiceMonitor to avoid metric duplication
@@ -436,7 +436,7 @@ spec:
                 value:
                   - name: envoy
                     # Contrib image is required because the postgres filter extension is only in the contrib build
-                    image: envoyproxy/envoy:contrib-v1.39.1
+                    image: mirror.gcr.io/envoyproxy/envoy:contrib-v1.39.1
                     ports:
                       - name: envoy-admin
                         containerPort: 8000

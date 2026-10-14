@@ -41,7 +41,7 @@ spec:
         containers:
           app:
             image:
-              repository: nginxinc/nginx-unprivileged
+              repository: public.ecr.aws/nginx/nginx-unprivileged
               tag: 1.31.6-alpine
             resources:
               requests:

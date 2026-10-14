@@ -210,6 +210,13 @@
   ],
 
   packageRules: [
+    // First: later rules match on the overridden (docker.io/...) name.
+    {
+      description: "mirror.gcr.io lists only cached tags; look up Docker Hub (same digests)",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^mirror\\.gcr\\.io//"],
+      overridePackageName: "{{{replace '^mirror\\.gcr\\.io/' 'docker.io/' packageName}}}",
+    },
     // --- Approval / safety ---------------------------------------------------
     {
       description: "Major updates wait for a Dependency Dashboard checkbox",
@@ -242,13 +249,13 @@
     {
       description: "Envoy publishes contrib-/distroless- variants as separate tag streams",
       matchDatasources: ["docker"],
-      matchPackageNames: ["/^(docker\\.io/)?envoyproxy/envoy$/"],
+      matchPackageNames: ["docker.io/envoyproxy/envoy"],
       versioning: "regex:^(?:(?<compatibility>contrib|distroless)-)?v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
     },
     {
       description: "Ubuntu: numeric LTS tags only (ubuntu versioning also treats codenames like 'resolute' as versions)",
       matchDatasources: ["docker"],
-      matchPackageNames: ["ubuntu", "docker.io/library/ubuntu"],
+      matchPackageNames: ["public.ecr.aws/docker/library/ubuntu"],
       allowedVersions: "/^\\d[02468]\\.04$/",
     },
     {
@@ -276,7 +283,7 @@
     {
       description: "VictoriaLogs tags dropped the -victorialogs suffix after v1.17.0",
       matchDatasources: ["docker"],
-      matchPackageNames: ["victoriametrics/victoria-logs"],
+      matchPackageNames: ["quay.io/victoriametrics/victoria-logs"],
       versioning: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-victorialogs)?$",
     },
     {
@@ -343,7 +350,7 @@
     {
       description: "VM operator config-reloader tags: config-reloader-vX.Y.Z, released with the operator",
       matchDatasources: ["docker"],
-      matchPackageNames: ["docker.io/victoriametrics/operator"],
+      matchPackageNames: ["quay.io/victoriametrics/operator"],
       matchCurrentValue: "/^config-reloader-/",
       versioning: "regex:^config-reloader-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
     },
@@ -378,7 +385,7 @@
       matchPackageNames: [
         "ghcr.io/rook/rook-ceph",
         "ghcr.io/rook/rook-ceph-cluster",
-        "docker.io/rook/ceph",
+        "ghcr.io/rook/ceph",
         "quay.io/cephcsi/ceph-csi-operator",
         "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
       ],
@@ -398,9 +405,9 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "CoreDNS: HelmReleases + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart)",
+      description: "CoreDNS: HelmReleases + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart) + the image pinned in values",
       groupName: "coredns",
-      matchPackageNames: ["ghcr.io/coredns/charts/coredns"],
+      matchPackageNames: ["ghcr.io/coredns/charts/coredns", "registry.k8s.io/coredns/coredns"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -433,7 +440,7 @@
     {
       description: "VictoriaLogs + its Grafana datasource plugin",
       groupName: "victoria-logs",
-      matchPackageNames: ["victoriametrics/victoria-logs", "victoriametrics-logs-datasource"],
+      matchPackageNames: ["quay.io/victoriametrics/victoria-logs", "victoriametrics-logs-datasource"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -577,23 +584,22 @@
       groupName: "ubuntu",
       matchDatasources: ["docker"],
       matchPackageNames: [
-        "ubuntu",
-        "docker.io/library/ubuntu",
+        "public.ecr.aws/docker/library/ubuntu",
         "mcr.microsoft.com/devcontainers/base",
         "ghcr.io/gameservermanagers/steamcmd",
       ],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "Envoy: same image referenced with and without the docker.io prefix",
+      description: "Envoy: every proxy/sidecar image in one PR",
       groupName: "envoy",
-      matchPackageNames: ["/^(docker\\.io/)?envoyproxy/envoy$/"],
+      matchPackageNames: ["docker.io/envoyproxy/envoy"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Temporal: chart + server/admin-tools/ui images",
       groupName: "temporal",
-      matchPackageNames: ["temporal", "/^temporalio\\//"],
+      matchPackageNames: ["temporal", "/^docker\\.io/temporalio//"],
       matchDatasources: ["helm", "docker"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
@@ -622,8 +628,8 @@
       matchFileNames: ["cluster/gitops/monitoring/victoria-metrics/k8s-stack/**"],
       matchDatasources: ["docker"],
       matchPackageNames: [
-        "/^docker\\.io/victoriametrics//",
-        "docker.io/prom/alertmanager",
+        "/^quay\\.io/victoriametrics//",
+        "quay.io/prometheus/alertmanager",
         "registry.k8s.io/kube-state-metrics/kube-state-metrics",
         "quay.io/prometheus/node-exporter",
       ],
@@ -640,7 +646,7 @@
       description: "democratic-csi: sidecars, proxy and init images",
       groupName: "democratic-csi",
       matchFileNames: ["cluster/gitops/storage/democratic-csi/**"],
-      matchPackageNames: ["ghcr.io/democratic-csi/csi-grpc-proxy", "docker.io/busybox", "/^registry\\.k8s\\.io/sig-storage//"],
+      matchPackageNames: ["ghcr.io/democratic-csi/csi-grpc-proxy", "public.ecr.aws/docker/library/busybox", "/^registry\\.k8s\\.io/sig-storage//"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -711,7 +717,7 @@
     },
     {
       groupName: "harbor",
-      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/harbor", "/^docker\\.io/goharbor//"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/harbor", "/^ghcr\\.io/goharbor//"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -777,7 +783,7 @@
     },
     {
       description: "Tags track the bundled kubectl version",
-      matchPackageNames: ["alpine/k8s"],
+      matchPackageNames: ["docker.io/alpine/k8s"],
       sourceUrl: "https://github.com/kubernetes/kubernetes",
     },
     {
@@ -867,11 +873,11 @@
     },
     {
       description: "contrib-/distroless- tags don't match envoy's vX.Y.Z releases",
-      matchPackageNames: ["/^(docker\\.io/)?envoyproxy/envoy$/"],
+      matchPackageNames: ["docker.io/envoyproxy/envoy"],
       changelogUrl: "https://github.com/envoyproxy/envoy/releases",
     },
     {
-      matchPackageNames: ["python", "docker.io/library/python"],
+      matchPackageNames: ["public.ecr.aws/docker/library/python"],
       changelogUrl: "https://docs.python.org/3/whatsnew/changelog.html",
     },
     {
@@ -879,7 +885,7 @@
       changelogUrl: "https://www.postgresql.org/docs/release/",
     },
     {
-      matchPackageNames: ["alpine/curl"],
+      matchPackageNames: ["quay.io/curl/curl"],
       changelogUrl: "https://curl.se/changes.html",
     },
     // FairwindsOps/charts has no tags/releases; the chart dir history is the changelog.
@@ -920,7 +926,7 @@
         // Kubernetes
         "ghcr.io/siderolabs/kubelet",
         "registry.k8s.io/kubectl",
-        "alpine/k8s",
+        "docker.io/alpine/k8s",
         // Talos
         "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
@@ -960,7 +966,7 @@
       matchPackageNames: [
         "ghcr.io/siderolabs/kubelet",
         "registry.k8s.io/kubectl",
-        "alpine/k8s",
+        "docker.io/alpine/k8s",
         "ghcr.io/rook/rook-ceph",
         "ghcr.io/rook/rook-ceph-cluster",
       ],
@@ -973,7 +979,7 @@
       matchPackageNames: [
         "ghcr.io/siderolabs/kubelet",
         "registry.k8s.io/kubectl",
-        "alpine/k8s",
+        "docker.io/alpine/k8s",
         "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
         "ghcr.io/siderolabs/installer",
