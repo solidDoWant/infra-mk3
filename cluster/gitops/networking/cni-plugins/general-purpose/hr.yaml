@@ -33,7 +33,7 @@ spec:
           installer:
             image:
               repository: ghcr.io/home-operations/cni-plugins
-              tag: &plugin_version 1.9.1
+              tag: 1.9.1
             command:
               - rsync
               - -av
@@ -64,7 +64,8 @@ spec:
                 valueFrom:
                   fieldRef:
                     fieldPath: spec.nodeName
-              VERSION: *plugin_version
+              # Label values can't hold a digest's "@"/":" and cap at 63 chars.
+              VERSION: &plugin_version '{{ .Values.controllers.installer.initContainers.installer.image.tag | replace "@sha256:" "-" | trunc 63 }}'
             securityContext: &security_context_unprivileged
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
