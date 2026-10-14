@@ -21,6 +21,15 @@ spec:
     kind: OCIRepository
     name: nzbhydra2-backup
   values:
+    resources:
+      controllers:
+        backup-tool:
+          containers:
+            backup-tool:
+              # The chart passes this to the pods the tool starts (BACKUP_TOOL_IMAGE).
+              image:
+                repository: ghcr.io/soliddowant/backup-tool
+                tag: 0.0.20@sha256:3ca5d08a0d6b05810cc75694e105061b90531184e06960bf8321e6dfbb9ce9e4
     jobConfig:
       drType: generic
       drAction: backup
