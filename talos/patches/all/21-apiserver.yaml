@@ -8,8 +8,6 @@ extraArgs:
   # services/extensions by sending traffic to each endpoint instead of the
   # service cluster IP
   enable-aggregator-routing: "true"
-  # Feature enablement
-  feature-gates: kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true,kube:ImageVolume=true,kube:MutatingAdmissionPolicy=true,kube:EnvFiles=true
   # Resource enablement
   # Enable everything but alpha and legacy features
   runtime-config: "api/all=true,api/legacy=false"

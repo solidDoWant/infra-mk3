@@ -24,9 +24,6 @@ config:
     # - net.ipv4.ip_forward
   # Allow pinning CPUs for workloads when QoS is Guaranteed
   cpuManagerPolicy: static
-extraArgs:
-  # Feature enablement
-  feature-gates: DRAAdminAccess=true,ImageVolume=true,EnvFiles=true
 ---
 apiVersion: v1alpha1
 kind: KubeNodeConfig

@@ -4,8 +4,6 @@ apiVersion: v1alpha1
 kind: KubeSchedulerConfig
 extraArgs:
   bind-address: 0.0.0.0
-  # Feature enablement
-  feature-gates: kube:DRAAdminAccess=true,kube:DRAPartitionableDevices=true
   # See apiServer.
   logging-format: json
 # Enable cluster-level topology spread constraints for supported controllers.
