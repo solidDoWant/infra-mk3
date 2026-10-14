@@ -1,0 +1,403 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "Groups (one PR for components that must move together), then the digest-only group that overrides them",
+  packageRules: [
+    {
+      description: "Talos: topf.yaml + talosctl",
+      groupName: "talos",
+      matchPackageNames: ["siderolabs/talos", "ghcr.io/siderolabs/talosctl"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Kubernetes: cluster version (topf.yaml kubelet) + kubectl images",
+      groupName: "kubernetes",
+      matchPackageNames: ["ghcr.io/siderolabs/kubelet", "registry.k8s.io/kubectl", "docker.io/alpine/k8s"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Flux: install manifests + CLI",
+      groupName: "flux",
+      matchPackageNames: ["fluxcd/flux2", "ghcr.io/fluxcd/flux-cli", "/^ghcr\\.io/fluxcd/(source|kustomize|helm|notification)-controller$/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Rook: operator + cluster charts, operator image, bundled ceph-csi-operator and the drivers chart that must match it",
+      groupName: "rook-ceph",
+      matchPackageNames: [
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
+        "ghcr.io/rook/ceph",
+        "quay.io/cephcsi/ceph-csi-operator",
+        "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
+      ],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Istio: charts + images + istioctl",
+      groupName: "istio",
+      // 1.31+ is not published to gcr.io/istio-release: charts moved to
+      // ghcr.io, images to Docker Hub (pulled via mirror.gcr.io).
+      matchPackageNames: ["/^ghcr\\.io/istio/release/charts//", "/^docker\\.io/istio/(pilot|proxyv2|install-cni|ztunnel)$/", "istio/istioctl"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    // CRDs applied from release assets must move with their operator.
+    {
+      description: "spegel: HelmRelease + bootstrap helmfile chart, dashboard URL tag",
+      groupName: "spegel",
+      matchPackageNames: ["spegel", "ghcr.io/spegel-org/helm-charts/spegel", "spegel-org/spegel"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "CoreDNS: HelmReleases + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart) + the image pinned in values",
+      groupName: "coredns",
+      matchPackageNames: ["ghcr.io/coredns/charts/coredns", "registry.k8s.io/coredns/coredns"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "kubelet-csr-approver: HelmRelease + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart)",
+      groupName: "kubelet-csr-approver",
+      matchPackageNames: ["ghcr.io/postfinance/charts/kubelet-csr-approver", "ghcr.io/postfinance/kubelet-csr-approver"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Teleport: charts, tbot sidecars (must not outrun the cluster), chart schema refs, devcontainer + VM workspace binaries",
+      groupName: "teleport",
+      matchPackageNames: ["/^teleport-/", "/gravitational\\/(tbot|teleport)-distroless$/", "gravitational/teleport"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "VictoriaMetrics: k8s-stack chart (bundles the operator) + operator CRDs + the metrics datasource plugin it configures",
+      groupName: "victoria-metrics-operator",
+      matchPackageNames: ["/victoria-metrics-k8s-stack$/", "VictoriaMetrics/operator", "victoriametrics-metrics-datasource"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "VictoriaMetrics: regenerate the k8s-stack chart's vendored rules and dashboards",
+      matchPackageNames: ["/victoria-metrics-k8s-stack$/"],
+      postUpgradeTasks: {
+        commands: ["go -C cluster/gitops/monitoring/victoria-metrics/sync-job/tool run ."],
+        fileFilters: ["cluster/gitops/monitoring/victoria-metrics/sync-job/generated/**"],
+        installTools: { golang: {}, helm: {} },
+      },
+    },
+    {
+      description: "VictoriaLogs + its Grafana datasource plugin",
+      groupName: "victoria-logs",
+      matchPackageNames: ["quay.io/victoriametrics/victoria-logs", "victoriametrics-logs-datasource"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Keep the 0.x plugin on the victoria-logs group branch (the preset routes 0.x minors to major- branches)",
+      matchPackageNames: ["victoriametrics-logs-datasource"],
+      additionalBranchPrefix: "",
+    },
+    {
+      description: "Kyverno chart + dashboard (same chart version) + images",
+      groupName: "kyverno",
+      matchPackageNames: ["kyverno/kyverno", "ghcr.io/kyverno/charts/kyverno", "/^ghcr\\.io/kyverno/(kyverno|kyvernopre|kyverno-cli|background-controller|cleanup-controller|reports-controller)$/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Cilium: chart (HelmRelease + bootstrap helmfile) + values schema ref + CLI in the devcontainer",
+      groupName: "cilium",
+      matchPackageNames: ["/(^|/)cilium$/", "cilium/cilium-cli"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "cert-manager: chart + images + cmctl in the devcontainer",
+      groupName: "cert-manager",
+      matchPackageNames: [
+        "quay.io/jetstack/charts/cert-manager",
+        "/^quay\\.io/jetstack/cert-manager-(controller|webhook|cainjector|acmesolver|startupapicheck)$/",
+        "cert-manager/cmctl",
+      ],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Helm tooling in the devcontainer: helm, helmfile and the plugins helmfile requires",
+      groupName: "helm-tooling",
+      matchPackageNames: ["alpine/helm", "ghcr.io/helmfile/helmfile", "databus23/helm-diff"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Goldilocks: chart + image tag override",
+      groupName: "goldilocks",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/goldilocks", "us-docker.pkg.dev/fairwinds-ops/oss/goldilocks"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Keep 0.x members on their group branch (the preset routes 0.x minors to major- branches)",
+      matchPackageNames: ["cilium/cilium-cli", "victoriametrics-metrics-datasource", "VictoriaMetrics/operator", "kubevirt/monitoring"],
+      additionalBranchPrefix: "",
+    },
+    // Exporter/app image + the dashboard pinned to the same release.
+    {
+      groupName: "qbittorrent-exporter",
+      matchPackageNames: ["ghcr.io/martabal/qbittorrent-exporter", "martabal/qbittorrent-exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "nginx-prometheus-exporter",
+      matchPackageNames: ["ghcr.io/nginx/nginx-prometheus-exporter", "nginx/nginx-prometheus-exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "backup-tool: dr-job chart + the image its consumers pin (which the pods it starts also run)",
+      groupName: "backup-tool",
+      matchPackageNames: ["ghcr.io/soliddowant/charts/dr-job", "ghcr.io/soliddowant/backup-tool"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "media-processor",
+      matchPackageNames: ["/(^|/)media-processor$/", "/^ghcr\\.io/soliddowant/media-processor//", "solidDoWant/media-processor"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "smartctl-exporter",
+      matchPackageNames: ["prometheus-community/smartctl_exporter", "quay.io/prometheuscommunity/smartctl-exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "tape-archiver: charts + the Ansible-deployed data-worker image",
+      groupName: "tape-archiver",
+      matchPackageNames: ["/(^|/)tape-archiver-(web|control-worker)$/", "/^ghcr\\.io/soliddowant/tape-archiver//"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Coder: chart + CLI image in the devcontainer + agent in the VM workspace image",
+      groupName: "coder",
+      matchPackageNames: ["ghcr.io/coder/chart/coder", "ghcr.io/coder/coder", "coder/coder"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "VPA: Fairwinds chart + recommender image + CRDs (kubernetes/autoscaler)",
+      groupName: "vpa",
+      matchPackageNames: ["vpa", "kubernetes/autoscaler", "registry.k8s.io/autoscaling/vpa-recommender"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "KEDA: chart + CRD kustomize base",
+      groupName: "keda",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/keda", "kedacore/keda", "/^ghcr\\.io/kedacore/keda(-admission-webhooks)?$/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "grafana-operator",
+      matchPackageNames: ["/grafana-operator/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "system-upgrade-controller",
+      matchPackageNames: ["/system-upgrade-controller/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "node-network-operator",
+      matchPackageNames: ["/node-network-operator/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "whereabouts",
+      matchPackageNames: ["/whereabouts/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "kubevirt",
+      matchPackageNames: ["/kubevirt/", "/containerized-data-importer/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "democratic-csi: chart + driver image (image tag sits in the chart's image map)",
+      groupName: "democratic-csi",
+      matchPackageNames: ["ghcr.io/democratic-csi/charts/democratic-csi", "ghcr.io/democratic-csi/democratic-csi"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Keep the 0.x chart on the democratic-csi group branch (the preset routes 0.x minors to major- branches)",
+      matchPackageNames: ["ghcr.io/democratic-csi/charts/democratic-csi"],
+      additionalBranchPrefix: "",
+    },
+    {
+      groupName: "rabbitmq",
+      matchPackageNames: ["/rabbitmq/", "/messaging-topology-operator/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Ubuntu: base image + images tagged by Ubuntu release",
+      groupName: "ubuntu",
+      matchDatasources: ["docker"],
+      matchPackageNames: [
+        "public.ecr.aws/docker/library/ubuntu",
+        "mcr.microsoft.com/devcontainers/base",
+        "ghcr.io/gameservermanagers/steamcmd",
+      ],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Envoy: every proxy/sidecar image in one PR",
+      groupName: "envoy",
+      matchPackageNames: ["docker.io/envoyproxy/envoy"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Temporal: chart + server/admin-tools/ui images",
+      groupName: "temporal",
+      matchPackageNames: ["temporal", "/^docker\\.io/temporalio//"],
+      matchDatasources: ["helm", "docker"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "fluent-operator: operator + CRD charts + the fluent-bit/fluentd images it renders",
+      groupName: "fluent-operator",
+      matchPackageNames: ["/^ghcr\\.io/fluent/helm-charts/fluent-operator/", "/^ghcr\\.io/fluent/fluent-operator//"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "Volume snapshots: CRDs + snapshot-controller chart",
+      groupName: "volume-snapshot",
+      matchPackageNames: [
+        "kubernetes-csi/external-snapshotter",
+        "ghcr.io/piraeusdatastore/helm-charts/snapshot-controller",
+        "registry.k8s.io/sig-storage/snapshot-controller",
+      ],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    // Chart + the images it would default to, pinned in values so they carry a
+    // digest. Overrides stop following the chart, so they share its PR.
+    // Images shared across charts at different versions are scoped by file.
+    {
+      description: "VictoriaMetrics: images pinned in the k8s-stack values",
+      groupName: "victoria-metrics-operator",
+      matchFileNames: ["cluster/gitops/monitoring/victoria-metrics/k8s-stack/**"],
+      matchDatasources: ["docker"],
+      matchPackageNames: [
+        "/^quay\\.io/victoriametrics//",
+        "quay.io/prometheus/alertmanager",
+        "registry.k8s.io/kube-state-metrics/kube-state-metrics",
+        "quay.io/prometheus/node-exporter",
+      ],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "ceph-csi: plugin + sidecars the drivers run (the operator's defaults for its version)",
+      groupName: "rook-ceph",
+      matchFileNames: ["cluster/gitops/storage/rook-ceph/**"],
+      matchPackageNames: ["quay.io/cephcsi/cephcsi", "/^registry\\.k8s\\.io/sig-storage//"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "democratic-csi: sidecars, proxy and init images",
+      groupName: "democratic-csi",
+      matchFileNames: ["cluster/gitops/storage/democratic-csi/**"],
+      matchPackageNames: ["ghcr.io/democratic-csi/csi-grpc-proxy", "public.ecr.aws/docker/library/busybox", "/^registry\\.k8s\\.io/sig-storage//"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "openebs",
+      matchFileNames: ["cluster/gitops/storage/openebs/**"],
+      matchPackageNames: ["ghcr.io/openebs/charts/openebs", "ghcr.io/openebs/zfs-driver", "/^registry\\.k8s\\.io/sig-storage//"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "cloudnative-pg",
+      matchPackageNames: ["ghcr.io/cloudnative-pg/charts/cloudnative-pg", "ghcr.io/cloudnative-pg/cloudnative-pg", "ghcr.io/cloudnative-pg/pgbouncer"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "plugin-barman-cloud",
+      matchPackageNames: ["/^ghcr\\.io/cloudnative-pg/(charts/)?plugin-barman-cloud(-sidecar)?$/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "dragonfly-operator",
+      matchPackageNames: ["ghcr.io/dragonflydb/dragonfly-operator/helm/dragonfly-operator", "ghcr.io/dragonflydb/operator"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "approver-policy",
+      matchPackageNames: ["/^quay\\.io/jetstack/(charts/)?cert-manager-approver-policy$/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "istio-csr",
+      matchPackageNames: ["/^quay\\.io/jetstack/(charts/)?cert-manager-istio-csr$/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "kiali",
+      matchPackageNames: ["kiali-server", "quay.io/kiali/kiali"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "k8tz",
+      matchPackageNames: ["ghcr.io/k8tz/k8tz/charts/k8tz", "quay.io/k8tz/k8tz"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "node-feature-discovery",
+      matchPackageNames: ["/^registry\\.k8s\\.io/nfd/(charts/)?node-feature-discovery$/"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "descheduler",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/descheduler", "registry.k8s.io/descheduler/descheduler"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "metrics-server",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/metrics-server", "registry.k8s.io/metrics-server/metrics-server"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "external-dns",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/external-dns", "registry.k8s.io/external-dns/external-dns"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "amd-gpu-dra-driver",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/k8s-gpu-dra-driver", "docker.io/rocm/k8s-gpu-dra-driver"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "harbor",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/harbor", "/^ghcr\\.io/goharbor//"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "authentik",
+      matchPackageNames: ["ghcr.io/goauthentik/helm-charts/authentik", "ghcr.io/goauthentik/server"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "mail",
+      matchPackageNames: ["mail", "docker.io/boky/postfix", "docker.io/boky/postfix-exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "renovate-operator",
+      matchPackageNames: ["ghcr.io/mogenius/helm-charts/renovate-operator", "ghcr.io/mogenius/renovate-operator"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      groupName: "crd-schema-publisher",
+      matchPackageNames: ["ghcr.io/sholdee/charts/crd-schema-publisher", "ghcr.io/sholdee/crd-schema-publisher"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+
+    // After every group rule, so it takes digest-only updates out of their
+    // package groups.
+    {
+      description: "Digest-only updates (same tag, new digest): one PR, held for Dashboard approval",
+      matchUpdateTypes: ["digest"],
+      // Branch-tracked raw files (`# branch=`) only ever get digest updates;
+      // they get their own PRs.
+      matchPackageNames: [
+        "!/^https://github\\.com/(temporalio/dashboards|fluent/fluent-bit-docs|solidDoWant/tug2|frebib/nzbget-exporter|fluxcd/flux2-monitoring-example|Tricked-dev/vwmetrics)$/",
+      ],
+      groupName: "digest updates",
+      groupSlug: "digest-updates",
+      group: { commitMessageTopic: "digests" },
+      dependencyDashboardApproval: true,
+    },
+  ],
+}

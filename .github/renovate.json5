@@ -1,0 +1,75 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Base: managers (flux / kubernetes / kustomize across all YAML),
+  // `# renovate:` annotations, oci:// refs, commit format.
+  // Policy (limits, grouping, automerge, approvals) lives below and in
+  // .github/renovate/.
+  extends: [
+    "github>home-operations/renovate-presets#8.1.0",
+    "github>home-operations/renovate-presets//apps/cnpg.json5#8.1.0",
+    "github>home-operations/renovate-presets//apps/talosFactory.json5#8.1.0",
+    ":semanticCommits",
+    ":timezone(America/Chicago)",
+    // This repo's policy, split by topic. Their packageRules apply in this
+    // order, then the packageRules below. local> presets are read from the
+    // default branch: check edits with `task renovate:dry-run` before merging.
+    "local>solidDoWant/infra-mk3//.github/renovate/managers.json5",
+    "local>solidDoWant/infra-mk3//.github/renovate/safety.json5",
+    "local>solidDoWant/infra-mk3//.github/renovate/groups.json5",
+    "local>solidDoWant/infra-mk3//.github/renovate/changelogs.json5",
+    "local>solidDoWant/infra-mk3//.github/renovate/labels.json5",
+  ],
+
+  // The preset disables rate limiting. Without CI every merge is a deploy, so
+  // cap the backlog instead of opening ~200 PRs at once.
+  // prConcurrentLimit: 10,
+  // prHourlyLimit: 4,
+  // Hold new releases briefly (supply-chain safety, chained hotfix releases).
+  // timestamp-optional: registries without release timestamps (many OCI
+  // registries) would otherwise be held forever.
+  minimumReleaseAge: "3 days",
+  // cspell:words Behaviour
+  minimumReleaseAgeBehaviour: "timestamp-optional",
+  // The resulting "did not have a releaseTimestamp, ... proceeding" WARNs are
+  // the expected outcome of the above, but count as repository problems and
+  // operator warnings. Per-dep detail stays at debug.
+  logLevelRemap: [
+    {
+      matchMessage: "/did not have a releaseTimestamp, but as we're running with minimumReleaseAgeBehaviour=timestamp-optional/",
+      newLogLevel: "debug",
+    },
+  ],
+  suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
+  // Tags can be re-pushed; a digest pins the exact content. Digest-only
+  // updates then also follow re-pushes of floating tags (latest, branches).
+  pinDigests: true,
+
+  // Replaces config:recommended's list, so the defaults are repeated.
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/*.sops.*",
+    ".claude/**",
+    "**/docs/**",
+    "schemas/**",
+    "custom hardware/**",
+    // Ad-hoc debug pods, not deployed by Flux.
+    "cluster/tooling/**",
+  ],
+
+  // The flux manager already extracts HelmRelease values images; helm-values
+  // would extract every hr.yaml image a second time.
+  "helm-values": { enabled: false },
+  // Off by default upstream. Locked flake inputs only move through
+  // lockFileMaintenance (`nix flake update`, weekly by default).
+  nix: { enabled: true, lockFileMaintenance: { enabled: true } },
+
+  packageRules: [
+    // Last so it overrides any preset rule: no CI, and merging deploys.
+    {
+      description: "Automerge disabled for everything",
+      matchPackageNames: ["*"],
+      automerge: false,
+    },
+  ],
+}

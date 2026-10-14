@@ -6,7 +6,7 @@
 // and upgrade. Instead, this builds the sync job from the same chart release,
 // runs it in output mode against the HelmRelease's values, and vendors the
 // result for Flux to apply. Upstream changes show up as diffs in the chart
-// bump PR. Renovate runs this on chart bumps (see .renovaterc.json5).
+// bump PR. Renovate runs this on chart bumps (see .github/renovate/groups.json5).
 //
 // This can be removed in favor of a chart if
 // https://github.com/VictoriaMetrics/helm-charts/issues/3040#issuecomment-6076709839

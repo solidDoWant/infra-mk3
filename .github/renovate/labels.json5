@@ -1,0 +1,114 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "PR labels, and update-type overrides for Kubernetes, Talos and Rook",
+  packageRules: [
+    // Update-type labels use `labels` (last match wins) so a later rule can
+    // relabel; other labels use `addLabels` and accumulate on top.
+    {
+      matchUpdateTypes: ["major"],
+      labels: ["type/major"],
+    },
+    {
+      matchUpdateTypes: ["minor"],
+      labels: ["type/minor"],
+    },
+    {
+      matchUpdateTypes: ["patch"],
+      labels: ["type/patch"],
+    },
+    {
+      matchUpdateTypes: ["digest", "pinDigest"],
+      labels: ["type/digest"],
+    },
+    // After the update-type labels so `labels` overrides type/minor.
+    {
+      description: "Kubernetes, Talos and Rook/Ceph minors are their breaking releases: handle them as majors",
+      matchUpdateTypes: ["minor"],
+      matchPackageNames: [
+        // Kubernetes
+        "ghcr.io/siderolabs/kubelet",
+        "registry.k8s.io/kubectl",
+        "docker.io/alpine/k8s",
+        // Talos
+        "siderolabs/talos",
+        "ghcr.io/siderolabs/talosctl",
+        "ghcr.io/siderolabs/installer",
+        // Rook/Ceph
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
+        "/(^|/)ceph/ceph$/",
+        // Each minor adds CRD fields and must match the ceph-csi-operator
+        // subchart bundled by rook-ceph (rook 1.20 -> 1.0.x, 1.21 -> 1.1.x).
+        // Bump it by hand in the Rook minor PR. Patches are backports only.
+        "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
+      ],
+      dependencyDashboardApproval: true,
+      semanticCommitType: "feat",
+      commitMessagePrefix: "{{semanticCommitType}}({{semanticCommitScope}})!:",
+      additionalBranchPrefix: "major-",
+      labels: ["type/major"],
+    },
+    // Without separateMinorPatch the latest minor (a major here) supersedes
+    // the patch, so no patch PR is opened. No matchUpdateTypes: Renovate
+    // reads this flag before update types are known.
+    {
+      description: "Talos and ceph-csi-drivers patches get their own PR",
+      matchPackageNames: [
+        "siderolabs/talos",
+        "ghcr.io/siderolabs/talosctl",
+        "ghcr.io/siderolabs/installer",
+        "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
+      ],
+      separateMinorPatch: true,
+    },
+    // Kubernetes and Rook upgrades step through every minor on its latest
+    // patch, so each minor needs its own PR (merge them in order).
+    {
+      description: "Kubernetes and Rook patches and each minor get their own PR",
+      matchPackageNames: [
+        "ghcr.io/siderolabs/kubelet",
+        "registry.k8s.io/kubectl",
+        "docker.io/alpine/k8s",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
+      ],
+      separateMinorPatch: true,
+      separateMultipleMinor: true,
+    },
+    {
+      description: "Kubernetes, Talos and Rook patches carry minor-sized changes: handle them as minors",
+      matchUpdateTypes: ["patch"],
+      matchPackageNames: [
+        "ghcr.io/siderolabs/kubelet",
+        "registry.k8s.io/kubectl",
+        "docker.io/alpine/k8s",
+        "siderolabs/talos",
+        "ghcr.io/siderolabs/talosctl",
+        "ghcr.io/siderolabs/installer",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
+      ],
+      semanticCommitType: "feat",
+      labels: ["type/minor"],
+    },
+    // OCI charts use the docker datasource; tell them apart by path.
+    {
+      matchDatasources: ["docker"],
+      matchPackageNames: ["!/(^|[/-])(charts?|charts-mirror|helm|helm-charts)\\//", "!ghcr.io/rook/rook-ceph", "!ghcr.io/rook/rook-ceph-cluster", "!ghcr.io/intel/intel-gpu-resource-driver-chart"],
+      addLabels: ["renovate/container"],
+    },
+    {
+      matchDatasources: ["helm"],
+      addLabels: ["renovate/helm"],
+    },
+    {
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/(^|[/-])(charts?|charts-mirror|helm|helm-charts)\\//", "ghcr.io/rook/rook-ceph", "ghcr.io/rook/rook-ceph-cluster", "ghcr.io/intel/intel-gpu-resource-driver-chart"],
+      addLabels: ["renovate/helm"],
+    },
+    {
+      matchDatasources: ["github-releases", "github-tags"],
+      addLabels: ["renovate/github-release"],
+    },
+  ],
+}

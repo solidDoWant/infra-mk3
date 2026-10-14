@@ -1,0 +1,174 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "Lookup fixes, version holds and approval gates",
+  packageRules: [
+    // First: later rules match on the overridden (docker.io/...) name.
+    {
+      description: "mirror.gcr.io lists only cached tags; look up Docker Hub (same digests)",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^mirror\\.gcr\\.io//"],
+      overridePackageName: "{{{replace '^mirror\\.gcr\\.io/' 'docker.io/' packageName}}}",
+    },
+    {
+      description: "Major updates wait for a Dependency Dashboard checkbox",
+      matchUpdateTypes: ["major"],
+      dependencyDashboardApproval: true,
+    },
+    {
+      description: "Images built and pushed by CI to the in-cluster Harbor; the repo only holds the unsubstituted host",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^harbor\\./"],
+      enabled: false,
+    },
+    {
+      description: "No digest pins: flake.lock already pins nixpkgs, and a preset ref can't carry both tag and SHA",
+      matchManagers: ["nix", "renovate-config"],
+      pinDigests: false,
+    },
+    {
+      description: "Remote git bases are tracked by the commit-pin regex manager; the kustomize manager would read the SHA as the version",
+      matchManagers: ["kustomize"],
+      matchDatasources: ["github-tags", "git-tags"],
+      enabled: false,
+    },
+    {
+      description: "Inline image strings in HelmRelease values are already extracted by the flux manager",
+      matchManagers: ["kubernetes"],
+      matchFileNames: ["**/hr.yaml"],
+      enabled: false,
+    },
+    {
+      description: "Envoy publishes contrib-/distroless- variants as separate tag streams",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["docker.io/envoyproxy/envoy"],
+      versioning: "regex:^(?:(?<compatibility>contrib|distroless)-)?v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
+      description: "Ubuntu: numeric LTS tags only (ubuntu versioning also treats codenames like 'resolute' as versions)",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["public.ecr.aws/docker/library/ubuntu"],
+      allowedVersions: "/^\\d[02468]\\.04$/",
+    },
+    {
+      description: "Images tagged by Ubuntu release: LTS only. devcontainers dropped the dash from 26.04 on",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["mcr.microsoft.com/devcontainers/base", "ghcr.io/gameservermanagers/steamcmd"],
+      versioning: "regex:^ubuntu-?(?<major>\\d+)\\.(?<minor>\\d+)$",
+      allowedVersions: "/^ubuntu-?\\d[02468]\\.04$/",
+    },
+    {
+      // Rook flags data corruption in Tentacle 20.2.0 with csi.readAffinity on
+      // (enabled here): take Tentacle at >= 20.2.2.
+      description: "Ceph: X.0.Z is dev and X.1.Z is RC, so only X.2.0+ is stable. One PR per major",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/(^|/)ceph/ceph$/"],
+      allowedVersions: "/^v\\d+\\.([2-9]|\\d{2,})\\.\\d+$/",
+      separateMultipleMajor: true,
+    },
+    {
+      // Full tag as the version: the commit digest is looked up by tag name.
+      description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["kubernetes/autoscaler"],
+      versioning: "regex:^vertical-pod-autoscaler-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
+      description: "Kyverno dashboard: chart tags are kyverno-chart-X.Y.Z",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["kyverno/kyverno"],
+      versioning: "regex:^kyverno-chart-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
+      description: "xpumanager dashboard: tags mix V/v prefixes, and v2 dropped rest/grafana-dashboard.json",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["intel/xpumanager"],
+      versioning: "regex:^[vV](?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+      allowedVersions: "/^[vV]1\\./",
+    },
+    {
+      description: "VictoriaLogs tags dropped the -victorialogs suffix after v1.17.0",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["quay.io/victoriametrics/victoria-logs"],
+      versioning: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-victorialogs)?$",
+    },
+    {
+      description: "Release tags are vX.Y.Z; the Ansible/Nix vars are bare",
+      matchDatasources: ["github-releases"],
+      matchPackageNames: ["prometheus-community/smartctl_exporter", "coder/coder"],
+      extractVersion: "^v(?<version>.+)$",
+    },
+    {
+      description: "OPNsense: an installer ISO only exists for the YY.1/YY.7 releases (no patch, beta or RC builds)",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["opnsense/core"],
+      allowedVersions: "/^\\d+\\.[17]$/",
+    },
+    {
+      description: "Proxmox VE installer ISOs: proxmox-ve_X.Y-Z.iso (amd64 only)",
+      matchDatasources: ["custom.proxmox-iso"],
+      extractVersion: "^(?:\\./)?proxmox-ve_(?<version>\\d+\\.\\d+-\\d+)\\.iso$",
+      versioning: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)-(?<patch>\\d+)$",
+    },
+    {
+      description: "Nix fixed-output hashes sit next to the bumped version and are not updated",
+      matchFileNames: ["**/*.nix"],
+      prBodyNotes: [
+        "⚠️ Update the `hash`/`*Hash` values next to the bumped Nix version: set them to `lib.fakeHash` and take the `got:` value from the build error.",
+      ],
+    },
+    {
+      description: "mhvtl: the DKMS package version is the module's MHVTL_VERSION and gates the DKMS rebuild",
+      matchPackageNames: ["markh794/mhvtl"],
+      prBodyNotes: [
+        "⚠️ Bump `mhvtl_pkg_version` to the new commit's `MHVTL_VERSION` in `kernel/mhvtl.c` (not the spec `Version`). The DKMS install is skipped while `dkms status` reports the old package version as installed, so a commit bump alone does not rebuild the module.",
+      ],
+    },
+    {
+      description: "charts-mirror is a stop-gap: it prunes a chart 6 months after upstream publishes an official OCI chart",
+      matchPackageNames: ["/^ghcr\\.io/home-operations/charts-mirror//"],
+      prBodyNotes: [
+        "⚠️ Mirrored chart. Check whether upstream now publishes an official OCI chart (https://github.com/home-operations/charts-mirror/issues/8) and switch the OCIRepository `url` to it.",
+      ],
+    },
+    {
+      description: "Kyverno chart pinned (see kyverno/app/hr.yaml): 3.6.3+ breaks service: apiCall contexts until kyverno/kyverno#16047 ships",
+      matchPackageNames: ["ghcr.io/kyverno/charts/kyverno"],
+      allowedVersions: "/^3\\.6\\.[0-2]$/",
+    },
+    {
+      description: "Kyverno dashboard: same hold as the chart it ships in",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["kyverno/kyverno"],
+      allowedVersions: "/^kyverno-chart-3\\.6\\.[0-2]$/",
+    },
+    {
+      description: "Kyverno images: the app versions of the pinned 3.6.0-3.6.2 charts",
+      matchPackageNames: ["/^ghcr\\.io/kyverno/(kyverno|kyvernopre|kyverno-cli|background-controller|cleanup-controller|reports-controller)$/"],
+      allowedVersions: "/^v1\\.16\\.[0-2]$/",
+    },
+    {
+      description: "mail 5.0.0-5.1.0 crash with metrics enabled (sed -i on the subPath-mounted logrotate.conf, bokysan/docker-postfix#278); fix #266 is unreleased",
+      matchDatasources: ["helm"],
+      matchPackageNames: ["mail"],
+      allowedVersions: "!/^v?5\\.(0\\.[01]|1\\.0)$/",
+    },
+    {
+      description: "postfix image: same hold as the mail chart (chart and image versions match)",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["docker.io/boky/postfix"],
+      allowedVersions: "!/^v?5\\.(0\\.[01]|1\\.0)$/",
+    },
+    {
+      description: "VM operator config-reloader tags: config-reloader-vX.Y.Z, released with the operator",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["quay.io/victoriametrics/operator"],
+      matchCurrentValue: "/^config-reloader-/",
+      versioning: "regex:^config-reloader-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
+      description: "smartctl-exporter 0.15.0 skipped (closed #128/#188/#195); the group PR is immortal, so closing it does not stick",
+      matchPackageNames: ["prometheus-community/smartctl_exporter", "quay.io/prometheuscommunity/smartctl-exporter"],
+      allowedVersions: "!/^v?0\\.15\\.0$/",
+    },
+  ],
+}

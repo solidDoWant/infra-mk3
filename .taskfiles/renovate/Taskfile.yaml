@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+vars:
+  RENOVATE_IMAGE: ghcr.io/renovatebot/renovate:44.158.1@sha256:c64e6ca95349166fc4d3823e29c89417bb2f78f1f2f043449f798e69af3a1f33
+
+tasks:
+  # Runs Renovate against the working tree (uncommitted changes included).
+  # MODE: extract (deps only), lookup (+ available updates) or full (+ the
+  # branches/PRs it would create). Nothing is pushed. Pass LOG_FORMAT=json
+  # for machine-readable logs.
+  dry-run:
+    silent: true
+    vars:
+      MODE: '{{ .MODE | default "lookup" }}'
+      LOG_LEVEL: '{{ .LOG_LEVEL | default "info" }}'
+      LOG_FORMAT: '{{ .LOG_FORMAT | default "pretty" }}'
+    cmds:
+      - task: run
+        vars:
+          ENV: >-
+            -e LOG_LEVEL={{ .LOG_LEVEL }}
+            -e LOG_FORMAT={{ .LOG_FORMAT }}
+            -e RENOVATE_PLATFORM=local
+            -e RENOVATE_DRY_RUN={{ .MODE }}
+            -e RENOVATE_GITHUB_COM_TOKEN
+          SCRIPT: renovate
+
+  # Validates each preset file on its own (pinpoints the file), then the
+  # merged config as repo config (presets inlined).
+  validate:
+    silent: true
+    cmds:
+      - task: run
+        vars:
+          SCRIPT: >-
+            renovate-config-validator --strict .github/renovate/*.json5 &&
+            renovate-config-validator --strict
+
+  # Copies the working tree into a throwaway Renovate container, inlines the
+  # local> presets (the local platform can't read them) and runs SCRIPT.
+  # docker cp + logs rather than bind mounts or attach: the Docker daemon
+  # doesn't see devcontainer paths.
+  run:
+    internal: true
+    silent: true
+    dir: "{{ .ROOT_DIR }}"
+    env:
+      RENOVATE_GITHUB_COM_TOKEN:
+        sh: gh auth token 2>/dev/null || true
+    cmd: |
+      set -euo pipefail
+      cid=$(docker create {{ .ENV }} \
+        -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+        -w /repo {{ .RENOVATE_IMAGE }} \
+        bash -c {{ printf "node /tmp/inline-presets.mjs /repo && %s" .SCRIPT | shellQuote }})
+      trap 'docker rm -f "$cid" >/dev/null' EXIT
+      # World-writable: docker cp hands the files to root, and the inliner
+      # rewrites the root config as the image's non-root user.
+      git ls-files -z --cached --others --exclude-standard \
+        | tar --null --files-from=- --ignore-failed-read --mode=a+rwX \
+            --transform='s,^,repo/,' -c 2>/dev/null \
+        | docker cp - "$cid:/"
+      docker cp {{ joinPath .TASKFILE_DIR "inline-presets.mjs" | shellQuote }} "$cid:/tmp/inline-presets.mjs"
+      docker start "$cid" >/dev/null
+      status=$(docker wait "$cid")
+      docker logs "$cid"
+      exit "$status"
