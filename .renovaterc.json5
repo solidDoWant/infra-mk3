@@ -333,6 +333,18 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "CoreDNS: HelmReleases + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart)",
+      groupName: "coredns",
+      matchPackageNames: ["ghcr.io/coredns/charts/coredns"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "kubelet-csr-approver: HelmRelease + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart)",
+      groupName: "kubelet-csr-approver",
+      matchPackageNames: ["ghcr.io/postfinance/charts/kubelet-csr-approver"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
       description: "Teleport: charts, tbot sidecars (must not outrun the cluster), chart schema refs, devcontainer + VM workspace binaries",
       groupName: "teleport",
       matchPackageNames: ["/^teleport-/", "/gravitational\\/(tbot|teleport)-distroless$/", "gravitational/teleport"],
