@@ -120,7 +120,8 @@ releases:
       - networking/coredns-kube-dns
 
   - name: flux-instance
-    atomic: true
+    # Readiness is waited on by the flux:install-flux task instead
+    wait: false
     namespace: flux-system
     chart: controlplaneio-fluxcd/flux-instance
     version: 0.61.0

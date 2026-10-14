@@ -188,3 +188,19 @@ spec:
             ready: [status, conditions, "[type=Ready]", status]
             suspended: [spec, suspend]
             webhook_path: [status, webhookPath]
+    - groupVersionKind:
+        group: fluxcd.controlplane.io
+        version: v1
+        kind: FluxInstance
+      metricNamePrefix: gotk
+      metrics:
+        - name: "resource_info"
+          help: "The current state of a Flux Operator FluxInstance resource."
+          each:
+            type: Info
+            info:
+              labelsFromPath:
+                name: [metadata, name]
+          labelsFromPath:
+            exported_namespace: [metadata, namespace]
+            ready: [status, conditions, "[type=Ready]", status]

@@ -40,3 +40,10 @@ spec:
       app.kubernetes.io/name: flux-operator
   podMetricsEndpoints:
     - port: http-metrics
+      metricRelabelings:
+        # One series per Flux object with a `revision` label, so every push
+        # creates new series. KSM's gotk_resource_info covers these objects.
+        - action: drop
+          sourceLabels:
+            - __name__
+          regex: flux_(resource|resourceset|resourcesetinputprovider)_info
