@@ -1,18 +1,27 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: fluent-operator
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/fluent/helm-charts/fluent-operator
+  ref:
+    tag: 4.3.0
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: fluent-operator
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: fluent-operator
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: fluent-charts
-      version: 4.3.0
+  chartRef:
+    kind: OCIRepository
+    name: fluent-operator
   values:
     containerRuntime: containerd
     Kubernetes: false # Don't deploy the built-in k8s pipeline

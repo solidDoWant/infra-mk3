@@ -1,4 +1,18 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: authentik
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/goauthentik/helm-charts/authentik
+  ref:
+    tag: 2026.8.3
+---
 # cspell:words REQS certfile
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -8,14 +22,9 @@ spec:
   interval: 5m
   # DB migrations can outlast the 5m default; a rollback onto a migrated schema is worse
   timeout: 15m
-  chart:
-    spec:
-      chart: authentik
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: goauthentik-charts
-      version: 2026.8.3
+  chartRef:
+    kind: OCIRepository
+    name: authentik
   values:
     global:
       podLabels:

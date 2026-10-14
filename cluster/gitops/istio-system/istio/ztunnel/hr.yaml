@@ -1,19 +1,27 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: istio-ztunnel
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://gcr.io/istio-release/charts/ztunnel
+  ref:
+    tag: 1.30.5
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: istio-ztunnel
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: ztunnel
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: istio-charts
-      version: 1.30.5
+  chartRef:
+    kind: OCIRepository
+    name: istio-ztunnel
   values:
     profile: ambient
     logAsJson: true

@@ -1,4 +1,18 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: democratic-csi-zfs-generic-nfs
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/democratic-csi/charts/democratic-csi
+  ref:
+    tag: 0.15.1
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 # TODO tunnel via istio so that data is encrypted in transit
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -7,14 +21,9 @@ metadata:
   name: &app_name democratic-csi-zfs-generic-nfs
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: democratic-csi
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: democratic-csi-charts
-      version: 0.15.1
+  chartRef:
+    kind: OCIRepository
+    name: democratic-csi-zfs-generic-nfs
   # Not using Teleport for this until https://github.com/democratic-csi/democratic-csi/issues/454
   # is addressed
   valuesFrom:

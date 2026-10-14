@@ -1,4 +1,18 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: unifi-controller
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+  ref:
+    tag: 5.3.0
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 # TODO pull all unifi stuff - there is _a lot_ of phoning
 # home/analytics/telemetry. On top of that, there is no
@@ -12,15 +26,9 @@ metadata:
   name: unifi-controller
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: app-template
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: bjw-s-charts
-      version: 5.3.0
+  chartRef:
+    kind: OCIRepository
+    name: unifi-controller
   values:
     # This is not HA in any sense because the controller does not support
     # multiple concurrent instances, and I don't want to take the time to

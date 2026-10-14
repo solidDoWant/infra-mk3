@@ -16,7 +16,7 @@ Before asking the user anything, delegate research to a sub-agent to keep the ma
 ```
 Research the "<service>" application for deployment to a Kubernetes cluster. Find and report:
 
-1. Helm chart: Search https://kubesearch.dev for "<service>" — note chart name, repository URL, and latest version if found.
+1. Helm chart: Search https://kubesearch.dev for "<service>" — note chart name, repository URL, and latest version if found. Prefer an OCI chart (`oci://...`): check the project's README/release docs and common locations (ghcr.io/<org>/charts, ghcr.io/<org>/helm-charts, quay.io/<org>/charts) and confirm with `crane manifest <ref>:<version> | jq -r .config.mediaType` (expect `application/vnd.cncf.helm.config.v1+json`). Report an HTTPS repo only if no OCI chart exists.
 2. Container image: Prefer non-Docker Hub registries (ghcr.io, quay.io, registry.k8s.io, public.ecr.aws, etc.) over docker.io. Check in this order and report all that exist with their latest tag:
    a. `ghcr.io/home-operations/<name>` — community-maintained, rootless, hardened.
    b. The project's own GHCR/Quay/upstream-registry image (check the project's README or release docs — many projects publish to ghcr.io/<org>/<name> or quay.io/<org>/<name> in addition to or instead of Docker Hub).
@@ -87,9 +87,9 @@ Multiple Flux Kustomizations are needed when the service has:
 
 ### 2c: Helm Chart
 
-**Default: `app-template` v5.3.0** from `bjw-s-charts`. Use this for almost everything. Only deviate when the upstream chart provides substantial value that would require significant duplication to replicate in app-template (complex operator-managed resources, multi-component deployments with complex inter-service wiring, etc.). If proposing an external chart, name it and explain specifically why.
+**Default: `app-template` v5.3.0** from `oci://ghcr.io/bjw-s-labs/helm/app-template`. Use this for almost everything. Only deviate when the upstream chart provides substantial value that would require significant duplication to replicate in app-template (complex operator-managed resources, multi-component deployments with complex inter-service wiring, etc.). If proposing an external chart, name it and explain specifically why.
 
-If using an external chart that isn't already in `cluster/gitops/flux-system/flux/sources/helm/`, a new HelmRepository file is needed (see `references/file-patterns/flux-sources.md`).
+**Prefer OCI charts.** Charts are sourced from a per-HelmRelease OCIRepository in the same `hr.yaml`. Use a shared HelmRepository in `cluster/gitops/flux-system/flux/sources/helm/` only when the chart has no OCI publication (see `references/file-patterns/flux-sources.md`).
 
 ### 2d: Backend Services
 
@@ -263,7 +263,7 @@ The user must handle:
 - `references/file-patterns/backends-rabbitmq.md` — RabbitMQ cluster, cert infrastructure, per-consumer resources
 - `references/file-patterns/backends-s3.md` — ObjectBucketClaim and Kyverno transformation policy
 - `references/file-patterns/monitoring.md` — ServiceMonitor, VMServiceScrape, GrafanaDashboard
-- `references/file-patterns/flux-sources.md` — Adding new HelmRepository sources
+- `references/file-patterns/flux-sources.md` — OCIRepository chart sources (HelmRepository fallback)
 - `references/operators.md` — Envoy sidecar pattern, storage class guide, backend operator details
 - `references/envoy-sidecar-pg.yaml` — Reusable Envoy config for PostgreSQL mTLS proxying
 - `references/envoy-sidecar-redis.yaml` — Reusable Envoy config for Dragonfly/Redis mTLS proxying

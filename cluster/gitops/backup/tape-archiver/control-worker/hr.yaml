@@ -1,4 +1,18 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: tape-archiver-control-worker
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/soliddowant/charts/tape-archiver-control-worker
+  ref:
+    tag: 0.0.13
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 # tape-archiver control worker: Kubernetes-side orchestrator (snapshot
 # resolution, bin-packing) for tape backup runs. The bulk-data counterpart
@@ -11,14 +25,9 @@ metadata:
   name: tape-archiver-control-worker
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: tape-archiver-control-worker
-      version: 0.0.13
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: soliddowant-charts
+  chartRef:
+    kind: OCIRepository
+    name: tape-archiver-control-worker
   values:
     config:
       temporal:

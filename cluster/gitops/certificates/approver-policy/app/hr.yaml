@@ -1,4 +1,18 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: approver-policy
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://quay.io/jetstack/charts/cert-manager-approver-policy
+  ref:
+    tag: v0.28.0
+---
 # yaml-language-server: $schema=./schema.json
 # This service needs to be highly available.
 # If this service fails then cert-manager will fail.
@@ -8,15 +22,9 @@ metadata:
   name: &app_name approver-policy
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: cert-manager-approver-policy
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: jetstack-charts
-      version: v0.28.0
+  chartRef:
+    kind: OCIRepository
+    name: approver-policy
   values:
     crds:
       keep: true

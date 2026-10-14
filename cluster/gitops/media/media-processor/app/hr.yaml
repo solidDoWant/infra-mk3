@@ -1,4 +1,18 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: media-processor
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/soliddowant/charts/media-processor
+  ref:
+    tag: 0.0.39
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -6,14 +20,9 @@ metadata:
   name: media-processor
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: media-processor
-      version: 0.0.39
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: soliddowant-charts
+  chartRef:
+    kind: OCIRepository
+    name: media-processor
   values:
     config:
       temporal:

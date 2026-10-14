@@ -1,4 +1,18 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: victoria-metrics-license-service
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+  ref:
+    tag: 5.3.0
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 # README:
 # Per https://github.com/VictoriaMetrics/VictoriaMetrics/blob/281f1a94e45f9879076a0c207d8b0c9c30bca983/docs/enterprise.md#valid-cases-for-victoriametrics-enterprise,
@@ -14,15 +28,9 @@ metadata:
   name: victoria-metrics-license-service
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: app-template
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: bjw-s-charts
-      version: 5.3.0
+  chartRef:
+    kind: OCIRepository
+    name: victoria-metrics-license-service
   values:
     controllers:
       victoria-metrics-license-service:

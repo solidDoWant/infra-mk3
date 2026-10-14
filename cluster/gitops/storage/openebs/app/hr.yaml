@@ -1,18 +1,27 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: openebs
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/openebs/charts/openebs
+  ref:
+    tag: 4.6.2
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: openebs
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: openebs
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: openebs-charts
-      version: 4.6.2
+  chartRef:
+    kind: OCIRepository
+    name: openebs
   values:
     # Disable openebs-installed volume snapshot CRDs entirely
     openebs-crds: &crds

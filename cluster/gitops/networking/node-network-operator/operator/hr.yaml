@@ -1,19 +1,27 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: node-network-operator
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/soliddowant/charts/node-network-operator
+  ref:
+    tag: 0.0.11
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: node-network-operator
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: node-network-operator
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: soliddowant-charts
-      version: 0.0.11
+  chartRef:
+    kind: OCIRepository
+    name: node-network-operator
   values:
     config:
       crds:

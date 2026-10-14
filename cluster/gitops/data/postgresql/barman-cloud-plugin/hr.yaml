@@ -1,18 +1,27 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: plugin-barman-cloud
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/cloudnative-pg/charts/plugin-barman-cloud
+  ref:
+    tag: 0.8.1
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: &app_name plugin-barman-cloud
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: plugin-barman-cloud
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: cnpg-charts
-      version: 0.8.1
+  chartRef:
+    kind: OCIRepository
+    name: plugin-barman-cloud
   values:
     nameOverride: *app_name
     fullnameOverride: *app_name

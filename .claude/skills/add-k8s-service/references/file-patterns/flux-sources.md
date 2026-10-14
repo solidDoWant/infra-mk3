@@ -1,25 +1,43 @@
-# Adding New Flux Helm Sources
+# Flux Chart Sources
 
-HelmRepository resources live in `cluster/gitops/flux-system/flux/sources/helm/`. Each gets its own file named `<chart-name>-charts.yaml`.
+## OCI charts (default)
 
-Before adding a new source, check the existing files in that directory — the chart you need may already be registered.
-
-## OCI registry (most modern charts)
+Each HelmRelease gets its own `OCIRepository`, named after the HelmRelease and placed in the same `hr.yaml` directly above it. The chart version lives in `ref.tag`; Renovate bumps it there.
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/helmrepository_v1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
+kind: OCIRepository
 metadata:
-  name: <name>-charts
-  namespace: flux-system   # Needed for https://kubesearch.dev/ indexing
+  name: <service>
 spec:
-  url: oci://ghcr.io/<org>/helm
-  type: oci
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/<org>/charts/<chart>
+  ref:
+    tag: 1.2.3
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: <service>
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: <service>
 ```
 
-## HTTP/HTTPS Helm repository
+Verify the tag exists and is a chart before using it — some registries drop the `v` prefix the HTTPS repo uses (e.g. Rook):
+```bash
+crane manifest <registry>/<path>/<chart>:<tag> | jq -r .config.mediaType   # application/vnd.cncf.helm.config.v1+json
+```
+
+## HTTPS Helm repository (only when no OCI chart is published)
+
+HelmRepository resources live in `cluster/gitops/flux-system/flux/sources/helm/`, one file per repo named `<name>-charts.yaml`. Check that directory first — the repo may already be registered.
 
 ```yaml
 ---
@@ -28,17 +46,22 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: <name>-charts
-  namespace: flux-system
+  namespace: flux-system # Needed for https://kubesearch.dev/ indexing
 spec:
   url: https://charts.example.com
 ```
 
-After creating the file, reference the source in the HelmRelease:
+Reference it from the HelmRelease:
 ```yaml
-sourceRef:
-  kind: HelmRepository
-  namespace: flux-system
-  name: <name>-charts
+  chart:
+    spec:
+      chart: <chart>
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        namespace: flux-system
+        name: <name>-charts
+      version: 1.2.3
 ```
 
-New files in `cluster/gitops/flux-system/flux/sources/helm/` are picked up automatically — the `flux-sources` Kustomization points at the parent `sources/` directory and Flux discovers all YAML files recursively. No manual registration required.
+New files in `sources/helm/` are picked up automatically by the `flux-sources` Kustomization.

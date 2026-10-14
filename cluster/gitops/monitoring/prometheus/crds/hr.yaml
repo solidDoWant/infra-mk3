@@ -1,18 +1,27 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: prometheus-crds
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/prometheus-community/charts/prometheus-operator-crds
+  ref:
+    tag: 32.0.1
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: prometheus-crds
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: prometheus-operator-crds
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: prometheus-community-charts
-      version: 32.0.1
+  chartRef:
+    kind: OCIRepository
+    name: prometheus-crds
   # Only the types the VM operator converts are needed. Each served CRD costs
   # apiserver memory (OpenAPI specs, schemas, watch cache).
   values:

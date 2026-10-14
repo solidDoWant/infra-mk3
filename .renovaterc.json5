@@ -272,9 +272,8 @@
     },
     {
       description: "Kyverno chart pinned (see kyverno/app/hr.yaml): 3.6.3+ breaks service: apiCall contexts until kyverno/kyverno#16047 ships",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["kyverno"],
-      allowedVersions: "<=3.6.2",
+      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno"],
+      allowedVersions: "/^3\\.6\\.[0-2]$/",
     },
     {
       description: "mail 5.0.0-5.1.0 crash with metrics enabled (sed -i on the subPath-mounted logrotate.conf, bokysan/docker-postfix#278); fix #266 is unreleased",
@@ -310,15 +309,13 @@
     {
       description: "Rook: operator + cluster charts",
       groupName: "rook-ceph",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["rook-ceph", "rook-ceph-cluster"],
+      matchPackageNames: ["ghcr.io/rook/rook-ceph", "ghcr.io/rook/rook-ceph-cluster"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Istio: charts + istioctl",
       groupName: "istio",
-      matchPackageNames: ["base", "istiod", "cni", "ztunnel", "gateway", "istio/istioctl"],
-      matchDatasources: ["helm", "docker"],
+      matchPackageNames: ["/^gcr\\.io/istio-release/charts//", "istio/istioctl"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     // CRDs applied from release assets must move with their operator.
@@ -363,20 +360,19 @@
     {
       description: "Kyverno chart + dashboard (same chart version)",
       groupName: "kyverno",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["kyverno"],
+      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Cilium: chart (HelmRelease + bootstrap helmfile) + values schema ref + CLI in the devcontainer",
       groupName: "cilium",
-      matchPackageNames: ["cilium", "cilium/cilium", "cilium/cilium-cli"],
+      matchPackageNames: ["/(^|/)cilium$/", "cilium/cilium-cli"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "cert-manager: chart + cmctl in the devcontainer",
       groupName: "cert-manager",
-      matchPackageNames: ["cert-manager", "cert-manager/cmctl"],
+      matchPackageNames: ["quay.io/jetstack/charts/cert-manager", "cert-manager/cmctl"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -426,8 +422,7 @@
     {
       description: "Coder: chart + CLI image in the devcontainer + agent in the VM workspace image",
       groupName: "coder",
-      matchPackageNames: ["coder", "ghcr.io/coder/coder", "coder/coder"],
-      matchDatasources: ["helm", "docker", "github-releases"],
+      matchPackageNames: ["ghcr.io/coder/chart/coder", "ghcr.io/coder/coder", "coder/coder"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -470,13 +465,12 @@
     {
       description: "democratic-csi: chart + driver image (image tag sits in the chart's image map)",
       groupName: "democratic-csi",
-      matchPackageNames: ["democratic-csi", "ghcr.io/democratic-csi/democratic-csi"],
+      matchPackageNames: ["ghcr.io/democratic-csi/charts/democratic-csi", "ghcr.io/democratic-csi/democratic-csi"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Keep the 0.x chart on the democratic-csi group branch (the preset routes 0.x minors to major- branches)",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["democratic-csi"],
+      matchPackageNames: ["ghcr.io/democratic-csi/charts/democratic-csi"],
       additionalBranchPrefix: "",
     },
     {
@@ -512,13 +506,13 @@
     {
       description: "fluent-operator: operator + CRD charts + the fluent-bit/fluentd images it renders",
       groupName: "fluent-operator",
-      matchPackageNames: ["/^fluent-operator/", "/^ghcr\\.io/fluent/fluent-operator//"],
+      matchPackageNames: ["/^ghcr\\.io/fluent/helm-charts/fluent-operator/", "/^ghcr\\.io/fluent/fluent-operator//"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Volume snapshots: CRDs + snapshot-controller chart",
       groupName: "volume-snapshot",
-      matchPackageNames: ["kubernetes-csi/external-snapshotter", "snapshot-controller"],
+      matchPackageNames: ["kubernetes-csi/external-snapshotter", "ghcr.io/piraeusdatastore/helm-charts/snapshot-controller"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
 
