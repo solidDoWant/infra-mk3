@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -38,7 +39,7 @@ spec:
             image:
               # Needed until https://github.com/itzg/mc-router/pull/422, https://github.com/itzg/mc-router/pull/421 merges and are released
               repository: ghcr.io/soliddowant/mc-router
-              tag: 1.32.0-next
+              tag: 1.32.0-next@sha256:1c21cce19544e4d87f5df6fb2ff0dbf3e2cd9e6c6affa07ff99c7c64a1528acb
             env:
               API_BINDING: 0.0.0.0:8080
               CONNECTION_RATE_LIMIT: "10"
@@ -71,7 +72,7 @@ spec:
           discord-notifier:
             image:
               repository: public.ecr.aws/docker/library/python
-              tag: 3.15.0-slim
+              tag: 3.15.0-slim@sha256:f48fda6d59b2b3437781d1c3ccf4aa0e26ae871de3cdd758b49ab45ee7291619
             envFrom:
               - secretRef:
                   name: minecraft-router-discord-notifier-webhook

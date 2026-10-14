@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -31,7 +32,7 @@ spec:
           app:
             image:
               repository: ghcr.io/soliddowant/bazarr-whisper-proxy
-              tag: 0.0.13
+              tag: 0.0.13@sha256:a9190b4d397fa0c8672fcad61924ce6bc63fd80df747d9494948727e18fbf738
             env:
               # Upstream ASR — OpenAI-compatible /v1/audio/transcriptions on openarc-subtitles.
               OPENARC_BASE_URL: http://openarc-subtitles.media.svc.cluster.local:8000

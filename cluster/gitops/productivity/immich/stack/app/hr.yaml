@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -57,7 +58,7 @@ spec:
               # the client version is irrelevant. Docker Official Image via ECR — no
               # rootless ghcr psql-client image is maintained, and this isn't the app image.
               repository: public.ecr.aws/docker/library/postgres
-              tag: "18-alpine"
+              tag: "18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873"
             command: /scripts/inject.sh
             env:
               PGHOST: immich-postgres-rw.productivity.svc.cluster.local
@@ -87,7 +88,7 @@ spec:
             image:
               # cspell:words majorfi
               repository: ghcr.io/majorfi/immich-stack
-              tag: 0.2.43
+              tag: 0.2.43@sha256:52f39f24dc28ea18500455355c898c22ece3547ed2deb4590445d7ab784a4580
             env:
               API_URL: http://immich-server.productivity.svc.cluster.local:2283/api
               RUN_MODE: once

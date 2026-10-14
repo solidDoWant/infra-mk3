@@ -241,7 +241,7 @@ spec:
           mountPath: /blueprints/example
       extraContainers:
         - name: k8s-sidecar
-          image: ghcr.io/kiwigrid/k8s-sidecar:2.14.1
+          image: ghcr.io/kiwigrid/k8s-sidecar:2.14.1@sha256:092dbe0c335fba9af414a27630ca68f34df6185784fa847d9954187e69dbfdd7
           env:
             - name: LABEL
               value: k8s-sidecar.home.arpa/application

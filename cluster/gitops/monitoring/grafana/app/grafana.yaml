@@ -179,7 +179,7 @@ spec:
                   mountPath: /etc/grafana/secrets/postgres-grafana-user
             # This container watches the namespace for configmaps with the `dashboards` label
             # and creates files for all their keys under `FOLDER`
-            - image: ghcr.io/kiwigrid/k8s-sidecar:2.14.1
+            - image: ghcr.io/kiwigrid/k8s-sidecar:2.14.1@sha256:092dbe0c335fba9af414a27630ca68f34df6185784fa847d9954187e69dbfdd7
               name: k8s-sidecar
               volumeMounts:
                 - name: *shared_dashboards

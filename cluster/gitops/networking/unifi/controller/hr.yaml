@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -41,7 +42,7 @@ spec:
           app:
             image:
               repository: ghcr.io/goofball222/unifi
-              tag: 10.6.106
+              tag: 10.6.106@sha256:93438c15aa72109ffb753c498f466f6cab885efa69a5c7ff1921dfcfa301b693
             env:
               RUN_CHOWN: "false"
               LOGSTDOUT: "true"

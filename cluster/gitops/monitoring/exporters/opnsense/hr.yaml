@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -35,7 +36,7 @@ spec:
             image:
               # cspell:words athennamind
               repository: ghcr.io/athennamind/opnsense-exporter
-              tag: 0.0.17
+              tag: 0.0.17@sha256:04a28ad984a091ea1e8371cf515da8b38b1d00416f53e6b5c9d68fec39d92ce0
             env:
               OPNSENSE_EXPORTER_OPS_PROTOCOL: https
               # OPNsense isn't integrated with infra PKI yet
