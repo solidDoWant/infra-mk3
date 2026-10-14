@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  # Points the YAML extension's CRD schema lookups at crd-schema-publisher.
+  # Machine settings are outside git, which keeps the domain private.
+  configure-schemas:
+    silent: true
+    vars:
+      SETTINGS_PATH: '{{ .SETTINGS_PATH | default (printf "%s/.vscode-server/data/Machine/settings.json" (env "HOME")) }}'
+      PUBLIC_DOMAIN_NAME:
+        sh: >-
+          sops --decrypt --extract '["stringData"]["SECRET_PUBLIC_DOMAIN_NAME"]'
+          {{ shellQuote .ROOT_DIR }}/cluster/gitops/flux-system/flux/cluster/cluster-secrets.sops.yaml
+    cmd: >-
+      python3 -I {{ shellQuote .TASKFILE_DIR }}/set-crd-store-url.py
+      {{ shellQuote .SETTINGS_PATH }}
+      "https://kube-schemas.{{ .PUBLIC_DOMAIN_NAME }}"

@@ -102,7 +102,9 @@ SCHEMA_URL="$(get_chart_url)"
 HELM_RELEASE_API_VERSION="$(yq '.apiVersion' "${HELM_FILE_PATH}")"
 HELM_RELEASE_GROUP="${HELM_RELEASE_API_VERSION%%/*}"
 HELM_RELEASE_VERSION="${HELM_RELEASE_API_VERSION##*/}"
-HELM_RELEASE_SCHEMA_URL="https://kubernetes-schemas.pages.dev/$(echo "${HELM_RELEASE_GROUP}" | tr '[:upper:]' '[:lower:]')/helmrelease_$(echo "${HELM_RELEASE_VERSION}" | tr '[:upper:]' '[:lower:]').json"
+# Served from the cluster by crd-schema-publisher; the domain is a cluster secret.
+PUBLIC_DOMAIN_NAME="$(sops --decrypt --extract '["stringData"]["SECRET_PUBLIC_DOMAIN_NAME"]' "$(git rev-parse --show-toplevel)/cluster/gitops/flux-system/flux/cluster/cluster-secrets.sops.yaml")"
+HELM_RELEASE_SCHEMA_URL="https://kube-schemas.${PUBLIC_DOMAIN_NAME}/$(echo "${HELM_RELEASE_GROUP}" | tr '[:upper:]' '[:lower:]')/helmrelease_$(echo "${HELM_RELEASE_VERSION}" | tr '[:upper:]' '[:lower:]').json"
 
 # Download the helm release schema and set the ref
 SCHEMA_PATH="$(dirname "${HELM_FILE_PATH}")/schema.json"
