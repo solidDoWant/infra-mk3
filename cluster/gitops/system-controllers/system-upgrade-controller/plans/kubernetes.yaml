@@ -29,7 +29,7 @@ spec:
   # TODO set an upgrade window
   # window:
   prepare: &prepare
-    image: mirror.gcr.io/alpine/k8s:1.37.1
+    image: mirror.gcr.io/alpine/k8s:1.37.1@sha256:712dc5385d1c1a3f83b747fa9e40f64d433a97f72ff42f9755ff7dd1f62846e4
     envs:
       - name: NODE_NAME
         valueFrom:

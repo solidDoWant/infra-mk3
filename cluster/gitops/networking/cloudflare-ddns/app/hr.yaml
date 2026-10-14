@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -32,7 +33,7 @@ spec:
           app:
             image:
               repository: ghcr.io/larivierec/cloudflare-ddns
-              tag: v1.2.9
+              tag: v1.2.9@sha256:50607d32726e29a0fa014c83be4b95f3d1b6e883f0f4da45ed3465ada3978c4a
             args:
               - --zone-name=${SECRET_PUBLIC_DOMAIN_NAME}
               - --record-name=public-wan.${SECRET_PUBLIC_DOMAIN_NAME}

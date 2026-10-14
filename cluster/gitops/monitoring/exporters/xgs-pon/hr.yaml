@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -35,7 +36,7 @@ spec:
             image:
               # Upstream publishes here; no home-operations image exists
               repository: quay.io/prometheuscommunity/json-exporter
-              tag: v0.8.0
+              tag: v0.8.0@sha256:3aad20d41a0b31dfaaf7ab1a091440e92a82a61ef68b76750eac0ad50a983652
             args:
               - --config.file=/etc/json_exporter/config.yml
               - --log.format=json

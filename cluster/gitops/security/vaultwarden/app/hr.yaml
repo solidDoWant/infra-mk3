@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -35,7 +36,7 @@ spec:
           app:
             image:
               repository: ghcr.io/dani-garcia/vaultwarden
-              tag: 1.37.4-alpine
+              tag: 1.37.4-alpine@sha256:19ea2b669945d842dadc3d500f2d6a795866a003330f59a47b9634658bae98bb
             env:
               # General config
               DOMAIN: https://vaultwarden.${SECRET_PUBLIC_DOMAIN_NAME}

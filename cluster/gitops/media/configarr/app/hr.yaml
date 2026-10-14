@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -47,7 +48,7 @@ spec:
             image:
               # cspell:words raydak
               repository: ghcr.io/raydak-labs/configarr
-              tag: 1.35.0
+              tag: 1.35.0@sha256:13ef4d9a6ebc13178c8c74813dd12e11ea7331e186a492d79d938513887b96d4
             env:
               RADARR_API_KEY:
                 secretKeyRef:

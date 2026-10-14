@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -42,7 +43,7 @@ spec:
           app:
             image:
               repository: public.ecr.aws/nginx/nginx-unprivileged
-              tag: 1.31.6-alpine
+              tag: 1.31.6-alpine@sha256:884e0b7f42f303641b0f4e78755aea647521dca0b89ca3be7992ad78b5c07434
             resources:
               requests:
                 memory: 128Mi

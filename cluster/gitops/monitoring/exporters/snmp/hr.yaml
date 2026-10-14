@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/bjw-s-labs/helm/app-template
   ref:
     tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -34,7 +35,7 @@ spec:
           app:
             image:
               repository: quay.io/prometheus/snmp-exporter
-              tag: v0.30.1
+              tag: v0.30.1@sha256:e5fd5e8b43ace6c088fe9bf0b37b7fff0e04380bee352be7ec41b853a4dd5859
             args:
               # Built-in modules (ups_mib, liebert_pdu, ...). Auth names must not
               # collide with the built-in public_v1/public_v2.

@@ -37,26 +37,26 @@ COPY install-racadm.sh /tmp/install-racadm.sh
 RUN /tmp/install-racadm.sh
 
 # yq
-COPY --from=mikefarah/yq:4.54.1 /usr/bin/yq /usr/local/bin/yq
+COPY --from=mikefarah/yq:4.54.1@sha256:4b3d9475d65571d28cbb19544d3820ec2945e4c8b2f18279394282b8dc3a592e /usr/bin/yq /usr/local/bin/yq
 
 # gomplate
-COPY --from=hairyhenderson/gomplate:stable /gomplate /usr/local/bin/gomplate
+COPY --from=hairyhenderson/gomplate:stable@sha256:991ce1b8a1307fa32f9b8050a7b339697464664236cfddb1c4079df4aa5f1cd4 /gomplate /usr/local/bin/gomplate
 
 # dive
 # "temporary" until https://github.com/wagoodman/dive/pull/511 is merged
-COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6 /usr/local/bin/dive /usr/local/bin/dive
+COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6@sha256:ec44733c7f17587f4cd3776d604d0ec41d81dd5ece4692ea386b1cac6f45752e /usr/local/bin/dive /usr/local/bin/dive
 
 # talosctl
 COPY --from=ghcr.io/siderolabs/talosctl:v1.14.2@sha256:b655ae1c73789c4789fcf6fbd61c8f45400ed4b3bd9892a26092fcd4d8d95d86 /talosctl /usr/local/bin/talosctl
 
 # topf
-COPY --from=ghcr.io/postfinance/topf:v0.6.1 /usr/local/bin/topf /usr/local/bin/topf
+COPY --from=ghcr.io/postfinance/topf:v0.6.1@sha256:2b4b23918da0a7b0f2cbca6caac535daf71cdfc1cb4075017d015c00224f0972 /usr/local/bin/topf /usr/local/bin/topf
 
 # helmfile
 COPY --from=ghcr.io/helmfile/helmfile:v1.8.1@sha256:9c29ece2fb6ec3f8c1432be9d29526f3cfe35d7e59e066d0aa5c4b3e819f2165 /usr/local/bin/helmfile /usr/local/bin/helmfile
 
 # kubectl
-COPY --from=registry.k8s.io/kubectl:v1.37.1 /bin/kubectl /usr/local/bin/kubectl
+COPY --from=registry.k8s.io/kubectl:v1.37.1@sha256:b7cab618e281b1ee7484e7b706a96e2135fbb6e072c2a573a7dab4e87d7f2385 /bin/kubectl /usr/local/bin/kubectl
 
 # flux
 COPY --from=ghcr.io/fluxcd/flux-cli:v2.9.6@sha256:b1ac18156f227af9a524b842a96f2c20986c7a779ef721df3ba4e4540f449d76 /usr/local/bin/flux /usr/local/bin/flux
@@ -68,7 +68,7 @@ COPY --from=ghcr.io/coder/coder:v2.38.0@sha256:38a4cfc548b096484d6d1743e5f1a5af1
 COPY --from=hashicorp/terraform:1.16 /bin/terraform /usr/local/bin/terraform
 
 # tflint
-COPY --from=ghcr.io/terraform-linters/tflint:v0.64.0 /usr/local/bin/tflint /usr/local/bin/tflint
+COPY --from=ghcr.io/terraform-linters/tflint:v0.64.0@sha256:1c595f42d794c32c45a6ea8b58655fd66433d4ca3b1bc631c574a48d120bd19f /usr/local/bin/tflint /usr/local/bin/tflint
 
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
@@ -81,7 +81,7 @@ ARG HELM_DIFF_VERSION=v3.15.15
 RUN helm plugin install --verify=false https://github.com/databus23/helm-diff --version "${HELM_DIFF_VERSION}"
 
 # kustomize
-COPY --from=registry.k8s.io/kustomize/kustomize:v5.8.3 /app/kustomize /usr/local/bin/kustomize
+COPY --from=registry.k8s.io/kustomize/kustomize:v5.8.3@sha256:429eda4a1c76a7de458d0c4ca3ded9b5d764899ff6bdaeccc1d98b1b6ee873e4 /app/kustomize /usr/local/bin/kustomize
 
 # Cilium CLI
 # renovate: datasource=github-releases depName=cilium/cilium-cli
