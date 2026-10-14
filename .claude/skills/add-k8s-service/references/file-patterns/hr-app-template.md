@@ -4,7 +4,6 @@ Use the latest app-template by default. Always pin the chart version and all ima
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:

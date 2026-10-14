@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the kubelet plugin's liveness-probe echo: the gRPC health check sends an
 # empty NodePrepareResources to its own socket every 10s (period hard-coded in
 # the chart), and the driver logs each call at V(0), so verbosity can't gate it.

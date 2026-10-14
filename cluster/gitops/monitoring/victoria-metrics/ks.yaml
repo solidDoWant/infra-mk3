@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -18,7 +17,6 @@ spec:
     name: infra-mk3
   wait: true
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -39,7 +37,6 @@ spec:
   dependsOn:
     - name: zfs-pool-provisioner
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -61,7 +58,6 @@ spec:
     - name: cluster-issuers
     - name: prometheus-crds
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -92,7 +88,6 @@ spec:
     - name: openebs
     - name: fluent-crds
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 # The k8s-stack chart's default rules and dashboards, vendored from its sync
 # job by sync-job/tool.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -117,7 +112,6 @@ spec:
     - name: grafana-crds
 # Haven't really used this so I'm disabling it.
 # ---
-# # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 # apiVersion: kustomize.toolkit.fluxcd.io/v1
 # kind: Kustomization
 # metadata:
@@ -146,7 +140,6 @@ spec:
 #     - name: openebs
 #     - name: victoria-metrics-k8s-stack
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

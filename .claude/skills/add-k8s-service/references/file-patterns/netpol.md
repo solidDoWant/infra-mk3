@@ -4,7 +4,6 @@ Every service requires a CiliumNetworkPolicy. Always add comments explaining wha
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:

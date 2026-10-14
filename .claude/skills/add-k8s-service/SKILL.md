@@ -209,6 +209,8 @@ defaultPodOptions:
 
 **Do not add `topologySpreadConstraints` per-service** — pod topology spread is configured at the cluster level (kube-scheduler defaults) and applies automatically. Adding per-service TSCs is redundant and creates drift.
 
+**Schema modelines**: Don't add `# yaml-language-server: $schema=` comments to Kubernetes resources. The editor picks each document's schema from its `apiVersion`/`kind`, and gets CRD schemas from the in-cluster crd-schema-publisher (`.vscode/settings.json` → `"kubernetes"`). Keep the bjw-s modeline on app-template HelmReleases, because it adds typed `values`. A new YAML file under `cluster/` that has no `apiVersion`/`kind` (Helm values, Envoy config) needs an exclude in that list.
+
 **Resource limits**: Always set `resources.limits.memory` equal to `resources.requests.memory`, if a memory request is set. CPU limits should be omitted (unbounded) to allow bursting.
 
 **PodDisruptionBudget**: Required when replicas ≥ 2. For app-template, configure per-controller inline:

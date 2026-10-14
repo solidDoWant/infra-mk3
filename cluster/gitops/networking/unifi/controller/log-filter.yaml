@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
 # One UniFi log4j event: a `[YYYY-MM-DD HH:MM:SS,mmm] ` header line, then every
 # following line up to the next header (Java stack traces, multi-line
 # messages). log4j writes each event in one write, so its lines are contiguous.
@@ -21,7 +20,6 @@ spec:
       regex: '/^(?!\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\] )/'
       next: cont
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Rejoins the UniFi controller's stack traces with their log line, one record
 # per event. Named to sort before `kubernetes` so it sees raw lines; joined
 # records are re-emitted at the start of the pipeline, which this filter skips.
@@ -40,7 +38,6 @@ spec:
         parser: unifi-log4j
         emitterName: unifi-multiline
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Splits a UniFi event `[<time>] <<thread>> <LEVEL> <logger> - <msg>` into
 # `log_fields.*`: `_msg` is the message line alone, and a joined stack trace
 # goes to `log_fields.stacktrace`. Runs after `kubernetes`.

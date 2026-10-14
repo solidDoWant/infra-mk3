@@ -5,9 +5,29 @@
             "file:///workspaces/69eeb36fa263e0b74bea6f438d51bf8e170b6a837e74c0989d831c7627480fb2/ansible/remote/switches/sx6036/setup.yaml"
         ],
         "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/requirements.json": "file:///workspaces/69eeb36fa263e0b74bea6f438d51bf8e170b6a837e74c0989d831c7627480fb2/ansible/requirements.yaml",
-        "https://json.schemastore.org/kustomization": "file:///workspaces/infra-mk3/cluster/kustomizations/bootstrap-adoption.yaml",
-        "kubernetes://schema/kustomize.toolkit.fluxcd.io/v1@kustomization": "file:///workspaces/infra-mk3/cluster/gitops/cilium/cilium/ks.yaml"
+        // Schemas are picked per document from apiVersion/kind. Custom resources
+        // come from yaml.kubernetesCRDStore.url (crd-schema-publisher), which is
+        // set in machine settings by `task editor:configure-schemas` so the domain
+        // stays out of git. Excludes are YAML files without apiVersion/kind.
+        "kubernetes": [
+            "cluster/**/*.yaml",
+            "!cluster/bootstrap/helmfile.yaml",
+            "!cluster/charts/**/Chart.yaml",
+            "!cluster/charts/**/values.yaml",
+            "!cluster/**/*-values.yaml",
+            "!cluster/**/*-transformer.yaml",
+            "!cluster/**/envoy.yaml",
+            "!cluster/**/envoy-config.yaml",
+            "!cluster/**/envoy-config/pg-*.yaml",
+            "!cluster/**/envoy-config/postgres.yaml",
+            "!cluster/**/envoy-config/redis-only.yaml",
+            "!cluster/**/*-sds.yaml",
+            "!cluster/**/docker-compose.yaml",
+            "!cluster/gitops/flux-system/flux/monitoring/ksm-custom-metrics/config.yaml",
+            "!cluster/gitops/monitoring/grafana/app/configmap-dashboard-provider-config.yaml"
+        ]
     },
+    "yaml.kubernetesVersion": "v1.36.5",
     "ansible.python.interpreterPath": "/usr/local/python/current/bin/python",
     "go-template.patterns": [
         "**/*.gomplate"

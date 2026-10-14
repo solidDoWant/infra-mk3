@@ -43,5 +43,5 @@
 	},
 	"privileged": true,
 	// TODO move this to dockerfile or script
-	"postCreateCommand": "sudo cp -rv /vscode/.ssh/. ~/.ssh && sudo chown -Rv \"$(id -u):$(id -g)\" ~/.ssh && chmod 600 ~/.ssh/id_rsa && pipx install --include-deps ansible ansible-lint && cat ansible/requirements.txt | xargs pipx inject ansible && ansible-galaxy install -r ansible/requirements.yaml"
+	"postCreateCommand": "sudo cp -rv /vscode/.ssh/. ~/.ssh && sudo chown -Rv \"$(id -u):$(id -g)\" ~/.ssh && chmod 600 ~/.ssh/id_rsa && pipx install --include-deps ansible ansible-lint && cat ansible/requirements.txt | xargs pipx inject ansible && ansible-galaxy install -r ansible/requirements.yaml && (task editor:configure-schemas || echo 'Run `task editor:configure-schemas` to enable CRD schemas')"
 }

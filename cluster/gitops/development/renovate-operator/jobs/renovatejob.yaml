@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=../../../../../schemas/crds/renovatejob_v1alpha1.json
 # Every repository the GitHub App is installed on, except infra-mk3. No
 # postUpgradeTasks commands are allowed here: the command is matched by string,
 # but the code it runs comes from the repository being processed.
@@ -15,7 +14,6 @@ spec:
   discoveryFilters:
     - "!/^soliddowant\\/infra-mk3$/i"
 ---
-# yaml-language-server: $schema=../../../../../schemas/crds/renovatejob_v1alpha1.json
 # infra-mk3 only, with postUpgradeTasks commands allowed. Anyone who can push to
 # infra-mk3 already controls the cluster through Flux.
 apiVersion: renovate-operator.mogenius.com/v1alpha1

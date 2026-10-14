@@ -471,7 +471,6 @@ Prerequisites:
 VXLAN overlay network (optional, deploy something similar via distro-specific config alternatively)
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
 # This is the link that pods will join to via the bridge CNI plugin. The bridge VNI plugins will add one end of a veth pair to this bridge, and
 # the other end to the pod's network namespace.
 # This bridge will also have a VXLAN interface added to it, so that pods can communicate across nodes.
@@ -486,7 +485,6 @@ spec:
     # This matches the wireguard MTU, which is the limiting factor for the VPN gateway network.
     mtu: 1420
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
 # This is the link that the VXLAN should use for transceiving packets. 
 # YOU MUST CHANGE THIS to match the primary interface on your nodes.
 apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
@@ -499,7 +497,6 @@ spec:
   # The operator will just assume that the link exists and is properly configured.
   unmanaged: {}
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/solidDoWant/node-network-operator/refs/tags/v0.0.6/schemas/link_v1alpha1.json
 # The VXLAN links deployed by this connect the bridges on each node to each other, allowing pods to communicate across nodes.
 apiVersion: nodenetworkoperator.soliddowant.dev/v1alpha1
 kind: Link

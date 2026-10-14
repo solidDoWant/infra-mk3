@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 # Cluster-side footprint of the tape-archiver data worker running on
 # ubuntu-storage-host-01 (the workload itself is a systemd-managed container,
 # see ansible/remote/vms/storage/roles/setup_tape_archiver): the Teleport
@@ -28,7 +27,6 @@ spec:
     - name: teleport-cluster
     - name: teleport-cr-mirror-policy
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -57,7 +55,6 @@ spec:
     - name: teleport-cluster
     - name: teleport-cr-mirror-policy
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

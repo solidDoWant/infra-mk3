@@ -52,7 +52,6 @@ fi
   printf '# Re-run the script to refresh the kinds list against the cluster.\n'
   cat <<'EOF'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:

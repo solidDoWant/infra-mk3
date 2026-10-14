@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
 # The OBC bucket name has a random suffix and the S3 endpoint host is derived
 # from cluster config — neither is known at chart-render time. This policy
 # rebuilds them as a flat ConfigMap whose keys the temporal HelmRelease pulls

@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
 # The instance manager's exporter stays scrapeable (`up` = 1) while its queries
 # fail, so TargetDown never fires and the missing metrics go unnoticed
 # (e.g. pg_stat_wal on PG18).

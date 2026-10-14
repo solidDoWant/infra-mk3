@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops ceph-exporter's `system:0` line: a stray boost "no error" code printed
 # on every successful poll, and the container's only output.
 #
@@ -19,7 +18,6 @@ spec:
     - grep:
         exclude: 'log ^system:0$'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the log-collector sidecar's 15-minute loop: rook's generated script runs
 # under `set -x` with `logrotate --verbose`, and neither is configurable.
 #
@@ -71,7 +69,6 @@ spec:
     - grep:
         exclude: 'log ^switching euid from [0-9]+ to [0-9]+ and egid from [0-9]+ to [0-9]+ \(pid [0-9]+\)$'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the active ceph-mgr's housekeeping chatter. Unlike the mons, little of
 # it can be gated in cephConfig: the pgmap `[DBG]` clog mirror is level 0, most
 # of the rest is per-module Python INFO, and the prometheus access log honours
@@ -112,7 +109,6 @@ spec:
     - grep:
         exclude: 'log "GET /metrics HTTP/'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the mgr `watch-active` sidecar's 15s "active mgr unchanged" poll (three
 # lines per tick, nearly all of its output). The cadence is hard-coded and
 # rook's logLevel doesn't reach these lines.
@@ -136,7 +132,6 @@ spec:
     - grep:
         exclude: 'log I \| cephcmd: successfully checked mgr_role label\. checking again in '
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the two mon log sources cephConfig can't gate (dout level 0). The rest
 # of the mon noise is gated at the source in hr.yaml's `mon:` cephConfig; prefer
 # that lever.
@@ -158,7 +153,6 @@ spec:
     - grep:
         exclude: 'log _set_new_cache_sizes'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Extracts Ceph daemon lines into `log_fields.*` and sets `_msg` to the message
 # alone. Two shapes:
 #   debug <time> <thread> <prio> <msg>

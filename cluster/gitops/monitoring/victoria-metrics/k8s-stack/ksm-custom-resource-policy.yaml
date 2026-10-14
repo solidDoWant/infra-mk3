@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
 # This Kyverno policy pulls in configmaps from all namespaces, with a specific,
 # label and uses them to build a new configmap. This new configmap is used by
 # kube-state-metrics as the configuration for exporting custom resource

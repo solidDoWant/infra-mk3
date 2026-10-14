@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops dragonfly's INFO line for clients that disconnect before sending
 # anything. ~99% of it is Teleport's `default` health_check_config: both agents
 # TCP-dial every registered database every ~30s and close. Disabling the check

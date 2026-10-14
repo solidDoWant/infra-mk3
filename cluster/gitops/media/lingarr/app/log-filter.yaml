@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
 # One Lingarr log event: a `[<time>] [<Level>] <category>: <msg>` line, then the
 # exception it carries (`<Type>: <msg>`, indented `at` frames, `--->` inner
 # exceptions, `--- End of ...` markers).
@@ -21,7 +20,6 @@ spec:
       regex: '/^(\s|---|[A-Za-z_][\w.`]*(Exception|Error)( \(0x[0-9A-Fa-f]+\))?: )/'
       next: cont
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Rejoins exceptions with their log line, one record per event. Named to sort
 # before `kubernetes` so it sees raw lines; joined records are re-emitted at
 # the start of the pipeline, which this filter skips.
@@ -40,7 +38,6 @@ spec:
         parser: lingarr
         emitterName: lingarr-multiline
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` and `log_fields.*` for Lingarr. Runs after `kubernetes`.
 # - `[<time>] [<Level>] <category>: <msg>`: level, logger, msg; a joined
 #   exception goes to `log_fields.exception`. Lingarr's `|Green|`-style

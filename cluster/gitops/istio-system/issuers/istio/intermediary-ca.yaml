@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/certificate_v1.json
 # This CA will issue certs for istio services across multiple namespaces. The requests will only come
 # from istio-csr within the istio-system namespace.
 apiVersion: cert-manager.io/v1
@@ -50,7 +49,6 @@ spec:
     group: cert-manager.io
   secretName: istio-intermediary-ca
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/clusterissuer_v1.json
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:

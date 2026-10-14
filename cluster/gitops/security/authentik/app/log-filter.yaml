@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops authentik's access-log records for its health and metrics endpoints
 # (in-container healthcheck, kubelet probes, metrics scrapes).
 #
@@ -25,7 +24,6 @@ spec:
     - grep:
         exclude: 'log "event": ?"(/-/(health/(live|ready)|metrics)/|/health/(live|ready)/|/metrics)".*"status": ?200[,}]'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on authentik server/worker to `event` instead of the JSON
 # envelope (the request path, for access-log records). Fields stay under
 # `log_fields.*`. Runs after `kubernetes`, which populates `log_fields`.

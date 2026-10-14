@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -27,7 +26,6 @@ spec:
 #
 # ingress-gateways-base — everything whose status kstatus CAN read, so it keeps
 # the default `wait: true` (health-check every applied object).
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -64,7 +62,6 @@ spec:
 # wins before `current: "true"` is ever read (verified on kustomize-controller
 # v1.8.5; Istio issue https://github.com/istio/istio/issues/39605). These
 # objects apply fine; they just can't be health-checked, so the wait is skipped.
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -93,7 +90,6 @@ spec:
 # objects: the resources it used to own are adopted by -base/-policies (which
 # reconcile first via dependsOn), and disabling prune guarantees this no-op can
 # never delete them during that ownership hand-off.
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

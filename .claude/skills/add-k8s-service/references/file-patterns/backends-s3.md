@@ -4,7 +4,6 @@
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/objectbucket.io/objectbucketclaim_v1alpha1.json
 apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
 metadata:
@@ -25,7 +24,6 @@ Use a Kyverno `Policy` to transform the OBC-generated resources into what the ap
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
 apiVersion: kyverno.io/v1
 kind: Policy
 metadata:

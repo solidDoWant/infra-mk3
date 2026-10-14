@@ -136,7 +136,6 @@ spec:
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/rabbitmqcluster_v1beta1.json
 apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
@@ -192,7 +191,6 @@ spec:
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/rabbitmq.com/vhost_v1beta1.json
 apiVersion: rabbitmq.com/v1beta1
 kind: Vhost
 metadata:

@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Keeps CoreDNS query logs out of VictoriaLogs except for failures. Query
 # logging stays on, so `kubectl logs` still shows everything.
 apiVersion: fluentbit.fluent.io/v1alpha2
@@ -29,7 +28,6 @@ spec:
     - grep:
         exclude: 'log IN s3\.${SECRET_PUBLIC_DOMAIN_NAME}\.([a-z0-9-]+\.)?(svc\.)?cluster\.local'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Parses CoreDNS `[<LEVEL>] <msg>` lines into `log_fields.*` and drops the
 # level prefix from `_msg`. Query-log lines, in the log plugin's default
 #   <client>:<port> - <id> "<type> <class> <name> <proto> <size> <do> <bufsize>" <rcode> <flags> <rsize> <duration>

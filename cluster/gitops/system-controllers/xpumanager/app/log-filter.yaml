@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops xpumd's ~1Hz `getFabricPorts result false` warning: these GPUs have no
 # Xe Link, so the poll always comes back empty. No flag silences it
 # (intel/xpumanager#101). Exact-message exclude, so real errors still ship.

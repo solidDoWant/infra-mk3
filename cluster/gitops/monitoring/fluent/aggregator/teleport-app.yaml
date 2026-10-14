@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportappv3_v1.json
 # Exposes the aggregator's forward input (24224) as a Teleport TCP app so
 # off-cluster hosts can ship logs through an authenticated tbot
 # application-tunnel instead of a LAN-exposed listener. The tunnel provides
@@ -23,7 +22,6 @@ metadata:
 spec:
   uri: tcp://fluentd-aggregator.monitoring.svc.cluster.local:24224
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportrolev7_v1.json
 # Grants access to the fluentd-forward app only. Attached to the
 # ubuntu-storage-host-01 machine bot (the storage host's tbot), whose
 # application-tunnel service dials this app; see
