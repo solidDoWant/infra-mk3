@@ -5,7 +5,7 @@ ARG BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:rolling@sha256:f144425ff09be
 FROM ${BASE_IMAGE}
 
 # renovate: datasource=github-releases depName=intel/xpumanager
-ARG XPUMANAGER_VERSION=v2.2.0
+ARG XPUMANAGER_VERSION=v2.3.0
 
 RUN \
     export DEBIAN_FRONTEND=noninteractive && \

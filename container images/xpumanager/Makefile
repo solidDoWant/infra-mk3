@@ -1,6 +1,6 @@
 BASE_IMAGE = public.ecr.aws/docker/library/ubuntu:26.04
 # renovate: datasource=github-releases depName=intel/xpumanager
-XPUMANAGER_VERSION = v2.2.0
+XPUMANAGER_VERSION = v2.3.0
 
 NEW_IMAGE = ghcr.io/soliddowant/xpumanager
 NEW_IMAGE_FULL = $(NEW_IMAGE):$(XPUMANAGER_VERSION:v%=%)
