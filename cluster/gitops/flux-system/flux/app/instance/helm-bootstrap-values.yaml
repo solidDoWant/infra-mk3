@@ -12,7 +12,9 @@ instance:
     registry: ghcr.io/fluxcd
     # Use the manifests embedded in the operator image instead of pulling them
     # from ghcr.io. This removes a registry dependency from the operator, but
-    # the version above must be one that the operator image ships.
+    # the version above must be one that the operator image ships. The chart
+    # renders this as null, so the field is removed after rendering (see the
+    # HelmRelease postRenderer and the bootstrap helmfile jsonPatches).
     artifact: ""
   # The image automation and image reflector controllers are not deployed.
   # Updates are handled by Renovate.

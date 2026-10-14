@@ -127,5 +127,15 @@ releases:
     version: 0.61.0
     values:
       - ../gitops/flux-system/flux/app/instance/helm-bootstrap-values.yaml
+    # Same as the HelmRelease postRenderer
+    jsonPatches:
+      - target:
+          group: fluxcd.controlplane.io
+          version: v1
+          kind: FluxInstance
+          name: flux
+        patch:
+          - op: remove
+            path: /spec/distribution/artifact
     needs:
       - flux-system/flux-operator
