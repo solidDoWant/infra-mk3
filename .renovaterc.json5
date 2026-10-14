@@ -446,6 +446,12 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "backup-tool: dr-job chart + the image its consumers pin (which the pods it starts also run)",
+      groupName: "backup-tool",
+      matchPackageNames: ["ghcr.io/soliddowant/charts/dr-job", "ghcr.io/soliddowant/backup-tool"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
       groupName: "media-processor",
       matchPackageNames: ["/(^|/)media-processor$/", "solidDoWant/media-processor"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
