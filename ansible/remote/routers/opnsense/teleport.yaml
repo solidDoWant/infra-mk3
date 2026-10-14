@@ -1,8 +1,9 @@
 ---
 # Registers the routers as agentless Teleport SSH nodes (Teleport doesn't run on
 # FreeBSD). The proxy connects to the stock sshd, which trusts Teleport's OpenSSH
-# user CA and presents a Teleport-signed host certificate. The Teleport side is
-# cluster/gitops/security/teleport/configuration/opnsense.yaml.
+# user CA and presents a Teleport-signed host certificate. The node resources are
+# created here rather than by the Teleport operator, which copies every CR label
+# (including Flux's) onto the node.
 #
 # OPNsense includes sshd_config.d/*.conf before its generated config and leaves
 # the directory alone (opnsense/core#8206, 25.1+), so these files persist across
@@ -26,6 +27,11 @@
     user_ca_path: "{{ teleport_ssh_dir }}/user_ca.pub"
     host_key_path: "{{ teleport_ssh_dir }}/host_key"
     host_cert_path: "{{ host_key_path }}-cert.pub"
+    # The Kubernetes VLAN, where the Teleport proxy connects from
+    teleport_interface: opt2
+    node_labels:
+      type: vm
+      purpose: router
 
   handlers:
     - name: Restart sshd
@@ -230,6 +236,37 @@
         - name: Fail on the invalid sshd config
           ansible.builtin.fail:
             msg: sshd rejected {{ sshd_include_path }}, so it was removed
+
+    - name: Get the Teleport node
+      delegate_to: localhost
+      ansible.builtin.command: tctl get node/{{ hostname }} --format=json
+      register: teleport_node
+      changed_when: false
+      failed_when: false
+      check_mode: false
+    - name: Register the Teleport node
+      vars:
+        node:
+          kind: node
+          sub_kind: openssh
+          version: v2
+          metadata:
+            name: "{{ hostname }}"
+            labels: "{{ node_labels }}"
+          spec:
+            addr: "{{ devices[hostname].physical[teleport_interface].ip_address }}:22"
+            hostname: "{{ hostname }}"
+        current: "{{ (teleport_node.stdout | from_json | first) if teleport_node.rc == 0 else {} }}"
+      delegate_to: localhost
+      ansible.builtin.command:
+        cmd: tctl create --force /dev/stdin
+        stdin: "{{ node | to_json }}"
+      changed_when: true
+      when: >-
+        current.sub_kind | default('') != node.sub_kind or
+        current.metadata.labels | default({}) != node.metadata.labels or
+        current.spec.addr | default('') != node.spec.addr or
+        current.spec.hostname | default('') != node.spec.hostname
 
     - name: Trust the Teleport host CA on the Ansible controller
       delegate_to: localhost
