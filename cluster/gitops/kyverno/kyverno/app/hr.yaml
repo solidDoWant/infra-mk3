@@ -123,6 +123,18 @@ spec:
                 - patch
                 - update
                 - watch
+            # release-terminal-virt-launcher-endpoints drops the Service
+            # selector label from live-migration source pods.
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+              verbs:
+                - get
+                - list
+                - patch
+                - update
+                - watch
             # Read-only, and only the reports controller actually needs these:
             # its resource-report controller opens a watch on every kind
             # matched by any policy, and a missing grant leaves that kind with
@@ -148,6 +160,14 @@ spec:
                 - talos.dev
               resources:
                 - serviceaccounts
+              verbs: *read_only_verbs
+            - apiGroups:
+                # release-terminal-virt-launcher-endpoints triggers on the
+                # migration status subresource.
+                - kubevirt.io
+              resources:
+                - virtualmachineinstancemigrations
+                - virtualmachineinstancemigrations/status
               verbs: *read_only_verbs
       priorityClassName: system-cluster-critical
       podDisruptionBudget:
