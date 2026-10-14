@@ -941,6 +941,11 @@
     {
       description: "Digest-only updates (same tag, new digest): one PR, held for Dashboard approval",
       matchUpdateTypes: ["digest"],
+      // Branch-tracked raw files (`# branch=`) only ever get digest updates;
+      // they get their own PRs.
+      matchPackageNames: [
+        "!/^https://github\\.com/(temporalio/dashboards|fluent/fluent-bit-docs|solidDoWant/tug2|frebib/nzbget-exporter|fluxcd/flux2-monitoring-example|Tricked-dev/vwmetrics)$/",
+      ],
       groupName: "digest updates",
       groupSlug: "digest-updates",
       group: { commitMessageTopic: "digests" },
