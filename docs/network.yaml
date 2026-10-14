@@ -258,8 +258,6 @@ devices:
           allow_firewall_ntp_access: true
           allow_firewall_bgp_access: true
           allow_firewall_dns_responses: true
-          # Teleport proxy -> agentless SSH node
-          allow_firewall_ssh_access: true
       opt3: &opnsense_opt3
         physical_name: vtnet4
         ip_address: 10.4.0.1

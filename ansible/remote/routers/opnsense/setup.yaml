@@ -45,6 +45,8 @@
 #   `/etc/rc.d/os-release onestart` (OPNsense skips base rc.d, so the os
 #   collector finds no /etc/os-release)
 # * Firewall rules for k8s VLAN to nodes running prometheus-node-exporter
+# * Firewall automation rule on opt2 (Kubernetes VLAN): pass TCP 22 from the opt2
+#   network to the opt2 address, for the Teleport proxy (see teleport.yaml)
 # * NTP: enable iburst on all pool servers (Services > Network Time > General)
 #   so ntpd syncs in <1min on boot instead of ~8-10min
 
@@ -819,32 +821,6 @@
                               - port: "{{ item[1] }}"
               loop: "{{ network.physical | dict2items | product(ports) }}"
               when: item[0].value.firewall.enable_firewall_access | default(false)
-            - name: Allow access to firewall SSH port
-              community.general.xml:
-                path: "{{ local_config_path }}"
-                xpath: "{{ rules_xpath }}"
-                add_children:
-                  - rule:
-                      uuid: "{{ 9999999999999999999999 | random | to_uuid }}"
-                      _:
-                        - type: pass
-                        - interface: "{{ item.key }}"
-                        - ipprotocol: inet
-                        - statetype: keep state
-                        - descr: Allow access to firewall SSH port
-                        - direction: in
-                        - quick: "1"
-                        - protocol: tcp
-                        - category: Firewall management
-                        - source:
-                            _:
-                              - network: "{{ item.key }}"
-                        - destination:
-                            _:
-                              - network: (self)
-                              - port: "22"
-              loop: "{{ network.physical | dict2items }}"
-              when: item.value.firewall.allow_firewall_ssh_access | default(false)
             - name: Allow pinging the firewall
               community.general.xml:
                 path: "{{ local_config_path }}"

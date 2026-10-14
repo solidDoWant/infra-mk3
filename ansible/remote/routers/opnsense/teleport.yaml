@@ -8,6 +8,11 @@
 # the directory alone (opnsense/core#8206, 25.1+), so these files persist across
 # config reloads and firmware upgrades.
 #
+# Clients that already know a router's ed25519 key are offered the cert first,
+# and fall back to its (new) key when they don't trust the CA, so they see a
+# host key change. They need an @cert-authority known_hosts entry for the
+# Teleport host CA instead, which this adds for the Ansible controller.
+#
 # Needs a `tsh login` with a role that can sign host certs. Skipped when Teleport
 # is unreachable, e.g. while bootstrapping (Teleport can't be up without the routers).
 - name: Configure Teleport SSH access
@@ -21,8 +26,6 @@
     user_ca_path: "{{ teleport_ssh_dir }}/user_ca.pub"
     host_key_path: "{{ teleport_ssh_dir }}/host_key"
     host_cert_path: "{{ host_key_path }}-cert.pub"
-    # The Kubernetes VLAN, where traffic from the Teleport proxy arrives
-    teleport_interface: opt2
 
   handlers:
     - name: Restart sshd
@@ -52,11 +55,18 @@
     - name: Load network.yaml
       ansible.builtin.include_vars:
         file: ../../../../docs/network.yaml
+    # Every address sshd answers on (including CARP VIPs), since clients
+    # validate the cert against the address they connect to
     - name: Set the host certificate principals
+      vars:
+        interfaces: "{{ devices[hostname].physical.values() }}"
       ansible.builtin.set_fact:
-        host_cert_principals:
-          - "{{ hostname }}"
-          - "{{ devices[hostname].physical[teleport_interface].ip_address }}"
+        host_cert_principals: >-
+          {{
+            [hostname] +
+            (interfaces | map(attribute='ip_address') | select('match', '^[0-9.]+$') | list) +
+            (interfaces | selectattr('gateway', 'defined') | map(attribute='gateway.address') | list)
+          }}
 
     # Signs user certs for agentless nodes
     - name: Export the Teleport OpenSSH CA
@@ -66,16 +76,22 @@
       register: openssh_ca
       changed_when: false
       check_mode: false
+    - name: Export the Teleport host CA
+      delegate_to: localhost
+      run_once: true
+      ansible.builtin.command: tctl auth export --type=host
+      register: host_ca
+      changed_when: false
+      check_mode: false
     - name: Get the Teleport host CA fingerprints
       delegate_to: localhost
       run_once: true
-      ansible.builtin.shell:
-        cmd: >-
-          set -o pipefail &&
-          tctl auth export --type=host |
-          awk '/^@cert-authority/ {print $3, $4}' |
-          ssh-keygen -l -f -
-        executable: /bin/bash
+      ansible.builtin.command:
+        cmd: ssh-keygen -l -f -
+        stdin: |
+          {% for line in host_ca.stdout_lines if line is match('@cert-authority ') %}
+          {{ line.split()[2:4] | join(' ') }}
+          {% endfor %}
       register: host_ca_fingerprints
       changed_when: false
       check_mode: false
@@ -214,3 +230,15 @@
         - name: Fail on the invalid sshd config
           ansible.builtin.fail:
             msg: sshd rejected {{ sshd_include_path }}, so it was removed
+
+    - name: Trust the Teleport host CA on the Ansible controller
+      delegate_to: localhost
+      ansible.builtin.blockinfile:
+        path: ~/.ssh/known_hosts
+        marker: "# {mark} Teleport host CA for {{ hostname }} (ansible/remote/routers/opnsense/teleport.yaml)"
+        block: |
+          {% for line in host_ca.stdout_lines if line is match('@cert-authority ') %}
+          @cert-authority {{ host_cert_principals | join(',') }} {{ line.split()[2:] | join(' ') }}
+          {% endfor %}
+        create: true
+        mode: "0600"
