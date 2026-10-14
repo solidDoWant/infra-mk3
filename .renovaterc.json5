@@ -271,6 +271,13 @@
       ],
     },
     {
+      description: "charts-mirror is a stop-gap: it prunes a chart 6 months after upstream publishes an official OCI chart",
+      matchPackageNames: ["/^ghcr\\.io/home-operations/charts-mirror//"],
+      prBodyNotes: [
+        "⚠️ Mirrored chart. Check whether upstream now publishes an official OCI chart (https://github.com/home-operations/charts-mirror/issues/8) and switch the OCIRepository `url` to it.",
+      ],
+    },
+    {
       description: "Kyverno chart pinned (see kyverno/app/hr.yaml): 3.6.3+ breaks service: apiCall contexts until kyverno/kyverno#16047 ships",
       matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno"],
       allowedVersions: "/^3\\.6\\.[0-2]$/",
@@ -384,7 +391,7 @@
     {
       description: "Goldilocks: chart + image tag override",
       groupName: "goldilocks",
-      matchPackageNames: ["goldilocks", "us-docker.pkg.dev/fairwinds-ops/oss/goldilocks"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/goldilocks", "us-docker.pkg.dev/fairwinds-ops/oss/goldilocks"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -434,7 +441,7 @@
     {
       description: "KEDA: chart + CRD kustomize base",
       groupName: "keda",
-      matchPackageNames: ["keda", "kedacore/keda"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/keda", "kedacore/keda"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -625,13 +632,11 @@
     },
     // Monorepo chart tags (<chart>-helm-chart-X.Y.Z) don't match; link the chart changelog.
     {
-      matchDatasources: ["helm"],
-      matchPackageNames: ["external-dns"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/external-dns"],
       changelogUrl: "https://github.com/kubernetes-sigs/external-dns/blob/master/charts/external-dns/CHANGELOG.md",
     },
     {
-      matchDatasources: ["helm"],
-      matchPackageNames: ["metrics-server"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/metrics-server"],
       changelogUrl: "https://github.com/kubernetes-sigs/metrics-server/blob/master/charts/metrics-server/CHANGELOG.md",
     },
     {
@@ -672,8 +677,7 @@
       changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/vpa",
     },
     {
-      matchDatasources: ["helm"],
-      matchPackageNames: ["goldilocks"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/goldilocks"],
       changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/goldilocks",
     },
 
@@ -710,13 +714,13 @@
         "ghcr.io/siderolabs/talosctl",
         "ghcr.io/siderolabs/installer",
         // Rook/Ceph
-        "rook-ceph",
-        "rook-ceph-cluster",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
         "/(^|/)ceph/ceph$/",
         // Each minor adds CRD fields and must match the ceph-csi-operator
         // subchart bundled by rook-ceph (rook 1.20 -> 1.0.x, 1.21 -> 1.1.x).
         // Bump it by hand in the Rook minor PR. Patches are backports only.
-        "ceph-csi-drivers",
+        "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
       ],
       dependencyDashboardApproval: true,
       semanticCommitType: "feat",
@@ -733,7 +737,7 @@
         "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
         "ghcr.io/siderolabs/installer",
-        "ceph-csi-drivers",
+        "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
       ],
       separateMinorPatch: true,
     },
@@ -745,8 +749,8 @@
         "ghcr.io/siderolabs/kubelet",
         "registry.k8s.io/kubectl",
         "alpine/k8s",
-        "rook-ceph",
-        "rook-ceph-cluster",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
       ],
       separateMinorPatch: true,
       separateMultipleMinor: true,
@@ -761,18 +765,25 @@
         "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
         "ghcr.io/siderolabs/installer",
-        "rook-ceph",
-        "rook-ceph-cluster",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
       ],
       semanticCommitType: "feat",
       labels: ["type/minor"],
     },
+    // OCI charts use the docker datasource; tell them apart by path.
     {
       matchDatasources: ["docker"],
+      matchPackageNames: ["!/(^|[/-])(charts?|charts-mirror|helm|helm-charts)\\//", "!ghcr.io/rook/rook-ceph", "!ghcr.io/rook/rook-ceph-cluster", "!ghcr.io/intel/intel-gpu-resource-driver-chart"],
       addLabels: ["renovate/container"],
     },
     {
       matchDatasources: ["helm"],
+      addLabels: ["renovate/helm"],
+    },
+    {
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/(^|[/-])(charts?|charts-mirror|helm|helm-charts)\\//", "ghcr.io/rook/rook-ceph", "ghcr.io/rook/rook-ceph-cluster", "ghcr.io/intel/intel-gpu-resource-driver-chart"],
       addLabels: ["renovate/helm"],
     },
     {

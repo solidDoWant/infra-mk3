@@ -1,19 +1,32 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: amd-resource-drivers-gpu
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/home-operations/charts-mirror/k8s-gpu-dra-driver
+  ref:
+    tag: 1.0.1
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token.actions.githubusercontent.com$
+        subject: ^https://github.com/home-operations/charts-mirror.*$
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: amd-resource-drivers-gpu
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: k8s-gpu-dra-driver
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: rocm-charts
-      version: v1.0.1
+  chartRef:
+    kind: OCIRepository
+    name: amd-resource-drivers-gpu
   values:
     cdi:
       dynamicPath: /var/cdi/dynamic
