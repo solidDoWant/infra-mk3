@@ -10,7 +10,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/fluxcd/flux2//manifests/install/?timeout=120&version=v2.9.6
+  - https://github.com/fluxcd/flux2//manifests/install/?timeout=120&ref=b9c17924adb533d3617ec7de97a7b0f4acc07b39 # v2.9.6
   - ./netpol.yaml
 patches:
   # Don't deploy the image automation controller, or the image reflector controller.
