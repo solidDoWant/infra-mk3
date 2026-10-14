@@ -59,7 +59,7 @@ spec:
     server:
       enabled: true
       image:
-        repository: temporalio/server
+        repository: mirror.gcr.io/temporalio/server
         # When bumping: if the release includes temporalio/temporal#11429 (PR #11431),
         # drop the Temporal excludeFilters in cilium/cilium/app/helm-bootstrap-values.yaml.
         tag: 1.32.1@sha256:acecbab5b0b8ae9cf4012b508866ca97feda3709577bf157b537239f40029049
@@ -374,7 +374,7 @@ spec:
     admintools:
       enabled: true
       image:
-        repository: temporalio/admin-tools
+        repository: mirror.gcr.io/temporalio/admin-tools
         tag: 1.32.1@sha256:9ef0dc5b063bf4ffd5c1512de72e0e73e225bd2c7006a18ce69bd592a8862a83
       # Same fsGroup reasoning as schema.securityContext — admintools mounts the
       # same postgres TLS secrets, and its image runs as user 1000.
@@ -419,7 +419,7 @@ spec:
       enabled: true
       replicaCount: 2
       image:
-        repository: temporalio/ui
+        repository: mirror.gcr.io/temporalio/ui
         tag: 2.55.0
       # TEMPORAL_ADDRESS is hardcoded by the chart (web-deployment.yaml) using the
       # release name + namespace + frontend port — including it here causes a

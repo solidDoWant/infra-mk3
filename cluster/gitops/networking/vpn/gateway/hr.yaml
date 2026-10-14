@@ -43,7 +43,7 @@ spec:
           setup-nat:
             # Use the same image just to avoid pulling another image.
             image: &image # cspell:words qmcgaw
-              repository: qmcgaw/gluetun
+              repository: ghcr.io/qdm12/gluetun
               tag: v3.41.3
             env:
               VPN_INTERFACE: tun0 # Interface for VPN traffic

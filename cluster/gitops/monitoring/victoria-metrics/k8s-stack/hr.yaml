@@ -35,11 +35,11 @@ spec:
     victoria-metrics-operator:
       fullnameOverride: victoria-metrics-operator
       image:
-        repository: docker.io/victoriametrics/operator
+        repository: quay.io/victoriametrics/operator
         tag: v0.75.0@sha256:78da26b41a819093707be2ab6a65a5dc19f43d58ec52f30b49a545c2c6b7bd55
       configReloader:
         image:
-          repository: docker.io/victoriametrics/operator
+          repository: quay.io/victoriametrics/operator
           tag: config-reloader-v0.75.0@sha256:11c5d33b2112571e72cdc020b63c8045f2cd523fec4768b67a91f96e36b05c59
       crds:
         enabled: false
@@ -54,6 +54,10 @@ spec:
       # Disable the operator's per-field default resource injection for VMAlert so we can
       # omit the CPU limit
       env:
+        # Registry for operator-defaulted images (e.g. VMAuth), which otherwise resolve
+        # to Docker Hub. Images that already name a registry are left as-is.
+        - name: VM_CONTAINERREGISTRY
+          value: quay.io
         - name: VM_VMALERTDEFAULT_USEDEFAULTRESOURCES
           value: "false"
         # Same reason, for vmselect and vmagent: the operator fills in any resource
@@ -212,7 +216,7 @@ spec:
           enabled: true
           spec:
             image:
-              repository: docker.io/victoriametrics/vmauth
+              repository: quay.io/victoriametrics/vmauth
               tag: v1.154.0-enterprise@sha256:908db04430f50f5f2890b2c04e144e4ca2c52f5680bfe1df9ba72fb3fa983312
             hostAliases:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
@@ -242,7 +246,7 @@ spec:
         vmselect:
           revisionHistoryLimitCount: 1
           image:
-            repository: docker.io/victoriametrics/vmselect
+            repository: quay.io/victoriametrics/vmselect
             tag: v1.154.0-enterprise-cluster@sha256:c196a772674dabca4ec30a5dc06b097955a060679979d6e806a094b450fc6a63
           resources:
             # Right-sized 2026-08-01 from 14d of metrics: p95 CPU 378m / peak
@@ -313,7 +317,7 @@ spec:
         vminsert:
           revisionHistoryLimitCount: 1
           image:
-            repository: docker.io/victoriametrics/vminsert
+            repository: quay.io/victoriametrics/vminsert
             tag: v1.154.0-enterprise-cluster@sha256:be0899ce9b849ce535b7fc5b4c38731d191bb7f91a6141de2c0547b9ed38d148
           resources:
             requests:
@@ -351,7 +355,7 @@ spec:
         vmstorage:
           revisionHistoryLimitCount: 1
           image:
-            repository: docker.io/victoriametrics/vmstorage
+            repository: quay.io/victoriametrics/vmstorage
             tag: v1.154.0-enterprise-cluster@sha256:3477f310fe6a75df2c3532bb9976a6bd1c7faf5f8e9622d846a4c16b287fb0a1
           # Peak RSS ~2.3Gi, idle ~1.3Gi
           resources:
@@ -422,7 +426,7 @@ spec:
     alertmanager:
       spec:
         image:
-          repository: docker.io/prom/alertmanager
+          repository: quay.io/prometheus/alertmanager
           tag: v0.34.1@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
@@ -475,7 +479,7 @@ spec:
     vmalert:
       spec:
         image:
-          repository: docker.io/victoriametrics/vmalert
+          repository: quay.io/victoriametrics/vmalert
           tag: v1.154.0-enterprise@sha256:7c4cb2d3dad21ee3fe2d314399dcf4334b1c9dd40de358c4887de2c3d8636d80
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
@@ -528,7 +532,7 @@ spec:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
         image:
-          repository: docker.io/victoriametrics/vmagent
+          repository: quay.io/victoriametrics/vmagent
           tag: v1.154.0-enterprise@sha256:954babb0ae3ef6aec3b5167bf634c34f6c8b02af5b0ca177edb49c055825dd5b
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}

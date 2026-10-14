@@ -54,9 +54,9 @@ spec:
           inject-keys:
             image:
               # Client-only use (psql); the SQL relies on server-side functions so
-              # the client version is irrelevant. docker.io fallback — no rootless
-              # ghcr psql-client image is maintained, and this isn't the app image.
-              repository: docker.io/library/postgres
+              # the client version is irrelevant. Docker Official Image via ECR — no
+              # rootless ghcr psql-client image is maintained, and this isn't the app image.
+              repository: public.ecr.aws/docker/library/postgres
               tag: "18-alpine"
             command: /scripts/inject.sh
             env:

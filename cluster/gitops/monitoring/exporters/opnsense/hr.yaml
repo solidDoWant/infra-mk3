@@ -98,7 +98,7 @@ spec:
         containers:
           app: &firmware_update_check_app
             image:
-              repository: alpine/curl
+              repository: quay.io/curl/curl
               tag: 8.22.0
             args:
               - --fail

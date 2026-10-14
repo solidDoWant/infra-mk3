@@ -1,4 +1,4 @@
-BASE_IMAGE = ubuntu:26.04
+BASE_IMAGE = public.ecr.aws/docker/library/ubuntu:26.04
 # renovate: datasource=github-releases depName=intel/xpumanager
 XPUMANAGER_VERSION = v2.2.0
 

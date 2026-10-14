@@ -33,7 +33,7 @@ spec:
         containers:
           app:
             image:
-              repository: grafana/grafana-image-renderer
+              repository: mirror.gcr.io/grafana/grafana-image-renderer
               tag: v5.12.6
             env:
               LOG_FORMAT: json

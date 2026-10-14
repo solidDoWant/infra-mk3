@@ -10,7 +10,7 @@ spec:
     kubernetes.io/hostname: talos-k8s-mixed-01
   containers:
     - name: admin
-      image: ubuntu:22.04
+      image: public.ecr.aws/docker/library/ubuntu:22.04
       command:
         - sleep
         - "999999999999"
@@ -33,7 +33,7 @@ spec:
     kubernetes.io/hostname: talos-k8s-mixed-02
   containers:
     - name: admin
-      image: ubuntu:22.04
+      image: public.ecr.aws/docker/library/ubuntu:22.04
       command:
         - sleep
         - "999999999999"
@@ -56,7 +56,7 @@ spec:
     kubernetes.io/hostname: talos-k8s-mixed-03
   containers:
     - name: admin
-      image: ubuntu:22.04
+      image: public.ecr.aws/docker/library/ubuntu:22.04
       command:
         - sleep
         - "999999999999"

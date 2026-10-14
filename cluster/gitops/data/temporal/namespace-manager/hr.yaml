@@ -61,7 +61,7 @@ spec:
           # is brought in via the admin-tools image volume below.
           manager:
             image:
-              repository: badouralix/curl-jq
+              repository: mirror.gcr.io/badouralix/curl-jq
               tag: latest@sha256:1e7c0284e24572ace7170df9fc91f15fd3b79ebf056d4dde17244d5d74bbfabc
             command:
               - /script/manager.sh
@@ -117,7 +117,7 @@ spec:
       # /img/admin-tools/usr/local/bin/temporal (referenced via $TEMPORAL).
       admin-tools:
         type: image
-        image: temporalio/admin-tools:1.32.1@sha256:9ef0dc5b063bf4ffd5c1512de72e0e73e225bd2c7006a18ce69bd592a8862a83
+        image: mirror.gcr.io/temporalio/admin-tools:1.32.1@sha256:9ef0dc5b063bf4ffd5c1512de72e0e73e225bd2c7006a18ce69bd592a8862a83
         advancedMounts:
           temporal-namespace-manager:
             manager:

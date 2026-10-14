@@ -52,7 +52,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: nginx-logger
-          image: nginxinc/nginx-unprivileged:1.27.2-alpine
+          image: public.ecr.aws/nginx/nginx-unprivileged:1.27.2-alpine
           resources:
             limits:
               memory: "128Mi"

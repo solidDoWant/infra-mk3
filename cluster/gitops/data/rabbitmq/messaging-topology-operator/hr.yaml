@@ -39,9 +39,7 @@ spec:
         containers:
           operator:
             image:
-              # Pulling from quay.io needs https://github.com/rabbitmq/messaging-topology-operator/issues/978
-              # repository: quay.io/rabbitmqoperator/messaging-topology-operator
-              repository: rabbitmqoperator/messaging-topology-operator
+              repository: quay.io/rabbitmqoperator/messaging-topology-operator
               tag: 1.20.3
             env:
               OPERATOR_NAMESPACE:
