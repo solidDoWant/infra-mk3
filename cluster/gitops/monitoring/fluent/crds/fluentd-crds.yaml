@@ -8,6 +8,7 @@ spec:
   url: oci://ghcr.io/fluent/helm-charts/fluent-operator-fluentd-crds
   ref:
     tag: 4.3.0
+    digest: sha256:8b010d419894eac412fa6a77b520cfa7a799d9b6c11ab4bec0f1e616fc14b7dc
   # Signed by a shared reusable workflow; the identity does not pin the fluent repo.
   verify:
     provider: cosign
