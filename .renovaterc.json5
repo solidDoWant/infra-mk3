@@ -416,7 +416,9 @@
     {
       description: "Istio: charts + images + istioctl",
       groupName: "istio",
-      matchPackageNames: ["/^gcr\\.io/istio-release/charts//", "/^gcr\\.io/istio-release/(pilot|proxyv2|install-cni|ztunnel)$/", "istio/istioctl"],
+      // 1.31+ is not published to gcr.io/istio-release: charts moved to
+      // ghcr.io, images to Docker Hub (pulled via mirror.gcr.io).
+      matchPackageNames: ["/^ghcr\\.io/istio/release/charts//", "/^docker\\.io/istio/(pilot|proxyv2|install-cni|ztunnel)$/", "istio/istioctl"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     // CRDs applied from release assets must move with their operator.
