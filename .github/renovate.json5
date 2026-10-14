@@ -40,6 +40,16 @@
     },
   ],
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
+  // Default PR body, but the Configuration section only lists settings that
+  // differ from this repo's defaults (a schedule, automerge, a non-default
+  // rebase policy, Immortal), and is dropped when nothing does. Innermost
+  // replace runs first: default schedule lines, then the empty Schedule
+  // header, then the default Automerge/Rebasing/Ignore lines, then the
+  // bare heading.
+  prBodyTemplate: "{{{header}}}{{{table}}}{{{warnings}}}{{{notes}}}{{{changelogs}}}{{{replace '^\\n\\n---\\n\\n### Configuration\\n\\n$' '' \
+    (replace '[^\\n]*\\*\\*(Automerge\\*\\*: Disabled by config|Rebasing\\*\\*: Whenever PR becomes conflicted,|Ignore\\*\\*:)[^\\n]*\\n\\n' '' \
+    (replace '[^\\n]*\\*\\*Schedule\\*\\*: [^\\n]*\\n\\n\\n\\n' '' \
+    (replace '- (Branch creation|Automerge)\\n  - At any time \\(no schedule defined\\)\\n' '' configDescription)))}}}{{{controls}}}{{{footer}}}",
   // Tags can be re-pushed; a digest pins the exact content. Digest-only
   // updates then also follow re-pushes of floating tags (latest, branches).
   pinDigests: true,
