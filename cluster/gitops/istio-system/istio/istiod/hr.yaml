@@ -34,7 +34,7 @@ spec:
     profile: ambient
     pilot:
       # A ref containing `/` bypasses hub/tag/variant.
-      image: registry.istio.io/release/pilot:1.30.5-distroless@sha256:78052a996140d7f0a3f03d04fb3352714cbc40e0b69dcf70b59ee07511ff3dfb
+      image: gcr.io/istio-release/pilot:1.30.5-distroless@sha256:78052a996140d7f0a3f03d04fb3352714cbc40e0b69dcf70b59ee07511ff3dfb
       autoscaleMin: 2
       # Right-sized 2026-08-01 from 14d of metrics. Chart default is 500m/2048Mi;
       # measured p95 CPU 13m (p99 17m, max 60m) and peak working set 435Mi. This
@@ -70,9 +70,9 @@ spec:
     global:
       # Injected into gateways and sidecars.
       proxy:
-        image: registry.istio.io/release/proxyv2:1.30.5-distroless@sha256:658e29ad3b72b20f62f3133088d12ac2abd29abe119209478babce32fd44a94d
+        image: gcr.io/istio-release/proxyv2:1.30.5-distroless@sha256:658e29ad3b72b20f62f3133088d12ac2abd29abe119209478babce32fd44a94d
       proxy_init:
-        image: registry.istio.io/release/proxyv2:1.30.5-distroless@sha256:658e29ad3b72b20f62f3133088d12ac2abd29abe119209478babce32fd44a94d
+        image: gcr.io/istio-release/proxyv2:1.30.5-distroless@sha256:658e29ad3b72b20f62f3133088d12ac2abd29abe119209478babce32fd44a94d
       caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
       istiod:
         # Continuous in-cluster config analysis. Disabled: it emitted ~1600

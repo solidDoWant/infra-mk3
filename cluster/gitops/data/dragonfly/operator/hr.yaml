@@ -25,7 +25,7 @@ spec:
       enabled: false
     manager:
       image:
-        repository: docker.dragonflydb.io/dragonflydb/operator
+        repository: ghcr.io/dragonflydb/operator
         tag: v1.7.0@sha256:3bfe011c73a0f642cc49808c34e2199ff378b08f2201e8bd134115706b39b9b1
       extraArgs:
         - --metrics-bind-address=0.0.0.0:8080

@@ -21,7 +21,7 @@ spec:
     name: istio-cni
   values:
     profile: ambient
-    image: registry.istio.io/release/install-cni:1.30.5-distroless@sha256:7285115c6b02054c059b71dff0a446dc045a65b1c5cdc652806c94aed1de8d73
+    image: gcr.io/istio-release/install-cni:1.30.5-distroless@sha256:7285115c6b02054c059b71dff0a446dc045a65b1c5cdc652806c94aed1de8d73
     global:
       logAsJson: true
     cni:
