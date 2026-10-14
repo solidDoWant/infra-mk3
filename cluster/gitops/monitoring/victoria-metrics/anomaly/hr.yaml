@@ -9,6 +9,11 @@ spec:
   url: oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-anomaly
   ref:
     tag: 1.12.19
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/VictoriaMetrics/helm-charts/\.github/workflows/release\.yaml@refs/.+$
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 # cspell:words pgmajfault
