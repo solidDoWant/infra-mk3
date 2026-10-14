@@ -14,6 +14,7 @@ spec:
     # Affects our Postgres/Dragonfly CA-bundle policies. Bump back to
     # current once # https://github.com/kyverno/kyverno/pull/16047 is released.
     tag: 3.6.2
+    digest: sha256:97358c9404b6dfdf0905fcb3220c2d0a8c82525c4071c580a9eaca8a6ab56839
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
