@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops helm-controller's per-reconcile "nothing to do" lines, plus the fixed set
 # of PodSecurity admission warnings echoed for known-privileged releases.
 #
@@ -24,7 +23,6 @@ spec:
     - grep:
         exclude: 'log "msg":"would violate PodSecurity'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Ships only error-level records from kustomize-controller. An allowlist, so new
 # heartbeat lines in future Flux versions are dropped automatically.
 #
@@ -45,7 +43,6 @@ spec:
     - grep:
         regex: 'log "level":"error"'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops notification-controller's "no alerts found" line, logged for every event
 # because the cluster has no Alert objects.
 #
@@ -64,7 +61,6 @@ spec:
     - grep:
         exclude: 'log "msg":"discarding event, no alerts found for the involved object"'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops source-controller's per-reconcile "artifact up-to-date" line. Stored
 # artifacts, packaged charts, garbage collection and errors still ship.
 apiVersion: fluentbit.fluent.io/v1alpha2
@@ -80,7 +76,6 @@ spec:
     - grep:
         exclude: 'log "msg":"artifact up-to-date with remote revision'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on the Flux controllers to `msg` instead of the JSON envelope.
 # Fields stay under `log_fields.*`. Runs after `kubernetes`, which populates
 # `log_fields`.

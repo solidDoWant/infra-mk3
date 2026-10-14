@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/certificate_v1.json
 # Dashboard serving cert (dashboard.sslCertificateRef). The gateway
 # re-encrypts to it (BackendTLSPolicy in httproute.yaml) so the dashboard sees
 # HTTPS, which its SAML handler needs to build the right URLs.
@@ -31,7 +30,6 @@ spec:
     name: storage-intermediary-ca
   secretName: rook-ceph-dashboard-tls
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/policy.cert-manager.io/certificaterequestpolicy_v1alpha1.json
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:

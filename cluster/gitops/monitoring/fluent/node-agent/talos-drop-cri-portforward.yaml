@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops containerd's (the Talos `cri` service) port-forward lifecycle narration.
 # On mixed-01 this was ~96% of the cri stream (~177k lines/day/node): 99.2% info,
 # and the only real signal is RemoveContainer failures.

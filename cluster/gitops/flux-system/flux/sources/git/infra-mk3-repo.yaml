@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/gitrepository_v1.json
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
@@ -29,7 +28,6 @@ spec:
 # trigger the update
 
 # ---
-# # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
 # apiVersion: source.toolkit.fluxcd.io/v1
 # kind: GitRepository
 # metadata:
@@ -50,7 +48,6 @@ spec:
 #     !/cluster/gitops
 #     !/cluster/bootstrap/kustomization.yaml
 # ---
-# # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
 # # This is a workaround to shift the "/cluster/gitops" directory to the root path.
 # # This makes fluxtomizations a bit less verbose.
 # apiVersion: source.toolkit.fluxcd.io/v1

@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops CNPG Pooler metrics-scrape chatter: each scrape opens three
 # admin-console connections over the unix socket, and pgbouncer logs three lines
 # per connection. Also drops the exporter's `Missing metric` for peers rows,
@@ -23,7 +22,6 @@ spec:
     - grep:
         exclude: 'log "msg":"Missing metric"'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on CNPG pods to the readable message instead of the JSON envelope:
 # `record.message` (postgres), `record.msg` (pgbouncer), else `msg`. Fields stay
 # under `log_fields.*`. Runs after `kubernetes`, which populates `log_fields`.

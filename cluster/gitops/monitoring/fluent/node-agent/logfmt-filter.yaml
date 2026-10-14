@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Parses logfmt lines (Go slog/logrus text: cilium, external-dns, exporters,
 # ...) into `log_fields.*` and sets `_msg` to `msg`. Lua rather than the
 # built-in logfmt parser, which accepts bare words (any text "parses") and

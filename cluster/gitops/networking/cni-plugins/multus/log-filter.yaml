@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Extracts multus (and its whereabouts IPAM) `<time> [<level>] <msg>` lines
 # into `log_fields.*` and sets `_msg` to the message alone. `verbose` is
 # multus's info tier. klog and logfmt (cilium-cni) lines are handled by

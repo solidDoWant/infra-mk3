@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/policy_v1.json
 # Routes Renovate's traffic through a proxy that retries ghcr.io lookups
 # (envoy.yaml): adds it to the executor pods as a native sidecar, plus the
 # global config that points Renovate at it. The RenovateJobTemplate has no

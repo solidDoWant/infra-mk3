@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportworkloadidentityv1_v1.json
 # Read-only access to the ${NAMESPACE} Temporal namespace. Consumed by KEDA
 # Temporal scalers in this namespace (e.g. the tape-archiver control worker's
 # ScaledJob), which only need DescribeTaskQueue backlog reads, never write

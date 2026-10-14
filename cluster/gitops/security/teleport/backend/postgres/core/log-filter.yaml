@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the two LOG lines Postgres writes for every logical-decoding session.
 # Teleport's change feed polls pg_logical_slot_get_changes() every second per
 # auth pod, opening a new session each time.

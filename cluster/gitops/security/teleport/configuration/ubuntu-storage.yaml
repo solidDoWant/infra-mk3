@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportprovisiontoken_v2.json
 apiVersion: resources.teleport.dev/v2
 kind: TeleportProvisionToken
 metadata:
@@ -48,7 +47,6 @@ spec:
         # Pulled from `teleport tpm identify` on the node
         ek_public_hash: 078b92640cc40c3c798817f3188af3c40a5b854db237ac86f89b71044b6832c6
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportbotv1_v1.json
 # Machine-scoped bot: one identity for all of this host's cluster
 # credentials (tape-archiver Temporal JWT, log-shipping tunnel). Managed
 # host-side by the shared setup_tbot role
@@ -68,7 +66,6 @@ spec:
     # cluster/gitops/monitoring/fluent/aggregator/teleport-app.yaml).
     - fluentd-forward-sender
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/resources.teleport.dev/teleportprovisiontoken_v2.json
 # TPM join token for the machine bot. Same EK trust chain as the SSH node
 # token above — the -bot suffix because that token claims the plain
 # hostname.

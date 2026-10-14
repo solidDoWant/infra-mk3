@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 # Teleport CRs (bot/role/token/workload identity) live alongside the app in
 # the `media` namespace. The Teleport operator only watches its own namespace
 # (security), so the teleport-cr-mirror-policy ClusterPolicy mirrors them

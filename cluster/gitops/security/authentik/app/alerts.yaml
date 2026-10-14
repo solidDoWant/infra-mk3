@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -20,7 +19,6 @@ spec:
               {{ $value | printf "%.0f" }} authentik tasks have been queued for 15m.
               Workers are stuck or overloaded.
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
 # The chart's alerts (goauthentik/helm#491), minus PendingMigrations: authentik
 # doesn't export django_migrations_unapplied_total (goauthentik/authentik#9941,
 # fix in goauthentik/authentik#26352).

@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the frontend-cert refresh failure on history/matching/worker. The chart
 # renders one shared TLS config but mounts the frontend cert only on frontend
 # pods, so the others fail to load a cert they never serve, every 5m.
@@ -22,7 +21,6 @@ spec:
     - grep:
         exclude: 'log "msg":"loading certificate from file","tls-cert-file":"/etc/temporal/certs/frontend/tls\.crt"'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops the history scavenger's per-branch `deleted history garbage` receipt
 # (one ~550-byte line per reclaimed branch). Unconditional Info call; the only
 # lever is the global server log level.
@@ -43,7 +41,6 @@ spec:
     - grep:
         exclude: 'log "msg":"deleted history garbage"'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops temporal-web's access log for the kubelet `/healthz` probe. The access
 # logger is unconditional. Requires kube-probe and status 200, so a failing
 # probe still ships. Relies on echo's fixed JSON field order.
@@ -60,7 +57,6 @@ spec:
     - grep:
         exclude: 'log "uri":"/healthz","user_agent":"kube-probe/[^"]*","status":200,'
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on the Temporal server and web pods to the readable message
 # instead of the JSON envelope: `msg` (server), else `<method> <uri> <status>`
 # (web access log, which has no message field). Standard-library log lines

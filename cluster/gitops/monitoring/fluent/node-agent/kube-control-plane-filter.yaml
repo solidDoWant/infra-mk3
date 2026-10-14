@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` on kube-apiserver, kube-controller-manager and kube-scheduler to
 # `msg` instead of the JSON envelope. They run with `--logging-format=json`
 # (talos/patches/all/), whose records have no level: info records carry `v`, and
@@ -38,7 +37,6 @@ spec:
             return 2, ts, record
           end
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Drops kube-apiserver's cancelled etcd dials. Every /metrics scrape creates a
 # throwaway etcd client for apiserver_storage_size_bytes and closes it at once
 # (apiserver storage/etcd3/metrics), cancelling its in-flight dial or TLS

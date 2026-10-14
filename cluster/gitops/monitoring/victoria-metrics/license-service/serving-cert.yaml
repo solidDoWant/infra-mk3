@@ -1,6 +1,5 @@
 # Due to https://github.com/cert-manager/cert-manager/issues/7660, this must be split into separate certs for now.
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
 # This is self signed because it should be explicitly trusted where needed, and
 # nowhere else.
 apiVersion: cert-manager.io/v1
@@ -38,7 +37,6 @@ spec:
     group: cert-manager.io
   secretName: victoria-metrics-license-service-serving-issuing-cert
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cert-manager.io/clusterissuer_v1.json
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
@@ -85,7 +83,6 @@ spec:
     usages:
       - server auth
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

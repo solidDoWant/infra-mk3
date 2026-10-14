@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
 # One NZBHydra2 log event: a `<date> <time> <LEVEL> [<thread>] ` line (the
 # CONSOLE_LOG_PATTERN set in hr.yaml), then every line up to the next one.
 # Messages can carry unindented newlines (SQL errors), so continuation is
@@ -22,7 +21,6 @@ spec:
       regex: '/^(?!\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [A-Z]+ \[)/'
       next: cont
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Rejoins multi-line events (stack traces, SQL errors) with their log line, one
 # record per event. Named to sort before `kubernetes` so it sees raw lines;
 # joined records are re-emitted at the start of the pipeline, which this
@@ -42,7 +40,6 @@ spec:
         parser: nzbhydra2
         emitterName: nzbhydra2-multiline
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` and `log_fields.*` for NZBHydra2. Runs after `kubernetes`.
 # - `<date> <time> <LEVEL> [<thread>] <logger> : [<mdc>] <msg>`: level,
 #   thread, logger, msg; the MDC (`[ID: <search>, Host: <ip>, User: <user>] `)

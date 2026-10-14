@@ -1,5 +1,4 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clustermultilineparser_v1alpha2.json
 # One Project Zomboid log event: a line starting with a non-space character,
 # then every following indented line (`\tStack trace:`, `\t\t<frame>`,
 # `\t<exception>`).
@@ -21,7 +20,6 @@ spec:
       regex: '/^\s/'
       next: cont
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Rejoins the server's stack traces with their log line, one record per event.
 # Named to sort before `kubernetes` so it sees raw lines; joined records are
 # re-emitted at the start of the pipeline, which this filter skips.
@@ -40,7 +38,6 @@ spec:
         parser: project-zomboid
         emitterName: project-zomboid-multiline
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/fluentbit.fluent.io/clusterfilter_v1alpha2.json
 # Sets `_msg` and `log_fields.*` for the server pod. Runs after `kubernetes`.
 # - Game log `<LEVEL>: <category> f:<frame> st:<ms>[ at <location>]> <msg>`:
 #   level (LOG is info), category, frame, uptime_ms, location; a joined trace
