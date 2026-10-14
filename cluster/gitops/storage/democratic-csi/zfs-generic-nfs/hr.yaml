@@ -75,22 +75,22 @@ spec:
       externalAttacher:
         image:
           registry: registry.k8s.io/sig-storage/csi-attacher
-          tag: v4.4.0@sha256:dbded4ebe299973e31d0ef55815eb07a990fc67872b14900a8e69232acae4f2d
+          tag: v4.13.0@sha256:d1a26170efed45491074ca4545c81844eee2b9043fb885ac01fb4aed6f8b72d2
         verbosityLevel: 2
       externalProvisioner:
         image:
           registry: registry.k8s.io/sig-storage/csi-provisioner
-          tag: v3.6.0@sha256:6de50bacfd72627ffe4209e3db8ad7391d04ea6fb741bf51feab6c5dcfd80002
+          tag: v3.6.4@sha256:e7ad666f1d9b0caa077c7f0c157c9f87d1e73858390732496f66dcc716ff10c5
         verbosityLevel: 2
       externalResizer:
         image:
           registry: registry.k8s.io/sig-storage/csi-resizer
-          tag: v1.9.0@sha256:f1f352df97874442624fcef23eab04aa038f66cb0e361212f6ec09e92998184d
+          tag: v1.14.0@sha256:5e7cbb63fd497fa913caa21fee1a69f727c220c6fa83c5f8bb0995e2ad73a474
         verbosityLevel: 2
       externalSnapshotter:
         image:
           registry: registry.k8s.io/sig-storage/csi-snapshotter
-          tag: v8.2.1@sha256:5f4bb469fec51147ce157329dab598c758da1b018bad6dad26f0ff469326d769
+          tag: v8.6.0@sha256:42af0929bcd60a43499825c078a60ff0534e08af8fbeb283aa391be40feb9f3e
         verbosityLevel: 2
       driver:
         image: &image
@@ -104,11 +104,11 @@ spec:
       driverRegistrar:
         image:
           registry: registry.k8s.io/sig-storage/csi-node-driver-registrar
-          tag: v2.9.0@sha256:cd21e19cd8bbd5bc56f1b4f1398a436e7897da2995d6d036c9729be3f4e456e6
+          tag: v2.18.0@sha256:b7fefd08651f00ac4df1a196ed4c621c2451fbb899297fe9fad9e36c667af0c0
       cleanup:
         image:
           registry: docker.io/busybox
-          tag: 1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+          tag: 1.38.0@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
     csiProxy:
       image:
         registry: ghcr.io/democratic-csi/csi-grpc-proxy
