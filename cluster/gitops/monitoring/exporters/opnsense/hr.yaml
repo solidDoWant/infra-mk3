@@ -99,7 +99,7 @@ spec:
           app: &firmware_update_check_app
             image:
               repository: quay.io/curl/curl
-              tag: 8.22.0
+              tag: 8.23.0@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06
             args:
               - --fail
               - --silent
