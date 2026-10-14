@@ -1,4 +1,20 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: lingarr
+spec:
+  interval: 1h
+  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+  ref:
+    tag: 5.3.0
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/bjw-s-labs/helm-charts/\.github/workflows/chart-release-steps\.yaml@refs/.+$
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 # This is deployed as a service to handle translation requests exclusively, rather than also managing on-disk subtitle files.
 # This prevents Bazarr and other tooling from fighting over the same files and lets Lingarr focus on translation and not also be a file manager.
@@ -8,15 +24,9 @@ metadata:
   name: lingarr
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: app-template
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: bjw-s-charts
-      version: 5.3.0
+  chartRef:
+    kind: OCIRepository
+    name: lingarr
   values:
     controllers:
       lingarr:

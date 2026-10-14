@@ -271,10 +271,16 @@
       ],
     },
     {
+      description: "charts-mirror is a stop-gap: it prunes a chart 6 months after upstream publishes an official OCI chart",
+      matchPackageNames: ["/^ghcr\\.io/home-operations/charts-mirror//"],
+      prBodyNotes: [
+        "⚠️ Mirrored chart. Check whether upstream now publishes an official OCI chart (https://github.com/home-operations/charts-mirror/issues/8) and switch the OCIRepository `url` to it.",
+      ],
+    },
+    {
       description: "Kyverno chart pinned (see kyverno/app/hr.yaml): 3.6.3+ breaks service: apiCall contexts until kyverno/kyverno#16047 ships",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["kyverno"],
-      allowedVersions: "<=3.6.2",
+      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno"],
+      allowedVersions: "/^3\\.6\\.[0-2]$/",
     },
     {
       description: "mail 5.0.0-5.1.0 crash with metrics enabled (sed -i on the subPath-mounted logrotate.conf, bokysan/docker-postfix#278); fix #266 is unreleased",
@@ -310,15 +316,13 @@
     {
       description: "Rook: operator + cluster charts",
       groupName: "rook-ceph",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["rook-ceph", "rook-ceph-cluster"],
+      matchPackageNames: ["ghcr.io/rook/rook-ceph", "ghcr.io/rook/rook-ceph-cluster"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Istio: charts + istioctl",
       groupName: "istio",
-      matchPackageNames: ["base", "istiod", "cni", "ztunnel", "gateway", "istio/istioctl"],
-      matchDatasources: ["helm", "docker"],
+      matchPackageNames: ["/^gcr\\.io/istio-release/charts//", "istio/istioctl"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     // CRDs applied from release assets must move with their operator.
@@ -326,6 +330,18 @@
       description: "spegel: HelmRelease + bootstrap helmfile chart, dashboard URL tag",
       groupName: "spegel",
       matchPackageNames: ["spegel", "ghcr.io/spegel-org/helm-charts/spegel", "spegel-org/spegel"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "CoreDNS: HelmReleases + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart)",
+      groupName: "coredns",
+      matchPackageNames: ["ghcr.io/coredns/charts/coredns"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
+      description: "kubelet-csr-approver: HelmRelease + bootstrap helmfile chart (depNames differ: full OCI path vs helmfile release chart)",
+      groupName: "kubelet-csr-approver",
+      matchPackageNames: ["ghcr.io/postfinance/charts/kubelet-csr-approver"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -363,20 +379,19 @@
     {
       description: "Kyverno chart + dashboard (same chart version)",
       groupName: "kyverno",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["kyverno"],
+      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Cilium: chart (HelmRelease + bootstrap helmfile) + values schema ref + CLI in the devcontainer",
       groupName: "cilium",
-      matchPackageNames: ["cilium", "cilium/cilium", "cilium/cilium-cli"],
+      matchPackageNames: ["/(^|/)cilium$/", "cilium/cilium-cli"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "cert-manager: chart + cmctl in the devcontainer",
       groupName: "cert-manager",
-      matchPackageNames: ["cert-manager", "cert-manager/cmctl"],
+      matchPackageNames: ["quay.io/jetstack/charts/cert-manager", "cert-manager/cmctl"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -388,7 +403,7 @@
     {
       description: "Goldilocks: chart + image tag override",
       groupName: "goldilocks",
-      matchPackageNames: ["goldilocks", "us-docker.pkg.dev/fairwinds-ops/oss/goldilocks"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/goldilocks", "us-docker.pkg.dev/fairwinds-ops/oss/goldilocks"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -426,8 +441,7 @@
     {
       description: "Coder: chart + CLI image in the devcontainer + agent in the VM workspace image",
       groupName: "coder",
-      matchPackageNames: ["coder", "ghcr.io/coder/coder", "coder/coder"],
-      matchDatasources: ["helm", "docker", "github-releases"],
+      matchPackageNames: ["ghcr.io/coder/chart/coder", "ghcr.io/coder/coder", "coder/coder"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -439,7 +453,7 @@
     {
       description: "KEDA: chart + CRD kustomize base",
       groupName: "keda",
-      matchPackageNames: ["keda", "kedacore/keda"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/keda", "kedacore/keda"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -470,13 +484,12 @@
     {
       description: "democratic-csi: chart + driver image (image tag sits in the chart's image map)",
       groupName: "democratic-csi",
-      matchPackageNames: ["democratic-csi", "ghcr.io/democratic-csi/democratic-csi"],
+      matchPackageNames: ["ghcr.io/democratic-csi/charts/democratic-csi", "ghcr.io/democratic-csi/democratic-csi"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Keep the 0.x chart on the democratic-csi group branch (the preset routes 0.x minors to major- branches)",
-      matchDatasources: ["helm"],
-      matchPackageNames: ["democratic-csi"],
+      matchPackageNames: ["ghcr.io/democratic-csi/charts/democratic-csi"],
       additionalBranchPrefix: "",
     },
     {
@@ -512,13 +525,13 @@
     {
       description: "fluent-operator: operator + CRD charts + the fluent-bit/fluentd images it renders",
       groupName: "fluent-operator",
-      matchPackageNames: ["/^fluent-operator/", "/^ghcr\\.io/fluent/fluent-operator//"],
+      matchPackageNames: ["/^ghcr\\.io/fluent/helm-charts/fluent-operator/", "/^ghcr\\.io/fluent/fluent-operator//"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
       description: "Volume snapshots: CRDs + snapshot-controller chart",
       groupName: "volume-snapshot",
-      matchPackageNames: ["kubernetes-csi/external-snapshotter", "snapshot-controller"],
+      matchPackageNames: ["kubernetes-csi/external-snapshotter", "ghcr.io/piraeusdatastore/helm-charts/snapshot-controller"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
 
@@ -631,13 +644,11 @@
     },
     // Monorepo chart tags (<chart>-helm-chart-X.Y.Z) don't match; link the chart changelog.
     {
-      matchDatasources: ["helm"],
-      matchPackageNames: ["external-dns"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/external-dns"],
       changelogUrl: "https://github.com/kubernetes-sigs/external-dns/blob/master/charts/external-dns/CHANGELOG.md",
     },
     {
-      matchDatasources: ["helm"],
-      matchPackageNames: ["metrics-server"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/metrics-server"],
       changelogUrl: "https://github.com/kubernetes-sigs/metrics-server/blob/master/charts/metrics-server/CHANGELOG.md",
     },
     {
@@ -678,8 +689,7 @@
       changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/vpa",
     },
     {
-      matchDatasources: ["helm"],
-      matchPackageNames: ["goldilocks"],
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/goldilocks"],
       changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/goldilocks",
     },
 
@@ -716,13 +726,13 @@
         "ghcr.io/siderolabs/talosctl",
         "ghcr.io/siderolabs/installer",
         // Rook/Ceph
-        "rook-ceph",
-        "rook-ceph-cluster",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
         "/(^|/)ceph/ceph$/",
         // Each minor adds CRD fields and must match the ceph-csi-operator
         // subchart bundled by rook-ceph (rook 1.20 -> 1.0.x, 1.21 -> 1.1.x).
         // Bump it by hand in the Rook minor PR. Patches are backports only.
-        "ceph-csi-drivers",
+        "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
       ],
       dependencyDashboardApproval: true,
       semanticCommitType: "feat",
@@ -739,7 +749,7 @@
         "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
         "ghcr.io/siderolabs/installer",
-        "ceph-csi-drivers",
+        "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers",
       ],
       separateMinorPatch: true,
     },
@@ -751,8 +761,8 @@
         "ghcr.io/siderolabs/kubelet",
         "registry.k8s.io/kubectl",
         "alpine/k8s",
-        "rook-ceph",
-        "rook-ceph-cluster",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
       ],
       separateMinorPatch: true,
       separateMultipleMinor: true,
@@ -767,18 +777,25 @@
         "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
         "ghcr.io/siderolabs/installer",
-        "rook-ceph",
-        "rook-ceph-cluster",
+        "ghcr.io/rook/rook-ceph",
+        "ghcr.io/rook/rook-ceph-cluster",
       ],
       semanticCommitType: "feat",
       labels: ["type/minor"],
     },
+    // OCI charts use the docker datasource; tell them apart by path.
     {
       matchDatasources: ["docker"],
+      matchPackageNames: ["!/(^|[/-])(charts?|charts-mirror|helm|helm-charts)\\//", "!ghcr.io/rook/rook-ceph", "!ghcr.io/rook/rook-ceph-cluster", "!ghcr.io/intel/intel-gpu-resource-driver-chart"],
       addLabels: ["renovate/container"],
     },
     {
       matchDatasources: ["helm"],
+      addLabels: ["renovate/helm"],
+    },
+    {
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/(^|[/-])(charts?|charts-mirror|helm|helm-charts)\\//", "ghcr.io/rook/rook-ceph", "ghcr.io/rook/rook-ceph-cluster", "ghcr.io/intel/intel-gpu-resource-driver-chart"],
       addLabels: ["renovate/helm"],
     },
     {

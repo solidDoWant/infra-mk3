@@ -7,11 +7,14 @@ helmDefaults:
 
 repositories:
   - name: cilium
-    url: https://helm.cilium.io/
+    url: quay.io/cilium/charts
+    oci: true
   - name: coredns
-    url: https://coredns.github.io/helm
+    url: ghcr.io/coredns/charts
+    oci: true
   - name: postfinance
-    url: https://postfinance.github.io/kubelet-csr-approver
+    url: ghcr.io/postfinance/charts
+    oci: true
   - name: spegel
     url: ghcr.io/spegel-org/helm-charts
     oci: true

@@ -1,19 +1,24 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: istio-cni
+spec:
+  interval: 1h
+  url: oci://gcr.io/istio-release/charts/cni
+  ref:
+    tag: 1.30.5
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: istio-cni
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: cni
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: istio-charts
-      version: 1.30.5
+  chartRef:
+    kind: OCIRepository
+    name: istio-cni
   values:
     profile: ambient
     global:

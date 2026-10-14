@@ -1,18 +1,31 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: descheduler
+spec:
+  interval: 1h
+  # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
+  # Switch to the official chart once https://github.com/kubernetes-sigs/descheduler/issues/1470 lands.
+  url: oci://ghcr.io/home-operations/charts-mirror/descheduler
+  ref:
+    tag: 0.37.0
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/home-operations/charts-mirror/\.github/workflows/app-builder\.yaml@refs/.+$
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: &app_name descheduler
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: descheduler
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: descheduler-charts
-      version: 0.37.0
+  chartRef:
+    kind: OCIRepository
+    name: descheduler
   values:
     kind: Deployment
     replicas: 2

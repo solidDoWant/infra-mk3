@@ -15,7 +15,7 @@ Take the user's target path. Accept anything: a component dir (e.g., `cluster/gi
 
 Scan the target for every version reference:
 
-- HelmRelease: `spec.chart.spec.chart` + `spec.chart.spec.version` (or `chartRef`/sourceRef pinning)
+- HelmRelease: `spec.chartRef` → the OCIRepository above it in the same file (`spec.url` + `spec.ref.tag`), or `spec.chart.spec.chart` + `spec.chart.spec.version` for the remaining HelmRepository sources
 - Image references: `image.repository` + `image.tag` in HelmRelease values, raw Deployments, StatefulSets, DaemonSets, CronJobs, etc.
 - Kustomization version overrides
 - Operator CRDs with version/image fields (e.g., `RabbitMQCluster.spec.image`, CNPG `Cluster.spec.imageName`)

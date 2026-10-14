@@ -1,19 +1,31 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: harbor
+spec:
+  interval: 1h
+  # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
+  # Switch to the official chart once https://github.com/goharbor/harbor-helm/issues/2265 lands.
+  url: oci://ghcr.io/home-operations/charts-mirror/harbor
+  ref:
+    tag: 1.19.2
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/home-operations/charts-mirror/\.github/workflows/app-builder\.yaml@refs/.+$
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: harbor
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: harbor
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: harbor-charts
-      version: 1.19.2
+  chartRef:
+    kind: OCIRepository
+    name: harbor
   valuesFrom:
     - kind: ConfigMap
       name: harbor-registry-bucket-hr-config

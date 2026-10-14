@@ -1,4 +1,20 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: victoria-metrics-k8s-stack
+spec:
+  interval: 1h
+  url: oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack
+  ref:
+    tag: 0.96.0
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/VictoriaMetrics/helm-charts/\.github/workflows/release\.yaml@refs/.+$
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -6,15 +22,9 @@ metadata:
   name: victoria-metrics-k8s-stack
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: victoria-metrics-k8s-stack
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: victoria-metrics-charts
-      version: 0.96.0
+  chartRef:
+    kind: OCIRepository
+    name: victoria-metrics-k8s-stack
   values:
     global:
       cluster:

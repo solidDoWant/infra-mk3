@@ -1,4 +1,15 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: grafana-operator
+spec:
+  interval: 1h
+  url: oci://ghcr.io/grafana/helm-charts/grafana-operator
+  ref:
+    tag: 5.25.0
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -8,15 +19,9 @@ metadata:
     patches.flux.home.arpa/helmrelease.skip-crds: "true"
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: grafana-operator
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: grafana-charts
-      version: 5.25.0
+  chartRef:
+    kind: OCIRepository
+    name: grafana-operator
   values:
     # Sets CLUSTER_DOMAIN, which makes the operator address the managed Grafana
     # as `grafana-service.monitoring.svc.cluster.local` rather than the bare

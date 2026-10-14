@@ -115,6 +115,21 @@ spec:
                 version: v2
                 kind: HelmRelease
                 labelSelector: patches.flux.home.arpa/helmrelease.defaults != false
+            # Add a patch that selects the Helm chart layer of OCIRepositories
+            - patch: |
+                apiVersion: placeholder-value-does-not-matter
+                kind: placeholder-value-does-not-matter
+                metadata:
+                  name: placeholder-value-does-not-matter
+                spec:
+                  layerSelector:
+                    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+                    operation: copy
+              target:
+                group: source.toolkit.fluxcd.io
+                version: v1
+                kind: OCIRepository
+                labelSelector: patches.flux.home.arpa/ocirepository.helm-chart != false
             # Add a patch that disables CRD installation
             - patch: |
                 apiVersion: placeholder-value-does-not-matter

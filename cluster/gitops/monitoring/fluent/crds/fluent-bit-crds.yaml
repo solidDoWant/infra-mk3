@@ -1,15 +1,27 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: fluent-operator-fluent-bit-crds
+spec:
+  interval: 1h
+  url: oci://ghcr.io/fluent/helm-charts/fluent-operator-fluent-bit-crds
+  ref:
+    tag: 4.3.0
+  # Signed by a shared reusable workflow; the identity does not pin the fluent repo.
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/action-stars/helm-workflows/\.github/workflows/release\.yaml@[0-9a-f]{40}$
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: fluent-operator-fluent-bit-crds
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: fluent-operator-fluent-bit-crds
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: fluent-charts
-      version: 4.3.0
+  chartRef:
+    kind: OCIRepository
+    name: fluent-operator-fluent-bit-crds

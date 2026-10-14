@@ -1,4 +1,22 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ceph-csi-drivers
+spec:
+  interval: 1h
+  # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
+  # Switch to the official chart once https://github.com/ceph/ceph-csi-operator/issues/488 lands.
+  url: oci://ghcr.io/home-operations/charts-mirror/ceph-csi-drivers
+  ref:
+    tag: 1.1.0
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/home-operations/charts-mirror/\.github/workflows/app-builder\.yaml@refs/.+$
+---
 # Rook >= 1.20 no longer deploys the CSI drivers. This chart owns the
 # OperatorConfig/Driver CRs (adopted from Rook, which pre-labelled them for a
 # release named exactly `ceph-csi-drivers`) plus the plugin RBAC.
@@ -11,14 +29,9 @@ metadata:
 spec:
   interval: 5m
   releaseName: ceph-csi-drivers
-  chart:
-    spec:
-      chart: ceph-csi-drivers
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: ceph-csi-operator-charts
-      version: 1.1.0
+  chartRef:
+    kind: OCIRepository
+    name: ceph-csi-drivers
   values:
     # Defaults the operator fills into any Driver field left unset
     operatorConfig:

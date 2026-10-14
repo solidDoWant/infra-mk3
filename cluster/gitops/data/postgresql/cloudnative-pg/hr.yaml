@@ -1,4 +1,20 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: cloudnative-pg
+spec:
+  interval: 1h
+  url: oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg
+  ref:
+    tag: 0.29.1
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/cloudnative-pg/charts/\.github/workflows/release-publish\.yml@refs/.+$
+---
 # yaml-language-server: $schema=./schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -6,14 +22,9 @@ metadata:
   name: &app_name cloudnative-pg
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: cloudnative-pg
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: cnpg-charts
-      version: 0.29.1
+  chartRef:
+    kind: OCIRepository
+    name: cloudnative-pg
   values:
     # If the operator fails, then instance failover will also fail.
     replicaCount: 2

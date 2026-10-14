@@ -72,6 +72,7 @@ specs:
           # ECR Public's blob CDN (blob requests redirect here)
           # cspell:words d2glxqk2uabbnd
           - matchName: d2glxqk2uabbnd.cloudfront.net
+          - matchName: gcr.io
           - matchName: registry.k8s.io
           - matchName: cdn.registry.k8s.io
           - matchPattern: "**.pkg.dev"
@@ -79,18 +80,9 @@ specs:
 
           # Helm repositories (cluster/gitops/flux-system/flux/sources/helm)
           - matchName: charts.fairwinds.com
-          - matchName: charts.goauthentik.io
-          - matchName: charts.jetstack.io
           - matchName: charts.releases.teleport.dev
-          - matchName: charts.rook.io
-          - matchName: helm.cilium.io
-          - matchName: helm.coder.com
-          # cspell:words goharbor
-          - matchName: helm.goharbor.io
           - matchName: go.temporal.io
           - matchName: kiali.org
-          - matchName: piraeus.io
-          - matchName: istio-release.storage.googleapis.com
 
           # Go: toolchain install, module proxy/checksum DB, and common vanity
           # import hosts (resolved via ?go-get=1 for source URLs)

@@ -1,4 +1,15 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: tape-archiver-web
+spec:
+  interval: 1h
+  url: oci://ghcr.io/soliddowant/charts/tape-archiver-web
+  ref:
+    tag: 0.0.13
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 # tape-archiver web UI: browser dashboard for submitting, monitoring, pausing,
 # and resuming tape backup runs. Talks to the same Temporal frontend as the
@@ -10,14 +21,9 @@ metadata:
   name: tape-archiver-web
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: tape-archiver-web
-      version: 0.0.13
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: soliddowant-charts
+  chartRef:
+    kind: OCIRepository
+    name: tape-archiver-web
   values:
     config:
       temporal:

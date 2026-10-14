@@ -607,6 +607,21 @@ spec:
 VPN gateway (deployed via Flux HelmRelease with bjw-s' app-template chart, but can also be deployed as a "raw" pod, deployment, etc.):
 ```yaml
 ---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: vpn-gateway
+spec:
+  interval: 1h
+  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+  ref:
+    tag: 5.3.0
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/bjw-s-labs/helm-charts/\.github/workflows/chart-release-steps\.yaml@refs/.+$
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -614,15 +629,9 @@ metadata:
   name: vpn-gateway
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: app-template
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: bjw-s-charts
-      version: 5.3.0
+  chartRef:
+    kind: OCIRepository
+    name: vpn-gateway
   values:
     controllers:
       vpn-gateway:
@@ -758,15 +767,9 @@ metadata:
   name: vpn-gateway
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: app-template
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: bjw-s-charts
-      version: 5.3.0
+  chartRef:
+    kind: OCIRepository
+    name: vpn-gateway
   values:
     controllers:
       vpn-gateway:

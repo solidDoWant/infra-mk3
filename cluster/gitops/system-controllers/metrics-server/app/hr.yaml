@@ -1,19 +1,31 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: metrics-server
+spec:
+  interval: 1h
+  # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
+  # Switch to the official chart once https://github.com/kubernetes-sigs/metrics-server/issues/1527 lands.
+  url: oci://ghcr.io/home-operations/charts-mirror/metrics-server
+  ref:
+    tag: 3.14.0
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/home-operations/charts-mirror/\.github/workflows/app-builder\.yaml@refs/.+$
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: &app_name metrics-server
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: metrics-server
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        namespace: flux-system
-        name: metrics-server-charts
-      version: 3.14.0
+  chartRef:
+    kind: OCIRepository
+    name: metrics-server
   values:
     apiService:
       insecureSkipTLSVerify: false

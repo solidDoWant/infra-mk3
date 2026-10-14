@@ -1,4 +1,22 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: keda
+spec:
+  interval: 1h
+  # Stop-gap mirror, pruned 6 months after upstream publishes an OCI chart.
+  # Switch to the official chart once https://github.com/kedacore/charts/issues/20 lands.
+  url: oci://ghcr.io/home-operations/charts-mirror/keda
+  ref:
+    tag: 2.21.0
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/home-operations/charts-mirror/\.github/workflows/app-builder\.yaml@refs/.+$
+---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -6,15 +24,9 @@ metadata:
   name: keda
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: keda
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        name: kedacore-charts
-        namespace: flux-system
-      version: 2.21.0
+  chartRef:
+    kind: OCIRepository
+    name: keda
   values:
     # CRDs are deployed in a separate Flux Kustomization (keda-crds).
     crds:
