@@ -94,6 +94,8 @@ specs:
           - matchName: github.com
           - matchName: objects.githubusercontent.com
           - matchName: raw.githubusercontent.com
+          # Redirect target of github.com/<org>/<repo>/releases/download/...
+          - matchName: release-assets.githubusercontent.com
         toPorts: *https_ports
       - <<: *to_dns_resolver
         toPorts:
@@ -182,7 +184,7 @@ specs:
               gateway.networking.k8s.io/gateway-name: external-gateway
         toPorts:
           - ports:
-              - port: "15008" # Istio HBONE port
+              - port: http-webhook
                 protocol: TCP
       - *from_metrics_scraper
   - description: flux-operator
