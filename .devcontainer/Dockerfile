@@ -101,7 +101,7 @@ RUN curl -fsSL -o /usr/local/bin/openapi2jsonschema "https://raw.githubuserconte
     chmod +x /usr/local/bin/openapi2jsonschema
 
 # istioctl
-COPY --from=istio/istioctl:1.31.1 /usr/local/bin/istioctl /usr/local/bin/istioctl
+COPY --from=istio/istioctl:1.31.1@sha256:cadffbb4c6899179352bb883c51817e23e23e4517d25e83c9bc0418a5a271152 /usr/local/bin/istioctl /usr/local/bin/istioctl
 
 # flux-local
 # RUN pipx install --include-deps flux-local
