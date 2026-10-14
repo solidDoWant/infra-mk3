@@ -151,6 +151,13 @@ specs:
           - ports:
               - port: proxypeering
                 protocol: TCP
+      # Agentless SSH nodes
+      - toCIDRSet:
+          - cidrGroupRef: routers
+        toPorts:
+          - ports:
+              - port: "22"
+                protocol: TCP
     ingress:
       - *from_kubelet_for_cluster_healthcheck
       - *from_metrics_scraper_for_cluster_metrics

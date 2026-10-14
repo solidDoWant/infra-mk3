@@ -1,21 +1,19 @@
-# Not supported until these are resolved:
-# * https://github.com/opnsense/core/issues/6007
-# * https://github.com/opnsense/core/pull/6785
-# TODO these are resolved - update this + Ansible
-# Pending release of github.com/gravitational/teleport/pull/50193 (probably 17.3)
-# ---
-# apiVersion: resources.teleport.dev/v1
-# kind: TeleportOpenSSHServerV2
-# metadata:
-#   name: opnsense-01
-# spec:
-#   addr: 10.3.0.1:22
-#   hostname: opnsense-01
-# ---
-# apiVersion: resources.teleport.dev/v1
-# kind: TeleportOpenSSHServerV2
-# metadata:
-#   name: opnsense-02
-# spec:
-#   addr: 10.3.0.2:22
-#   hostname: opnsense-02
+---
+# Agentless: sshd on the routers trusts Teleport's CAs, configured by
+# ansible/remote/routers/opnsense/teleport.yaml. The addresses must be among the
+# host certificate principals that playbook issues.
+apiVersion: resources.teleport.dev/v1
+kind: TeleportOpenSSHServerV2
+metadata:
+  name: router-01
+spec:
+  addr: 10.3.0.1:22
+  hostname: router-01
+---
+apiVersion: resources.teleport.dev/v1
+kind: TeleportOpenSSHServerV2
+metadata:
+  name: router-02
+spec:
+  addr: 10.3.0.2:22
+  hostname: router-02

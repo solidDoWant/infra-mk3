@@ -45,6 +45,8 @@
 #   `/etc/rc.d/os-release onestart` (OPNsense skips base rc.d, so the os
 #   collector finds no /etc/os-release)
 # * Firewall rules for k8s VLAN to nodes running prometheus-node-exporter
+# * Firewall automation rule on opt2 (Kubernetes VLAN): pass TCP 22 from the opt2
+#   network to the opt2 address, for the Teleport proxy (see teleport.yaml)
 # * NTP: enable iburst on all pool servers (Services > Network Time > General)
 #   so ntpd syncs in <1min on boot instead of ~8-10min
 
@@ -199,6 +201,9 @@
               - passwordauth: "1"
               - permitrootlogin: "1"
               - group: admins
+              - noauto: "1"
+              # opt2 (Kubernetes VLAN) is where the Teleport proxy connects
+              - interfaces: lan,opt2,opt1,opt3
 
     # Not currently needed
     # - name: Add API credentials
@@ -1142,6 +1147,9 @@
     - name: Copy the config file to the remote host and reload
       ansible.builtin.import_role:
         name: copy_config_remote
+
+- name: Configure Teleport SSH access
+  ansible.builtin.import_playbook: teleport.yaml
 
 - name: Enable the WAN interface on the secondary router
   hosts: r730xd:&proxmox
