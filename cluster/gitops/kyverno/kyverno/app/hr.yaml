@@ -36,7 +36,7 @@ spec:
       image:
         registry: registry.k8s.io
         repository: kubectl
-        tag: v1.32.7@sha256:3c526815897478b22becbb5d2eadf0e0c021b41248400b8bcc8c6f32132442d2
+        tag: v1.32.13@sha256:fbfd671cd51f0be98174170f2000cbb97d2788e2270bc1697323d401558307e1
     # Global logging for all controllers. The chart default verbosity is 2
     # (trace): the background controller alone emits ~1900 TRC lines (per-UR
     # mutate/generate reconcile traces) on top of startup. 1 keeps INF/WARN/ERR
