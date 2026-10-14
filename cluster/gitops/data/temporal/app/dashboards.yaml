@@ -9,7 +9,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/temporalio/dashboards/master/server/server-general.json
+  url: https://raw.githubusercontent.com/temporalio/dashboards/4994df2cf98a901ec78217c111eda95ff087480d/server/server-general.json # branch=master
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
@@ -24,7 +24,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/frontend-service-specific.json
+  url: https://raw.githubusercontent.com/temporalio/dashboards/4994df2cf98a901ec78217c111eda95ff087480d/misc/frontend-service-specific.json # branch=master
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
@@ -39,7 +39,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/history-service-specific.json
+  url: https://raw.githubusercontent.com/temporalio/dashboards/4994df2cf98a901ec78217c111eda95ff087480d/misc/history-service-specific.json # branch=master
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
@@ -54,7 +54,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/matching-service-specific.json
+  url: https://raw.githubusercontent.com/temporalio/dashboards/4994df2cf98a901ec78217c111eda95ff087480d/misc/matching-service-specific.json # branch=master
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS
@@ -69,7 +69,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/worker-service-specific.json
+  url: https://raw.githubusercontent.com/temporalio/dashboards/4994df2cf98a901ec78217c111eda95ff087480d/misc/worker-service-specific.json # branch=master
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: datasource
@@ -84,7 +84,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/temporalio/dashboards/master/misc/advanced-visibility-specific.json
+  url: https://raw.githubusercontent.com/temporalio/dashboards/4994df2cf98a901ec78217c111eda95ff087480d/misc/advanced-visibility-specific.json # branch=master
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_PROMETHEUS

@@ -75,21 +75,11 @@
   customManagers: [
     {
       customType: "regex",
-      description: "GitHub release assets and tagged raw files (CRDs, manifests, dashboards, schemas)",
+      description: "GitHub release assets with no in-tree copy to pin by commit",
       managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
       matchStrings: [
         "https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/releases/download/(?<currentValue>v?\\d[^/\\s]*)/",
       ],
-      datasourceTemplate: "github-releases",
-    },
-    {
-      customType: "regex",
-      description: "VPA CRDs, tagged vertical-pod-autoscaler-X.Y.Z in the kubernetes/autoscaler monorepo",
-      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
-      matchStrings: [
-        "https://raw\\.githubusercontent\\.com/kubernetes/autoscaler/refs/tags/vertical-pod-autoscaler-(?<currentValue>\\d+\\.\\d+\\.\\d+)/",
-      ],
-      depNameTemplate: "kubernetes/autoscaler",
       datasourceTemplate: "github-releases",
     },
     {
@@ -104,17 +94,6 @@
       // Collapse vX.Y.Z releases to vX.Y; prereleases don't match and are dropped.
       extractVersionTemplate: "^(?<version>v\\d+\\.\\d+)\\.\\d+$",
       versioningTemplate: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)$",
-    },
-    {
-      customType: "regex",
-      description: "Kyverno dashboard, tagged kyverno-chart-X.Y.Z: tracked as the kyverno chart so it follows the chart pin",
-      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
-      matchStrings: [
-        "https://raw\\.githubusercontent\\.com/kyverno/kyverno/refs/tags/kyverno-chart-(?<currentValue>\\d+\\.\\d+\\.\\d+)/",
-      ],
-      depNameTemplate: "kyverno",
-      datasourceTemplate: "helm",
-      registryUrlTemplate: "https://kyverno.github.io/kyverno",
     },
     {
       customType: "regex",
@@ -139,7 +118,7 @@
       description: "Literal image refs assigned to *_IMAGE Makefile variables",
       managerFilePatterns: ["/(^|/)Makefile$/"],
       matchStrings: [
-        "(?:^|\\n)\\w*_IMAGE\\s*[?:]?=\\s*(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)\\s*(?:\\n|$)",
+        "(?:^|\\n)\\w*_IMAGE\\s*[?:]?=\\s*(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?\\s*(?:\\n|$)",
       ],
       datasourceTemplate: "docker",
     },
@@ -148,7 +127,7 @@
       description: "Literal image refs assigned to *_IMAGE Taskfile vars",
       managerFilePatterns: ["/^\\.taskfiles/.+\\.ya?ml$/"],
       matchStrings: [
-        "\\w*_IMAGE:\\s*[\"']?(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)[\"']?\\s*(?:\\n|$)",
+        "\\w*_IMAGE:\\s*[\"']?(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?[\"']?\\s*(?:\\n|$)",
       ],
       datasourceTemplate: "docker",
     },
@@ -190,8 +169,12 @@
     },
     {
       customType: "regex",
-      description: "Image maps the flux manager can't see: full repo in `registry:` (democratic-csi) or under a parent key not named `image` (KEDA)",
-      managerFilePatterns: ["/^cluster/gitops/storage/democratic-csi/.+\\.ya?ml$/", "/^cluster/gitops/system-controllers/keda/app/hr\\.yaml$/"],
+      description: "Image maps the flux manager can't see: full repo in `registry:` (democratic-csi), under a parent key not named `image` (KEDA), or outside a HelmRelease (VLSingle)",
+      managerFilePatterns: [
+        "/^cluster/gitops/storage/democratic-csi/.+\\.ya?ml$/",
+        "/^cluster/gitops/system-controllers/keda/app/hr\\.yaml$/",
+        "/^cluster/gitops/monitoring/victoria-metrics/logs/vmlogs\\.yaml$/",
+      ],
       matchStrings: [
         "(?:registry|repository): (?<depName>[a-z0-9][\\w.-]*/[\\w./-]+)\\n\\s*tag: (?<currentValue>\\w[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})",
       ],
@@ -199,7 +182,35 @@
     },
     {
       customType: "regex",
-      description: "Tagged raw files (CRDs, manifests, dashboards, values schema refs)",
+      description: "Raw files pinned by commit, tag in a trailing comment: `raw.githubusercontent.com/<owner>/<repo>/<sha>/<path> # <tag>`",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?<currentDigest>[0-9a-f]{40})/\\S*[ \\t]+#[ \\t]*(?<currentValue>[^\\s=]+)(?:\\s|$)",
+      ],
+      datasourceTemplate: "github-tags",
+    },
+    {
+      customType: "regex",
+      description: "Raw files pinned by commit, following a branch: `raw.githubusercontent.com/<owner>/<repo>/<sha>/<path> # branch=<branch>`",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?<currentDigest>[0-9a-f]{40})/\\S*[ \\t]+#[ \\t]*branch=(?<currentValue>\\S+)",
+      ],
+      datasourceTemplate: "git-refs",
+      packageNameTemplate: "https://github.com/{{{depName}}}",
+    },
+    {
+      customType: "regex",
+      description: "Digest-pinned `oci://<image>:<tag>@<digest>` refs (WasmPlugin); the preset's oci:// manager reads the digest as part of the tag",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "oci://(?<depName>[^:@\\s]+):(?<currentValue>\\w[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Tagged raw files (editor `$schema` refs); deployed raw files are pinned by commit (above)",
       managerFilePatterns: ["/^cluster/.+\\.(ya?ml|json)$/"],
       matchStrings: [
         "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?:refs/tags/)?(?<currentValue>v\\d[^/\\s]*)/",
@@ -275,10 +286,30 @@
       separateMultipleMajor: true,
     },
     {
+      description: "The preset's oci:// manager reads a pinned digest as part of the tag; the digest-aware manager owns those refs",
+      matchManagers: ["custom.regex"],
+      matchCurrentValue: "/@sha256:/",
+      enabled: false,
+    },
+    {
+      // Full tag as the version: the commit digest is looked up by tag name.
       description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
-      matchDatasources: ["github-releases"],
+      matchDatasources: ["github-tags"],
       matchPackageNames: ["kubernetes/autoscaler"],
-      extractVersion: "^vertical-pod-autoscaler-(?<version>\\d+\\.\\d+\\.\\d+)$",
+      versioning: "regex:^vertical-pod-autoscaler-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
+      description: "Kyverno dashboard: chart tags are kyverno-chart-X.Y.Z",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["kyverno/kyverno"],
+      versioning: "regex:^kyverno-chart-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+    },
+    {
+      description: "xpumanager dashboard: tags mix V/v prefixes, and v2 dropped rest/grafana-dashboard.json",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["intel/xpumanager"],
+      versioning: "regex:^[vV](?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+      allowedVersions: "/^[vV]1\\./",
     },
     {
       description: "VictoriaLogs tags dropped the -victorialogs suffix after v1.17.0",
@@ -327,8 +358,14 @@
     },
     {
       description: "Kyverno chart pinned (see kyverno/app/hr.yaml): 3.6.3+ breaks service: apiCall contexts until kyverno/kyverno#16047 ships",
-      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno"],
+      matchPackageNames: ["ghcr.io/kyverno/charts/kyverno"],
       allowedVersions: "/^3\\.6\\.[0-2]$/",
+    },
+    {
+      description: "Kyverno dashboard: same hold as the chart it ships in",
+      matchDatasources: ["github-tags"],
+      matchPackageNames: ["kyverno/kyverno"],
+      allowedVersions: "/^kyverno-chart-3\\.6\\.[0-2]$/",
     },
     {
       description: "Kyverno images: the app versions of the pinned 3.6.0-3.6.2 charts",
@@ -451,7 +488,7 @@
     {
       description: "Kyverno chart + dashboard (same chart version) + images",
       groupName: "kyverno",
-      matchPackageNames: ["kyverno", "ghcr.io/kyverno/charts/kyverno", "/^ghcr\\.io/kyverno/(kyverno|kyvernopre|kyverno-cli|background-controller|cleanup-controller|reports-controller)$/"],
+      matchPackageNames: ["kyverno/kyverno", "ghcr.io/kyverno/charts/kyverno", "/^ghcr\\.io/kyverno/(kyverno|kyvernopre|kyverno-cli|background-controller|cleanup-controller|reports-controller)$/"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
@@ -484,7 +521,7 @@
     },
     {
       description: "Keep 0.x members on their group branch (the preset routes 0.x minors to major- branches)",
-      matchPackageNames: ["cilium/cilium-cli", "victoriametrics-metrics-datasource"],
+      matchPackageNames: ["cilium/cilium-cli", "victoriametrics-metrics-datasource", "VictoriaMetrics/operator", "kubevirt/monitoring"],
       additionalBranchPrefix: "",
     },
     // Exporter/app image + the dashboard pinned to the same release.

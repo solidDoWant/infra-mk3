@@ -95,8 +95,7 @@ spec:
       driver:
         image: &image
           registry: ghcr.io/democratic-csi/democratic-csi
-          # renovate: datasource=docker depName=ghcr.io/democratic-csi/democratic-csi
-          tag: v1.9.5
+          tag: v1.9.5@sha256:fc3b7d7ed3a616714139525075312758e23a5d425ffb539ad12c9bd20fb6001f
     node:
       priorityClassName: system-cluster-critical
       driver:
