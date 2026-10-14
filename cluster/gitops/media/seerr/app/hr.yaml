@@ -88,7 +88,7 @@ spec:
             # contrib image is required for the postgres_proxy filter
             image:
               repository: envoyproxy/envoy
-              tag: contrib-v1.40.0
+              tag: contrib-v1.40.0@sha256:366ea8bbbbaded6d95f3a1aafedd12c6def9f0d6eea02f3123b69c41e46e54f5
             ports:
               - name: envoy-admin
                 containerPort: 8000
