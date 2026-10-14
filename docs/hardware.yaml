@@ -115,8 +115,15 @@ Compute:
                         Subsystem: Storage
                         Function: Tape library
                 Count: 2
+            Count: 2
             Physical location:
-              - PCIe slot: 2
+              - PCIe slot: 3
+              - PCIe slot: 6
+          - Manufacturer: Dell
+            Model: HBA330 Mini
+            Function: Front drive bay HBA
+            Physical location:
+              - Storage mezzanine: 1
         Drives:
           - Manufacturer: Western Digital
             Series: Black
@@ -146,7 +153,7 @@ Compute:
             Type: SSD
             Form factor: M.2 2280 inside U.2 SFF-8639 adapter
             Interface: NVMe
-            Capacity: 56 # GB
+            Capacity: 58 # GB
             PCIe:
               Slot:
                 Generation: 3.0
@@ -158,8 +165,8 @@ Compute:
             Has DRAM: false
             Has PLP: false
             Physical locations:
+              - Bay: 20
               - Bay: 21
-              - Bay: 22
       Network:
         Cards:
           - Manufacturer: Dell
@@ -208,7 +215,7 @@ Compute:
                     Physical layer: Ethernet
                 Count: 2
             Physical location:
-              - PCIe slot: 3
+              - PCIe slot: 2
         Integrated:
           - Manufacturer: Dell
             Model: iDRAC 8
@@ -242,15 +249,17 @@ Compute:
           Model: QLE2562
           Subsystem: Storage
           Function: HBA
+          Count: 2
           Link:
             Slot:
-              Generation: 2.0
+              Generation: 3.0
               Lanes: 4
             Device:
-              Generation: 3.0
+              Generation: 2.0
               Lanes: 8
           Physical location:
-            - PCIe slot: 2
+            - PCIe slot: 3
+            - PCIe slot: 6
         - Manufacturer: Mellanox
           Model: ConnectX 3 Pro MCX314A-BCCT
           Subsystem: Network
@@ -263,7 +272,7 @@ Compute:
               Generation: 3.0
               Lanes: 8
           Physical location:
-            - PCIe slot: 3
+            - PCIe slot: 2
         - Manufacturer: Dell
           Model: P31H2
           Subsystem: Storage
@@ -304,9 +313,9 @@ Compute:
       Power:
         Power supplies:
           - Manufacturer: Dell
-            Model: 05RHVV
+            Model: 0CMPGM
             Type: Internal
-            Max supply: 750 # Watts
+            Max supply: 1100 # Watts
             Hot swappable: true
             Connector: C14
             Count: 2
