@@ -28,7 +28,7 @@ spec:
   fluentdCfgSelector:
     matchLabels:
       config.fluentd.fluent.io/enabled: "true"
-  image: ghcr.io/fluent/fluent-operator/fluentd:v1.19.2
+  image: ghcr.io/fluent/fluent-operator/fluentd:v1.19.2@sha256:fef9f961b919a56c7f11b0d6edcd55693150cc72d9728aac4b7a95937336774f
   mode: collector
   priorityClassName: system-cluster-critical
   replicas: 2
