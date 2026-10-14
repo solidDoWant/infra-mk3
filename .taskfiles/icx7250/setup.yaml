@@ -35,9 +35,9 @@ tasks:
       task: firmware-service
       vars:
         SERVICE_TYPE: http
-        CONTAINER_IMAGE: nginx:1.31.6@sha256:60f0d4e986561e08804f75c211dcaf7fc5455699eada29f42cbe8a0a7253dd86
+        CONTAINER_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.6-alpine@sha256:884e0b7f42f303641b0f4e78755aea647521dca0b89ca3be7992ad78b5c07434
         CONTAINER_MOUNT_PATH: /usr/share/nginx/html
-        CONTAINER_PORT: 443
+        CONTAINER_PORT: 8080
         LOCAL_PORT: 4443
         WAIT_INPUT: true
 

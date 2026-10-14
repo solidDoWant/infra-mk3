@@ -43,7 +43,7 @@ tasks:
       - task: download-firmware-all
     vars:
       FIRMWARE_DIR: *FIRMWARE_DIR
-      NGINX_IMAGE: nginx:1.31.6@sha256:60f0d4e986561e08804f75c211dcaf7fc5455699eada29f42cbe8a0a7253dd86
+      NGINX_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.6-alpine@sha256:884e0b7f42f303641b0f4e78755aea647521dca0b89ca3be7992ad78b5c07434
       CONTAINER_NAME: mellanox-firmware
       LOCAL_HTTP_PORT: "8080" # This task does not configure any firewalls that may block traffic to this port
     dir: "{{ .TASKFILE_DIR }}"
@@ -103,7 +103,7 @@ tasks:
           # Start a container that serves the images
           docker run --rm -d --name "{{ .CONTAINER_NAME }}" \
             -v "{{ .FIRMWARE_DIR }}:/usr/share/nginx/html:ro" \
-            -p {{ .LOCAL_HTTP_PORT }}:80 "{{ .NGINX_IMAGE }}" > /dev/null
+            -p {{ .LOCAL_HTTP_PORT }}:8080 "{{ .NGINX_IMAGE }}" > /dev/null
 
           # Fetch the image on the switch
           # Get the IP address that the switch sees this device as by looking at the audit log
