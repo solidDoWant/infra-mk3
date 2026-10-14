@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/istio/release/charts/cni
   ref:
-    tag: 1.30.5
-    digest: sha256:bc33230803b4ca1a9beb6ddf287198bbc1eac6d576cda8da3a292137c62ba8ca
+    tag: 1.31.1
+    digest: sha256:10f2acee15145919a8283febb69c537bcddec4300f489e459094a1312f9d15d8
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -21,7 +21,7 @@ spec:
     name: istio-cni
   values:
     profile: ambient
-    image: mirror.gcr.io/istio/install-cni:1.30.5-distroless@sha256:7285115c6b02054c059b71dff0a446dc045a65b1c5cdc652806c94aed1de8d73
+    image: mirror.gcr.io/istio/install-cni:1.31.1-distroless@sha256:5b4b7a9a6188cbb6a65d2c700df793b50484e87d009f26be5e22d46dfbbc3c62
     global:
       logAsJson: true
     cni:
