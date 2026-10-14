@@ -31,6 +31,9 @@
     },
   ],
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
+  // Tags can be re-pushed; a digest pins the exact content. Digest-only
+  // updates then also follow re-pushes of floating tags (latest, branches).
+  pinDigests: true,
 
   // Replaces config:recommended's list, so the defaults are repeated.
   ignorePaths: [
@@ -191,6 +194,11 @@
       matchDatasources: ["docker"],
       matchPackageNames: ["/^harbor\\./"],
       enabled: false,
+    },
+    {
+      description: "No digest pins: flake.lock already pins nixpkgs, and a preset ref can't carry both tag and SHA",
+      matchManagers: ["nix", "renovate-config"],
+      pinDigests: false,
     },
     {
       description: "Inline image strings in HelmRelease values are already extracted by the flux manager",
@@ -709,7 +717,7 @@
       labels: ["type/patch"],
     },
     {
-      matchUpdateTypes: ["digest"],
+      matchUpdateTypes: ["digest", "pinDigest"],
       labels: ["type/digest"],
     },
     // After the update-type labels so `labels` overrides type/minor.
