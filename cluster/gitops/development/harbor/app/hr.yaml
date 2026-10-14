@@ -81,11 +81,17 @@ spec:
           - regex: pool
             action: labeldrop
     portal:
+      image:
+        repository: docker.io/goharbor/harbor-portal
+        tag: v2.15.2@sha256:b811b67f7a7f6f1614e4bdf7478b207d13e8aa3f815ff6ad84f216a5098d213d
       replicas: 2
       revisionHistoryLimit: 1
       podLabels: &external_access_labels
         endpoints.netpols.home.arpa/external-ingress-enabled: "true"
     core:
+      image:
+        repository: docker.io/goharbor/harbor-core
+        tag: v2.15.2@sha256:d7b780d23721a000f0fb8e181add6675eafa336de5d033b77fd7da0c171ff7f7
       replicas: 2
       revisionHistoryLimit: 1
       podLabels: *external_access_labels
@@ -132,6 +138,9 @@ spec:
               mountPath: /etc/envoy/secrets/root-ca
           restartPolicy: Always
     jobservice:
+      image:
+        repository: docker.io/goharbor/harbor-jobservice
+        tag: v2.15.2@sha256:f71a4452a095bcd2a8f0683648a3ae28415432df87ccfb00ec7625f3e340a598
       replicas: 2
       revisionHistoryLimit: 1
       jobLoggers:
@@ -140,6 +149,14 @@ spec:
       initContainers:
         - *envoy_sidecar
     registry:
+      registry:
+        image:
+          repository: docker.io/goharbor/registry-photon
+          tag: v2.15.2@sha256:c4ebef61ceb50a3d8bc21d149bc280422db20a1e69df317b64b74098c3615855
+      controller:
+        image:
+          repository: docker.io/goharbor/harbor-registryctl
+          tag: v2.15.2@sha256:223d5cb49d5dbf0ba4ae022e7dd9775fa459904112dc12084d3aaa36c1408362
       replicas: 2
       revisionHistoryLimit: 1
       credentials:
@@ -147,6 +164,9 @@ spec:
         password: ""
         existingSecret: harbor-internal-registry-credentials
     trivy:
+      image:
+        repository: docker.io/goharbor/trivy-adapter-photon
+        tag: v2.15.2@sha256:215c07b71c37fc7fc16e02d9185d936dcb8884a80e810817c2cd058bbd7c4e98
       replicas: 2
       resources:
         requests:
@@ -183,6 +203,10 @@ spec:
         maxIdleConns: 10
     redis:
       type: internal
+      internal:
+        image:
+          repository: docker.io/goharbor/valkey-photon
+          tag: v2.15.2@sha256:7337783e8148f01a25b113f5c7b1d640f78b1860fcaf80a33d0dbb294f7b99d0
       # This does not currently work due to https://github.com/envoyproxy/envoy/issues/41659
       # type: external
       # external:
@@ -190,6 +214,9 @@ spec:
       #   # This is only used by the registry service due to the envoy redis connection pooling mess
       #   addr: 127.0.0.1:6379
     exporter:
+      image:
+        repository: docker.io/goharbor/harbor-exporter
+        tag: v2.15.2@sha256:e1b0a248f61aad5084c5d1612d5f1da89f99c23ce743eaf8cba913d6d00c0547
       revisionHistoryLimit: 1
       # TODO, this will require changing the ServiceMonitor to avoid metric duplication
       # replicas: 2

@@ -14,12 +14,18 @@ spec:
         name: bokysan-charts
       version: 4.4.0
   values:
+    image:
+      repository: docker.io/boky/postfix
+      tag: 4.4.0@sha256:f3f247fd42528b969e2603ac120d5a5b5db7dfe61f4505c49d438b9ba1822999
     replicaCount: 2
     service:
       # Chart defaults to 587, but doesn't use TLS
       port: 25
     metrics:
       enabled: true
+      image:
+        repository: docker.io/boky/postfix-exporter
+        tag: latest@sha256:0a46a0c599b564f34ffc650f2cb3c108a867c1bb0b18a496d12d2d5cdcbaf6af
       serviceMonitor:
         enabled: true
     extraVolumes:

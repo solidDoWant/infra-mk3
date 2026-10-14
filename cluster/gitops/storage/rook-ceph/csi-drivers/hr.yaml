@@ -36,8 +36,8 @@ spec:
     operatorConfig:
       namespace: storage
       driverSpecDefaults:
-        imageSet:
-          name: rook-csi-operator-image-set-configmap
+        imageSet: &image_set
+          name: ceph-csi-image-set
         clusterName: rook-ceph-cluster
         # TODO figure out whether I should encrypt volumes (tradeoffs)
         # encryption:
@@ -56,6 +56,8 @@ spec:
       rbd:
         # Must match the StorageClass/VolumeSnapshotClass provisioner names
         name: storage.rbd.csi.ceph.com
+        # Replaces a stale Driver-level ref Rook wrote before the chart took over
+        imageSet: *image_set
         grpcTimeout: 150
         # `none` (the chart default) drops the csi-snapshotter sidecar
         snapshotPolicy: volumeSnapshot
@@ -105,6 +107,7 @@ spec:
             omapGenerator: *resources_128mi
       cephfs:
         name: storage.cephfs.csi.ceph.com
+        imageSet: *image_set
         grpcTimeout: 150
         snapshotPolicy: volumeGroupSnapshot
         log: *log

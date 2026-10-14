@@ -20,6 +20,9 @@ spec:
     kind: OCIRepository
     name: istio-csr
   values:
+    image:
+      repository: quay.io/jetstack/cert-manager-istio-csr
+      tag: v0.18.0@sha256:495dcdad72a468c9f851cea853c700c2644a3ac1e2566840aef9dbb1a20ec3be
     replicaCount: 2
     app:
       logFormat: json

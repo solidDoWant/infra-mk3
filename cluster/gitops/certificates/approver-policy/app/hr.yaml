@@ -21,6 +21,9 @@ spec:
     kind: OCIRepository
     name: approver-policy
   values:
+    image:
+      repository: quay.io/jetstack/cert-manager-approver-policy
+      tag: v0.28.0@sha256:1a955b0a5c41d319fd56b5f85aaff6f2eaba01d70f3b1adf001eac4d7b1d49e5
     crds:
       keep: true
       enabled: true

@@ -65,3 +65,25 @@ spec:
           - name: "Istio Control Plane Dashboard"
           - name: "Istio Performance Dashboard"
           - name: "Istio Wasm Extension Dashboard"
+  postRenderers:
+    # The chart splits the ref into image_name/image_version, which Renovate's
+    # flux manager does not read.
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: kiali
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: kiali
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: kiali
+                        # renovate: image
+                        image: quay.io/kiali/kiali:v2.33.0@sha256:082246cfc99f69667f10e56cecd6b92d6c614908d29b123d93a0cd0173d0905f

@@ -28,6 +28,9 @@ spec:
       tls:
         autogenerate: false
     controller:
+      image:
+        repository: registry.k8s.io/sig-storage/snapshot-controller
+        tag: v8.6.0@sha256:81e79f205083f105e573ba2ebfe5964ede7f69a154e8627f53ebbbccd3ed9f70
       revisionHistoryLimit: 1
       replicaCount: 2
       pdb:

@@ -21,6 +21,9 @@ spec:
     name: node-network-operator
   values:
     config:
+      image:
+        repository: ghcr.io/soliddowant/node-network-operator
+        tag: 0.0.11@sha256:f159dc0a68e7d67ed2b301765ef690f13f40db7e16bae35360bfa653d88e6ec6
       crds:
         # These are installed via a separate Kustomization
         enabled: false

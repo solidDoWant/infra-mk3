@@ -73,12 +73,24 @@ spec:
       # leadership changes, errors) are V<=2 and still ship. `2` matches the
       # openebs zfs-localpv sidecars and the usual kubernetes-csi default.
       externalAttacher:
+        image:
+          registry: registry.k8s.io/sig-storage/csi-attacher
+          tag: v4.4.0@sha256:dbded4ebe299973e31d0ef55815eb07a990fc67872b14900a8e69232acae4f2d
         verbosityLevel: 2
       externalProvisioner:
+        image:
+          registry: registry.k8s.io/sig-storage/csi-provisioner
+          tag: v3.6.0@sha256:6de50bacfd72627ffe4209e3db8ad7391d04ea6fb741bf51feab6c5dcfd80002
         verbosityLevel: 2
       externalResizer:
+        image:
+          registry: registry.k8s.io/sig-storage/csi-resizer
+          tag: v1.9.0@sha256:f1f352df97874442624fcef23eab04aa038f66cb0e361212f6ec09e92998184d
         verbosityLevel: 2
       externalSnapshotter:
+        image:
+          registry: registry.k8s.io/sig-storage/csi-snapshotter
+          tag: v8.2.1@sha256:5f4bb469fec51147ce157329dab598c758da1b018bad6dad26f0ff469326d769
         verbosityLevel: 2
       driver:
         image: &image
@@ -89,6 +101,18 @@ spec:
       priorityClassName: system-cluster-critical
       driver:
         image: *image
+      driverRegistrar:
+        image:
+          registry: registry.k8s.io/sig-storage/csi-node-driver-registrar
+          tag: v2.9.0@sha256:cd21e19cd8bbd5bc56f1b4f1398a436e7897da2995d6d036c9729be3f4e456e6
+      cleanup:
+        image:
+          registry: docker.io/busybox
+          tag: 1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+    csiProxy:
+      image:
+        registry: ghcr.io/democratic-csi/csi-grpc-proxy
+        tag: v0.5.7@sha256:0240d0fba3cedd598036766b1865e88aa2eac9c16822df03d5d912a81128ebb6
     storageClasses:
       - name: zfs-generic-nfs
         reclaimPolicy: Delete

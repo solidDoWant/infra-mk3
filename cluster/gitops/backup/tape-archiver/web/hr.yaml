@@ -220,6 +220,9 @@ spec:
                   memory: 64Mi
           containers:
             main:
+              image:
+                repository: ghcr.io/soliddowant/tape-archiver/web
+                tag: 0.0.13@sha256:f026ded62c6498033295f7fe6c6d6e5898ab9a36734710b6d32761dae6440f94
               # VICTORIAMETRICS_URL / VICTORIALOGS_URL env vars are rendered
               # by the chart from config.web.observability (0.0.5+) — no
               # direct env entries needed.

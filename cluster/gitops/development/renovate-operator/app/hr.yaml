@@ -25,6 +25,10 @@ spec:
     name: renovate-operator
   values:
     fullnameOverride: renovate-operator
+    image:
+      registry: ghcr.io
+      repository: mogenius/renovate-operator
+      tag: 6.5.1@sha256:892eec306b8ad0040046328ac7ed47fdcd28946e6e26fc9911f2d6d6c6055c70
     # >1 enables leader election: only the leader runs the scheduler and
     # executor. UI/webhook requests are served by every replica (sessions live
     # in encrypted cookies, triggers are written to RenovateProject status).

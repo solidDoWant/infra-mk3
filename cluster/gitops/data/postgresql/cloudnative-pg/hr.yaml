@@ -28,9 +28,15 @@ spec:
     replicaCount: 2
     nameOverride: *app_name
     fullnameOverride: *app_name
+    # Also the instance-manager image in every Cluster pod (OPERATOR_IMAGE_NAME)
+    image:
+      repository: ghcr.io/cloudnative-pg/cloudnative-pg
+      tag: 1.30.1@sha256:923c267ec29636db3bee20f993d0ec4973fa22998e1adad37da79e4d32b5bc07
     config:
       data:
         INHERITED_LABELS: app.kubernetes.io/instance
+        # renovate: image
+        PGBOUNCER_IMAGE_NAME: ghcr.io/cloudnative-pg/pgbouncer:1.25.2@sha256:b15c428057d1ffbc19fb70496911a5f1a47066dcc1315bf794f4e85ade29e2e5
     priorityClassName: system-cluster-critical
     monitoring:
       podMonitorEnabled: true
