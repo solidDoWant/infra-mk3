@@ -405,6 +405,12 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "Kubernetes: cluster version (topf.yaml kubelet) + kubectl images",
+      groupName: "kubernetes",
+      matchPackageNames: ["ghcr.io/siderolabs/kubelet", "registry.k8s.io/kubectl", "docker.io/alpine/k8s"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
       description: "Flux: install manifests + CLI",
       groupName: "flux",
       matchPackageNames: ["fluxcd/flux2", "ghcr.io/fluxcd/flux-cli", "/^ghcr\\.io/fluxcd/(source|kustomize|helm|notification)-controller$/"],
