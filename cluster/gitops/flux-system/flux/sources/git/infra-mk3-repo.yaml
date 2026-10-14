@@ -14,11 +14,9 @@ spec:
   #   secretRef:
   #     name:
   ignore: |
-    # Ignore everything except for the cluster gitops directory, and bootstrap kustomization
+    # Ignore everything except for the directories that Flux deploys from
     /*
     !/cluster/gitops
-    !/cluster/bootstrap/kustomization.yaml
-    !/cluster/bootstrap/netpol.yaml
     !/cluster/charts
     !/cluster/components
 

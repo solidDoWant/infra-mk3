@@ -3,12 +3,21 @@
 version: 3
 
 tasks:
+  install-flux:
+    silent: true
+    desc: Installs the Flux Operator and the Flux controllers from the bootstrap helmfile
+    dir: "{{ .ROOT_DIR }}/cluster/bootstrap"
+    cmds:
+      - helmfile apply --file helmfile.yaml --selector name=flux-operator --selector name=flux-instance --skip-diff-on-install --suppress-diff
+      # The Flux CRDs must exist before any Flux resources are applied
+      - kubectl -n flux-system wait fluxinstance/flux --for=condition=Ready --timeout=10m
+
   deploy-flux:
     silent: true
     dir: "{{ .ROOT_DIR }}/cluster"
     cmds:
-      # Deploy Flux CRDs, controllers, and misc. resources
-      - kubectl apply --kustomize ./bootstrap
+      # Deploy the Flux Operator, Flux CRDs, and controllers
+      - task: install-flux
       # Use the locally-available private key to decrypt the flux private key, and upload it to the cluster
       - sops --decrypt ./bootstrap/flux-sops-age-key.sops.yaml | kubectl apply -f -
       # Deploy the flux git source for this repo

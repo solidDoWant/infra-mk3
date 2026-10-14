@@ -23,3 +23,20 @@ spec:
           - notification-controller
   podMetricsEndpoints:
     - port: http-prom
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flux-operator
+  labels:
+    app.kubernetes.io/part-of: flux
+    app.kubernetes.io/component: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - flux-system
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flux-operator
+  podMetricsEndpoints:
+    - port: http-metrics
