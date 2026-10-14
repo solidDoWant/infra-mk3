@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/base:ubuntu26.04
+FROM mcr.microsoft.com/devcontainers/base:ubuntu26.04@sha256:91eff046d5c12318fc98e59258982b87ba896c467427ed8b5dab5a02107a5db7
 
 # Generally helpful tools
 RUN apt update && apt install --no-install-recommends -y \
