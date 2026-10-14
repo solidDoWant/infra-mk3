@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - ./namespace.yaml
   - ./coder/ks.yaml
+  - ./crd-schema-publisher/ks.yaml
   - ./harbor/ks.yaml
   - ./issuers/ks.yaml
   - ./renovate-operator/ks.yaml

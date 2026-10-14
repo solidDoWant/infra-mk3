@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/source.toolkit.fluxcd.io/ocirepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: crd-schema-publisher
+spec:
+  interval: 1h
+  url: oci://ghcr.io/sholdee/charts/crd-schema-publisher
+  ref:
+    tag: 2026.1010.191442
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/sholdee/crd-schema-publisher/\.github/workflows/release\.yaml@refs/.+$
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: crd-schema-publisher
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: crd-schema-publisher
+  values:
+    fullnameOverride: crd-schema-publisher
+    # Serve mode requires a single replica; the chart forces Recreate.
+    mode: controller
+    config:
+      # Core API (/openapi/v2) and Kustomize schemas alongside the CRDs.
+      includeBuiltins: true
+      includeKustomize: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: &memory 512Mi
+      limits:
+        cpu: null
+        memory: *memory
+    # Keeps the last build across restarts, so the pod is ready immediately.
+    persistence:
+      enabled: true
+      storageClass: ssd-replicated-3x
+      size: 1Gi
+    serve:
+      enabled: true
+      httpRoute:
+        enabled: true
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        hostnames:
+          - kube-schemas.${SECRET_PUBLIC_DOMAIN_NAME}
+    metrics:
+      podMonitor:
+        enabled: true
+      # Replaced by alerts.yaml: the chart's error-spike rule queries a
+      # misspelled metric (publish_cycles_total).
+      prometheusRule:
+        enabled: false
+    grafana:
+      dashboard:
+        operator:
+          enabled: true
+          defaultInstanceSelector:
+            enabled: false
+          instanceSelector:
+            matchLabels:
+              grafana.home.arpa/instance: grafana
+          datasources:
+            - inputName: DS_PROMETHEUS
+              datasourceName: VictoriaMetrics
