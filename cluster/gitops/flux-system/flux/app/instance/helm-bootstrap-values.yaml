@@ -1,0 +1,117 @@
+---
+# Used both by the bootstrap helmfile and by the HelmRelease, so that Flux
+# "adopts" itself without any changes once it is deployed.
+#
+# This only describes the Flux controllers. The GitRepository and the root
+# Kustomization are not managed via `instance.sync`, because every
+# Kustomization in the repo references the `infra-mk3` GitRepository.
+instance:
+  distribution:
+    # renovate: datasource=github-releases depName=fluxcd/flux2
+    version: 2.9.6
+    registry: ghcr.io/fluxcd
+    # Use the manifests embedded in the operator image instead of pulling them
+    # from ghcr.io. This removes a registry dependency from the operator, but
+    # the version above must be one that the operator image ships.
+    artifact: ""
+  # The image automation and image reflector controllers are not deployed.
+  # Updates are handled by Renovate.
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+    - notification-controller
+  cluster:
+    type: kubernetes
+    domain: cluster.local
+    # Network policies are handled by netpol.yaml. The upstream policies allow
+    # all egress.
+    networkPolicy: false
+    multitenant: false
+  kustomize:
+    patches:
+      # The namespace is managed by the root Kustomization (gitops/flux-system/namespace.yaml).
+      # The operator strips kustomize-controller's labels and field ownership from what it
+      # applies, so both managing it would cause a tug-of-war.
+      - patch: |
+          $patch: delete
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: placeholder-value-does-not-matter
+        target:
+          kind: Namespace
+      # Flux performance tuning patches, see https://fluxcd.io/flux/installation/configuration/vertical-scaling/
+      # Allow more jobs to run in parallel
+      - patch: |
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --concurrent=24
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --requeue-dependency=5s
+        target: &performance_controllers_target
+          kind: Deployment
+          name: "(kustomize-controller|helm-controller|source-controller)"
+      # Increase resource limits
+      - patch: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: all
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: manager
+                    resources:
+                      limits:
+                        memory: 1Gi
+                      requests:
+                        memory: 1Gi
+                        cpu: 100m
+        target: *performance_controllers_target
+      # Remove CPU resource limit
+      - patch: |
+          - op: remove
+            path: /spec/template/spec/containers/0/resources/limits/cpu
+        target: *performance_controllers_target
+      # Run kustomize builds in-memory
+      - patch: |
+          - op: add
+            path: /spec/template/spec/volumes/0/emptyDir
+            value:
+              medium: Memory
+        target:
+          kind: Deployment
+          name: kustomize-controller
+      # Gracefully shut down when about to hit memory limit
+      - patch: |
+          # Enable OOM watch feature
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --feature-gates=OOMWatch=true
+          # Threshold at which to trigger a graceful shutdown (optional, default 95%)
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --oom-watch-memory-threshold=95
+          # Interval at which to check memory usage (optional, default 500ms)
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --oom-watch-interval=500ms
+        target:
+          kind: Deployment
+          name: helm-controller
+      # Allow the notification controller to received external webhook calls
+      - patch: |
+          - op: add
+            path: /spec/template/metadata/labels/endpoints.netpols.home.arpa~1external-ingress-enabled
+            value: "true"
+        target:
+          kind: Deployment
+          name: notification-controller
+
+# Deleting the FluxInstance uninstalls Flux, including the controllers. Don't
+# let a Helm uninstall (or a deleted HelmRelease) do that.
+commonAnnotations:
+  helm.sh/resource-policy: keep

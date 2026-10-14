@@ -15,9 +15,9 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "Flux: install manifests + CLI",
+      description: "Flux: FluxInstance version + CLI, and the operator (charts in HelmRelease + bootstrap helmfile, image) whose embedded manifests must include that version",
       groupName: "flux",
-      matchPackageNames: ["fluxcd/flux2", "ghcr.io/fluxcd/flux-cli", "/^ghcr\\.io/fluxcd/(source|kustomize|helm|notification)-controller$/"],
+      matchPackageNames: ["fluxcd/flux2", "ghcr.io/fluxcd/flux-cli", "/(^|/)flux-(operator|instance)$/"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {

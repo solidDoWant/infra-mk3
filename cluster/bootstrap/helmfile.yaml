@@ -18,6 +18,9 @@ repositories:
   - name: spegel
     url: ghcr.io/spegel-org/helm-charts
     oci: true
+  - name: controlplaneio-fluxcd
+    url: ghcr.io/controlplaneio-fluxcd/charts
+    oci: true
 
 # These will all eventually be "adopted" by Flux once it is deployed.
 releases:
@@ -91,3 +94,38 @@ releases:
     needs:
       - cilium/cilium
       - networking/coredns-kube-dns
+
+  # Flux "adopts" these and itself via the flux Kustomization.
+  - name: flux-operator
+    atomic: true
+    namespace: flux-system
+    createNamespace: false # Handled by hook
+    chart: controlplaneio-fluxcd/flux-operator
+    version: 0.61.0
+    values:
+      - ../gitops/flux-system/flux/app/operator/helm-bootstrap-values.yaml
+    hooks:
+      # The cluster has a default deny policy, so the netpol must exist first
+      - events:
+          - presync
+        showlogs: true
+        command: sh
+        args:
+          - -c
+          - >-
+            kubectl create --dry-run=client -o yaml namespace flux-system | kubectl apply -f - &&
+            kubectl apply -n flux-system -f ../gitops/flux-system/flux/app/netpol.yaml
+    needs:
+      - cilium/cilium
+      - networking/coredns-kube-dns
+
+  - name: flux-instance
+    # Readiness is waited on by the flux:install-flux task instead
+    wait: false
+    namespace: flux-system
+    chart: controlplaneio-fluxcd/flux-instance
+    version: 0.61.0
+    values:
+      - ../gitops/flux-system/flux/app/instance/helm-bootstrap-values.yaml
+    needs:
+      - flux-system/flux-operator

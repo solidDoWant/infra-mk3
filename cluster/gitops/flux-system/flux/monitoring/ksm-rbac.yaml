@@ -34,6 +34,11 @@ rules:
       - alerts
       - providers
       - receivers
+  - <<: *rule
+    apiGroups:
+      - fluxcd.controlplane.io
+    resources:
+      - fluxinstances
 ---
 # Allow the KSM service account to assume the role
 apiVersion: rbac.authorization.k8s.io/v1

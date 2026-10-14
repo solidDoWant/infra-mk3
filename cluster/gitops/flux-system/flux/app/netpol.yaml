@@ -185,3 +185,22 @@ specs:
               - port: "15008" # Istio HBONE port
                 protocol: TCP
       - *from_metrics_scraper
+  - description: flux-operator
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: flux-operator
+    egress:
+      - *to_kube_apiserver
+    ingress:
+      # Kubelet for healthcheck
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: http
+                protocol: TCP
+      - <<: *from_metrics_scraper
+        toPorts:
+          - ports:
+              - port: http-metrics
+                protocol: TCP
