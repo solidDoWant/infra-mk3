@@ -21,7 +21,7 @@ Research the "<service>" application for deployment to a Kubernetes cluster. Fin
    a. `ghcr.io/home-operations/<name>` — community-maintained, rootless, hardened.
    b. The project's own GHCR/Quay/upstream-registry image (check the project's README or release docs — many projects publish to ghcr.io/<org>/<name> or quay.io/<org>/<name> in addition to or instead of Docker Hub).
    c. Docker Official Images (`ubuntu`, `python`, `postgres`, ...): `public.ecr.aws/docker/library/<name>` (published by Docker, same digests).
-   d. Docker-Hub-only images: `mirror.gcr.io/<org>/<name>` (Google's pull-through cache, same digests; the first `packageRules` entry in `.renovaterc.json5` points Renovate lookups back at Docker Hub, so other rules must name it `docker.io/<org>/<name>`). Never reference `docker.io` directly.
+   d. Docker-Hub-only images: `mirror.gcr.io/<org>/<name>` (Google's pull-through cache, same digests; the first `packageRules` entry in `.github/renovate/safety.json5` points Renovate lookups back at Docker Hub, so other rules must name it `docker.io/<org>/<name>`). Never reference `docker.io` directly.
    Note which registry each candidate came from so the implementing agent can pick the best one.
 3. Default port(s) and how the app is configured (env vars, config file, CLI flags).
 4. PostgreSQL support: does it support Postgres? If so, does it support native TLS client certificates? Check in this order:

@@ -37,7 +37,7 @@ spec:
       enabled: false
 
     # Parent keys aren't `image`, so the flux manager can't see these; a
-    # custom manager in .renovaterc.json5 matches the full repository.
+    # custom manager in .github/renovate/managers.json5 matches the full repository.
     image:
       keda:
         registry: ""

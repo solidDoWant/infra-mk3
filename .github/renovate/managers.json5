@@ -1,0 +1,160 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "Custom datasources and regex managers for refs the built-in managers miss",
+
+  customDatasources: {
+    "grafana-plugins": {
+      defaultRegistryUrlTemplate: "https://grafana.com/api/plugins/{{packageName}}/versions",
+      format: "json",
+      // Each version carries the plugin's GitHub repo; sourceUrl drives changelog fetching.
+      transformTemplates: [
+        '{"releases": $map(items, function($i) { {"version": $i.version, "releaseTimestamp": $i.createdAt} }), "sourceUrl": items[0].url}',
+      ],
+    },
+    // Directory index of the installer ISOs; every link is a release candidate,
+    // extractVersion (packageRules) keeps the proxmox-ve_X.Y-Z.iso ones.
+    "proxmox-iso": {
+      defaultRegistryUrlTemplate: "https://enterprise.proxmox.com/iso/",
+      format: "html",
+    },
+  },
+
+  customManagers: [
+    {
+      customType: "regex",
+      description: "GitHub release assets with no in-tree copy to pin by commit",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/releases/download/(?<currentValue>v?\\d[^/\\s]*)/",
+      ],
+      datasourceTemplate: "github-releases",
+    },
+    {
+      customType: "regex",
+      description: "Talos config $schema URLs, versioned by minor: tracked as siderolabs/talos so they join the talos group PR",
+      managerFilePatterns: ["/^talos/.+\\.ya?ml(?:\\.tpl)?$/"],
+      matchStrings: [
+        "\\$schema=https://docs\\.siderolabs\\.com/talos/(?<currentValue>v\\d+\\.\\d+)/schemas/",
+      ],
+      depNameTemplate: "siderolabs/talos",
+      datasourceTemplate: "custom.talos-factory",
+      // Collapse vX.Y.Z releases to vX.Y; prereleases don't match and are dropped.
+      extractVersionTemplate: "^(?<version>v\\d+\\.\\d+)\\.\\d+$",
+      versioningTemplate: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)$",
+    },
+    {
+      customType: "regex",
+      description: "Grafana plugins (grafana-operator plugins: lists)",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "- name: (?<depName>[a-z0-9]+(?:-[a-z0-9]+)*-(?:datasource|panel|app))\\n\\s+version: [\"']?(?<currentValue>\\d[^\"'\\s]*)",
+      ],
+      datasourceTemplate: "custom.grafana-plugins",
+    },
+    {
+      customType: "regex",
+      description: "tape-archiver data-worker image deployed by Ansible",
+      managerFilePatterns: ["/^ansible/.+\\.ya?ml$/"],
+      matchStrings: [
+        "(?<depName>ghcr\\.io/soliddowant/tape-archiver/[a-z0-9-]+):(?<currentValue>[\\w.-]+)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Literal image refs assigned to *_IMAGE Makefile variables",
+      managerFilePatterns: ["/(^|/)Makefile$/"],
+      matchStrings: [
+        "(?:^|\\n)\\w*_IMAGE\\s*[?:]?=\\s*(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?\\s*(?:\\n|$)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Literal image refs assigned to *_IMAGE Taskfile vars",
+      managerFilePatterns: ["/^\\.taskfiles/.+\\.ya?ml$/"],
+      matchStrings: [
+        "\\w*_IMAGE:\\s*[\"']?(?<depName>[a-z0-9][\\w./-]*):(?<currentValue>\\w[\\w.-]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?[\"']?\\s*(?:\\n|$)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "`# renovate: datasource=… depName=…` annotations on `KEY = value` lines (Makefile, Nix); the preset's annotation manager needs `=` directly before the value",
+      managerFilePatterns: ["/(^|/)Makefile$/", "/\\.nix$/"],
+      matchStrings: [
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n[^\\n]*?\\s=\\s*[\"']?(?<currentValue>[^\"'\\s;]+)[\"']?",
+      ],
+    },
+    {
+      customType: "regex",
+      description: "Commit pins following a GitHub branch: `# renovate: datasource=git-refs depName=<owner>/<repo> branch=<branch>` above the full SHA",
+      managerFilePatterns: ["/^ansible/.+\\.ya?ml$/", "/\\.nix$/"],
+      matchStrings: [
+        "datasource=git-refs depName=(?<depName>\\S+) branch=(?<currentValue>\\S+)\\n[^\\n]*?(?::\\s*|=\\s*)[\"']?(?<currentDigest>[0-9a-f]{40})[\"']?",
+      ],
+      datasourceTemplate: "git-refs",
+      packageNameTemplate: "https://github.com/{{{depName}}}",
+    },
+    {
+      customType: "regex",
+      description: "Kustomize remote git bases pinned by commit: `//<path>?…ref=<sha> # <tag>`",
+      managerFilePatterns: ["/(^|/)kustomization\\.ya?ml$/"],
+      matchStrings: [
+        "https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+)//[^?\\s]*\\?(?:[^\\s#]*&)?ref=(?<currentDigest>[0-9a-f]{40})[^\\s#]*\\s+#\\s*(?<currentValue>v?\\d\\S*)",
+      ],
+      datasourceTemplate: "github-tags",
+    },
+    {
+      customType: "regex",
+      description: "`# renovate: image` above a digest-pinned image ref the built-in managers don't see (env vars, args, operator config)",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "# renovate: image\\n[^\\n]*?[\\s\"'=](?<depName>[a-z0-9][\\w.-]*(?::\\d+)?/[\\w./-]+):(?<currentValue>\\w[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Image maps the flux manager can't see: full repo in `registry:` (democratic-csi), under a parent key not named `image` (KEDA), or outside a HelmRelease (VLSingle)",
+      managerFilePatterns: [
+        "/^cluster/gitops/storage/democratic-csi/.+\\.ya?ml$/",
+        "/^cluster/gitops/system-controllers/keda/app/hr\\.yaml$/",
+        "/^cluster/gitops/monitoring/victoria-metrics/logs/vmlogs\\.yaml$/",
+      ],
+      matchStrings: [
+        "(?:registry|repository): (?<depName>[a-z0-9][\\w.-]*/[\\w./-]+)\\n\\s*tag: (?<currentValue>\\w[\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Raw files pinned by commit, tag in a trailing comment: `raw.githubusercontent.com/<owner>/<repo>/<sha>/<path> # <tag>`",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?<currentDigest>[0-9a-f]{40})/\\S*[ \\t]+#[ \\t]*(?<currentValue>[^\\s=]+)(?:\\s|$)",
+      ],
+      datasourceTemplate: "github-tags",
+    },
+    {
+      customType: "regex",
+      description: "Raw files pinned by commit, following a branch: `raw.githubusercontent.com/<owner>/<repo>/<sha>/<path> # branch=<branch>`",
+      managerFilePatterns: ["/^cluster/.+\\.ya?ml$/"],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?<currentDigest>[0-9a-f]{40})/\\S*[ \\t]+#[ \\t]*branch=(?<currentValue>\\S+)",
+      ],
+      datasourceTemplate: "git-refs",
+      packageNameTemplate: "https://github.com/{{{depName}}}",
+    },
+    {
+      customType: "regex",
+      description: "Tagged raw files (editor `$schema` refs); deployed raw files are pinned by commit (above)",
+      managerFilePatterns: ["/^cluster/.+\\.(ya?ml|json)$/"],
+      matchStrings: [
+        "https://raw\\.githubusercontent\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/(?:refs/tags/)?(?<currentValue>v\\d[^/\\s]*)/",
+        "https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+)/raw/refs/tags/(?<currentValue>v\\d[^/\\s]*)/",
+      ],
+      datasourceTemplate: "github-tags",
+    },
+  ],
+}

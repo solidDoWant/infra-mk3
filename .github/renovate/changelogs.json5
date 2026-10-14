@@ -1,0 +1,162 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "Changelog sources for packages without (or with a wrong) source label",
+  packageRules: [
+    // Release notes come from GitHub releases/tags of sourceUrl. Packages with
+    // no (or a wrong) org.opencontainers.image.source label get one here;
+    // changelogUrl is a link-only fallback where upstream tags don't match.
+    {
+      matchPackageNames: ["registry.k8s.io/kubectl"],
+      sourceUrl: "https://github.com/kubernetes/kubernetes",
+    },
+    {
+      matchPackageNames: ["/dragonfly-operator/"],
+      sourceUrl: "https://github.com/dragonflydb/dragonfly-operator",
+    },
+    {
+      matchPackageNames: ["ghcr.io/dragonflydb/dragonfly"],
+      sourceUrl: "https://github.com/dragonflydb/dragonfly",
+    },
+    {
+      matchPackageNames: ["public.ecr.aws/aws-cli/aws-cli"],
+      sourceUrl: "https://github.com/aws/aws-cli",
+    },
+    {
+      matchPackageNames: ["/^(docker\\.io/)?democraticcsi/democratic-csi$/", "ghcr.io/democratic-csi/democratic-csi"],
+      sourceUrl: "https://github.com/democratic-csi/democratic-csi",
+    },
+    {
+      matchPackageNames: ["ghcr.io/grpc-ecosystem/grpc-health-probe"],
+      sourceUrl: "https://github.com/grpc-ecosystem/grpc-health-probe",
+    },
+    {
+      matchPackageNames: ["ghcr.io/k8s-gateway/k8s_gateway"],
+      sourceUrl: "https://github.com/k8s-gateway/k8s_gateway",
+    },
+    {
+      matchPackageNames: ["ghcr.io/fluent/fluent-operator/fluent-bit"],
+      sourceUrl: "https://github.com/fluent/fluent-bit",
+    },
+    {
+      matchPackageNames: ["ghcr.io/jellyfin/jellyfin"],
+      sourceUrl: "https://github.com/jellyfin/jellyfin",
+    },
+    {
+      description: "Tags track the bundled kubectl version",
+      matchPackageNames: ["docker.io/alpine/k8s"],
+      sourceUrl: "https://github.com/kubernetes/kubernetes",
+    },
+    {
+      description: "Tags track the bundled helm version",
+      matchPackageNames: ["alpine/helm"],
+      sourceUrl: "https://github.com/helm/helm",
+    },
+    {
+      matchPackageNames: ["quay.io/prometheuscommunity/smartctl-exporter"],
+      sourceUrl: "https://github.com/prometheus-community/smartctl_exporter",
+    },
+    {
+      matchDatasources: ["pypi"],
+      matchPackageNames: ["omsdk"],
+      sourceUrl: "https://github.com/dell/omsdk",
+    },
+    {
+      description: "Changelog lives in the README",
+      matchDatasources: ["pypi"],
+      matchPackageNames: ["bcrypt"],
+      changelogUrl: "https://github.com/pyca/bcrypt#changelog",
+    },
+    {
+      description: "Tags are vX.Y; images are X.Y.Z",
+      matchPackageNames: ["ghcr.io/home-operations/nzbget"],
+      changelogUrl: "https://github.com/nzbgetcom/nzbget/releases",
+    },
+    {
+      description: "Floating X.Y tags don't match vX.Y.Z releases",
+      matchPackageNames: ["hashicorp/terraform"],
+      changelogUrl: "https://github.com/hashicorp/terraform/releases",
+    },
+    {
+      description: "Tags are gpu-vX.Y.Z; release notes fall back to extractVersion for tag matching",
+      matchPackageNames: ["/intel-gpu-resource-driver/"],
+      extractVersion: "^(?:gpu-v)?(?<version>.+)$",
+    },
+    {
+      description: "talos-factory custom datasource (talosFactory preset) has no source",
+      matchDatasources: ["custom.talos-factory"],
+      sourceUrl: "https://github.com/siderolabs/talos",
+    },
+    // Coder registry modules: monorepo tagged release/coder/<module>/vX.Y.Z.
+    // extractVersion is per module so sibling modules' tags can't match.
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["/^registry\\.coder\\.com/coder//"],
+      sourceUrl: "https://github.com/coder/registry",
+    },
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["registry.coder.com/coder/claude-code/coder"],
+      extractVersion: "^(?:release/coder/claude-code/v)?(?<version>\\d.*)$",
+    },
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["registry.coder.com/coder/git-commit-signing/coder"],
+      extractVersion: "^(?:release/coder/git-commit-signing/v)?(?<version>\\d.*)$",
+    },
+    {
+      matchDatasources: ["terraform-module"],
+      matchPackageNames: ["registry.coder.com/coder/agentapi/coder"],
+      extractVersion: "^(?:release/coder/agentapi/v)?(?<version>\\d.*)$",
+    },
+    // Monorepo chart tags (<chart>-helm-chart-X.Y.Z) don't match; link the chart changelog.
+    {
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/external-dns"],
+      changelogUrl: "https://github.com/kubernetes-sigs/external-dns/blob/master/charts/external-dns/CHANGELOG.md",
+    },
+    {
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/metrics-server"],
+      changelogUrl: "https://github.com/kubernetes-sigs/metrics-server/blob/master/charts/metrics-server/CHANGELOG.md",
+    },
+    {
+      description: "Teleport's GitHub releases lag its charts/images",
+      matchPackageNames: ["/^teleport-/", "/gravitational\\/(tbot|teleport)/"],
+      changelogUrl: "https://goteleport.com/docs/changelog/",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/pause"],
+      changelogUrl: "https://github.com/kubernetes/kubernetes/blob/master/build/pause/CHANGELOG.md",
+    },
+    {
+      description: "Tags are kustomize/vX.Y.Z",
+      matchPackageNames: ["registry.k8s.io/kustomize/kustomize"],
+      changelogUrl: "https://github.com/kubernetes-sigs/kustomize/releases",
+    },
+    {
+      description: "contrib-/distroless- tags don't match envoy's vX.Y.Z releases",
+      matchPackageNames: ["docker.io/envoyproxy/envoy"],
+      changelogUrl: "https://github.com/envoyproxy/envoy/releases",
+    },
+    {
+      matchPackageNames: ["public.ecr.aws/docker/library/python"],
+      changelogUrl: "https://docs.python.org/3/whatsnew/changelog.html",
+    },
+    {
+      matchPackageNames: ["ghcr.io/cloudnative-pg/postgresql"],
+      changelogUrl: "https://www.postgresql.org/docs/release/",
+    },
+    {
+      matchPackageNames: ["quay.io/curl/curl"],
+      changelogUrl: "https://curl.se/changes.html",
+    },
+    // FairwindsOps/charts has no tags/releases; the chart dir history is the changelog.
+    {
+      matchDatasources: ["helm"],
+      matchPackageNames: ["vpa"],
+      changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/vpa",
+    },
+    {
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/goldilocks"],
+      changelogUrl: "https://github.com/FairwindsOps/charts/commits/master/stable/goldilocks",
+    },
+  ],
+}
