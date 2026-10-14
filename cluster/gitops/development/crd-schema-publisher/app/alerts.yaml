@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: crd-schema-publisher
+spec:
+  groups:
+    - name: crd-schema-publisher
+      rules:
+        - alert: CRDPublisherWatchdogStale
+          expr: time() - crdpublisher_watchdog_timestamp > 120
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: crd-schema-publisher watchdog is stale
+            description: |
+              The watch loop has not sent a heartbeat in over 2 minutes. The
+              process may be stuck, and served schemas will not track CRD changes.
+        - alert: CRDPublisherErrorSpike
+          expr: increase(crdpublisher_publish_cycle_total{result="error"}[1h]) > 5
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: crd-schema-publisher schema builds are failing
+            description: |
+              More than 5 schema build cycles failed in the last hour. Served
+              schemas are stale until a build succeeds; check the pod logs.
