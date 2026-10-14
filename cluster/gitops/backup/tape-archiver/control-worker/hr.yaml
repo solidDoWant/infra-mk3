@@ -117,7 +117,7 @@ spec:
               restartPolicy: Always
               image:
                 repository: public.ecr.aws/gravitational/tbot-distroless
-                tag: 18.11.3
+                tag: 18.11.3@sha256:6eef735973710bd08c84a9eb493fb9ea3082f4af837199f4bcc9ce70881c5be9
               args:
                 - start
                 - --config
