@@ -1,6 +1,6 @@
 # Needed until https://github.com/intel/xpumanager/issues/100 is fixed
 
-ARG BASE_IMAGE=ubuntu:rolling
+ARG BASE_IMAGE=ubuntu:rolling@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
 
 FROM ${BASE_IMAGE}
 
