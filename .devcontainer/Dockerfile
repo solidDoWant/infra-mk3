@@ -53,7 +53,7 @@ COPY --from=ghcr.io/siderolabs/talosctl:v1.14.2 /talosctl /usr/local/bin/talosct
 COPY --from=ghcr.io/postfinance/topf:v0.6.1 /usr/local/bin/topf /usr/local/bin/topf
 
 # helmfile
-COPY --from=ghcr.io/helmfile/helmfile:v1.8.1 /usr/local/bin/helmfile /usr/local/bin/helmfile
+COPY --from=ghcr.io/helmfile/helmfile:v1.8.1@sha256:9c29ece2fb6ec3f8c1432be9d29526f3cfe35d7e59e066d0aa5c4b3e819f2165 /usr/local/bin/helmfile /usr/local/bin/helmfile
 
 # kubectl
 COPY --from=registry.k8s.io/kubectl:v1.37.1 /bin/kubectl /usr/local/bin/kubectl
@@ -72,7 +72,7 @@ COPY --from=ghcr.io/terraform-linters/tflint:v0.64.0 /usr/local/bin/tflint /usr/
 
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
-COPY --from=alpine/helm:4.3.0 /usr/bin/helm /usr/local/bin/helm
+COPY --from=alpine/helm:4.3.0@sha256:a6cf54599ccb99d90cf0712b30f03fdb3cab062e6b94e0418cc4db7e8a1464b2 /usr/bin/helm /usr/local/bin/helm
 ## Plugins
 ### helm-diff: required by `helmfile apply`
 ### Helm 4 verifies plugins by default; git-sourced installs carry no provenance
