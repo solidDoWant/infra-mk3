@@ -172,6 +172,15 @@
     },
     {
       customType: "regex",
+      description: "Kustomize remote git bases pinned by commit: `//<path>?…ref=<sha> # <tag>`",
+      managerFilePatterns: ["/(^|/)kustomization\\.ya?ml$/"],
+      matchStrings: [
+        "https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+)//[^?\\s]*\\?(?:[^\\s#]*&)?ref=(?<currentDigest>[0-9a-f]{40})[^\\s#]*\\s+#\\s*(?<currentValue>v?\\d\\S*)",
+      ],
+      datasourceTemplate: "github-tags",
+    },
+    {
+      customType: "regex",
       description: "Tagged raw files (CRDs, manifests, dashboards, values schema refs)",
       managerFilePatterns: ["/^cluster/.+\\.(ya?ml|json)$/"],
       matchStrings: [
@@ -199,6 +208,12 @@
       description: "No digest pins: flake.lock already pins nixpkgs, and a preset ref can't carry both tag and SHA",
       matchManagers: ["nix", "renovate-config"],
       pinDigests: false,
+    },
+    {
+      description: "Remote git bases are tracked by the commit-pin regex manager; the kustomize manager would read the SHA as the version",
+      matchManagers: ["kustomize"],
+      matchDatasources: ["github-tags", "git-tags"],
+      enabled: false,
     },
     {
       description: "Inline image strings in HelmRelease values are already extracted by the flux manager",

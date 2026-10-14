@@ -2,5 +2,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/rabbitmq/cluster-operator//config/crd/?timeout=120&version=v2.23.0
-  - https://github.com/rabbitmq/messaging-topology-operator//config/crd/?timeout=120&version=v1.20.3
+  - https://github.com/rabbitmq/cluster-operator//config/crd/?timeout=120&ref=3ad2b0ec0b43dbeb4b57c1142fc5c813a5716033 # v2.23.0
+  - https://github.com/rabbitmq/messaging-topology-operator//config/crd/?timeout=120&ref=2d780409f494944b3a2786c6687cebddef5bfb33 # v1.20.3
