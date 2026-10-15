@@ -87,6 +87,12 @@
       extractVersion: "^(?:version/)?(?<version>.+)$",
     },
     {
+      description: "Image repo stopped tagging at 1.29.x; nginx tags are release-X.Y.Z",
+      matchPackageNames: ["public.ecr.aws/nginx/nginx-unprivileged"],
+      sourceUrl: "https://github.com/nginx/nginx",
+      extractVersion: "^(?:release-)?(?<version>.+)$",
+    },
+    {
       description: "talos-factory custom datasource (talosFactory preset) has no source",
       matchDatasources: ["custom.talos-factory"],
       sourceUrl: "https://github.com/siderolabs/talos",
