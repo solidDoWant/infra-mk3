@@ -41,10 +41,8 @@ module "claude_code" {
   source  = "registry.coder.com/coder/claude-code/coder"
   version = "~> 5.5"
 
-  agent_id            = coder_agent.main.id
-  disable_autoupdater = true
-  model               = "sonnet"
-  workdir             = local.repo_directory
+  agent_id = coder_agent.main.id
+  workdir  = local.repo_directory
 
   # Start every session in bypassPermissions without the one-time confirmation.
   managed_settings = {
