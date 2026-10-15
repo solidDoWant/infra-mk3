@@ -80,12 +80,12 @@ spec:
       externalProvisioner:
         image:
           registry: registry.k8s.io/sig-storage/csi-provisioner
-          tag: v3.6.4@sha256:e7ad666f1d9b0caa077c7f0c157c9f87d1e73858390732496f66dcc716ff10c5
+          tag: v6.4.0@sha256:6ebe60fd8ed67a7f8a90d34402e9e706b274e53612d6fa5fbb8285728db622e2
         verbosityLevel: 2
       externalResizer:
         image:
           registry: registry.k8s.io/sig-storage/csi-resizer
-          tag: v1.14.0@sha256:5e7cbb63fd497fa913caa21fee1a69f727c220c6fa83c5f8bb0995e2ad73a474
+          tag: v2.3.0@sha256:48fb3deb93cd848e3c8998b6368f4322c93bb5ce4a90d1307b6dda0dbefb9a0e
         verbosityLevel: 2
       externalSnapshotter:
         image:
