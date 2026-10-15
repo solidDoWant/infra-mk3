@@ -170,5 +170,11 @@
       matchPackageNames: ["prometheus-community/smartctl_exporter", "quay.io/prometheuscommunity/smartctl-exporter"],
       allowedVersions: "!/^v?0\\.15\\.0$/",
     },
+    {
+      description: "Rook csi-resizer held at 2.2.x: ceph-csi-operator hardcodes --feature-gates=RecoverVolumeExpansionFailure=true, which 2.3.0 removed (exits 1, 'unrecognized feature gate'). Lift once ceph/ceph-csi-operator#638 ships",
+      matchFileNames: ["cluster/gitops/storage/rook-ceph/csi-drivers/image-set.yaml"],
+      matchPackageNames: ["registry.k8s.io/sig-storage/csi-resizer"],
+      allowedVersions: "/^v2\\.[0-2]\\./",
+    },
   ],
 }
