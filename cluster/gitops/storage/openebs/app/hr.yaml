@@ -104,7 +104,7 @@ spec:
           image:
             registry: registry.k8s.io
             repository: sig-storage/csi-resizer
-            tag: v1.14.0@sha256:5e7cbb63fd497fa913caa21fee1a69f727c220c6fa83c5f8bb0995e2ad73a474
+            tag: v2.3.0@sha256:48fb3deb93cd848e3c8998b6368f4322c93bb5ce4a90d1307b6dda0dbefb9a0e
           extraArgs:
             - --v=2
         snapshotter:
@@ -116,7 +116,7 @@ spec:
           image:
             registry: registry.k8s.io
             repository: sig-storage/csi-provisioner
-            tag: v5.3.0@sha256:bb057f866177d5f4139a1527e594499cbe0feeb67b63aaca8679dfdf0a6016f9
+            tag: v6.4.0@sha256:6ebe60fd8ed67a7f8a90d34402e9e706b274e53612d6fa5fbb8285728db622e2
           extraArgs:
             - --v=2
             # Own CSIStorageCapacity objects from the DEPLOYMENT, not the
