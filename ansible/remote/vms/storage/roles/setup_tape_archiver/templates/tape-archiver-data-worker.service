@@ -20,6 +20,10 @@ After=docker.service network-online.target tape-archiver-tbot.service
 # the JWT in /run/tape-archiver/jwt survives it (RuntimeDirectoryPreserve on
 # the tbot unit) and stays valid until its next renewal regardless.
 Wants=network-online.target tape-archiver-tbot.service
+# A persistently broken host lands in `failed` instead of restarting forever
+# (RestartSec alone keeps the default start limiter from ever tripping).
+StartLimitIntervalSec=10min
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -43,14 +47,13 @@ Environment=TAPE_ARCHIVER_IMAGE={{ tape_archiver_image }}
 # rewrites the virtual library to mirror the REAL library's slot occupancy,
 # so the rehearsal is faithful. Beyond the SCSI nodes above that needs three
 # more things, all gated on mhvtl being present and none touching a real
-# library (it only rewrites mhvtl's own config/media and signals its own
-# daemon):
-#   * the /dev/mhvtl1x CONTROL devices (char 236, minor = the device.conf
-#     queue IDs: 10 library, 11/12 drives) — the reprovision path opens these.
-#   * --pid=host, so the worker can SIGHUP the host's vtllibrary daemon to
-#     re-read library_contents.10 IN PLACE. The daemon is not restarted and
-#     the module is not reloaded, so /dev/sch*, /dev/nst*, /dev/sg* keep their
-#     numbers and the --device passthrough above stays valid.
+# library (it rearranges the running virtual library through its own I/O
+# station and never restarts or signals the daemons):
+#   * --ipc=host (tape-archiver >= 0.0.14), so the worker can send operator
+#     commands to the mhvtl daemons over their SysV message queue.
+#   * all-or-nothing: a partly present virtual library (e.g. a vtltape@1x that
+#     did not come back; vtltape@.service is KillMode=none) is logged and not
+#     passed through, since a one-drive library cannot rehearse a two-copy run.
 #   * /etc/mhvtl AND the media home bind-mounted rw, so make_vtl_media (bundled
 #     in the image, not required on the host) can rewrite library_contents.10
 #     and regenerate media. The media home is NOT hardcoded: the generator
@@ -64,7 +67,11 @@ Environment=TAPE_ARCHIVER_IMAGE={{ tape_archiver_image }}
 #     harmless — and keeps the unit correct if the home ever moves off-pool.
 RuntimeDirectory=tape-archiver-worker
 EnvironmentFile=-/run/tape-archiver-worker/mhvtl-devices.env
-ExecStartPre=/bin/sh -c 'F=/run/tape-archiver-worker/mhvtl-devices.env; : > "$F"; if [ -e /dev/mhvtl/changer ] && [ -e /dev/mhvtl/drive0 ] && [ -e /dev/mhvtl/drive1 ]; then FLAGS=""; for d in /dev/mhvtl/changer /dev/mhvtl/drive0 /dev/mhvtl/drive1 /dev/mhvtl/sg-changer /dev/mhvtl/sg-drive0 /dev/mhvtl/sg-drive1; do R=$(readlink -f "$d"); FLAGS="$FLAGS --device $R --device $R:$d"; done; for c in /dev/mhvtl10 /dev/mhvtl11 /dev/mhvtl12; do [ -e "$c" ] && FLAGS="$FLAGS --device $c"; done; FLAGS="$FLAGS --pid=host --mount type=bind,source=/etc/mhvtl,target=/etc/mhvtl"; H=$(. /etc/mhvtl/mhvtl.conf >/dev/null 2>&1; echo "$MHVTL_HOME_PATH"); [ -d "$H" ] && FLAGS="$FLAGS --mount type=bind,source=$H,target=$H"; echo "MHVTL_DEVICE_FLAGS=$FLAGS" > "$F"; fi'
+ExecStartPre=/bin/sh -c 'F=/run/tape-archiver-worker/mhvtl-devices.env; : > "$F"; N="/dev/mhvtl/changer /dev/mhvtl/drive0 /dev/mhvtl/drive1 /dev/mhvtl/sg-changer /dev/mhvtl/sg-drive0 /dev/mhvtl/sg-drive1"; P=0; for d in $N; do [ -e "$d" ] && P=$((P+1)); done; if [ "$P" != 6 ]; then [ "$P" = 0 ] || echo "mhvtl is only partly present ($P of 6 /dev/mhvtl nodes); dry runs are disabled" >&2; else FLAGS=""; for d in $N; do R=$(readlink -f "$d"); FLAGS="$FLAGS --device $R --device $R:$d"; done; for c in /dev/mhvtl10 /dev/mhvtl11 /dev/mhvtl12; do [ -e "$c" ] && FLAGS="$FLAGS --device $c"; done; FLAGS="$FLAGS --ipc=host --mount type=bind,source=/etc/mhvtl,target=/etc/mhvtl"; H=$(. /etc/mhvtl/mhvtl.conf >/dev/null 2>&1; echo "$MHVTL_HOME_PATH"); [ -d "$H" ] && FLAGS="$FLAGS --mount type=bind,source=$H,target=$H"; echo "MHVTL_DEVICE_FLAGS=$FLAGS" > "$F"; fi'
+
+# Fail fast naming a missing required device, instead of docker run exiting
+# 127 with "error gathering device information".
+ExecStartPre=/bin/sh -c 'for d in {{ (tape_archiver_tape_devices + [tape_archiver_changer_device] + tape_archiver_sg_discovery.stdout_lines + ["/dev/zfs", "/dev/fuse"]) | join(" ") }}; do [ -e "$d" ] || { echo "required device $d is missing" >&2; exit 1; }; done'
 
 # All run configuration lives in the env file, never hardcoded in this unit.
 EnvironmentFile=/etc/tape-archiver/data-worker.env
