@@ -75,7 +75,7 @@ locals {
   # survives. Do the Update while the workspace is STOPPED (Stop -> Update ->
   # Start): KubeVirt won't swap a live VMI's disk, and Terraform can only destroy
   # the old root PVC cleanly once it is unmounted.
-  image_version = "20261010230045" # tag pushed by ./image (see above)
+  image_version = "20261015060610" # tag pushed by ./image (see above)
 
   # The desktop variant is a SEPARATE image built from the same os-config with the
   # Xfce/Teleport-desktop module added (see ../image/os-config/flake.nix). Both
