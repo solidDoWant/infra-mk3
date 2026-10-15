@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/soliddowant/charts/tape-archiver-web
   ref:
-    tag: 0.0.15
-    digest: sha256:058cbc535272b43e78fef791c42765dcbd4142e824ff01b32bf7fedc8e70bde1
+    tag: 0.0.16
+    digest: sha256:071c9d4e221cfb688e5e89432931cefc03ff56687072f6d059e8bb5d94ca9aab
 ---
 # tape-archiver web UI: browser dashboard for submitting, monitoring, pausing,
 # and resuming tape backup runs. Talks to the same Temporal frontend as the
@@ -223,7 +223,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/soliddowant/tape-archiver/web
-                tag: 0.0.15@sha256:76168b334a2737b94542e41f17ce8195212ecaa121b3c7dcf009682c6c7828bc
+                tag: 0.0.16@sha256:bd905967440fc6c2fe576d93e28dda9b0a10a29c724516ecf434c76ee76c7811
               # VICTORIAMETRICS_URL / VICTORIALOGS_URL env vars are rendered
               # by the chart from config.web.observability (0.0.5+) — no
               # direct env entries needed.
