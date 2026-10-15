@@ -1,0 +1,34 @@
+---
+# Per-tape write health from the data worker (tape-archiver docs/report.md).
+# Gauges are set once per written tape and kept until the worker restarts, so
+# these stay active after a bad write. dry_run="false" excludes rehearsals on
+# the virtual library, which reuse the real tapes' barcodes.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: tape-archiver-write-health
+spec:
+  groups:
+    - name: tape-archiver-write-health
+      rules:
+        - alert: TapeArchiverTapeAlert
+          expr: tape_archiver_write_tapealert_flags{dry_run="false"} > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: Tape {{ $labels.barcode }} reported TapeAlert flags during its last write
+            description: |
+              The drive raised {{ $value | humanize }} TapeAlert flag(s) while writing
+              tape {{ $labels.barcode }}. The run's report and the web UI's Tapes page
+              name the flags. Consider retiring the tape or cleaning the drive.
+
+        - alert: TapeArchiverWriteBelowFloor
+          expr: tape_archiver_write_below_floor{dry_run="false"} == 1
+          labels:
+            severity: warning
+          annotations:
+            summary: Tape {{ $labels.barcode }} was written below the speed-matching floor
+            description: |
+              Tape {{ $labels.barcode }} was written slower than its generation's
+              speed-matching floor, so the drive likely shoe-shined. Check the staging
+              pool's read rate and the run's report.
