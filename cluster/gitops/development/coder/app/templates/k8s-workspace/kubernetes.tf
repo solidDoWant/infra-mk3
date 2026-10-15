@@ -54,6 +54,12 @@ locals {
     CODER_TELEMETRY_ENABLE           = "false"
     CODER_AGENT_TOKEN                = coder_agent.main.token
     CODER_DERP_SERVER_STUN_ADDRESSES = "disable"
+    # Spawn every agent child (terminals, SSH, scripts, apps) via
+    # `coder agent-exec`, which renices it +5 and sets its oom_score_adj so the
+    # container OOM killer picks dev processes (e.g. linkers) before the agent:
+    # 998 if the agent is at >= 0, or 0 if it is negative (runc Guaranteed pods
+    # start at -997). Both are raises, so no capabilities are needed as uid 1000.
+    CODER_PROC_PRIO_MGMT = "1"
     # Node does not consult the system trust store; point it at the mounted CA so
     # node-based tooling (e.g. Claude Code) also trusts the cluster PKI root.
     NODE_EXTRA_CA_CERTS = local.cluster_ca_mount_path

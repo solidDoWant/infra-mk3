@@ -286,6 +286,15 @@
           "PATH=/run/wrappers/bin:/home/coder/.nix-profile/bin:/home/coder/.local/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin"
         ];
         ExecStart = "${pkgs.coder}/bin/coder agent";
+        # Everything started from a Coder terminal/app lives in this unit's
+        # cgroup, so the default OOMPolicy=stop tore down the whole unit (agent
+        # included) whenever the kernel OOM-killed e.g. a linker. Let the kernel
+        # kill just the offending process instead.
+        OOMPolicy = "continue";
+        # Make the agent the OOM killer's last resort. Its children are reset to
+        # 0 by `coder agent-exec` (CODER_PROC_PRIO_MGMT, set in agent.env by the
+        # template) rather than inheriting this.
+        OOMScoreAdjust = -900;
         Restart = "on-failure";
         RestartSec = 5;
       };

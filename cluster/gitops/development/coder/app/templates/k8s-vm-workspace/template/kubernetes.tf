@@ -126,6 +126,11 @@ locals {
     # host becomes "...svc.cluster.localapi" and the request fails to resolve.
     CODER_AGENT_URL                  = "${trimsuffix(data.coder_workspace.me.access_url, "/")}/"
     CODER_DERP_SERVER_STUN_ADDRESSES = "disable"
+    # Spawn every agent child (terminals, SSH, scripts, apps) via
+    # `coder agent-exec`, which resets its oom_score_adj from the agent's -900
+    # (coder-agent.service in ../image) back to 0, and renices it +5. Without
+    # this the children would inherit -900 and the agent would lose its edge.
+    CODER_PROC_PRIO_MGMT = "1"
     # Node does not consult the system trust store; point it at the mounted CA so
     # node-based tooling (e.g. Claude Code) also trusts the cluster PKI root.
     NODE_EXTRA_CA_CERTS = local.cluster_ca_cert_path
