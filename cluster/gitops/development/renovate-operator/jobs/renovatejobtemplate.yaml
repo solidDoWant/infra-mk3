@@ -9,7 +9,7 @@ spec:
   schedule: "0 * * * *"
   # Slim image: tools (Go, Terraform, Python, Nix, ...) are installed on demand
   # (binarySource: install).
-  image: ghcr.io/renovatebot/renovate:44.161.1@sha256:a57b12d2415446e8e6695c7506881651134f6bbc3572b26882194da2069def00
+  image: ghcr.io/renovatebot/renovate:44.161.2@sha256:30cb7c1222bfd2f75d883ef81b28a71bb9730c5e71cefbd852c0c79eb7f7e00f
   provider:
     name: github
   # The operator mints a short-lived installation token from these and injects
