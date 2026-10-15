@@ -63,6 +63,9 @@
   // Off by default upstream. Locked flake inputs only move through
   // lockFileMaintenance (`nix flake update`, weekly by default).
   nix: { enabled: true, lockFileMaintenance: { enabled: true } },
+  // The schedule only decides when the branch may be created; it still opens
+  // unasked every week. Wait for the Dependency Dashboard checkbox instead.
+  lockFileMaintenance: { dependencyDashboardApproval: true },
 
   packageRules: [
     // Last so it overrides any preset rule: no CI, and merging deploys.
