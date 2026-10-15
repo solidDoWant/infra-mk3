@@ -97,6 +97,7 @@ specs:
           # cspell:words gopkg
           - matchName: gopkg.in
           - matchName: go.uber.org
+          - matchName: go.yaml.in
 
           # Helm install for postUpgradeTasks (victoria-metrics k8s-stack sync-job)
           - matchName: get.helm.sh
@@ -105,6 +106,9 @@ specs:
           - matchName: registry.terraform.io
           - matchName: registry.coder.com
           - matchName: releases.hashicorp.com
+          # npm registry (tape-archiver web/)
+          # cspell:words npmjs
+          - matchName: registry.npmjs.org
           # Python and Ansible Galaxy (ansible/)
           # cspell:words pypi pythonhosted
           - matchName: pypi.org
