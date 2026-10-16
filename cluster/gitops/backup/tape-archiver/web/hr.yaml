@@ -140,12 +140,9 @@ spec:
         # Run presets select by the tape markers (#427), not by name, so new
         # apps and datasets are picked up without editing these. Copies and
         # encryption recipients are chosen per run.
-        # TODO add the Immich library PVC (`k8s` PersistentVolumeClaim
-        # source, labelSelector tape.home.arpa/archive=true) once
-        # solidDoWant/tape-archiver#419's PVC source ships.
         presets:
           - name: everything
-            description: Newest backup-tool snapshot of every app, plus marked host datasets
+            description: Newest backup-tool snapshot of every app, plus marked PVCs and host datasets
             config:
               sources:
                 - &app_backups
@@ -155,6 +152,12 @@ spec:
                     # Set via each dr-job's backupVolume.snapshotLabels
                     labelSelector: tape.home.arpa/archive=true
                     select: newestPerPVC
+                - &marked_pvcs
+                  k8s:
+                    apiVersion: v1
+                    kind: PersistentVolumeClaim
+                    # Live volumes (e.g. the Immich library); each is snapshotted for the run
+                    labelSelector: tape.home.arpa/archive=true
                 - &host_datasets
                   zfsProperty:
                     # Set by the storage ansible's configure_zfs_dataset
@@ -166,6 +169,11 @@ spec:
             config:
               sources:
                 - *app_backups
+          - name: marked-pvcs
+            description: Live PVCs labelled tape.home.arpa/archive=true
+            config:
+              sources:
+                - *marked_pvcs
           - name: host-datasets
             description: Host datasets marked tape.home.arpa:archive=true
             config:
