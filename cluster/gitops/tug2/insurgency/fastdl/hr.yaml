@@ -162,7 +162,7 @@ spec:
       # image to mount at all. Today that is `test` only; `main` runs stock content.
       fastdl-test:
         type: image
-        image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test-fastdl:0.0.23-dev
+        image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-test-fastdl:0.0.24-dev
         pullPolicy: IfNotPresent
         advancedMounts:
           insurgency-fastdl:
