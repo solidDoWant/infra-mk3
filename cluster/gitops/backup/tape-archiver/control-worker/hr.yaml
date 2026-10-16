@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/soliddowant/charts/tape-archiver-control-worker
   ref:
-    tag: 0.0.19
-    digest: sha256:74d2f6a2f2d184fd8f8e6a6f22b9cea7f2899e343349b76c11083ccdaaddadda
+    tag: 0.0.20
+    digest: sha256:ec9a814a32dbe49c9e97af9e02067397d2b087c52ee0d838810fb3b2f1d269d4
 ---
 # tape-archiver control worker: Kubernetes-side orchestrator (snapshot
 # resolution, bin-packing) for tape backup runs. The bulk-data counterpart
@@ -172,7 +172,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/soliddowant/tape-archiver/control-worker
-                tag: 0.0.19@sha256:8c80f485d712953f237f95799be122b4033c99fe38bcc68088f7ad234fcdc833
+                tag: 0.0.20@sha256:900de093b9d50ffecc485bde0eac883707b2818af06e397d7940b61f9f4eb328
               env:
                 # Skip grpc-go's TXT lookup at `_grpc_config.<target>`, which CoreDNS
                 # cannot serve — it NXDOMAINs and then walks the search list. No service
