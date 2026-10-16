@@ -109,15 +109,20 @@
     #     pool_name: *pool
     #     dataset_name: "{{ item.name }}"
     #     share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
-    #     user_properties: "{{ item.user_properties | default({}) }}"
+    #     properties: "{{ item.properties | default({}) }}"
     #   ansible.builtin.include_role:
     #     name: configure_zfs_dataset
     #   loop:
     #     # Re-downloadable, and ~5x the size of archive, so not a tape source
     #     - name: media
     #       share_with_nfs: true
-    #     - name: archive # non-k8s backups; not NFS-exported
-    #       user_properties:
+    #     - name: archive # non-k8s backups, mounted by LAN clients
+    #       share_with_nfs: true
+    #       properties:
+    #         # Write-once data. Existing data was rewritten to 4M on 2026-10-16
+    #         # (rsync into a new dataset; zfs rewrite can't change block size).
+    #         recordsize: 4M
+    #         sync: standard
     #         # Selected by tape-archiver's zfsProperty source (local values only)
     #         tape.home.arpa:archive: "true"
     #     # tape-archiver Prepare-phase scratch (sync=standard); not NFS-exported.

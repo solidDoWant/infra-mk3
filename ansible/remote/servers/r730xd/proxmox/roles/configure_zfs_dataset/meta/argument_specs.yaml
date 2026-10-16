@@ -11,9 +11,6 @@ argument_specs:
       share_with_nfs:
         type: bool
         default: false
-      force_sync_writes:
-        type: bool
-        default: false
       nfs_subnets:
         type: list
         elements: str
@@ -28,8 +25,10 @@ argument_specs:
       encrypt:
         type: bool
         default: false
-      user_properties:
+      properties:
         type: dict
         default: {}
         description: >-
-          ZFS user properties (`namespace:name`) to set locally on the dataset.
+          ZFS properties, native (e.g. `recordsize`, `sync`) or user
+          (`namespace:name`), to set locally on the dataset. Values must be in
+          the form `zfs get` prints (e.g. `4M`, not `4194304`).

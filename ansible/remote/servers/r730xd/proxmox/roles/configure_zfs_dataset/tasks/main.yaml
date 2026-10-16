@@ -16,23 +16,26 @@
     {%- if encrypt %}
     -o encryption=aes-256-gcm -o keylocation=prompt -o keyformat=passphrase
     {%- endif %}
-    {{ force_sync_writes | ternary("-o sync=disabled", "") }}
+    {%- for key, value in properties.items() %}
+    -o {{ key }}={{ value | quote }}
+    {%- endfor %}
   when: zfs_list.rc != 0
 
 # Set locally on this dataset only (children inherit, but consumers such as
-# tape-archiver's zfsProperty source match local values only).
-- name: Read current user properties
+# tape-archiver's zfsProperty source match local values only). Changing
+# recordsize on an existing dataset only affects newly written blocks.
+- name: Read current properties
   ansible.builtin.command: >-
     zfs get -H -s local -o property,value
-    {{ user_properties.keys() | join(',') }}
+    {{ properties.keys() | join(',') }}
     {{ pool_name }}/{{ dataset_name }}
   changed_when: false
-  register: zfs_user_properties
-  when: user_properties | length > 0
+  register: zfs_properties
+  when: properties | length > 0
 
-- name: Set user properties
+- name: Set properties
   vars:
-    current: "{{ dict(zfs_user_properties.stdout_lines | map('split', '\t')) }}"
+    current: "{{ dict(zfs_properties.stdout_lines | map('split', '\t')) }}"
   ansible.builtin.command: zfs set {{ item.key }}={{ item.value | quote }} {{ pool_name }}/{{ dataset_name }}
-  loop: "{{ user_properties | dict2items }}"
+  loop: "{{ properties | dict2items }}"
   when: current[item.key] | default(none) != item.value
