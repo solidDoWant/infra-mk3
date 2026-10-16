@@ -39,8 +39,11 @@ spec:
         zfs:
           cli:
             sudoEnabled: true
+          # Applied at creation only (needs the provisioner's
+          # --extra-create-metadata, a chart default); older datasets were set by hand.
           datasetProperties:
-            # TODO user properties
+            "home.arpa:pvc-namespace": "{{ parameters.[csi.storage.k8s.io/pvc/namespace] }}"
+            "home.arpa:pvc-name": "{{ parameters.[csi.storage.k8s.io/pvc/name] }}"
           snapshotProperties:
             # TODO user properties
           datasetParentName: bulk-pool-01/k8s/democratic-csi/nfs/pvcs

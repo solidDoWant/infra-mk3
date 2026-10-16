@@ -109,13 +109,20 @@
     #     pool_name: *pool
     #     dataset_name: "{{ item.name }}"
     #     share_with_nfs: "{{ item.share_with_nfs | default(false) }}"
+    #     user_properties: "{{ item.user_properties | default({}) }}"
     #   ansible.builtin.include_role:
     #     name: configure_zfs_dataset
     #   loop:
+    #     # Re-downloadable, and ~5x the size of archive, so not a tape source
     #     - name: media
     #       share_with_nfs: true
-    #     - name: archive # non-k8s backups; contents are a tape-backup source; not NFS-exported
-    #     - name: tape-staging # tape-archiver Prepare-phase scratch (sync=standard); NOT a tape-backup source; not NFS-exported
+    #     - name: archive # non-k8s backups; not NFS-exported
+    #       user_properties:
+    #         # Selected by tape-archiver's zfsProperty source (local values only)
+    #         tape.home.arpa:archive: "true"
+    #     # tape-archiver Prepare-phase scratch (sync=standard); not NFS-exported.
+    #     # Never mark this for tape (tape-archiver refuses it anyway).
+    #     - name: tape-staging
     #     - name: k8s
     #     - name: k8s/democratic-csi
     #     - name: k8s/democratic-csi/nfs

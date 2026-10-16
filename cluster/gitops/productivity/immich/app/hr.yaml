@@ -367,6 +367,9 @@ spec:
         accessMode: ReadWriteMany
         storageClass: zfs-generic-nfs
         size: 500Gi
+        labels:
+          # Snapshotted and archived by tape-archiver's PVC source
+          tape.home.arpa/archive: "true"
         advancedMounts:
           server:
             main:
