@@ -28,3 +28,8 @@ argument_specs:
       encrypt:
         type: bool
         default: false
+      user_properties:
+        type: dict
+        default: {}
+        description: >-
+          ZFS user properties (`namespace:name`) to set locally on the dataset.

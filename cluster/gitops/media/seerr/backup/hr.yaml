@@ -39,6 +39,9 @@ spec:
         backupName: seerr-backup
         backupVolume:
           storageClass: zfs-generic-nfs # Backed by storage server
+          snapshotLabels:
+            # Selected (newest per PVC) by tape-archiver runs
+            tape.home.arpa/archive: "true"
           size: 2Gi
         postgres:
           - name: &cluster_name seerr-postgres

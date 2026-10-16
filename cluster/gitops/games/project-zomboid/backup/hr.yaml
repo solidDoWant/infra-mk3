@@ -39,6 +39,9 @@ spec:
         backupName: project-zomboid-backup
         backupVolume:
           storageClass: zfs-generic-nfs # Backed by storage server
+          snapshotLabels:
+            # Selected (newest per PVC) by tape-archiver runs
+            tape.home.arpa/archive: "true"
           # Holds the save, the player database and the server config. The save grows
           # with how much of the map players have explored.
           size: 5Gi

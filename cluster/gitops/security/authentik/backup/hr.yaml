@@ -39,6 +39,9 @@ spec:
         backupName: authentik-backup
         backupVolume:
           storageClass: zfs-generic-nfs # Backed by storage server
+          snapshotLabels:
+            # Selected (newest per PVC) by tape-archiver runs
+            tape.home.arpa/archive: "true"
         cluster:
           name: authentik-postgres
         s3:

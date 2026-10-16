@@ -39,6 +39,9 @@ spec:
         backupName: teleport-backup
         backupVolume:
           storageClass: zfs-generic-nfs # Backed by storage server
+          snapshotLabels:
+            # Selected (newest per PVC) by tape-archiver runs
+            tape.home.arpa/archive: "true"
         cnpgClusters:
           core:
             name: teleport-core-postgres
