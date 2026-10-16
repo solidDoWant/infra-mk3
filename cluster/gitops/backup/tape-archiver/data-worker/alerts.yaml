@@ -1,8 +1,9 @@
 ---
 # Per-tape write health from the data worker (tape-archiver docs/report.md).
-# Gauges are set once per written tape and kept until the worker restarts, so
-# these stay active after a bad write. dry_run="false" excludes rehearsals on
-# the virtual library, which reuse the real tapes' barcodes.
+# Gauges persist until the worker restarts, so each alert is bounded to writes
+# measured in the last 24h via tape_archiver_write_measured_timestamp_seconds.
+# dry_run="false" excludes rehearsals on the virtual library, which reuse the
+# real tapes' barcodes.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -12,7 +13,10 @@ spec:
     - name: tape-archiver-write-health
       rules:
         - alert: TapeArchiverTapeAlert
-          expr: tape_archiver_write_tapealert_flags{dry_run="false"} > 0
+          expr: |
+            tape_archiver_write_tapealert_flags{dry_run="false"} > 0
+              and on(barcode, dry_run)
+            (time() - tape_archiver_write_measured_timestamp_seconds) < 86400
           labels:
             severity: warning
           annotations:
@@ -23,7 +27,10 @@ spec:
               name the flags. Consider retiring the tape or cleaning the drive.
 
         - alert: TapeArchiverWriteBelowFloor
-          expr: tape_archiver_write_below_floor{dry_run="false"} == 1
+          expr: |
+            tape_archiver_write_below_floor{dry_run="false"} == 1
+              and on(barcode, dry_run)
+            (time() - tape_archiver_write_measured_timestamp_seconds) < 86400
           labels:
             severity: warning
           annotations:
