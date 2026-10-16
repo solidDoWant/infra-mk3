@@ -10,6 +10,14 @@
       overridePackageName: "{{{replace '^mirror\\.gcr\\.io/' 'docker.io/' packageName}}}",
     },
     {
+      // auto-replace re-extracts the edited file (no packageRules) and aborts
+      // with "update failure" when its depName differs from the upgrade's.
+      description: "Undo the base preset's helmfile overrideDepName ({{packageName}}): restore the extracted depName, the chart name",
+      matchManagers: ["helmfile"],
+      matchDatasources: ["docker"],
+      overrideDepName: "{{{replace '^.*/' '' packageName}}}",
+    },
+    {
       description: "Major updates wait for a Dependency Dashboard checkbox",
       matchUpdateTypes: ["major"],
       dependencyDashboardApproval: true,
