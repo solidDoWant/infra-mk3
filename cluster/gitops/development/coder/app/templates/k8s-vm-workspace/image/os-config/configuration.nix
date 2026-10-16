@@ -54,12 +54,21 @@
     kernelPackages = pkgs.linuxPackages;
     # serial console for `kubectl virt console` / debugging.
     kernelParams = [ "console=ttyS0" ];
-    # nfs client + overlay support for the persistent-disk /nix overlay.
+    # nfs client + overlay support for the persistent-disk /nix overlay. zfs
+    # (module + userspace tools) is baked in because it can't be added at
+    # runtime: an in-guest `nixos-rebuild` puts the new system closure in the
+    # persistent store overlay, which the initrd closure finder can't see, so
+    # the next boot drops to emergency mode (see ./modules/persistence).
     supportedFilesystems = [
       "nfs"
       "overlay"
+      "zfs"
     ];
   };
+
+  # Required by the zfs module. Static, so every workspace shares it - fine as
+  # each VM's pools live on its own disks, never imported by two VMs at once.
+  networking.hostId = "c0de0001";
 
   # Run dynamically-linked, non-Nix binaries without patchelf. Claude Code (a
   # native binary downloaded at runtime by claude.ai/install.sh) would otherwise
