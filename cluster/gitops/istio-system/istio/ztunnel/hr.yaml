@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/istio/release/charts/ztunnel
   ref:
-    tag: 1.31.1
-    digest: sha256:f5707e3d013dcf241da9a5bc8a98817109f8bdd6f2d0615a437c0d8d71ee196c
+    tag: 1.31.2
+    digest: sha256:cf3ac400874dc6bdf7affb1396dde3a46c10f1a60fb9542c65d2b6fc02de376c
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -21,7 +21,7 @@ spec:
     name: istio-ztunnel
   values:
     profile: ambient
-    image: mirror.gcr.io/istio/ztunnel:1.31.1-distroless@sha256:b06c67b895d6a49cecbdea6f100f59a29e52bf58205e0f69034ca17131182f4d
+    image: mirror.gcr.io/istio/ztunnel:1.31.2-distroless@sha256:9bf22119695b2930664b735761351f9a4d7e101f9535cf16714bdbd2b9a1dbd2
     logAsJson: true
     caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
     # Defaults to the bare `istiod.<istioNamespace>.svc:15012`, which cannot resolve

@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/istio/release/charts/istiod
   ref:
-    tag: 1.31.1
-    digest: sha256:89cf6f0b2659efb7ae69c631b5492f5a75cd2e73647773911b0385390159d206
+    tag: 1.31.2
+    digest: sha256:92c8b0ab5c67dbd750e5625bc3dd7f7c995287079c36279ea649178adc5afa41
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -34,7 +34,7 @@ spec:
     profile: ambient
     pilot:
       # A ref containing `/` bypasses hub/tag/variant.
-      image: mirror.gcr.io/istio/pilot:1.31.1-distroless@sha256:e46fd278250c4877df1e7c3d47cc2e66492e39ab79c58e3e62bb3487307526dc
+      image: mirror.gcr.io/istio/pilot:1.31.2-distroless@sha256:ac750465c8736dbb9def8800567c1d03115e9ffd7e2e5ff493fdfbd85a823d68
       autoscaleMin: 2
       # Right-sized 2026-08-01 from 14d of metrics. Chart default is 500m/2048Mi;
       # measured p95 CPU 13m (p99 17m, max 60m) and peak working set 435Mi. This
@@ -70,9 +70,9 @@ spec:
     global:
       # Injected into gateways and sidecars.
       proxy:
-        image: mirror.gcr.io/istio/proxyv2:1.31.1-distroless@sha256:15e6087b4033bc6cfbcddc4b47d93cb0c2ec6f1a4730c349ee1f3308108e4acf
+        image: mirror.gcr.io/istio/proxyv2:1.31.2-distroless@sha256:0e9ac87d650581280d4e904356ca75e82e0168d2d76daa3b8b214e29dc6a7652
       proxy_init:
-        image: mirror.gcr.io/istio/proxyv2:1.31.1-distroless@sha256:15e6087b4033bc6cfbcddc4b47d93cb0c2ec6f1a4730c349ee1f3308108e4acf
+        image: mirror.gcr.io/istio/proxyv2:1.31.2-distroless@sha256:0e9ac87d650581280d4e904356ca75e82e0168d2d76daa3b8b214e29dc6a7652
       caAddress: cert-manager-istio-csr.istio-system.svc.cluster.local.:443
       istiod:
         # Continuous in-cluster config analysis. Disabled: it emitted ~1600
