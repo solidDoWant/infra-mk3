@@ -137,6 +137,41 @@ spec:
           mhvtlDrive0Dev: /dev/mhvtl/drive0
           mhvtlDrive1Dev: /dev/mhvtl/drive1
 
+        # Run presets select by the tape markers (#427), not by name, so new
+        # apps and datasets are picked up without editing these. Copies and
+        # encryption recipients are chosen per run.
+        # TODO add the Immich library PVC (`k8s` PersistentVolumeClaim
+        # source, labelSelector tape.home.arpa/archive=true) once
+        # solidDoWant/tape-archiver#419's PVC source ships.
+        presets:
+          - name: everything
+            description: Newest backup-tool snapshot of every app, plus marked host datasets
+            config:
+              sources:
+                - &app_backups
+                  k8s:
+                    apiVersion: snapshot.storage.k8s.io/v1
+                    kind: VolumeSnapshot
+                    # Set via each dr-job's backupVolume.snapshotLabels
+                    labelSelector: tape.home.arpa/archive=true
+                    select: newestPerPVC
+                - &host_datasets
+                  zfsProperty:
+                    # Set by the storage ansible's configure_zfs_dataset
+                    name: tape.home.arpa:archive
+                    value: "true"
+                    under: bulk-pool-01
+          - name: app-backups
+            description: Newest backup-tool snapshot of every app
+            config:
+              sources:
+                - *app_backups
+          - name: host-datasets
+            description: Host datasets marked tape.home.arpa:archive=true
+            config:
+              sources:
+                - *host_datasets
+
     resources:
       defaultPodOptions:
         dnsConfig:
