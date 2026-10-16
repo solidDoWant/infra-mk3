@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/soliddowant/charts/tape-archiver-control-worker
   ref:
-    tag: 0.0.17
-    digest: sha256:aa21e7f29d44cd7a1db00bce097b3d1fe5ebe72ad7017deaafbb0ab6f16a5d6a
+    tag: 0.0.18
+    digest: sha256:70eb9e1f6124d3459c3f2269a99b757182fc9425573518d0b061adc03e634270
 ---
 # tape-archiver control worker: Kubernetes-side orchestrator (snapshot
 # resolution, bin-packing) for tape backup runs. The bulk-data counterpart
@@ -78,6 +78,9 @@ spec:
         # names k8s VolumeSnapshot sources. Must match
         # cluster/gitops/storage/democratic-csi/zfs-generic-nfs/hr.yaml.
         k8sDatasetParent: bulk-pool-01/k8s/democratic-csi/nfs/pvcs
+        # CSI driver of PersistentVolumeClaim sources; must match csiDriver.name
+        # in the same democratic-csi release.
+        k8sCSIDriver: nfs.zfs.democratic-csi.local
         # Renders a PodMonitor for the worker's :9090 /metrics endpoint.
         metrics:
           enabled: true
@@ -169,7 +172,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/soliddowant/tape-archiver/control-worker
-                tag: 0.0.17@sha256:678f47846d679ba1a48a2f21fe1e3408c843d98b71663e46c1a5511626c543c6
+                tag: 0.0.18@sha256:24d0e221f76a7a93f25764c86b455878df92bd860f7397ebcf3af9e56d67679b
               env:
                 # Skip grpc-go's TXT lookup at `_grpc_config.<target>`, which CoreDNS
                 # cannot serve — it NXDOMAINs and then walks the search list. No service
