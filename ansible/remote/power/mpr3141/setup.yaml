@@ -14,6 +14,19 @@
         - time zone {{ local_timezone_id }}
         - system name {{ hostname }}
 
+    # Percent of rated input current, as high_critical:high_warn[:low_critical]
+    # (low must be "0", not "00").
+    # The 45:40 defaults sit at the rack's normal ~6.2 A of a 16 A rating and
+    # flap PDUStatusDegraded. Alarm-only: swocp (outlet cut-off) is disabled.
+    - name: Set input current thresholds
+      vars:
+        command: "{{ item }}"
+      ansible.builtin.include_role:
+        name: run-command
+      loop:
+        - current threshold 1 L1 90:80:0
+        - current threshold 1 N 90:80
+
     - name: Configure SNMPv3 read-only user
       vars:
         command: "{{ item }}"

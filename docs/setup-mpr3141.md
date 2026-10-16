@@ -28,6 +28,7 @@ The device needs some minimal manual configuration. To do so:
 After the initial manual setup is complete, run `task mpr3141:full-configuration`. This will:
 * Set the device name and hostname
 * Set the time zone
+* Raise the input (L1 and neutral) current thresholds from 45%/40% to 90%/80% of rating. The defaults sit at the rack's normal load.
 * Create a read-only SNMPv3 user (SHA/AES) in slot 1, from `ansible/remote/power/mpr3141/group_vars/mpr3141.sops.yaml`
 * Disable SNMP v1/v2, whose default communities allow writes (outlet control) from any address
 * Restart the RPC2 card to apply the SNMP settings
