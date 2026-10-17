@@ -1,0 +1,49 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: backup-cleanup
+spec:
+  interval: 1h
+  url: oci://ghcr.io/soliddowant/charts/dr-job
+  ref:
+    tag: 0.0.23
+    digest: sha256:9e430291d8eb1a1c90cccae8ec196e2ec5a7ad6d8105b56d070b58e00f84ce90
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: backup-cleanup
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: backup-cleanup
+  values:
+    resources:
+      controllers:
+        backup-tool:
+          containers:
+            backup-tool:
+              image:
+                repository: ghcr.io/soliddowant/backup-tool
+                tag: 0.0.23@sha256:38a9461ce474c50eb0e83be3d208f5418bf938220295388e5a75f212eaae04ab
+    jobConfig:
+      drType: backups
+      drAction: cleanup
+      cronjob:
+        schedule: "0 4 * * *" # After the nightly backups
+      configFile:
+        namespace: "" # All namespaces
+        # Each rule keeps the first backup at or after each scheduled time (UTC)
+        retention:
+          - schedule: "@daily"
+            keep: 14
+          - schedule: "@weekly" # Sundays
+            keep: 4
+          - schedule: "@monthly"
+            keep: 12
+          - schedule: "@yearly"
+            keep: -1 # Unlimited
+        dryRun: true
