@@ -75,7 +75,7 @@ locals {
   # survives. Do the Update while the workspace is STOPPED (Stop -> Update ->
   # Start): KubeVirt won't swap a live VMI's disk, and Terraform can only destroy
   # the old root PVC cleanly once it is unmounted.
-  image_version = "20261015060610" # tag pushed by ./image (see above)
+  image_version = "20261016233836" # tag pushed by ./image (see above)
 
   # The desktop variant is a SEPARATE image built from the same os-config with the
   # Xfce/Teleport-desktop module added (see ../image/os-config/flake.nix). Both
@@ -225,7 +225,7 @@ data "coder_parameter" "root_disk_size" {
   validation {
     # min must stay >= the qcow2 virtual size of the LARGEST variant; CDI fails
     # the import if the target PVC is smaller than the source image. Measured at
-    # image_version below: base 7.15 GiB, desktop 12.0 GiB. A validation block
+    # image_version below: base 7.19 GiB, desktop 12.0 GiB. A validation block
     # cannot branch on enable_desktop, so this is the desktop size plus ~2 GiB of
     # headroom for image growth - which is why the minimum is above what a
     # base-image workspace needs. Re-measure with `qemu-img info` on a new build.
