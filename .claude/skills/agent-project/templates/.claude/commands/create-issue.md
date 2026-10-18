@@ -49,6 +49,7 @@ Rules for the draft:
 - Every criterion must be falsifiable: a broken implementation must cause it to fail.
 - Technical Context contains everything an implementer needs that isn't obvious from the code or spec — dependencies, env var names, interface contracts, ordering constraints.
 - Non-Goals prevent scope creep; always include at least one.
+- Issues that add a guard, fence, lint rule, CI check, or other protective mechanism must state its **threat model** in Technical Context (what it must stop, and what it explicitly does not try to stop) so reviews have a boundary.
 - Do not invent acceptance criteria that weren't requested or implied. Ask if unsure.
 
 ---

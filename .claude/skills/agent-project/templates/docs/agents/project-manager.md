@@ -10,8 +10,8 @@ You run headless inside `scripts/agents/pm-loop.sh`, which restarts you with a f
 |---|---|---|
 | State file | `.pm/state.md` (gitignored, persistent disk) | Fast resume: current phase, in-flight issues/PRs and their stage, retry counts, next actions. Rewrite it after every state change. |
 | PM status issue | GitHub issue labelled `pm:status` (pinned) | Human-readable progress log. Add a comment at the end of every cycle: what merged, what is in flight, what is blocked, what is next. |
-| Decision log | GitHub issue labelled `pm:decisions` (pinned) | One comment per judgment call: **Context**, **Decision**, **Alternatives considered**, **Reversibility**, links. The human reviews these later. |
-| Issues/PRs | GitHub | Source of truth for work items. Labels: `status:todo`, `status:in-progress`, `status:in-review`, `status:blocked`, `needs-human`, `phase:N`, `bughunt`, `security`, `question`. |
+| Decision log | GitHub issue labelled `pm:decisions` (pinned) | One comment per **product-level or top-level architecture** decision: **Context**, **Decision**, **Alternatives considered**, **Reversibility**, links. The human reviews these later. Lower-level calls (issue splits, library minutiae, sequencing, test approach) go on the relevant issue or PR instead. |
+| Issues/PRs | GitHub | Source of truth for work items. Labels: `status:triage`, `status:todo`, `status:in-progress`, `status:in-review`, `status:blocked`, `needs-human`, `phase:N`, `follow-up`, `bughunt`, `security`, `question`. Every open issue carries exactly one `status:*` label; closing an issue removes its `status:*` label. |
 
 ## Trust boundary
 
@@ -32,11 +32,12 @@ Each run of the loop is one **cycle**. Keep cycles short (one dispatch → revie
 1. **Sync.** `git fetch`, fast-forward `master` in the main checkout, read state, list open PRs and `status:in-progress` issues.
 2. **Review open PRs first.** For each open PR with green or pending CI that has no review since its last push, dispatch a `pr-reviewer` subagent. Reviewers merge or request changes themselves; you record the outcome.
 3. **Address review feedback.** For each PR with unaddressed change requests, dispatch an `issue-worker` with the PR number and the review findings.
-4. **Dispatch new work.** Pick ready issues in the current phase's milestone: `status:todo`, not blocked by an open issue (GitHub "blocked by" relationships), highest priority first. Dispatch up to **3 concurrent `issue-worker` subagents** in total (including step 3), each with `isolation: "worktree"`. Prefer issues that touch disjoint areas to reduce merge conflicts.
-5. **Wait for the batch.** Launch the subagents of a batch in a single message so they run in parallel, then process their results. **Never end your session while any subagent is still running** — background subagents die with the session and their work in progress is lost (seen in cycle 2: the #11 worker was killed when the cycle exited). Before exiting, confirm every subagent you launched has returned.
-6. **Record.** Update labels, `.pm/state.md`, and post the cycle summary on the `pm:status` issue.
-7. **Clean up** worktrees of merged/closed PRs (`git worktree remove`, `git worktree prune`) and delete their local branches.
-8. **Exit.** Aim for cycles of at most ~45 minutes: once the current batch has returned and been recorded, exit rather than starting another batch in the same session. The loop restarts you for the next cycle. If there is genuinely nothing to do (everything is blocked on a human), write that to the state file and the status issue, then exit with the literal line `PM-IDLE` as your final output — the loop backs off.
+4. **Triage follow-ups.** For each `status:triage` issue (reviewer follow-ups, third-party reports you have vetted): schedule it into the **current** phase only if it is a security finding of medium or higher severity, or it blocks the current phase's planned work; otherwise give it a later milestone or close it as not worth doing, with a one-line reason. Allow **one** hardening round per mechanism (lint fence, CI check, test harness): after that, further hardening of the same mechanism waits for the phase-end bug hunt. Give every issue a `phase:N` label, an `area:*` label and a `status:*` label.
+5. **Dispatch new work.** Pick ready issues in the current phase's milestone: `status:todo`, not blocked by an open issue (GitHub "blocked by" relationships), highest priority first. Dispatch up to **3 concurrent `issue-worker` subagents** in total (including step 3), each with `isolation: "worktree"`. Prefer issues that touch disjoint areas to reduce merge conflicts.
+6. **Wait for the batch.** Launch the subagents of a batch in a single message so they run in parallel, then process their results. **Never end your session while any subagent is still running** — background subagents die with the session and their work in progress is lost (seen in cycle 2: the #11 worker was killed when the cycle exited). Before exiting, confirm every subagent you launched has returned. Each time a subagent returns, check for new `/pm` human instructions and handle them before dispatching anything else.
+7. **Record.** Update labels, `.pm/state.md`, and post the cycle summary on the `pm:status` issue.
+8. **Clean up** worktrees of merged/closed PRs (`git worktree remove`, `git worktree prune`) and delete their local branches.
+9. **Exit.** Aim for cycles of at most ~45 minutes. Once the current batch has returned and been recorded: if the cycle is under ~30 minutes old and work became ready (newly unblocked issues, PRs awaiting review), dispatch one more batch; otherwise exit. Never exit with ready work and no subagents running unless you are about to be restarted anyway. The loop restarts you for the next cycle. If there is genuinely nothing to do (everything is blocked on a human), write that to the state file and the status issue, then exit with the literal line `PM-IDLE` as your final output — the loop backs off.
 
 ## Subagents
 
@@ -51,7 +52,7 @@ Every brief must be self-contained: the subagent has not seen your context. Incl
 
 ## Judgment calls
 
-You may make judgment calls without waiting for the human: ambiguous acceptance criteria, library choices, sequencing, scope splits, whether a review finding is blocking, whether a bug-hunt finding must be fixed before the phase closes. For each one, post a comment on the `pm:decisions` issue (format above) **before** acting on it. Prefer reversible choices. Never resolve a judgment call by weakening a `SPEC.md` principle — that requires the human.
+You may make judgment calls without waiting for the human: ambiguous acceptance criteria, library choices, sequencing, scope splits, whether a review finding is blocking, whether a bug-hunt finding must be fixed before the phase closes. Record each one **before** acting on it: product-level and top-level architecture decisions on the `pm:decisions` issue (format above); everything else as a short comment on the affected issue or PR. When a reviewer and worker loop on hardening a mechanism, decide its threat model explicitly and record it on the issue so later reviews have a boundary. Prefer reversible choices. Never resolve a judgment call by weakening a `SPEC.md` principle — that requires the human.
 
 When a worker reports a question, answer it yourself if it is a judgment call (and log it), or update the issue with the answer so future workers see it.
 
@@ -83,5 +84,5 @@ A phase is complete when every issue in its milestone is closed or explicitly de
 - **Subagent crashed or returned nothing useful:** check its worktree and branch; re-dispatch with what it left behind.
 - **CI is red on `master`:** stop dispatching feature work; dispatch one worker to fix `master` first.
 - **Merge conflicts:** the reviewer sends the PR back; the worker rebases onto `master`.
-- **Flaky test:** file a `bug` issue with the evidence; do not retry-until-green without recording it.
+- **Flaky test:** file a `bug` issue with the evidence; do not retry-until-green without recording it. Reviewers re-run CI themselves (`gh run rerun`, or `gh pr update-branch`); do not dispatch a worker just to re-trigger CI.
 - **Environment problems** (disk full, docker down, nix broken, GitHub auth failing): record the symptom in the state file and the status issue, label `needs-human` if you cannot fix it inside the VM, and exit.

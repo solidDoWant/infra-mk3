@@ -22,7 +22,7 @@ def gh(*args, input=None):
 def save(): json.dump(created, open(STATE, "w"), indent=1)
 
 LABELS = {
- "status:todo": "ededed", "status:in-progress": "fbca04", "status:in-review": "0e8a16", "status:blocked": "b60205",
+ "status:triage": "ededed", "follow-up": "c5def5", "status:todo": "ededed", "status:in-progress": "fbca04", "status:in-review": "0e8a16", "status:blocked": "b60205",
  "status:decomposed": "c5def5", "needs-human": "d93f0b", "epic": "3e4b9e", "bughunt": "5319e7", "security": "b60205",
  "question": "d876e3", "bug": "d73a4a", "severity:critical": "b60205", "severity:high": "d93f0b",
  "severity:medium": "fbca04", "severity:low": "c2e0c6", "pm:status": "1d76db", "pm:decisions": "1d76db",
