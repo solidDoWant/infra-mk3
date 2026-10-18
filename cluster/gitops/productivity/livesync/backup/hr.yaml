@@ -1,0 +1,55 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: livesync-backup
+spec:
+  interval: 1h
+  url: oci://ghcr.io/soliddowant/charts/dr-job
+  ref:
+    tag: 0.0.22
+    digest: sha256:bcc8dbe33ec5eb6f65625e4dca7d3e12ad3472d4519ddf5b4eb014a3ad1f0877
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: livesync-backup
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: livesync-backup
+  values:
+    resources:
+      controllers:
+        backup-tool:
+          containers:
+            backup-tool:
+              # The chart passes this to the pods the tool starts (BACKUP_TOOL_IMAGE).
+              image:
+                repository: ghcr.io/soliddowant/backup-tool
+                tag: 0.0.22@sha256:dc1b7a352bf5b83b88935e9978d59fceae0ed79d19b39cc88461a60163b0f276
+    jobConfig:
+      drType: generic
+      drAction: backup
+      cronjob:
+        schedule: "10 2 * * *" # Staggered to avoid concurrent snapshots on the shared zfs-generic-nfs provisioner
+      configFile:
+        backupName: livesync-backup
+        backupVolume:
+          storageClass: zfs-generic-nfs # Backed by storage server
+          size: 10Gi
+        postgres:
+          # Every vault, E2EE-encrypted as LiveSync chunks. This is what a restore uses.
+          - name: &cluster_name livesync-postgres
+            cluster: *cluster_name
+        files:
+          # Plaintext markdown copy of every vault, readable without Obsidian. The
+          # bridge's sync checkpoints (state/) are rebuilt by a full re-fetch.
+          - name: vaults
+            pvc: livesync-bridge
+            snapshotClass: ssd-replicated-3x-block
+            exclude:
+              - glob: state
+              - glob: lost+found

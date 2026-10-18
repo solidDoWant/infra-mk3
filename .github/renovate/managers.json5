@@ -89,7 +89,7 @@
     {
       customType: "regex",
       description: "Commit pins following a GitHub branch: `# renovate: datasource=git-refs depName=<owner>/<repo> branch=<branch>` above the full SHA",
-      managerFilePatterns: ["/^ansible/.+\\.ya?ml$/", "/\\.nix$/"],
+      managerFilePatterns: ["/^ansible/.+\\.ya?ml$/", "/\\.nix$/", "/(^|/)Makefile$/"],
       matchStrings: [
         "datasource=git-refs depName=(?<depName>\\S+) branch=(?<currentValue>\\S+)\\n[^\\n]*?(?::\\s*|=\\s*)[\"']?(?<currentDigest>[0-9a-f]{40})[\"']?",
       ],

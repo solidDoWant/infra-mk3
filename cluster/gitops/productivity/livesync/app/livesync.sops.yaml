@@ -1,0 +1,46 @@
+# Credentials for couchgres and the vault encryption shared by every vault.
+# Generated values are alphanumeric so Flux substitution leaves them alone.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: livesync
+  labels:
+    kyverno.home.arpa/reload: "true"
+type: Opaque
+stringData:
+  #ENC[AES256_GCM,data:9d18qv2ixN3++HDbMv0rzpaqy+gIe5H+zEDaJnSOJo+7NHJF1f2bTfq+XCVYAgLUTVkD4GeWXNz1kWMCm5i1gZiUHd9iWXoTpHCZgLlw5o3OtNss,iv:aDzGqfWqiPwufjvZedG6LgkCzH2fMhzavvrhudOsH/0=,tag:7tv/8QfsUFNMGT+cGZ19Hw==,type:comment]
+  #ENC[AES256_GCM,data:JlInlcqrmhv58ZHItwUgTuYLLZcQUi8=,iv:zqpd61hWcTmN3kaAdTUwsrsD4TmfX4+Ci8r0Ss9X/48=,tag:ZRsuIeqFhhorj87pRiocbg==,type:comment]
+  ADMIN_USERNAME: ENC[AES256_GCM,data:2m388Zs=,iv:BafQOpr+Ou4wda5leJF0IwSX95j3B/7KDPK1WoDD1mk=,tag:HAWN+R5OJQaV/8GyWZPmAA==,type:str]
+  ADMIN_PASSWORD: ENC[AES256_GCM,data:RpiBdZIdg8eF+0ya9EfF3vEN82MVqYYUB8ano85LQ2zM27vuQR7RWfokypOzSAJ8,iv:XMwONXaLFialgxPGhXUtQ3cKntaMU0Hzs65THhxMEDs=,tag:JGMxtioZdWi4pnAlhw2IUw==,type:str]
+  #ENC[AES256_GCM,data:IpbKatYQPHI/wMHpUeNnEZ+iEpz3ZnGznTetcBOQH4z9A0JWX12S1vg1FMxtl1f2b5z6CobdFds8976nSZnOTgo=,iv:A9Lf3LuckYTWTIvuqsggQCS0ZijhSwMLwW8UKwolnlE=,tag:/qb0WIPsf0+F4dR3ax/q5w==,type:comment]
+  SYNC_USERNAME: ENC[AES256_GCM,data:G1mDpIT76Ms=,iv:pcTJw+9mcVq99dx7MyMRiAhKCT2qgxTJe4X2cAroB1k=,tag:7aziJCcy2/9tUm/mCjIS2Q==,type:str]
+  SYNC_PASSWORD: ENC[AES256_GCM,data:kLXFnjM184I8Blsc2pl2sHXZF9GE3auNRRz4AqY+Z1O7PQwem8e4U4HASih37Ovv,iv:aHE+LfiFYKV5xCdIm3Ww7KHEV3ktV2k6JyaNa+RpGJI=,tag:1skhwoU9LA8+mQjqaf/7Eg==,type:str]
+  #ENC[AES256_GCM,data:qSD7MXSalE6Lr1ax/WvNa0IY6vYpLCe+fgYAeoEqCNpsq9yTwPTHUeOYOTONcGWudnw1G2lhvQ/k3FOXmnylY1CJ4dE8,iv:Y6v8Jb33Dnf8tqnDMClpuMu2lU+x9PRa48LxIXc3VsQ=,tag:HJHRWpPHysKa3WfdJflAuw==,type:comment]
+  VAULT_PASSPHRASE: ENC[AES256_GCM,data:FRLbTaBi18LQZMSpXfnBekv1IiJYZcJmdSa3wPt6DGo=,iv:kPMxrl9rQmCPWGKm6DjSFKstK/bgW7iCsrKhKiumYU8=,tag:YfIodQCp8A/LOYoY247u7Q==,type:str]
+  #ENC[AES256_GCM,data:+AsqU1jJTkkHp9qwFbrpMj0iX5mQuSrLVbT9Th3x9zUs8HOHR8XwLBsTI3bf8y6UnLGVZD31tj+4SkWyeLx2gVOBwrw+4g==,iv:p6448W7m6Jd9pxGa/R6s9VGrqg1w2GUyOVQNXoWuQRo=,tag:fFsRcaV00WM2Fzlpmw+iVw==,type:comment]
+  VAULT_ID_RECOVERY_CODE: ENC[AES256_GCM,data:opMqfR3uAgJ82ZqU2AJzKImHhiBF7YOIlevno9qbvRRIM91EIpuz8FEg2MKFJl26NLs5VaBbXWyZ4afyuUcIb+GlfCKERrQvVYU=,iv:kmcpJq3pQbAAj9OebmGAxLpeETu0YksX7xgmuZJkPdE=,tag:ZX7Ho0a0W5zM0xCabje2MA==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBGVkZqdklYV0cxUjc4bkJw
+        aWNZUm9SNVlCTWFmdTRielBBWjhjM0hnMTM0CmNLTVdYam5OVUllSEl5RnQrTytM
+        ODFlSGdNZXgrdVlub1hHOTlLR2JXWGcKLS0tIDVJTDZBYXpjZEhVZk1ibE8vWEt1
+        NkhHai9HMDBQbEVaT0VQL2d2czM1WXMKvISZMUiTtS3JXtFHW8KU5I0n7HxAAD/G
+        nEjNiDdHD+m0YJPsTWVajHBxDtfCW2PXi+2OUvq7vFulcuHnOkwWKw==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBGUm9Fa0hoc0M4ZlRjMFpW
+        c2NvendlcjM1cFJ5M0NwWXdEcWZIQ2pLL1NRClh6bTJhL3R1N2tCdHZ3ODdxYkhB
+        eXRsdWdQK3hQTHlEbVBoS0pSMXJKQVkKLS0tIDM1akRTNVVqcTQ4em84YUlDSzI0
+        ejF5VkU4U0dmVnlwZ203U2FxN3BNa00K3kzeBwxnMbW4bwqScqcwvzd/oZ1uJrrg
+        qe39JlJjxAdHA57bbgImWLJvGWE8YbznsmMFf3z70p5fva8CPClxxQ==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-10-17T23:46:16Z"
+  mac: ENC[AES256_GCM,data:WtItrxpxT65NieJPBiAMLvJHrbysuN2eP2EtY7unYetymIiPOfdfSUzZjhkVRVZqfhTYeeMEzw+UyD2bTZ8rksjZoCFtMErsokkbB/rTVjQ0oSowcupVM1WANowJA5CgRjH33/oX5higbiVs5w83pvdnZu9IokUQMJwBnyc1vKI=,iv:p1NjkNCN5JAO2HnadafEKG6vmHPraL4oivHGWv1IZmA=,tag:uXDjPHhLwaZs5zUANNE3Tg==,type:str]
+  mac_only_encrypted: true
+  version: 3.13.3
