@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/soliddowant/charts/dr-job
   ref:
-    tag: 0.0.22
-    digest: sha256:bcc8dbe33ec5eb6f65625e4dca7d3e12ad3472d4519ddf5b4eb014a3ad1f0877
+    tag: 0.0.23
+    digest: sha256:9e430291d8eb1a1c90cccae8ec196e2ec5a7ad6d8105b56d070b58e00f84ce90
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -29,7 +29,7 @@ spec:
               # The chart passes this to the pods the tool starts (BACKUP_TOOL_IMAGE).
               image:
                 repository: ghcr.io/soliddowant/backup-tool
-                tag: 0.0.22@sha256:dc1b7a352bf5b83b88935e9978d59fceae0ed79d19b39cc88461a60163b0f276
+                tag: 0.0.23@sha256:38a9461ce474c50eb0e83be3d208f5418bf938220295388e5a75f212eaae04ab
     jobConfig:
       drType: vaultwarden
       drAction: backup
