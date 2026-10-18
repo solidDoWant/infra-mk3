@@ -125,9 +125,14 @@
     #         sync: standard
     #         # Selected by tape-archiver's zfsProperty source (local values only)
     #         tape.home.arpa:archive: "true"
-    #     # tape-archiver Prepare-phase scratch (sync=standard); not NFS-exported.
+    #     # tape-archiver Prepare-phase scratch; not NFS-exported.
     #     # Never mark this for tape (tape-archiver refuses it anyway).
     #     - name: tape-staging
+    #       properties:
+    #         # Large sequential staging files. Data written before 2026-10-18
+    #         # kept its 128K blocks (not migrated).
+    #         recordsize: 4M
+    #         sync: standard
     #     - name: k8s
     #     - name: k8s/democratic-csi
     #     - name: k8s/democratic-csi/nfs
