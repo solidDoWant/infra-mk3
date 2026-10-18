@@ -1,4 +1,4 @@
-BUILD_IMAGE = public.ecr.aws/docker/library/golang:1.26.7-trixie@sha256:978084e7adea0904b6d76cbc9afcb9baeed6ee170eecdc8866566aaa9f22ad0c
+BUILD_IMAGE = public.ecr.aws/docker/library/golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e
 # renovate: datasource=github-tags depName=couchgres/couchgres
 COUCHGRES_VERSION = v1.0.0
 # Commit the tag above points at. Update it together with the version.
