@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The single required check. Everything runs inside the flake's dev shell so
+  # CI uses exactly the toolchain developers and agents use.
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - name: Lint
+        run: nix develop -c make lint
+      - name: Unit tests
+        run: nix develop -c make test
+      - name: Integration tests
+        run: nix develop -c make test-integration
+      - name: Generated code is current
+        run: nix develop -c make check-generate
+      - name: Build
+        run: nix develop -c make build
