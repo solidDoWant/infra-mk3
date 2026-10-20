@@ -161,6 +161,11 @@
       changelogUrl: "https://www.postgresql.org/docs/release/",
     },
     {
+      description: "Container repo has no releases; upstream tags are pgbouncer_X_Y_Z",
+      matchPackageNames: ["ghcr.io/cloudnative-pg/pgbouncer"],
+      changelogUrl: "https://www.pgbouncer.org/changelog.html",
+    },
+    {
       matchPackageNames: ["quay.io/curl/curl"],
       changelogUrl: "https://curl.se/changes.html",
     },
