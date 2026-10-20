@@ -98,6 +98,11 @@
       extractVersion: "^(?:release-)?(?<version>.+)$",
     },
     {
+      description: "Tags are release-X.Y.Z; release notes fall back to extractVersion for tag matching",
+      matchPackageNames: ["ghcr.io/home-operations/qbittorrent"],
+      extractVersion: "^(?:release-)?(?<version>.+)$",
+    },
+    {
       description: "talos-factory custom datasource (talosFactory preset) has no source",
       matchDatasources: ["custom.talos-factory"],
       sourceUrl: "https://github.com/siderolabs/talos",
