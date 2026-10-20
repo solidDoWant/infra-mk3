@@ -124,6 +124,12 @@
       matchPackageNames: ["registry.coder.com/coder/agentapi/coder"],
       extractVersion: "^(?:release/coder/agentapi/v)?(?<version>\\d.*)$",
     },
+    {
+      description: "Chart source points at the app repo; chart tags are coredns-X.Y.Z",
+      matchPackageNames: ["coredns", "ghcr.io/coredns/charts/coredns"],
+      sourceUrl: "https://github.com/coredns/helm",
+      extractVersion: "^(?:coredns-)?(?<version>.+)$",
+    },
     // Monorepo chart tags (<chart>-helm-chart-X.Y.Z) don't match; link the chart changelog.
     {
       matchPackageNames: ["ghcr.io/home-operations/charts-mirror/external-dns"],
