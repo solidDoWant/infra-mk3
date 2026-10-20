@@ -42,9 +42,9 @@
     },
     // CRDs applied from release assets must move with their operator.
     {
-      description: "spegel: HelmRelease + bootstrap helmfile chart, dashboard URL tag",
+      description: "spegel: HelmRelease + bootstrap helmfile chart",
       groupName: "spegel",
-      matchPackageNames: ["spegel", "ghcr.io/spegel-org/helm-charts/spegel", "spegel-org/spegel"],
+      matchPackageNames: ["spegel", "ghcr.io/spegel-org/helm-charts/spegel"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
