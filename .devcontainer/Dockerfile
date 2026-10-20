@@ -12,7 +12,7 @@ ARG TASK_VERSION=v3.54.0
 # renovate: datasource=github-releases depName=getsops/sops
 ARG SOPS_VERSION=v3.13.3
 # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
-ARG TELEPORT_VERSION=18.11.3
+ARG TELEPORT_VERSION=18.11.6
 RUN mkdir -pv /tmp/debs && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
