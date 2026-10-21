@@ -36,11 +36,11 @@ spec:
       fullnameOverride: victoria-metrics-operator
       image:
         repository: quay.io/victoriametrics/operator
-        tag: v0.75.0@sha256:78da26b41a819093707be2ab6a65a5dc19f43d58ec52f30b49a545c2c6b7bd55
+        tag: v0.75.1@sha256:97162bf8320b296f0361099f0290b9e035a3369e4022c5c42ca4a8146deca981
       configReloader:
         image:
           repository: quay.io/victoriametrics/operator
-          tag: config-reloader-v0.75.0@sha256:11c5d33b2112571e72cdc020b63c8045f2cd523fec4768b67a91f96e36b05c59
+          tag: config-reloader-v0.75.1@sha256:72d129e6a95edd3ee233cf11680c394baa2f75835f8cb978d3748dfb5eac87f2
       crds:
         enabled: false
         plain: false
