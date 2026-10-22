@@ -58,7 +58,7 @@ spec:
               # the client version is irrelevant. Docker Official Image via ECR — no
               # rootless ghcr psql-client image is maintained, and this isn't the app image.
               repository: public.ecr.aws/docker/library/postgres
-              tag: "18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873"
+              tag: "18-alpine@sha256:83148c0bc09eac4d598b70a61e1404d0212b76c95c504bfd6c81a4c59ec91792"
             command: /scripts/inject.sh
             env:
               PGHOST: immich-postgres-rw.productivity.svc.cluster.local
