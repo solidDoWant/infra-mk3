@@ -68,7 +68,7 @@ COPY --from=ghcr.io/coder/coder:v2.38.1@sha256:fcddd64d5f08d6aa8806508d1459d36f3
 COPY --from=hashicorp/terraform:1.17@sha256:4d1b496a256f2989bccdb04b9104a4ede97234b10fba90259e173e905ec4fb58 /bin/terraform /usr/local/bin/terraform
 
 # tflint
-COPY --from=ghcr.io/terraform-linters/tflint:v0.64.0@sha256:1c595f42d794c32c45a6ea8b58655fd66433d4ca3b1bc631c574a48d120bd19f /usr/local/bin/tflint /usr/local/bin/tflint
+COPY --from=ghcr.io/terraform-linters/tflint:v0.65.0@sha256:2788f4d4fc663c0e953b011b01bf443fe5bfce7587ee916e588e6057b85d6359 /usr/local/bin/tflint /usr/local/bin/tflint
 
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
