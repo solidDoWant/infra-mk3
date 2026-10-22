@@ -103,6 +103,12 @@
       extractVersion: "^(?:release-)?(?<version>.+)$",
     },
     {
+      description: "kubernetes/autoscaler monorepo; VPA tags are vertical-pod-autoscaler-X.Y.Z",
+      matchPackageNames: ["registry.k8s.io/autoscaling/vpa-recommender"],
+      sourceUrl: "https://github.com/kubernetes/autoscaler",
+      extractVersion: "^(?:vertical-pod-autoscaler-)?(?<version>.+)$",
+    },
+    {
       description: "talos-factory custom datasource (talosFactory preset) has no source",
       matchDatasources: ["custom.talos-factory"],
       sourceUrl: "https://github.com/siderolabs/talos",
