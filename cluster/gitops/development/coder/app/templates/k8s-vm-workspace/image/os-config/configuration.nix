@@ -23,7 +23,7 @@
       (final: prev: {
         coder = prev.coder.overrideAttrs (old: rec {
           # renovate: datasource=github-releases depName=coder/coder
-          version = "2.38.0";
+          version = "2.38.1";
           src = prev.fetchurl {
             url = "https://github.com/coder/coder/releases/download/v${version}/coder_${version}_linux_amd64.tar.gz";
             hash = "sha256-bJAmr0XxAZBReqMX0C0H89zlDIwVRIIv1lMVlsQ47XY=";
