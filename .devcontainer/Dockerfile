@@ -65,7 +65,7 @@ COPY --from=ghcr.io/fluxcd/flux-cli:v2.9.6@sha256:b1ac18156f227af9a524b842a96f2c
 COPY --from=ghcr.io/coder/coder:v2.38.1@sha256:fcddd64d5f08d6aa8806508d1459d36f3e9e9098554440acd6dc2526a95252cc /opt/coder /usr/local/bin/coder
 
 # Terraform
-COPY --from=hashicorp/terraform:1.16@sha256:bfffc1ded5fbf0a17beaaf22eb4793980abdb19d0761ff6a3a0efb2ab4d9b316 /bin/terraform /usr/local/bin/terraform
+COPY --from=hashicorp/terraform:1.17@sha256:4d1b496a256f2989bccdb04b9104a4ede97234b10fba90259e173e905ec4fb58 /bin/terraform /usr/local/bin/terraform
 
 # tflint
 COPY --from=ghcr.io/terraform-linters/tflint:v0.64.0@sha256:1c595f42d794c32c45a6ea8b58655fd66433d4ca3b1bc631c574a48d120bd19f /usr/local/bin/tflint /usr/local/bin/tflint
