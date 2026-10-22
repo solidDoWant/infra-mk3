@@ -8,7 +8,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/VictoriaMetrics/VictoriaMetrics/29c43cd2fee05409499a4d1b38e950e1b7f13bd4/deployment/docker/vmanomaly/vmanomaly-default/dashboard.json # v1.154.0
+  url: https://raw.githubusercontent.com/VictoriaMetrics/VictoriaMetrics/64c2e75fe7dc4f16fe73ba060ea383c73b1a8628/deployment/docker/vmanomaly/vmanomaly-default/dashboard.json # v1.154.1
   datasources:
     - datasourceName: VictoriaMetrics
       inputName: DS_VM
@@ -22,4 +22,4 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
-  url: https://raw.githubusercontent.com/VictoriaMetrics/VictoriaMetrics/29c43cd2fee05409499a4d1b38e950e1b7f13bd4/deployment/docker/vmanomaly/vmanomaly-integration/vmanomaly_guide_dashboard.json # v1.154.0
+  url: https://raw.githubusercontent.com/VictoriaMetrics/VictoriaMetrics/64c2e75fe7dc4f16fe73ba060ea383c73b1a8628/deployment/docker/vmanomaly/vmanomaly-integration/vmanomaly_guide_dashboard.json # v1.154.1
