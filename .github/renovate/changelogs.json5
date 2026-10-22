@@ -22,6 +22,11 @@
       sourceUrl: "https://github.com/aws/aws-cli",
     },
     {
+      description: "Labels are read from the highest tag, a commit-hash build (e.g. 8588859) with none",
+      matchPackageNames: ["quay.io/victoriametrics/operator"],
+      sourceUrl: "https://github.com/VictoriaMetrics/operator",
+    },
+    {
       matchPackageNames: ["/^(docker\\.io/)?democraticcsi/democratic-csi$/", "ghcr.io/democratic-csi/democratic-csi"],
       sourceUrl: "https://github.com/democratic-csi/democratic-csi",
     },
