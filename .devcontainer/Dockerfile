@@ -47,7 +47,7 @@ COPY --from=hairyhenderson/gomplate:stable@sha256:991ce1b8a1307fa32f9b8050a7b339
 COPY --from=ghcr.io/soliddowant/dive:v0.12.0-1-g5dd9ba6@sha256:ec44733c7f17587f4cd3776d604d0ec41d81dd5ece4692ea386b1cac6f45752e /usr/local/bin/dive /usr/local/bin/dive
 
 # talosctl
-COPY --from=ghcr.io/siderolabs/talosctl:v1.14.2@sha256:b655ae1c73789c4789fcf6fbd61c8f45400ed4b3bd9892a26092fcd4d8d95d86 /talosctl /usr/local/bin/talosctl
+COPY --from=ghcr.io/siderolabs/talosctl:v1.14.4@sha256:b3233234327350f20ed194f3fad83d90a64344c1940f839c7b0c0abef50c8c33 /talosctl /usr/local/bin/talosctl
 
 # topf
 COPY --from=ghcr.io/postfinance/topf:v0.6.1@sha256:2b4b23918da0a7b0f2cbca6caac535daf71cdfc1cb4075017d015c00224f0972 /usr/local/bin/topf /usr/local/bin/topf
