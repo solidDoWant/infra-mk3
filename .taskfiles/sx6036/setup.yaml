@@ -43,7 +43,7 @@ tasks:
       - task: download-firmware-all
     vars:
       FIRMWARE_DIR: *FIRMWARE_DIR
-      NGINX_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.7-alpine@sha256:378d0c32f6562f7fd9629170797f57d2b953aa09be983b3daaf4809bb039ca00
+      NGINX_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.8-alpine@sha256:a2545a4b4fdebc62bd6a624ba64bea3a1b8bb6e71deabe973ceec621349d5301
       CONTAINER_NAME: mellanox-firmware
       LOCAL_HTTP_PORT: "8080" # This task does not configure any firewalls that may block traffic to this port
     dir: "{{ .TASKFILE_DIR }}"
