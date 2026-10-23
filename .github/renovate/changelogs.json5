@@ -62,6 +62,11 @@
       sourceUrl: "https://github.com/helm/helm",
     },
     {
+      description: "Source label is the chainguard static base image",
+      matchPackageNames: ["ghcr.io/postfinance/topf"],
+      sourceUrl: "https://github.com/postfinance/topf",
+    },
+    {
       matchPackageNames: ["quay.io/prometheuscommunity/smartctl-exporter"],
       sourceUrl: "https://github.com/prometheus-community/smartctl_exporter",
     },
