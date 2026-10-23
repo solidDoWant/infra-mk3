@@ -5,9 +5,9 @@
   // Policy (limits, grouping, automerge, approvals) lives below and in
   // .github/renovate/.
   extends: [
-    "github>home-operations/renovate-presets#10.0.0",
-    "github>home-operations/renovate-presets//apps/cnpg.json5#10.0.0",
-    "github>home-operations/renovate-presets//apps/talosFactory.json5#10.0.0",
+    "github>home-operations/renovate-presets#10.0.1",
+    "github>home-operations/renovate-presets//apps/cnpg.json5#10.0.1",
+    "github>home-operations/renovate-presets//apps/talosFactory.json5#10.0.1",
     ":semanticCommits",
     ":timezone(America/Chicago)",
     // This repo's policy, split by topic. Their packageRules apply in this
