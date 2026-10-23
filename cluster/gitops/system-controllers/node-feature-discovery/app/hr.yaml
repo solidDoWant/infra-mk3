@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://registry.k8s.io/nfd/charts/node-feature-discovery
   ref:
-    tag: 0.20.0
-    digest: sha256:4b012ea6dd8d815a054174310e53051d3e097b381265ff12e0f4b6c77fe2f2b2
+    tag: 0.20.1
+    digest: sha256:5c4df0919041454a3a2095965e3ada6bb514095731921f3055aa539669e79e54
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -32,7 +32,7 @@ spec:
   values:
     image:
       repository: registry.k8s.io/nfd/node-feature-discovery
-      tag: v0.20.0@sha256:3f600513a463712aaab33cf525e20be0b5718e57da50d0ac2e092b86bcfc4812
+      tag: v0.20.1@sha256:6fc5c9af9176e1acb5ce57a4a1d0c0d3eb25cd34f5bdd0efefebf0efe45a8379
     featureGates:
       NodeFeatureGroupAPI: true
     prometheus:
