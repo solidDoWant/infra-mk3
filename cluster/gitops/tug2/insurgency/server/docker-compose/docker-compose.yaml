@@ -35,7 +35,7 @@ services:
   # applies it as a CFS quota, which throttles the simulation thread.
   tug2-insurgency-main:
     <<: *insurgency-server
-    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.108
+    image: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/insurgency-main:0.0.109
     environment:
       - PORT=27000
       - RCON_PASSWORD=${SECRET_RCON_PASSWORD}
