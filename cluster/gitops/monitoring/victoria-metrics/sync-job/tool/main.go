@@ -39,6 +39,14 @@ const (
 	namespace = "monitoring"
 	chartRef  = "oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack"
 	chartRepo = "https://github.com/VictoriaMetrics/helm-charts"
+
+	// The sync job keeps dashboard fields it doesn't model via
+	// `json:",unknown"`, which needs GOEXPERIMENT=jsonv2. Go 1.27 dropped
+	// the experiment and the option, so a 1.27 build silently strips most of
+	// every dashboard. Renovate's installTools installs the latest Go.
+	// TODO: remove (and GOTOOLCHAIN below) once upstream's sync job builds
+	// correctly with Go >= 1.27, e.g. their Dockerfile moves off golang:1.26.
+	syncJobToolchain = "go1.26.10"
 )
 
 // Sync job log lines that don't indicate a skipped source or object. The PSI
@@ -189,7 +197,7 @@ func buildSyncJob(work, version string) (string, error) {
 	build := command(filepath.Join(src, "hack", "sync-job"), "go", "build", "-o", bin, ".")
 	// Same flags as upstream's Dockerfile. -p=2: unbounded parallel compiles
 	// peak at ~1.4 GB, which doesn't fit next to Renovate in its job pod.
-	build.Env = append(os.Environ(), "GOEXPERIMENT=jsonv2", "CGO_ENABLED=0", "GOFLAGS=-p=2")
+	build.Env = append(os.Environ(), "GOTOOLCHAIN="+syncJobToolchain, "GOEXPERIMENT=jsonv2", "CGO_ENABLED=0", "GOFLAGS=-p=2")
 	if err := build.Run(); err != nil {
 		return "", fmt.Errorf("go build: %w", err)
 	}
@@ -371,6 +379,13 @@ func indentDashboard(obj *yaml.Node) error {
 	var out bytes.Buffer
 	if err := json.Indent(&out, []byte(j.Value), "", "  "); err != nil {
 		return fmt.Errorf("indent spec.json: %w", err)
+	}
+
+	// The sync job's catch-all for unmodeled fields, serialized as a regular
+	// field: it was built without working json:",unknown" support, and the
+	// fields it should have held are gone.
+	if strings.Contains(out.String(), `"XXX":`) {
+		return errors.New(`spec.json has an "XXX" field: the sync job dropped unmodeled dashboard fields (check its Go toolchain)`)
 	}
 
 	j.Value = out.String() + "\n"
