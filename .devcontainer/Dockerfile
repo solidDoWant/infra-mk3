@@ -40,7 +40,7 @@ RUN /tmp/install-racadm.sh
 COPY --from=mikefarah/yq:4.54.1@sha256:4b3d9475d65571d28cbb19544d3820ec2945e4c8b2f18279394282b8dc3a592e /usr/bin/yq /usr/local/bin/yq
 
 # gomplate
-COPY --from=hairyhenderson/gomplate:stable@sha256:40307f53fa8d6133c5bac8264b5cb4f6ceb3ce02e1d57c33e100959967f6fd18 /gomplate /usr/local/bin/gomplate
+COPY --from=hairyhenderson/gomplate:stable@sha256:9c73c3cacc598cc9d926c67c5548901a4a4ee2223d29a2dacc910a68a5dfd684 /gomplate /usr/local/bin/gomplate
 
 # dive
 # "temporary" until https://github.com/wagoodman/dive/pull/511 is merged

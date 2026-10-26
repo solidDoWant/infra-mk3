@@ -4,7 +4,7 @@
 BASE_IMAGE = mirror.gcr.io/denoland/deno:debian-2.9.7@sha256:fa335acdf6b72106eda2cb6a8cb5f4187e7630e357467489db4b2e7352d5e432
 # Upstream has no releases or tags, so pin a commit on main.
 # renovate: datasource=git-refs depName=vrtmrz/livesync-bridge branch=main
-LIVESYNC_BRIDGE_COMMIT = fc0e028d33b3a12ddee1322951375e05107edc55
+LIVESYNC_BRIDGE_COMMIT = 06327188abd4488410882a3e2705471f2477af8e
 # Bump when the packaging (wrapper, healthcheck) changes without the upstream commit changing.
 IMAGE_REVISION ?= 1
 
