@@ -48,7 +48,7 @@ var expectedLog = regexp.MustCompile(` (applied (vmrule|dashboard) |skipping dis
 
 func main() {
 	log.SetFlags(0)
-	hrPath := flag.String("hr", "../../k8s-stack/hr.yaml", "HelmRelease to read the chart version and values from")
+	hrPath := flag.String("hr", "../../k8s-stack/hr.yaml", "file with the chart's OCIRepository (version) and HelmRelease (values)")
 	outDir := flag.String("out", "../generated", "output directory, replaced entirely")
 	flag.Parse()
 
@@ -116,39 +116,54 @@ func run(hrPath, outDir string) error {
 	return nil
 }
 
-// readHelmRelease returns the chart version and spec.values.
+// readHelmRelease returns the chart version, from the OCIRepository's
+// spec.ref.tag, and the HelmRelease's spec.values. Both live in the same file.
 func readHelmRelease(path string) (string, []byte, error) {
-	var hr struct {
-		Spec struct {
-			Chart struct {
-				Spec struct {
-					Version string `yaml:"version"`
-				} `yaml:"spec"`
-			} `yaml:"chart"`
-			Values map[string]any `yaml:"values"`
-		} `yaml:"spec"`
-	}
-
-	b, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return "", nil, fmt.Errorf("read file: %w", err)
 	}
+	defer f.Close()
 
-	if err := yaml.Unmarshal(b, &hr); err != nil {
-		return "", nil, fmt.Errorf("parse YAML: %w", err)
+	var version string
+	var values map[string]any
+	dec := yaml.NewDecoder(f)
+	for {
+		var doc struct {
+			Kind string `yaml:"kind"`
+			Spec struct {
+				Ref struct {
+					Tag string `yaml:"tag"`
+				} `yaml:"ref"`
+				Values map[string]any `yaml:"values"`
+			} `yaml:"spec"`
+		}
+		if err := dec.Decode(&doc); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			return "", nil, fmt.Errorf("parse YAML: %w", err)
+		}
+
+		switch doc.Kind {
+		case "OCIRepository":
+			version = doc.Spec.Ref.Tag
+		case "HelmRelease":
+			values = doc.Spec.Values
+		}
 	}
 
-	version := hr.Spec.Chart.Spec.Version
 	if version == "" {
-		return "", nil, errors.New("no spec.chart.spec.version")
+		return "", nil, errors.New("no OCIRepository spec.ref.tag")
 	}
 
-	values, err := yaml.Marshal(hr.Spec.Values)
+	b, err := yaml.Marshal(values)
 	if err != nil {
 		return "", nil, fmt.Errorf("marshal spec.values: %w", err)
 	}
 
-	return version, values, nil
+	return version, b, nil
 }
 
 // buildSyncJob builds the sync job from the chart release's tag. Its module
