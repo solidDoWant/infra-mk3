@@ -17,7 +17,7 @@ tasks:
       task: firmware-service
       vars:
         SERVICE_TYPE: tftp
-        CONTAINER_IMAGE: 3x3cut0r/tftpd-hpa:5.2@sha256:40d00b6899c11c3e894d5c7f9f0084bbde8300c8d5fb39876919b55ab7567d44
+        CONTAINER_IMAGE: 3x3cut0r/tftpd-hpa:5.2@sha256:8d9fd6f505cf50af1c3c7b0bb1ed50cbb0c606ec1f5b41a15567efe123457a8e
         CONTAINER_MOUNT_PATH: /tftpboot
         CONTAINER_PORT: 69
         PORT_TYPE: udp
@@ -35,7 +35,7 @@ tasks:
       task: firmware-service
       vars:
         SERVICE_TYPE: http
-        CONTAINER_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.8-alpine@sha256:a2545a4b4fdebc62bd6a624ba64bea3a1b8bb6e71deabe973ceec621349d5301
+        CONTAINER_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.8-alpine@sha256:03df07e5931f8374d440bd62243a5ce9b24719715ef6fc4c9c626a5f1dbef417
         CONTAINER_MOUNT_PATH: /usr/share/nginx/html
         CONTAINER_PORT: 8080
         LOCAL_PORT: 4443

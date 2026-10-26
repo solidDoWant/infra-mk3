@@ -3,7 +3,7 @@
 # copyrighted game files, so - like the tug2 insurgency images - it must only ever be pushed to a
 # private registry.
 
-ARG STEAMCMD_IMAGE=ghcr.io/gameservermanagers/steamcmd:ubuntu-26.04@sha256:b599d61499c4467ce09cf586b71c3182ed0d674b1ae84a374d5ce5ae047f1900
+ARG STEAMCMD_IMAGE=ghcr.io/gameservermanagers/steamcmd:ubuntu-26.04@sha256:bcb1ba0974b1ffd91a1483540ce618a75dae0a67516b7c8d477737f4565eb418
 ARG RUNTIME_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
 
 FROM ${STEAMCMD_IMAGE} AS server-builder

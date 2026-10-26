@@ -72,7 +72,7 @@ spec:
           discord-notifier:
             image:
               repository: public.ecr.aws/docker/library/python
-              tag: 3.15.1-slim@sha256:5b5ca730846f66dc816dbac397fcc0ec002230ec3aee6e09d2c44f8eafeddda2
+              tag: 3.15.1-slim@sha256:533b0b2f9b5d46fd097091cf826f27902f1d6c3bca714b6dc74551356aa97a51
             envFrom:
               - secretRef:
                   name: minecraft-router-discord-notifier-webhook
