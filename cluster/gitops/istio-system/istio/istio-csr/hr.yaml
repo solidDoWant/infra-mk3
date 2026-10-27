@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://quay.io/jetstack/charts/cert-manager-istio-csr
   ref:
-    tag: v0.18.0
-    digest: sha256:eecf897bb43c21d90d77e50cf917ad9d1952cbfc552b9155328e14fc67e2be67
+    tag: v0.19.1
+    digest: sha256:742f494aafc9ecabbd829c7fb24bc2ff66282a3c25a2b21c5ebf7106eb301daf
 ---
 # The Istio stack and its dependencies need to be HA
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -23,7 +23,7 @@ spec:
   values:
     image:
       repository: quay.io/jetstack/cert-manager-istio-csr
-      tag: v0.18.0@sha256:495dcdad72a468c9f851cea853c700c2644a3ac1e2566840aef9dbb1a20ec3be
+      tag: v0.19.1@sha256:eb1b8beee32f7dd830c301b7d2e061f46f9250b0421457e78b1017de8ffb9d86
     replicaCount: 2
     app:
       logFormat: json
