@@ -66,9 +66,9 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
-      description: "VictoriaMetrics: k8s-stack chart (bundles the operator) + operator CRDs + the metrics datasource plugin it configures",
+      description: "VictoriaMetrics: k8s-stack chart (bundles the operator) + operator CRDs + the metrics datasource plugin it configures + the vmanomaly dashboards pinned to the VM release",
       groupName: "victoria-metrics-operator",
-      matchPackageNames: ["/victoria-metrics-k8s-stack$/", "VictoriaMetrics/operator", "victoriametrics-metrics-datasource"],
+      matchPackageNames: ["/victoria-metrics-k8s-stack$/", "VictoriaMetrics/operator", "victoriametrics-metrics-datasource", "VictoriaMetrics/VictoriaMetrics"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {

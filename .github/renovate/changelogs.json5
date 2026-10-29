@@ -10,7 +10,7 @@
       sourceUrl: "https://github.com/kubernetes/kubernetes",
     },
     {
-      matchPackageNames: ["/dragonfly-operator/"],
+      matchPackageNames: ["/dragonfly-operator/", "ghcr.io/dragonflydb/operator"],
       sourceUrl: "https://github.com/dragonflydb/dragonfly-operator",
     },
     {
@@ -73,6 +73,87 @@
     {
       matchPackageNames: ["quay.io/k8tz/k8tz"],
       sourceUrl: "https://github.com/k8tz/k8tz",
+    },
+    {
+      description: "Source label points at chainguard-images/images",
+      matchPackageNames: ["ghcr.io/grafana/grafana-operator", "ghcr.io/grafana/helm-charts/grafana-operator"],
+      sourceUrl: "https://github.com/grafana/grafana-operator",
+    },
+    {
+      description: "Source label points at chainguard-images/images",
+      matchPackageNames: ["ghcr.io/postfinance/kubelet-csr-approver"],
+      sourceUrl: "https://github.com/postfinance/kubelet-csr-approver",
+    },
+    {
+      description: "Source label points at a Rocky Linux build repo",
+      matchPackageNames: ["quay.io/cephcsi/cephcsi"],
+      sourceUrl: "https://github.com/ceph/ceph-csi",
+    },
+    {
+      description: "Operator image + the drivers chart mirror (same vX.Y.Z releases)",
+      matchPackageNames: ["quay.io/cephcsi/ceph-csi-operator", "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers"],
+      sourceUrl: "https://github.com/ceph/ceph-csi-operator",
+    },
+    {
+      matchPackageNames: ["/^ghcr\\.io/goharbor//"],
+      sourceUrl: "https://github.com/goharbor/harbor",
+    },
+    {
+      description: "Source label points at the app repo (v2.x); chart releases are in harbor-helm",
+      matchPackageNames: ["ghcr.io/home-operations/charts-mirror/harbor"],
+      sourceUrl: "https://github.com/goharbor/harbor-helm",
+    },
+    {
+      matchPackageNames: ["/^ghcr\\.io/kyverno/(kyverno|kyvernopre|kyverno-cli|background-controller|cleanup-controller|reports-controller)$/"],
+      sourceUrl: "https://github.com/kyverno/kyverno",
+    },
+    {
+      matchPackageNames: ["ghcr.io/cloudnative-pg/plugin-barman-cloud", "ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar"],
+      sourceUrl: "https://github.com/cloudnative-pg/plugin-barman-cloud",
+    },
+    {
+      description: "Chart mirror + image (same vX.Y.Z releases)",
+      matchPackageNames: ["docker.io/rocm/k8s-gpu-dra-driver", "ghcr.io/home-operations/charts-mirror/k8s-gpu-dra-driver"],
+      sourceUrl: "https://github.com/ROCm/k8s-gpu-dra-driver",
+    },
+    {
+      matchPackageNames: ["quay.io/prometheuscommunity/json-exporter"],
+      sourceUrl: "https://github.com/prometheus-community/json_exporter",
+    },
+    {
+      description: "Release tags are X.Y.Z; versioning strips the pg<N>-v prefix",
+      matchPackageNames: ["ghcr.io/tensorchord/vchord-scratch"],
+      sourceUrl: "https://github.com/tensorchord/VectorChord",
+    },
+    {
+      description: "Images + charts share the app's vX.Y.Z releases",
+      matchPackageNames: ["/^ghcr\\.io/soliddowant/(charts/)?tape-archiver/"],
+      sourceUrl: "https://github.com/solidDoWant/tape-archiver",
+    },
+    // kubernetes-csi sidecars (rook-ceph, openebs, democratic-csi, volume-snapshot groups)
+    {
+      matchPackageNames: ["registry.k8s.io/sig-storage/snapshot-controller", "registry.k8s.io/sig-storage/csi-snapshotter"],
+      sourceUrl: "https://github.com/kubernetes-csi/external-snapshotter",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/sig-storage/csi-provisioner"],
+      sourceUrl: "https://github.com/kubernetes-csi/external-provisioner",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/sig-storage/csi-resizer"],
+      sourceUrl: "https://github.com/kubernetes-csi/external-resizer",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/sig-storage/csi-attacher"],
+      sourceUrl: "https://github.com/kubernetes-csi/external-attacher",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/sig-storage/csi-node-driver-registrar"],
+      sourceUrl: "https://github.com/kubernetes-csi/node-driver-registrar",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/metrics-server/metrics-server"],
+      sourceUrl: "https://github.com/kubernetes-sigs/metrics-server",
     },
     {
       matchPackageNames: ["registry.k8s.io/coredns/coredns"],
@@ -169,6 +250,45 @@
       matchPackageNames: ["ghcr.io/prometheus-community/charts/prometheus-smartctl-exporter"],
       sourceUrl: "https://github.com/prometheus-community/helm-charts",
       extractVersion: "^(?:prometheus-smartctl-exporter-)?(?<version>.+)$",
+    },
+    {
+      description: "Chart source points at the operator repo (v3.x); chart tags are fluent-operator-X.Y.Z",
+      matchPackageNames: ["ghcr.io/fluent/helm-charts/fluent-operator"],
+      sourceUrl: "https://github.com/fluent/helm-charts",
+      extractVersion: "^(?:fluent-operator-)?(?<version>.+)$",
+    },
+    {
+      matchPackageNames: ["ghcr.io/fluent/helm-charts/fluent-operator-fluent-bit-crds"],
+      sourceUrl: "https://github.com/fluent/helm-charts",
+      extractVersion: "^(?:fluent-operator-fluent-bit-crds-)?(?<version>.+)$",
+    },
+    {
+      matchPackageNames: ["ghcr.io/fluent/helm-charts/fluent-operator-fluentd-crds"],
+      sourceUrl: "https://github.com/fluent/helm-charts",
+      extractVersion: "^(?:fluent-operator-fluentd-crds-)?(?<version>.+)$",
+    },
+    {
+      description: "Chart tags are cloudnative-pg-vX.Y.Z",
+      matchPackageNames: ["ghcr.io/cloudnative-pg/charts/cloudnative-pg"],
+      extractVersion: "^(?:cloudnative-pg-v)?(?<version>.+)$",
+    },
+    {
+      description: "Chart source points at the plugin repo; chart tags are plugin-barman-cloud-vX.Y.Z",
+      matchPackageNames: ["ghcr.io/cloudnative-pg/charts/plugin-barman-cloud"],
+      sourceUrl: "https://github.com/cloudnative-pg/charts",
+      extractVersion: "^(?:plugin-barman-cloud-v)?(?<version>.+)$",
+    },
+    {
+      description: "Chart source points at the app repo; chart tags are snapshot-controller-X.Y.Z",
+      matchPackageNames: ["ghcr.io/piraeusdatastore/helm-charts/snapshot-controller"],
+      sourceUrl: "https://github.com/piraeusdatastore/helm-charts",
+      extractVersion: "^(?:snapshot-controller-)?(?<version>.+)$",
+    },
+    {
+      description: "Chart tags are democratic-csi-X.Y.Z",
+      matchPackageNames: ["ghcr.io/democratic-csi/charts/democratic-csi"],
+      sourceUrl: "https://github.com/democratic-csi/charts",
+      extractVersion: "^(?:democratic-csi-)?(?<version>.+)$",
     },
     // Monorepo chart tags (<chart>-helm-chart-X.Y.Z) don't match; link the chart changelog.
     {
