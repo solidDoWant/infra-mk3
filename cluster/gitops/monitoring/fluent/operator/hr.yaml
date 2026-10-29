@@ -32,7 +32,7 @@ spec:
       image:
         registry: ghcr.io
         repository: fluent/fluent-operator/fluent-operator
-        tag: 3.10.1@sha256:be978534f9fc1b998dc822c5eaa95b4e88e6a853a9739fd84fe10b44fcb9a97b
+        tag: 3.11.0@sha256:13af2f68887c442fcca787ad86d066d7403d43744dcebcc9dfd65830fdb8b55a
       extraArgs:
         - --leader-elect=true
         # Operator 3.9.0 defaults --metrics-bind-address to "0" (metrics disabled)
