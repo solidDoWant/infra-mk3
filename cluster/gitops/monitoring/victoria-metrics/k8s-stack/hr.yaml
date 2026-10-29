@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack
   ref:
-    tag: 0.96.1
-    digest: sha256:396f5671ad5ef50bffe9aa8ec652e34ee958d23e986bb273059738fce042168b
+    tag: 0.97.0
+    digest: sha256:cacce57f9d0e9ec5d6fc0b8a73061945a57286bd0f0452b174ecdc0587457fc5
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -36,11 +36,11 @@ spec:
       fullnameOverride: victoria-metrics-operator
       image:
         repository: quay.io/victoriametrics/operator
-        tag: v0.75.1@sha256:97162bf8320b296f0361099f0290b9e035a3369e4022c5c42ca4a8146deca981
+        tag: v0.75.2@sha256:237fac68b608c7ed7bc4c47ad25ebcb1cbe973c9a789661d2b6cfaa83093f87a
       configReloader:
         image:
           repository: quay.io/victoriametrics/operator
-          tag: config-reloader-v0.75.1@sha256:72d129e6a95edd3ee233cf11680c394baa2f75835f8cb978d3748dfb5eac87f2
+          tag: config-reloader-v0.75.2@sha256:6a997c5fe38692bff0384c0f113f8ab560f429d215649b16afc102ff81c80299
       crds:
         enabled: false
         plain: false
@@ -217,7 +217,7 @@ spec:
           spec:
             image:
               repository: quay.io/victoriametrics/vmauth
-              tag: v1.154.1-enterprise@sha256:3e0ceef928eb98a1a95a39a2ce15cd656bd5d071d2febd393a087d50fc96a324
+              tag: v1.155.0-enterprise@sha256:b795cb5e9d5f666fbdf75ad04bdf918dc9a0d8a2ee256b63060ffc5c7006f1b4
             hostAliases:
               - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
                 hostnames:
@@ -247,7 +247,7 @@ spec:
           revisionHistoryLimitCount: 1
           image:
             repository: quay.io/victoriametrics/vmselect
-            tag: v1.154.1-enterprise-cluster@sha256:1350507f00d029b7ce843b506aa7f62b9f4ba75f1d2f9de7933c570091bd0e50
+            tag: v1.155.0-enterprise-cluster@sha256:89ce3bf307d5e0d664a3dad1151df37e3bc08c5c39107e4340d86f61c67ce1a0
           resources:
             # Right-sized 2026-08-01 from 14d of metrics: p95 CPU 378m / peak
             # working set 526Mi (was 1 core / 8Gi).
@@ -318,7 +318,7 @@ spec:
           revisionHistoryLimitCount: 1
           image:
             repository: quay.io/victoriametrics/vminsert
-            tag: v1.154.1-enterprise-cluster@sha256:be858a4b28f5df203bf4995824656bc8b65c02ccb3c1b192ee2caca8b4b92e24
+            tag: v1.155.0-enterprise-cluster@sha256:04c2f6d7e1d0e5a9a85fe9dccb432afeee6693ed84e7c5f7a553127d83d38a37
           resources:
             requests:
               memory: 1Gi
@@ -356,7 +356,7 @@ spec:
           revisionHistoryLimitCount: 1
           image:
             repository: quay.io/victoriametrics/vmstorage
-            tag: v1.154.1-enterprise-cluster@sha256:45b9d2501cfea5121904f40c456d78a826f520e0941c79128c08472667f96a0c
+            tag: v1.155.0-enterprise-cluster@sha256:6617585e33b68a57db04be5f72ff36762b1ef0136229624c0e7c9e026bde5ffe
           # Peak RSS ~2.3Gi, idle ~1.3Gi
           resources:
             requests:
@@ -480,7 +480,7 @@ spec:
       spec:
         image:
           repository: quay.io/victoriametrics/vmalert
-          tag: v1.154.1-enterprise@sha256:d3562b35add7767b1b32367bd6c4433d853cb68d75d2faa926f42df72f7233ab
+          tag: v1.155.0-enterprise@sha256:14703934699510f2136ba5d7c9283cabf192ce59e2caa889915eac2d4242e3c0
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
             hostnames:
@@ -533,7 +533,7 @@ spec:
       spec:
         image:
           repository: quay.io/victoriametrics/vmagent
-          tag: v1.154.1-enterprise@sha256:61870439ae7d009f9ffdfe0da86c7b9bd41ad7a84dfa087a19933eb0dcb66176
+          tag: v1.155.0-enterprise@sha256:1daafe58b2929d9c8384f679c2b5e92b8879543a17e682cceca94226ffabf294
         hostAliases:
           - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
             hostnames:
