@@ -32,7 +32,7 @@ spec:
           nzbhydra2:
             image: &image
               repository: ghcr.io/home-operations/nzbhydra2
-              tag: 9.1.1@sha256:bbd00749480c48416c7ca382e9da33256a5935f9a32a1e8d23dcf4ef07a6285e
+              tag: 9.2.0@sha256:c42f5c5e3601f46d9a8336ff4c1e3148d365b472b5b1683ac653ea61a3377f7c
             env:
               # Overrides the image's -Xmx256M (nzbhydra.yml `xmx` is only read
               # by the upstream wrapper, which the image doesn't use). Heap OOM
