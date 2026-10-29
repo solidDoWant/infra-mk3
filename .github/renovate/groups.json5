@@ -127,7 +127,17 @@
     },
     {
       description: "Keep 0.x members on their group branch (the preset routes 0.x minors to major- branches)",
-      matchPackageNames: ["cilium/cilium-cli", "victoriametrics-metrics-datasource", "VictoriaMetrics/operator", "kubevirt/monitoring"],
+      matchPackageNames: [
+        "cilium/cilium-cli",
+        "victoriametrics-metrics-datasource",
+        "VictoriaMetrics/operator",
+        "/victoria-metrics-k8s-stack$/",
+        "quay.io/victoriametrics/operator",
+        "kubevirt/monitoring",
+        "ghcr.io/prometheus-community/charts/prometheus-smartctl-exporter",
+        "prometheus-community/smartctl_exporter",
+        "quay.io/prometheuscommunity/smartctl-exporter",
+      ],
       additionalBranchPrefix: "",
     },
     // Exporter/app image + the dashboard pinned to the same release.
@@ -153,8 +163,13 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "smartctl-exporter: cluster chart (follows the app release) + host exporters (Ansible) + image",
       groupName: "smartctl-exporter",
-      matchPackageNames: ["prometheus-community/smartctl_exporter", "quay.io/prometheuscommunity/smartctl-exporter"],
+      matchPackageNames: [
+        "ghcr.io/prometheus-community/charts/prometheus-smartctl-exporter",
+        "prometheus-community/smartctl_exporter",
+        "quay.io/prometheuscommunity/smartctl-exporter",
+      ],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {

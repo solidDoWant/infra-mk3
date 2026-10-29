@@ -71,6 +71,19 @@
       sourceUrl: "https://github.com/prometheus-community/smartctl_exporter",
     },
     {
+      matchPackageNames: ["quay.io/k8tz/k8tz"],
+      sourceUrl: "https://github.com/k8tz/k8tz",
+    },
+    {
+      matchPackageNames: ["registry.k8s.io/coredns/coredns"],
+      sourceUrl: "https://github.com/coredns/coredns",
+    },
+    {
+      description: "Rook operator image; shares the charts' vX.Y.Z releases",
+      matchPackageNames: ["ghcr.io/rook/ceph"],
+      sourceUrl: "https://github.com/rook/rook",
+    },
+    {
       matchDatasources: ["pypi"],
       matchPackageNames: ["omsdk"],
       sourceUrl: "https://github.com/dell/omsdk",
@@ -150,6 +163,12 @@
       matchPackageNames: ["coredns", "ghcr.io/coredns/charts/coredns"],
       sourceUrl: "https://github.com/coredns/helm",
       extractVersion: "^(?:coredns-)?(?<version>.+)$",
+    },
+    {
+      description: "Chart source points at the app repo; chart tags are prometheus-smartctl-exporter-X.Y.Z",
+      matchPackageNames: ["ghcr.io/prometheus-community/charts/prometheus-smartctl-exporter"],
+      sourceUrl: "https://github.com/prometheus-community/helm-charts",
+      extractVersion: "^(?:prometheus-smartctl-exporter-)?(?<version>.+)$",
     },
     // Monorepo chart tags (<chart>-helm-chart-X.Y.Z) don't match; link the chart changelog.
     {

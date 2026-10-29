@@ -36,6 +36,7 @@
         // Rook/Ceph
         "ghcr.io/rook/rook-ceph",
         "ghcr.io/rook/rook-ceph-cluster",
+        "ghcr.io/rook/ceph",
         "/(^|/)ceph/ceph$/",
         // Each minor adds CRD fields and must match the ceph-csi-operator
         // subchart bundled by rook-ceph (rook 1.20 -> 1.0.x, 1.21 -> 1.1.x).
@@ -71,6 +72,7 @@
         "docker.io/alpine/k8s",
         "ghcr.io/rook/rook-ceph",
         "ghcr.io/rook/rook-ceph-cluster",
+        "ghcr.io/rook/ceph",
       ],
       separateMinorPatch: true,
       separateMultipleMinor: true,
@@ -87,6 +89,7 @@
         "ghcr.io/siderolabs/installer",
         "ghcr.io/rook/rook-ceph",
         "ghcr.io/rook/rook-ceph-cluster",
+        "ghcr.io/rook/ceph",
       ],
       semanticCommitType: "feat",
       labels: ["type/minor"],
