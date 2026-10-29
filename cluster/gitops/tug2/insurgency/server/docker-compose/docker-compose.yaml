@@ -66,7 +66,7 @@ services:
       - "27001:27001/udp" # Game traffic
     cpuset: "1,2"
   envoy:
-    image: mirror.gcr.io/envoyproxy/envoy:contrib-v1.40.1@sha256:e2c04c703265ab832c7b9e89a13399f8ab3813fc7e7fbcd5a3a2b83bc2cb48d1
+    image: mirror.gcr.io/envoyproxy/envoy:contrib-v1.40.2@sha256:dc50a95c3d54a8f98cf682494db6fc42d77fde4ef12404fac3654d866a1f405d
     volumes:
       # Mount TLS certs for Postgres connections
       - /mnt/postgres:/mnt/postgres:ro
