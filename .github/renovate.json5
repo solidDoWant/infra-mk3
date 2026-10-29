@@ -30,6 +30,14 @@
   minimumReleaseAge: "3 days",
   // cspell:words Behaviour
   minimumReleaseAgeBehaviour: "timestamp-optional",
+  // Only timestamped releases wait, so a group would open with its
+  // timestamp-less members (most OCI images) and get the rest in a second PR
+  // 3 days later. Instead, put the waiting release in the branch with a
+  // pending stability check and hold the PR until nothing in it is pending.
+  // prNotPendingHours (default 25) must outlast minimumReleaseAge.
+  internalChecksFilter: "none",
+  prCreation: "not-pending",
+  prNotPendingHours: 80,
   // The resulting "did not have a releaseTimestamp, ... proceeding" WARNs are
   // the expected outcome of the above, but count as repository problems and
   // operator warnings. Per-dep detail stays at debug.
