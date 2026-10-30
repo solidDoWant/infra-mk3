@@ -139,7 +139,7 @@ RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
 
 # cmtool
 # renovate: datasource=github-releases depName=cert-manager/cmctl
-ARG CMCTL_VERSION=v2.6.1
+ARG CMCTL_VERSION=v2.6.2
 RUN KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
     PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; *) uname -m;; esac)" && \
     curl -fsSL -o /usr/local/bin/cmtool "https://github.com/cert-manager/cmctl/releases/download/${CMCTL_VERSION}/cmctl_${KERNEL}_${PRETTY_ARCH}" && \
