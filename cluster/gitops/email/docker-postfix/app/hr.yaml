@@ -12,11 +12,11 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: bokysan-charts
-      version: 4.4.0
+      version: 5.2.0
   values:
     image:
       repository: mirror.gcr.io/boky/postfix
-      tag: 4.4.0@sha256:f3f247fd42528b969e2603ac120d5a5b5db7dfe61f4505c49d438b9ba1822999
+      tag: 5.2.0@sha256:94443307a7e092c8ed2d18bde712d3571a25ac3169b53978b3298690aa70c083
     replicaCount: 2
     service:
       # Chart defaults to 587, but doesn't use TLS
