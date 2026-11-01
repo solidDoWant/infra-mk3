@@ -19,7 +19,18 @@ spec:
       # Use the example config. This will provide some value while
       # reducing the need to fine-tune the configuration.
       Include @recommended-conf
-      SecRuleEngine On
+      # Detection only by default: CRS evaluates and logs every request but
+      # blocks nothing, so a new app needs no exceptions to work. Hosts that
+      # benefit from blocking opt in below (rule 1010 onwards). Review the
+      # gateway's Coraza logs before moving more hosts to enforcement.
+      SecRuleEngine DetectionOnly
+      # Enforced hosts. The stats API is custom code that queries a database,
+      # which is where CRS adds real protection.
+      SecRule REQUEST_HEADERS:Host "@streq insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}" \
+        "id:1010,phase:1,pass,nolog,ctl:ruleEngine=On"
+      # The exceptions below still matter in detection-only mode: rules that
+      # skip body inspection avoid the gateway's 1 MiB body buffer (413s) and
+      # log noise, and the vault-sync rule keeps access tokens out of the logs.
       # Teleport multiplexes binary protocols (SSH/kube/db) and WebSocket ALPN
       # connection-upgrades over HTTPS. The OWASP CRS reliably flags this as
       # malicious and breaks tsh/Connect, so disable the WAF for the Teleport
@@ -43,20 +54,6 @@ spec:
         "id:1003,phase:1,pass,nolog,chain"
         SecRule REQUEST_FILENAME "@beginsWith /hook/" \
           "ctl:requestBodyAccess=Off"
-      # CouchDB's API (Obsidian LiveSync) uses PUT and DELETE, which CRS 911100
-      # rejects by default. Bodies are E2EE ciphertext, and LiveSync chunk uploads
-      # exceed the gateway's 1MiB buffer limit, which 413s any body the WAF buffers.
-      # Skip body inspection only; header/URI/query rules still run.
-      SecRule REQUEST_HEADERS:Host "@streq livesync.${SECRET_PUBLIC_DOMAIN_NAME}" \
-        "id:1004,phase:1,pass,nolog,setvar:'tx.allowed_methods=GET HEAD POST OPTIONS PUT DELETE',ctl:requestBodyAccess=Off"
-      # LiveSync devices only need /_session, /_up, and database paths (database
-      # names cannot start with "_"). Keep the admin surface (Fauxton, _node config,
-      # _users, replication) LAN-only. A single long alternation regex here crashes
-      # the wasm plugin's configure step (fail-closed), hence the negated match.
-      SecRule REQUEST_HEADERS:Host "@streq livesync.${SECRET_PUBLIC_DOMAIN_NAME}" \
-        "id:1005,phase:1,deny,status:403,log,msg:'LiveSync admin endpoint',chain"
-        SecRule REQUEST_FILENAME "@rx ^/+_" "chain"
-          SecRule REQUEST_FILENAME "!@rx ^/+_(session|up)/?$"
       # vault-sync (Obsidian sync) speaks ConnectRPC with binary protobuf bodies,
       # whose content types CRS 920420 rejects by default. Bodies are file
       # contents (often E2EE ciphertext) that only trip false positives, so skip
