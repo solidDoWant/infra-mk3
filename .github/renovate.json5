@@ -86,6 +86,17 @@
   lockFileMaintenance: { dependencyDashboardApproval: true },
 
   packageRules: [
+    // Here, after the presets, so no later rule puts the wait back.
+    {
+      description: "No release wait for my own projects: I publish them, so there is no supply-chain risk to wait out",
+      matchPackageNames: [
+        // Images and charts (ghcr.io/soliddowant/charts/...)
+        "/^ghcr\\.io/soliddowant//i",
+        // GitHub releases/tags and remote git bases
+        "/^(https://github\\.com/)?soliddowant//i",
+      ],
+      minimumReleaseAge: "0 days",
+    },
     // Last so it overrides any preset rule: no CI, and merging deploys.
     {
       description: "Automerge disabled for everything",
