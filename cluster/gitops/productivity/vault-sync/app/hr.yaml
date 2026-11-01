@@ -98,6 +98,7 @@ spec:
       grafana:
         dashboards:
           enabled: true
+          allowCrossNamespaceImport: true
           instanceSelector:
             matchLabels:
               grafana.home.arpa/instance: grafana
