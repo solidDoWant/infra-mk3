@@ -17,6 +17,11 @@ entries:
       identifiers:
         name: Invalidation flow
       required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Device code flow
+      required: true
   - model: authentik_brands.brand
     id: infra-mk3-brand
     identifiers:
@@ -29,3 +34,5 @@ entries:
       flow_authentication:
         !Find [authentik_flows.flow, [slug, password-authentication-flow]]
       flow_invalidation: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+      # OAuth device authorization grant (vault-sync Obsidian plugin)
+      flow_device_code: !Find [authentik_flows.flow, [slug, device-code-flow]]

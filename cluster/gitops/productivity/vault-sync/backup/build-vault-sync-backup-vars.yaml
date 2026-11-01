@@ -1,0 +1,34 @@
+---
+# Builds the backup's S3 source from the OBC ConfigMap. The bucket name has a
+# random suffix, so its path and endpoint aren't known ahead of time. The
+# literal fields live here too because the source is a list entry, which Flux
+# can only fill in whole from valuesFrom.
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: &name build-vault-sync-backup-vars
+spec:
+  rules:
+    - # Trigger on change of any of these resources
+      name: *name
+      match:
+        any:
+          - resources:
+              kinds:
+                - ConfigMap
+              name: vault-sync
+      skipBackgroundRequests: true
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: vault-sync-backup-vars
+        namespace: productivity
+        data:
+          data:
+            name: bucket
+            s3Path: s3://{{ request.object.data.BUCKET_NAME }}
+            endpoint: https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}
+            # Required when not using AWS S3; RGW ignores it
+            region: dummy-value

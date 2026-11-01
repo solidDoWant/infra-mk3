@@ -1,0 +1,78 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name vault-sync-backend
+spec:
+  targetNamespace: productivity
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/productivity/vault-sync/backend
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: prometheus-crds
+    - name: cluster-issuers
+    - name: productivity-namespace-issuer
+    - name: cloudnative-pg
+    - name: kyverno-app
+    - name: rook-ceph-cluster
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name vault-sync-app
+spec:
+  targetNamespace: productivity
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/productivity/vault-sync/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: vault-sync-backend
+    - name: gateway-crds
+    - name: prometheus-crds
+    - name: grafana-crds
+    - name: rook-ceph-cluster
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name vault-sync-backup
+spec:
+  targetNamespace: productivity
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/productivity/vault-sync/backup
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: vault-sync-app
+    - name: volume-snapshot-crds
+    - name: rook-ceph-cluster
+    - name: prometheus-crds
+    - name: productivity-namespace-issuer
+    - name: cluster-issuers
+    - name: approver-policy
+    - name: openebs
+    - name: cloudnative-pg
+    - name: democratic-csi-zfs-generic-nfs

@@ -1,0 +1,147 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: obsidian-vault-sync
+spec:
+  interval: 1h
+  # Not cosign-signed upstream, so there is no `verify` block.
+  url: oci://ghcr.io/soliddowant/charts/vault-sync
+  ref:
+    tag: 0.4.0
+    digest: sha256:0f40085f7ed78ec46567b4e7bc723cb572dec0f3a5c20f9132ea753a1b1221d2
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: obsidian-vault-sync
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: obsidian-vault-sync
+  values:
+    config:
+      database:
+        url:
+          value: "\
+            host=vault-sync-postgres-rw.productivity.svc.cluster.local \
+            dbname=vault-sync \
+            user=vault-sync \
+            sslmode=verify-full"
+        tls:
+          clientCertificate:
+            secretName: vault-sync-postgres-vault-sync-user
+          caCert:
+            secretKeyRef:
+              name: vault-sync-postgres-serving-cert
+              key: ca.crt
+      s3:
+        # bucket and endpoint are set from the OBC via valuesFrom below. The
+        # endpoint is RGW behind the internal gateway, which serves a publicly
+        # trusted cert, so no extra CA is needed.
+        credentials:
+          secretName: vault-sync # Created by the OBC
+      oidc:
+        # The public Authentik URL, not the in-cluster openid-configuration-proxy:
+        # the plugin gets its tokens from Authentik over the public hostname, and
+        # the server requires the token `iss` to match this exactly (trailing slash
+        # included). The server advertises this and the client ID to the plugin.
+        issuerUrl: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/vault-sync/
+        audience: vault-sync # Authentik client ID (public client, not a secret)
+      metrics:
+        serviceMonitor:
+          enabled: true
+        serviceWide:
+          enabled: true
+      export:
+        enabled: true
+        schedule: "0 1 * * *" # Finishes before the 02:10 dr-job backup captures its PVC
+        output:
+          persistence:
+            type: persistentVolumeClaim
+            forceRename: vault-sync-export # Pinned; the dr-job backup references this name
+            accessMode: ReadWriteOnce
+            size: 5Gi
+            storageClass: ssd-replicated-3x
+        database:
+          url:
+            value: "\
+              host=vault-sync-postgres-rw.productivity.svc.cluster.local \
+              dbname=vault-sync \
+              user=vault-sync-export \
+              sslmode=verify-full"
+          tls:
+            clientCertificate:
+              secretName: vault-sync-postgres-vault-sync-export-user
+        escrow:
+          # Escrow identity (key escrow.key). Mounted into the export job only.
+          # For a key rotation, also add the signing seeds to this Secret and set
+          # signingKeysKey (see vault-sync docs/export.md).
+          secretName: vault-sync-escrow-keys
+      # Disabled until needed
+      # escrowJobToken:
+      #  secretName: vault-sync-escrow-keys
+      route:
+        enabled: true
+        labels:
+          external-dns.home.arpa/publish: "true"
+        hostnames:
+          - vault-sync.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+          # Mobile devices sync from outside the LAN
+          - name: external-gateway
+            namespace: networking
+      grafana:
+        dashboards:
+          enabled: true
+          instanceSelector:
+            matchLabels:
+              grafana.home.arpa/instance: grafana
+      alerts:
+        prometheusRule:
+          enabled: true
+        runbookUrlBase: https://github.com/solidDoWant/vault-sync/tree/0.4.3/docs/admin/alerts.md
+    resources:
+      controllers:
+        main:
+          containers:
+            main:
+              image: &image
+                repository: ghcr.io/soliddowant/vault-sync
+                tag: 0.4.0@sha256:ba3c39e6528b1170fa8552b0f36c48bfc4a1208bdbb122b2c72256308dab6307
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: &memory 256Mi
+                limits:
+                  memory: *memory
+        export:
+          containers:
+            main:
+              image: *image
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: &memory 1Gi
+                limits:
+                  memory: *memory
+  valuesFrom:
+    - kind: ConfigMap
+      name: vault-sync # Created by the OBC
+      valuesKey: BUCKET_NAME
+      targetPath: config.s3.bucket
+    - kind: ConfigMap
+      name: vault-sync-bucket-vars
+      valuesKey: endpoint
+      targetPath: config.s3.endpoint
+    - kind: Secret
+      name: vault-sync-escrow-keys
+      valuesKey: escrow.recipient
+      targetPath: config.server.escrow.recipient
+    - kind: Secret
+      name: vault-sync-escrow-keys
+      valuesKey: signing.pub
+      targetPath: config.server.escrow.signingKey

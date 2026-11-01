@@ -1,0 +1,90 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: vault-sync-backup
+spec:
+  interval: 1h
+  url: oci://ghcr.io/soliddowant/charts/dr-job
+  ref:
+    tag: 0.0.23
+    digest: sha256:9e430291d8eb1a1c90cccae8ec196e2ec5a7ad6d8105b56d070b58e00f84ce90
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vault-sync-backup
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: vault-sync-backup
+  values:
+    resources:
+      controllers:
+        backup-tool:
+          containers:
+            backup-tool:
+              # The chart passes this to the pods the tool starts (BACKUP_TOOL_IMAGE).
+              image:
+                repository: ghcr.io/soliddowant/backup-tool
+                tag: 0.0.23@sha256:38a9461ce474c50eb0e83be3d208f5418bf938220295388e5a75f212eaae04ab
+    jobConfig:
+      drType: generic
+      drAction: backup
+      cronjob:
+        # Staggered to avoid concurrent snapshots on the shared zfs-generic-nfs
+        # provisioner. Runs after the 01:00 plaintext export has finished.
+        schedule: "10 2 * * *"
+      configFile:
+        backupName: vault-sync-backup
+        backupVolume:
+          storageClass: zfs-generic-nfs # Backed by storage server
+          size: 20Gi
+          snapshotLabels:
+            # Selected (newest per PVC) by tape-archiver runs
+            tape.home.arpa/archive: "true"
+        # Postgres is captured before S3. That is vault-sync's documented order
+        # for a consistent pair: the server writes a blob's object before its
+        # row, and deletes the row before the object, so every blob the dump
+        # references is still in the bucket when S3 is copied (unreferenced blobs
+        # past their GC grace excepted; bucket versioning covers those).
+        postgres:
+          - name: &cluster_name vault-sync-postgres
+            cluster: *cluster_name
+        files:
+          # Plaintext export of every non-E2EE and escrowed vault. Restorable
+          # without vault-sync.
+          - name: export
+            pvc: vault-sync-export
+            snapshotClass: ssd-replicated-3x-block
+            exclude:
+              - glob: lost+found
+        # s3 is a list, which Flux doesn't merge, so the whole entry comes from
+        # valuesFrom below.
+  valuesFrom:
+    - kind: ConfigMap
+      name: vault-sync-backup-vars
+      valuesKey: name
+      targetPath: jobConfig.configFile.s3[0].name
+    - kind: ConfigMap
+      name: vault-sync-backup-vars
+      valuesKey: s3Path
+      targetPath: jobConfig.configFile.s3[0].path
+    - kind: ConfigMap
+      name: vault-sync-backup-vars
+      valuesKey: endpoint
+      targetPath: jobConfig.configFile.s3[0].credentials.endpoint
+    - kind: ConfigMap
+      name: vault-sync-backup-vars
+      valuesKey: region
+      targetPath: jobConfig.configFile.s3[0].credentials.region
+    - kind: Secret
+      name: vault-sync # Created by the OBC
+      valuesKey: AWS_ACCESS_KEY_ID
+      targetPath: jobConfig.configFile.s3[0].credentials.accessKeyId
+    - kind: Secret
+      name: vault-sync
+      valuesKey: AWS_SECRET_ACCESS_KEY
+      targetPath: jobConfig.configFile.s3[0].credentials.secretAccessKey

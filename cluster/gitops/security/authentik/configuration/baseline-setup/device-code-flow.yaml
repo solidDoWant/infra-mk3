@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=../../../../../../schemas/configs/blueprint.authentik_v1.json
+version: 1
+metadata:
+  name: Device code flow
+  labels:
+    blueprints.goauthentik.io/description: Code entry for the OAuth device authorization grant
+entries:
+  # Set as the brand's device code flow. Authentik appends the code entry stage
+  # itself, so the flow needs no stages. Users are logged in before reaching it,
+  # and the provider's authorization flow runs after the code is entered.
+  - model: authentik_flows.flow
+    id: device-code-flow
+    identifiers:
+      slug: device-code-flow
+    attrs:
+      designation: stage_configuration
+      name: Device code
+      title: Sign in a device
+      authentication: require_authenticated

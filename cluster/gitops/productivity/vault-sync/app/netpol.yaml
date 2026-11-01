@@ -1,0 +1,103 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: obsidian-vault-sync
+specs:
+  - description: server
+    endpointSelector: &server_selector
+      matchLabels:
+        app.kubernetes.io/name: vault-sync
+        app.kubernetes.io/instance: obsidian-vault-sync
+        app.kubernetes.io/controller: main
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # PostgreSQL (CNPG), including the LISTEN connection for realtime fanout
+      - &to_postgres
+        toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: vault-sync-postgres
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Internal gateway: S3 (RGW), and Authentik's public hostname for the OIDC
+      # discovery doc + JWKS used to validate tokens
+      - &to_internal_gateway
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet probes (served on the metrics port)
+      - fromEntities:
+          - host
+        toPorts: &metrics_ports
+          - ports:
+              - port: "9090"
+                protocol: TCP
+      # Plugin API and realtime WebSocket, from both gateways
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: external-gateway
+        toPorts: # &api_ports
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Disabled until needed
+      # Export job's escrow rotation (`export rotate-escrow`) calls the
+      # job-only EscrowJobService
+      # - fromEndpoints:
+      #     - &export_selector
+      #       matchLabels:
+      #         app.kubernetes.io/name: vault-sync
+      #         app.kubernetes.io/instance: obsidian-vault-sync
+      #         app.kubernetes.io/controller: export
+      #   toPorts: *api_ports
+      # Metrics scraping
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts: *metrics_ports
+  - description: export
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: vault-sync
+        app.kubernetes.io/instance: obsidian-vault-sync
+        app.kubernetes.io/controller: export
+    egress:
+      - *dns_resolution
+      - *to_postgres
+      # S3 (RGW) via the internal gateway
+      - *to_internal_gateway
+      # Disabled until needed
+      # # Escrow rotation (`export rotate-escrow -server`) via the in-cluster Service
+      # - toEndpoints:
+      #     - *server_selector
+      #   toPorts: *api_ports

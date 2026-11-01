@@ -1,0 +1,49 @@
+---
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: vault-sync
+spec:
+  generateBucketName: vault-sync
+  storageClassName: ssd-replicated-object
+  additionalConfig:
+    # One object per stored file version (content-addressed blobs).
+    maxObjects: "1000000"
+    maxSize: 100G
+    # Versioning is enabled out-of-band by the vault-sync-versioning
+    # HelmRelease — Rook's OBC has no field to enable it (rook/rook#17318).
+    # Versioning lets the S3 side of a backup be rolled back to the moment its
+    # Postgres copy was taken (the backup reads Postgres first, then S3, while
+    # the server keeps deleting garbage-collected blobs). These rules clean up
+    # the resulting old versions and delete markers.
+    # Incomplete multipart uploads are aborted after 2 days, past the server's
+    # own 24h upload TTL, so the server always cleans up its uploads first.
+    bucketLifecycle: |
+      {
+        "Rules": [
+          {
+            "ID": "AbortIncompleteMultipartUploads",
+            "Status": "Enabled",
+            "Prefix": "",
+            "AbortIncompleteMultipartUpload": {
+              "DaysAfterInitiation": 2
+            }
+          },
+          {
+            "ID": "ExpireDeleteMarkers",
+            "Status": "Enabled",
+            "Prefix": "",
+            "Expiration": {
+              "ExpiredObjectDeleteMarker": true
+            }
+          },
+          {
+            "ID": "ExpireNoncurrentVersions",
+            "Status": "Enabled",
+            "Prefix": "",
+            "NoncurrentVersionExpiration": {
+              "NoncurrentDays": 30
+            }
+          }
+        ]
+      }

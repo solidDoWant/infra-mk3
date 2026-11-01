@@ -1,0 +1,27 @@
+---
+# The S3 endpoint URL is built from the OBC's host and port. Consumed by the
+# app HelmRelease via valuesFrom.
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: &name build-vault-sync-bucket-vars
+spec:
+  rules:
+    - name: *name
+      match:
+        any:
+          - resources:
+              kinds:
+                - ConfigMap
+              name: vault-sync
+      skipBackgroundRequests: true
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: vault-sync-bucket-vars
+        namespace: productivity
+        data:
+          data:
+            endpoint: https://{{ request.object.data.BUCKET_HOST }}:{{ request.object.data.BUCKET_PORT }}

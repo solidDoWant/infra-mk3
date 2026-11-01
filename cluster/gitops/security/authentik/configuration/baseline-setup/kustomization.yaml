@@ -8,6 +8,7 @@ resources:
 configMapGenerator:
   - name: authentik-configuration-blueprints
     files:
+      - ./device-code-flow.yaml
       - ./discord-authentication-flow.yaml
       - ./discord-enrollment-flow.yaml
       - ./discord-policies.yaml
