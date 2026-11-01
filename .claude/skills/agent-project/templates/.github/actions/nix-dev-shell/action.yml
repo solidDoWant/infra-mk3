@@ -1,0 +1,22 @@
+name: nix-dev-shell
+description: >-
+  Install Nix and restore the caches every Linux CI job needs: the Nix store
+  (the flake's dev shell), Go modules + build cache, and npm's cache. Keyed on
+  the files that determine their contents, so an unchanged toolchain is a
+  cache hit instead of a fresh download in every job.
+runs:
+  using: composite
+  steps:
+    - uses: cachix/install-nix-action@v31
+    - uses: nix-community/cache-nix-action@v7
+      with:
+        primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+        restore-prefixes-first-match: nix-${{ runner.os }}-
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/.npm
+        key: go-npm-${{ runner.os }}-${{ hashFiles('go.sum', 'plugin/package-lock.json') }}
+        restore-keys: go-npm-${{ runner.os }}-

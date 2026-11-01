@@ -7,27 +7,113 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read # dorny/paths-filter lists PR files via the API
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The single required check. Everything runs inside the flake's dev shell so
-  # CI uses exactly the toolchain developers and agents use.
-  checks:
+  # Decides whether anything that can affect build or test results changed.
+  # Docs-only and agent-playbook-only changes skip every test job; the
+  # required `checks` job below still runs and passes.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!*.md'
+              - '!docs/**'
+              - '!.claude/**'
+              - '!scripts/agents/**'
+              - '!LICENSE'
+              - '!.github/renovate.json5'
+              - '!.github/renovate/**'
+
+  # Docs: relative links and anchors resolve (lychee --offline) and generated
+  # reference pages match the code. The SimpleEnglish lint
+  # (scripts/docs/ste_lint.py) is reported in the job summary but never fails
+  # the job: word counts and lint scores are bad targets. Runs on every change, including docs-only
+  # ones, so it does not need the `changes` filter.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/nix-dev-shell
+      - run: nix develop -c make docs-check
+
+  # The test tiers run as parallel jobs (they used to be sequential steps of
+  # one ~9 minute job). Everything runs inside the flake's dev shell so CI
+  # uses exactly the toolchain developers and agents use.
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/nix-dev-shell
+      - name: Lint
+        run: nix develop -c make lint
+      - name: Generated code is current
+        run: nix develop -c make check-generate
+
+  unit:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/nix-dev-shell
+      - name: Unit tests
+        run: nix develop -c make test
+      - name: Build
+        run: nix develop -c make build
+
+  integration:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - uses: cachix/install-nix-action@v31
-      - name: Lint
-        run: nix develop -c make lint
-      - name: Unit tests
-        run: nix develop -c make test
+        with:
+          # The rolling-upgrade integration test builds the previous
+          # release (where this change branched from master) from history.
+          fetch-depth: 0
+      - uses: ./.github/actions/nix-dev-shell
       - name: Integration tests
         run: nix develop -c make test-integration
-      - name: Generated code is current
-        run: nix develop -c make check-generate
-      - name: Build
-        run: nix develop -c make build
+
+
+
+  # The single required status check (it also covers any matrix
+  # jobs, whose per-entry check names are not reported when the job is skipped). It
+  # always runs, so docs-only changes
+  # still produce a passing `checks`; it fails if any tier failed or was
+  # cancelled, and passes when they succeeded or were skipped by the filter.
+  checks:
+    needs: [changes, docs, lint, unit, integration] # + every other test job, incl. matrix jobs
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All test tiers passed or were skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "a required job ended with: $result" >&2; exit 1 ;;
+            esac
+          done

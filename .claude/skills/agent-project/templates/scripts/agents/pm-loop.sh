@@ -17,8 +17,59 @@ LOG_DIR="${PM_LOG_DIR:-$HOME/.pm-logs}"
 MODEL="${PM_MODEL:-opus}"
 PROMPT='You are the {{PROJECT}} project manager. Read docs/agents/project-manager.md and follow it exactly: resume from .pm/state.md, run one cycle, record progress, then exit.'
 
+# Headless `claude -p` only waits 10 minutes for background tasks (subagents)
+# after the PM's last turn, then kills them -- which is what killed the cycle-2
+# and cycle-7 workers. Wait up to 3 hours instead; a cycle is still bounded.
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS="${CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS:-10800000}"
+
 mkdir -p "$LOG_DIR" "$REPO_DIR/.pm"
-cd "$REPO_DIR"
+cd "$REPO_DIR" || exit 1
+
+# Claude Code's Bash tool runs each command from a snapshot of the login
+# shell, so the dev shell's PATH does not reach agents even when claude itself
+# runs under `nix develop`; agents then had to prefix commands with
+# `nix develop -c`, which the worktree guard often rejects. Instead, export
+# the dev shell as a file that Claude Code sources before every Bash command.
+# ~/.local/bin goes last-but-first so the coder gh wrapper (fresh GitHub token
+# per call) wins.
+ENV_FILE="$REPO_DIR/.pm/devenv.sh"
+refresh_env_file() {
+  if nix print-dev-env "$REPO_DIR" >"$ENV_FILE.tmp" 2>"$LOG_DIR/devenv.stderr"; then
+    # shellcheck disable=SC2016 # expanded when the file is sourced, not now
+    printf 'export PATH="$HOME/.local/bin:$PATH"\n' >>"$ENV_FILE.tmp"
+    mv "$ENV_FILE.tmp" "$ENV_FILE"
+  else
+    echo "$(date -Is) WARNING: nix print-dev-env failed; keeping previous $ENV_FILE" >>"$LOG_DIR/cycles.log"
+  fi
+}
+export CLAUDE_ENV_FILE="$ENV_FILE"
+
+# Between cycles nothing else is running, so disk cleanup cannot break an
+# in-flight build:
+#   - the Go build cache grows ~1 GB/h under many worktrees; clear it past 15 GB
+#   - each `nix develop` leaves a /tmp/nix-shell.* directory behind
+#   - killed test runs leave their docker compose stack ({{PROJECT}}-test-PID) up
+cleanup_between_cycles() {
+  local gocache size_kb project pid
+  gocache="$(bash -c "source '$ENV_FILE' >/dev/null 2>&1; go env GOCACHE" 2>/dev/null)"
+  if [ -n "$gocache" ] && [ -d "$gocache" ]; then
+    size_kb=$(du -sk "$gocache" 2>/dev/null | cut -f1)
+    if [ "${size_kb:-0}" -gt $((15 * 1024 * 1024)) ]; then
+      bash -c "source '$ENV_FILE' >/dev/null 2>&1; go clean -cache"
+      echo "$(date -Is) cleanup: cleared Go build cache (${size_kb} KiB)" >>"$LOG_DIR/cycles.log"
+    fi
+  fi
+  find /tmp -maxdepth 1 -name 'nix-shell.*' -mmin +360 -exec rm -rf {} + 2>/dev/null
+  for project in $(docker ps -a --format '{{.Label "com.docker.compose.project"}}' 2>/dev/null | grep '^{{PROJECT}}-test-[0-9]*$' | sort -u); do
+    pid=${project##*-}
+    if ! kill -0 "$pid" 2>/dev/null; then
+      docker ps -aq --filter "label=com.docker.compose.project=$project" | xargs -r docker rm -f >/dev/null
+      docker network ls -q --filter "label=com.docker.compose.project=$project" | xargs -r docker network rm >/dev/null 2>&1
+      echo "$(date -Is) cleanup: removed orphaned test stack $project" >>"$LOG_DIR/cycles.log"
+    fi
+  done
+  docker volume prune -f >/dev/null 2>&1
+}
 
 idle_backoff=60
 while true; do
@@ -28,12 +79,15 @@ while true; do
   fi
   while [ -e .pm/PAUSE ]; do sleep 60; done
 
+  cleanup_between_cycles
+  refresh_env_file
+
   ts="$(date -u +%Y%m%dT%H%M%SZ)"
   log="$LOG_DIR/cycle-$ts.jsonl"
   start=$(date +%s)
-  # ~/.local/bin goes first again inside the dev shell so the coder gh wrapper
-  # (fresh GitHub token per call) wins over anything the shell puts on PATH.
-  nix develop "$REPO_DIR" --command env PATH="$HOME/.local/bin:$PATH" claude -p "$PROMPT" \
+  # The PM's own Bash calls source CLAUDE_ENV_FILE too; ~/.local/bin first so
+  # the coder gh wrapper wins.
+  PATH="$HOME/.local/bin:$PATH" claude -p "$PROMPT" \
     --dangerously-skip-permissions \
     --model "$MODEL" \
     --output-format stream-json --verbose \
