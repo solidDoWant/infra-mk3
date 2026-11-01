@@ -5,9 +5,9 @@ metadata:
   name: obsidian-vault-sync
 specs:
   - description: server
-    endpointSelector: &server_selector
+    endpointSelector: # &server_selector
       matchLabels:
-        app.kubernetes.io/name: vault-sync
+        app.kubernetes.io/name: obsidian-vault-sync
         app.kubernetes.io/instance: obsidian-vault-sync
         app.kubernetes.io/controller: main
     egress:
@@ -55,6 +55,8 @@ specs:
           - ports:
               - port: "9090"
                 protocol: TCP
+              - port: "9091"
+                protocol: TCP
       # Plugin API and realtime WebSocket, from both gateways
       - fromEndpoints:
           - matchLabels:
@@ -75,7 +77,7 @@ specs:
       # - fromEndpoints:
       #     - &export_selector
       #       matchLabels:
-      #         app.kubernetes.io/name: vault-sync
+      #         app.kubernetes.io/name: obsidian-vault-sync
       #         app.kubernetes.io/instance: obsidian-vault-sync
       #         app.kubernetes.io/controller: export
       #   toPorts: *api_ports
@@ -88,7 +90,7 @@ specs:
   - description: export
     endpointSelector:
       matchLabels:
-        app.kubernetes.io/name: vault-sync
+        app.kubernetes.io/name: obsidian-vault-sync
         app.kubernetes.io/instance: obsidian-vault-sync
         app.kubernetes.io/controller: export
     egress:

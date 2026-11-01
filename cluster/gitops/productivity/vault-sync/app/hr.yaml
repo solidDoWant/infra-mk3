@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/vault-sync
   ref:
-    tag: 0.4.3
-    digest: sha256:3f7de39f12a7951bc9ef26f01a033dc2f243c8ecfec355687ead3d71dffd3800
+    tag: 0.4.4
+    digest: sha256:f0213b56fa18c513d6acca60fb2b8f8f01913d46a2fc612fe616de2c4c7d9e3b
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -49,11 +49,12 @@ spec:
         # included). The server advertises this and the client ID to the plugin.
         issuerUrl: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/vault-sync/
         audience: vault-sync # Authentik client ID (public client, not a secret)
-      metrics:
-        serviceMonitor:
-          enabled: true
-        serviceWide:
-          enabled: true
+      server:
+        metrics:
+          serviceMonitor:
+            enabled: true
+          serviceWide:
+            enabled: true
       export:
         enabled: true
         schedule: "0 1 * * *" # Finishes before the 02:10 dr-job backup captures its PVC
@@ -103,7 +104,7 @@ spec:
       alerts:
         prometheusRule:
           enabled: true
-        runbookUrlBase: https://github.com/solidDoWant/vault-sync/tree/0.4.3/docs/admin/alerts.md
+        runbookUrlBase: https://github.com/solidDoWant/vault-sync/tree/0.4.4/docs/admin/alerts.md
     resources:
       controllers:
         main:
@@ -111,7 +112,7 @@ spec:
             main:
               image: &image
                 repository: ghcr.io/soliddowant/vault-sync
-                tag: 0.4.3@sha256:2d51b7ffd1a1bd9c3a9f01751f9ec685ca70e44ce32cb9195d0a9d64ea428aa8
+                tag: 0.4.4@sha256:d73515e707244ae333c754a443d4d4a7c0ff0a3a06973257f7b5458f2d093f76
               resources:
                 requests:
                   cpu: 100m

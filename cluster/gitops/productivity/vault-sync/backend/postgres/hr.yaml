@@ -52,10 +52,10 @@ spec:
       applicationAccess:
         selectors:
           - matchLabels:
-              app.kubernetes.io/name: vault-sync
+              app.kubernetes.io/name: obsidian-vault-sync
               app.kubernetes.io/instance: obsidian-vault-sync
               app.kubernetes.io/controller: main
           - matchLabels:
-              app.kubernetes.io/name: vault-sync
+              app.kubernetes.io/name: obsidian-vault-sync
               app.kubernetes.io/instance: obsidian-vault-sync
               app.kubernetes.io/controller: export
