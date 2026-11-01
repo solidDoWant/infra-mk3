@@ -44,6 +44,27 @@ stringData:
           identifiers:
             name: infra-mk3 brand
           required: true
+      # The plugin asks only for `openid offline_access`, and authentik applies
+      # a scope mapping only when its scope is requested, so the default
+      # 'profile' mapping below never fires for the plugin. This mapping is
+      # tied to `openid`, which every request includes, so the tokens always
+      # carry the profile claims the server reads (`name`, else
+      # `preferred_username`). It uses them as the user's name in the history
+      # and in the names of conflict copies (vault-sync
+      # docs/admin/identity-provider.md).
+      - model: authentik_providers_oauth2.scopemapping
+        id: vault-sync-profile-scope
+        identifiers:
+          name: vault-sync profile
+        attrs:
+          name: vault-sync profile
+          scope_name: openid
+          description: vault-sync user name (profile claims on every token)
+          expression: |
+            return {
+                "name": request.user.name,
+                "preferred_username": request.user.username,
+            }
       # Application
       - model: authentik_providers_oauth2.oauth2provider
         id: vault-sync-provider
@@ -93,6 +114,7 @@ stringData:
                 authentik_providers_oauth2.scopemapping,
                 [name, "authentik default OAuth Mapping: OpenID 'offline_access'"],
               ]
+            - !KeyOf vault-sync-profile-scope
           sub_mode: hashed_user_id
           issuer_mode: per_provider
       - model: authentik_core.application
