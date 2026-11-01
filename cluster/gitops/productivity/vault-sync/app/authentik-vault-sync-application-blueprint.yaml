@@ -62,6 +62,9 @@ stringData:
           grant_types:
             - urn:ietf:params:oauth:grant-type:device_code
             - refresh_token
+          # Required by the serializer even though the device grant never
+          # redirects. Without it, creating the provider fails validation.
+          redirect_uris: []
           signing_key:
             !Find [
               authentik_crypto.certificatekeypair,
