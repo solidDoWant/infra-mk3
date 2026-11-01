@@ -21,7 +21,7 @@ stringData:
       - model: authentik_blueprints.metaapplyblueprint
         attrs:
           identifiers:
-            name: Implicit provider authentication
+            name: Explicit provider authentication
           required: true
       - model: authentik_blueprints.metaapplyblueprint
         attrs:
@@ -51,8 +51,11 @@ stringData:
           name: vault-sync
         attrs:
           name: vault-sync
+          # Explicit consent: the plugin opens a link with the device code
+          # pre-filled, so this prompt is the only check that the user meant
+          # to sign in a device.
           authorization_flow:
-            !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+            !Find [authentik_flows.flow, [slug, explicit-authorization-flow]]
           # The plugin can't keep a secret. The client ID isn't secret either:
           # the server advertises it to the plugin.
           client_type: public

@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=../../../../../../schemas/configs/blueprint.authentik_v1.json
+version: 1
+metadata:
+  name: Explicit provider authentication
+  labels:
+    blueprints.goauthentik.io/description: Require the user to approve every provider authorization
+entries:
+  # Asks every time (no remembered consent). Used by device-code providers,
+  # where the code can arrive pre-filled in a link. Without a prompt, opening a
+  # link someone else started would sign their device in as you.
+  - model: authentik_stages_consent.consentstage
+    id: explicit-authorization-consent
+    identifiers:
+      name: explicit-authorization-consent
+    attrs:
+      mode: always_require
+  - model: authentik_flows.flow
+    id: explicit-authorization-flow
+    identifiers:
+      slug: explicit-authorization-flow
+    attrs:
+      designation: authorization
+      name: Explicit authorization
+      title: Authorize %(app)s
+      authentication: require_authenticated
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      order: 0
+      stage: !KeyOf explicit-authorization-consent
+      target: !KeyOf explicit-authorization-flow
