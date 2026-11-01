@@ -191,6 +191,12 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "vault-sync: chart + the server image pinned in its values (released together)",
+      groupName: "vault-sync",
+      matchPackageNames: ["ghcr.io/soliddowant/charts/vault-sync", "ghcr.io/soliddowant/vault-sync"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
       description: "VPA: Fairwinds chart + recommender image + CRDs (kubernetes/autoscaler)",
       groupName: "vpa",
       matchPackageNames: ["vpa", "kubernetes/autoscaler", "registry.k8s.io/autoscaling/vpa-recommender"],
