@@ -109,6 +109,11 @@ spec:
     resources:
       controllers:
         main:
+          pod:
+            labels:
+              # External gateway egress allow, for mobile devices syncing from
+              # outside the LAN. The pod's own netpol limits this to the API port.
+              endpoints.netpols.home.arpa/external-ingress-enabled: "true"
           containers:
             main:
               image: &image
