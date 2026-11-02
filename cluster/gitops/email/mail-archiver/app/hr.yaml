@@ -1,0 +1,234 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: mail-archiver
+spec:
+  interval: 1h
+  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+  ref:
+    tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/bjw-s-labs/helm-charts/\.github/workflows/chart-release-steps\.yaml@refs/.+$
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mail-archiver
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: mail-archiver
+  values:
+    controllers:
+      mail-archiver:
+        # Single replica only. The sync scheduler, job queues (export, restore,
+        # import) and login sessions are all held in process memory with no
+        # cross-pod locking, so a second pod would sync every account twice and
+        # break job tracking. Recreate also keeps two pods from running the EF
+        # migrations at once during an upgrade.
+        strategy: Recreate
+        containers:
+          mail-archiver:
+            image:
+              # Upstream publishes the same image to ghcr.io and Docker Hub.
+              repository: ghcr.io/s1t5/mailarchiver
+              tag: 2610.1@sha256:d354bf8cefc4d825dd22cb2d8a70d6622cabbc08b0fa08983e3660f6c2f0a322
+            env:
+              ConnectionStrings__DefaultConnection: >-
+                Host=mail-archiver-postgres-rw.email.svc.cluster.local;
+                Database=mail-archiver;
+                Username=mail-archiver;
+                SSL Mode=VerifyCA;
+                Root Certificate=/etc/mail-archiver/certs/root-ca/ca.crt;
+                SSL Certificate=/etc/mail-archiver/certs/postgres/tls.crt;
+                SSL Key=/etc/mail-archiver/certs/postgres/tls.key
+              # First path keeps trust in public CAs (IMAP providers, Microsoft);
+              # second adds the cluster root for openid-configuration-proxy.
+              SSL_CERT_DIR: /etc/ssl/certs:/etc/mail-archiver/certs/root-ca
+              # Sign-in through Authentik only. Token `iss` must equal Authority
+              # exactly (trailing slash included), which the proxy guarantees.
+              # The redirect URI is fixed by the app: /oidc-signin-completed.
+              OAuth__Enabled: true
+              OAuth__Authority: https://openid-configuration-proxy.security.svc.cluster.local/application/o/mail-archiver/
+              OAuth__ClientId: ${SECRET_MAIL_ARCHIVER_AUTHENTIK_OIDC_CLIENT_ID}
+              OAuth__ClientSecret:
+                secretKeyRef:
+                  name: mail-archiver
+                  key: oidc-client-secret
+              OAuth__DisplayName: Authentik
+              OAuth__DisablePasswordLogin: true
+              OAuth__AutoRedirect: true
+              # Who can sign in at all is decided by the Authentik group policy.
+              # New users are created as Standard users (read-only on assigned
+              # accounts); promote them to Self Manager in the admin panel so
+              # they can add their own mail accounts.
+              OAuth__AutoApproveUsers: true
+              OAuth__AdminEmails__0:
+                secretKeyRef:
+                  name: mail-archiver-credentials
+                  key: adminEmail
+              # Break-glass local admin, created on first start.
+              Authentication__Username: admin
+              Authentication__Password:
+                secretKeyRef:
+                  name: mail-archiver-credentials
+                  key: adminPassword
+              Security__CredentialEncryptionKey:
+                secretKeyRef:
+                  name: mail-archiver-credentials
+                  key: encryptionKey
+              # Archive is write-once: lock every archived message against
+              # deletion (enforced by a database trigger).
+              DeletionPolicy__DeletionAllowed: false
+              # Folders never archived, for every account. Matched by exact
+              # folder name; per-account exclusions can be added in the UI.
+              MailSync__GlobalExcludedFolders__0: "[Gmail]/Spam"
+              MailSync__GlobalExcludedFolders__1: "[Gmail]/Trash"
+              MailSync__GlobalExcludedFolders__2: Spam
+              MailSync__GlobalExcludedFolders__3: Junk
+              MailSync__GlobalExcludedFolders__4: Junk Email
+              MailSync__GlobalExcludedFolders__5: Bulk
+              MailSync__GlobalExcludedFolders__6: Trash
+              MailSync__GlobalExcludedFolders__7: Deleted Items
+              MailSync__GlobalExcludedFolders__8: Deleted Messages
+              TimeZone__DisplayTimeZoneId: America/Chicago
+              # Fetches release notes from api.github.com; updates come through
+              # Renovate instead.
+              ReleaseNotes__Enabled: false
+              Api__Enabled: false
+              Mcp__Enabled: false
+            ports:
+              - name: http
+                containerPort: &http_port 5000
+            probes:
+              # No health endpoint; the login page renders without a session.
+              liveness: &probe
+                enabled: true
+                type: HTTP
+                port: http
+                path: /Auth/Login
+              readiness: *probe
+              # EF migrations run before the app starts listening, and can take
+              # a while on upgrades of a large archive.
+              startup:
+                enabled: true
+                type: HTTP
+                port: http
+                path: /Auth/Login
+                spec:
+                  failureThreshold: 120
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: 100m
+                memory: &memory 1Gi
+              limits:
+                memory: *memory
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+        pod:
+          labels:
+            # Admitted by the openid-configuration-proxy's ingress netpol.
+            endpoints.netpols.home.arpa/oidc-querier: "true"
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # The image doesn't set USER; this is the .NET base image's `app` user.
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    service:
+      mail-archiver:
+        controller: mail-archiver
+        ports:
+          http:
+            port: *http_port
+            primary: true
+    route:
+      mail-archiver:
+        hostnames:
+          - mail-archiver.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: mail-archiver
+                port: *http_port
+    persistence:
+      # ASP.NET data protection keys (auth cookies, anti-forgery tokens).
+      # Without them every restart signs everyone out. Backed up by dr-job.
+      data-protection-keys:
+        type: persistentVolumeClaim
+        storageClass: ssd-replicated-3x
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          mail-archiver:
+            mail-archiver:
+              - path: /app/DataProtection-Keys
+      # Web UI exports (zip files, kept for 24 hours) and uploaded mbox/EML
+      # imports. Both are transient, but can be as large as an account.
+      exports:
+        type: emptyDir
+        sizeLimit: 20Gi
+        advancedMounts:
+          mail-archiver:
+            mail-archiver:
+              - path: /app/exports
+      uploads:
+        type: emptyDir
+        sizeLimit: 20Gi
+        advancedMounts:
+          mail-archiver:
+            mail-archiver:
+              - path: /app/uploads
+      temp:
+        type: emptyDir
+        sizeLimit: 1Gi
+        advancedMounts:
+          mail-archiver:
+            mail-archiver:
+              - path: /tmp
+      # Distributed to every namespace by certificates/issuers/trust-distribution.
+      # Trusted for the postgres serving cert and the openid-configuration-proxy.
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        advancedMounts:
+          mail-archiver:
+            mail-archiver:
+              - path: /etc/mail-archiver/certs/root-ca
+      postgres-user-cert:
+        type: secret
+        name: mail-archiver-postgres-mail-archiver-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        advancedMounts:
+          mail-archiver:
+            mail-archiver:
+              - path: /etc/mail-archiver/certs/postgres

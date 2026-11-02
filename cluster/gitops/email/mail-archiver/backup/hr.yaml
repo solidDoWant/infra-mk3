@@ -1,0 +1,59 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: mail-archiver-backup
+spec:
+  interval: 1h
+  url: oci://ghcr.io/soliddowant/charts/dr-job
+  ref:
+    tag: 0.0.23
+    digest: sha256:9e430291d8eb1a1c90cccae8ec196e2ec5a7ad6d8105b56d070b58e00f84ce90
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mail-archiver-backup
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: mail-archiver-backup
+  values:
+    resources:
+      controllers:
+        backup-tool:
+          containers:
+            backup-tool:
+              # The chart passes this to the pods the tool starts (BACKUP_TOOL_IMAGE).
+              image:
+                repository: ghcr.io/soliddowant/backup-tool
+                tag: 0.0.23@sha256:38a9461ce474c50eb0e83be3d208f5418bf938220295388e5a75f212eaae04ab
+    jobConfig:
+      drType: generic
+      drAction: backup
+      cronjob:
+        schedule: "20 2 * * *" # Staggered to avoid concurrent snapshots on the shared zfs-generic-nfs provisioner
+      configFile:
+        backupName: mail-archiver-backup
+        backupVolume:
+          storageClass: zfs-generic-nfs # Backed by storage server
+          # Holds a logical dump of the whole archive (every message and
+          # attachment lives in the database). Keep this at least as large as
+          # the postgres volume.
+          size: 50Gi
+          snapshotLabels:
+            # Selected (newest per PVC) by tape-archiver runs
+            tape.home.arpa/archive: "true"
+        postgres:
+          - name: &cluster_name mail-archiver-postgres
+            cluster: *cluster_name
+        files:
+          # ASP.NET data protection keys. Not needed to read the archive, but
+          # restoring them keeps existing sessions valid.
+          - name: data-protection-keys
+            pvc: mail-archiver-data-protection-keys
+            snapshotClass: ssd-replicated-3x-block
+            exclude:
+              - glob: lost+found
