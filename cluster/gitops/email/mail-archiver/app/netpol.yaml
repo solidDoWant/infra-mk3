@@ -56,6 +56,41 @@ specs:
           - ports:
               - port: "993"
                 protocol: TCP
+      # Certificate revocation (CRL/OCSP) and missing-intermediate downloads
+      # (AIA), over plain HTTP. MailKit checks revocation on every IMAP TLS
+      # connection (CheckCertificateRevocation defaults to true), and the
+      # connection fails if the check can't complete. Providers whose CA isn't
+      # listed here will fail to connect until it's added.
+      - toFQDNs:
+          # Google Trust Services (Gmail)
+          - matchPattern: "*.pki.goog"
+          # DigiCert (Yahoo, Outlook/Microsoft 365, many others)
+          - matchPattern: "*.digicert.com"
+          # Microsoft PKI
+          - matchName: crl.microsoft.com
+          - matchName: oneocsp.microsoft.com
+          - matchName: www.microsoft.com
+          # Let's Encrypt (CRLs and intermediates; it no longer runs OCSP)
+          - matchPattern: "*.c.lencr.org"
+          - matchPattern: "*.i.lencr.org"
+          # Apple (iCloud Mail)
+          - matchName: crl.apple.com
+          - matchName: ocsp.apple.com
+          - matchName: certs.apple.com
+          # Sectigo / USERTrust
+          - matchPattern: "*.sectigo.com"
+          - matchPattern: "*.usertrust.com"
+          # GlobalSign
+          - matchPattern: "*.globalsign.com"
+          # Amazon Trust Services (hosts are nested, e.g. crl.r2m02.amazontrust.com)
+          - matchPattern: "*.amazontrust.com"
+          - matchPattern: "*.*.amazontrust.com"
+          # Entrust
+          - matchPattern: "*.entrust.net"
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
       # Microsoft 365 (Graph API) and personal Outlook accounts (OAuth device
       # code flow).
       - toFQDNs:
