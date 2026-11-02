@@ -61,11 +61,11 @@ stringData:
           redirect_uris:
             - url: https://mail-archiver.${SECRET_PUBLIC_DOMAIN_NAME}/oidc-signin-completed
               matching_mode: strict
+          # Not "authentik Self-signed Certificate": that one has expired, and
+          # .NET rejects signing keys whose certificate has expired. This one
+          # is renewed by cert-manager (security/authentik/app/oidc-signing-cert.yaml).
           signing_key:
-            !Find [
-              authentik_crypto.certificatekeypair,
-              [name, authentik Self-signed Certificate],
-            ]
+            !Find [authentik_crypto.certificatekeypair, [name, authentik-oidc-signing]]
           authentication_flow:
             !Find [authentik_flows.flow, [slug, password-authentication-flow]]
           invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]

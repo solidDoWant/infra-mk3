@@ -1,0 +1,41 @@
+---
+# Signing key for OIDC providers. Authentik's own "authentik Self-signed
+# Certificate" is generated once at install with a one-year lifetime and is
+# never renewed. Most clients only use the public key, but .NET (e.g.
+# mail-archiver) also rejects keys whose certificate has expired. This one is
+# renewed by cert-manager instead.
+#
+# The secret is mounted into the worker under /certs/authentik-oidc-signing/.
+# Authentik's certificate discovery imports it as a keypair named after that
+# directory, and re-imports it whenever the files change, so renewals reach
+# Authentik on their own. Providers reference it by that name.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authentik-oidc-signing
+spec:
+  commonName: authentik OIDC signing
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - digital signature
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+  privateKey:
+    # RSA, so tokens are signed with RS256, which every OIDC client supports.
+    algorithm: RSA
+    size: 2048
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    # Only the key matters: clients get the public key from JWKS, not from a
+    # trusted chain. Approved by the self-signed-issuer CertificateRequestPolicy.
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: self-signed
+  secretName: authentik-oidc-signing

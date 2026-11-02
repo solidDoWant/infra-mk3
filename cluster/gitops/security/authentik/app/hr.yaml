@@ -229,10 +229,28 @@ spec:
           emptyDir: {}
         - name: mask-blueprints
           emptyDir: {}
+        # OIDC signing keypair (see oidc-signing-cert.yaml). Optional so that a
+        # cert-manager problem can't keep the worker from starting.
+        - name: oidc-signing-cert
+          secret:
+            secretName: authentik-oidc-signing
+            optional: true
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
       volumeMounts:
         - &blueprints_mount
           name: sidecar-blueprints
           mountPath: &sidecar_blueprints_dir /blueprints/k8s-sidecar
+        # Certificate discovery imports this as the keypair
+        # "authentik-oidc-signing" (named after the directory) and re-imports
+        # it whenever cert-manager renews it.
+        - name: oidc-signing-cert
+          mountPath: /certs/authentik-oidc-signing
+          readOnly: true
         # Don't load these blueprints. This means that Authentik will not be
         # accessible until the customization fluxtomization loads.
         - name: mask-blueprints
