@@ -70,17 +70,20 @@ spec:
               # accounts); promote them to Self Manager in the admin panel so
               # they can add their own mail accounts.
               OAuth__AutoApproveUsers: true
-              OAuth__AdminEmails__0: ${SECRET_MAIL_ARCHIVER_ADMIN_EMAIL}
+              OAuth__AdminEmails__0:
+                secretKeyRef:
+                  name: mail-archiver-credentials
+                  key: adminEmail
               # Break-glass local admin, created on first start.
               Authentication__Username: admin
               Authentication__Password:
                 secretKeyRef:
-                  name: mail-archiver
-                  key: admin-password
+                  name: mail-archiver-credentials
+                  key: adminPassword
               Security__CredentialEncryptionKey:
                 secretKeyRef:
-                  name: mail-archiver
-                  key: credential-encryption-key
+                  name: mail-archiver-credentials
+                  key: encryptionKey
               # Archive is write-once: lock every archived message against
               # deletion (enforced by a database trigger).
               DeletionPolicy__DeletionAllowed: false
