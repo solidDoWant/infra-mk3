@@ -1,0 +1,82 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mail-archiver
+specs:
+  - description: mail-archiver
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: mail-archiver
+        app.kubernetes.io/controller: mail-archiver
+        app.kubernetes.io/instance: mail-archiver
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Access to the backend PostgreSQL database
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: mail-archiver-postgres
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # openid-configuration-proxy: the canonical in-cluster OIDC origin. The
+      # app runs its whole back-channel (discovery, token, JWKS, userinfo)
+      # through it over HTTPS on 8443 (see
+      # security/authentik/openid-configuration-proxy).
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: security
+              app.kubernetes.io/name: openid-configuration-proxy
+              app.kubernetes.io/instance: openid-configuration-proxy
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+      # IMAPS to any mail provider. Users add their own accounts, so the
+      # servers aren't known ahead of time. Trade-off: if the pod were
+      # compromised it could reach any host on 993, including outside-cluster
+      # LAN hosts. Replace with a toFQDNs list to restrict it to known providers.
+      - toEntities:
+          - world
+        toPorts:
+          - ports:
+              - port: "993"
+                protocol: TCP
+      # Microsoft 365 (Graph API) and personal Outlook accounts (OAuth device
+      # code flow).
+      - toFQDNs:
+          - matchName: graph.microsoft.com
+          - matchName: login.microsoftonline.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet for healthchecks
+      - fromEntities:
+          - host
+        toPorts: &http_ports
+          - ports:
+              - port: "5000"
+                protocol: TCP
+      # Internal gateway forwards user traffic
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *http_ports

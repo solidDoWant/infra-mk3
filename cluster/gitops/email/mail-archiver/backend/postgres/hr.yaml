@@ -1,0 +1,53 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mail-archiver-postgres
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    clusterName: mail-archiver
+    # Every archived message and attachment lives in the database. The ZFS
+    # volume can be expanded later.
+    storage:
+      size: 50Gi
+    certificates:
+      client:
+        ca:
+          subject: &subject
+            countries:
+              - US
+            provinces:
+              - ${SECRET_STATE}
+            organizations:
+              - infra-mk3
+      serving:
+        issuerRef:
+          name: email-intermediary-ca
+        subject: *subject
+    users:
+      # Owner role `mail-archiver` is created by initdb (owner defaults to the
+      # database name). The app needs ownership: its EF migrations create the
+      # mail_archiver schema, a history table in public, and the citext and
+      # pgcrypto extensions (both trusted, so no superuser needed). This block
+      # only issues the client certificate.
+      mail-archiver:
+        username: mail-archiver
+        disableReloading: true
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: mail-archiver
+            app.kubernetes.io/controller: mail-archiver
+            app.kubernetes.io/instance: mail-archiver
