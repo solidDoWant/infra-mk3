@@ -1,6 +1,6 @@
 # Needed until https://github.com/intel/xpumanager/issues/100 is fixed
 
-ARG BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:rolling@sha256:93e29beff5257b2cdf1c024d831f6d2997e53655a653ff76a811fc9e6564a719
+ARG BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:rolling@sha256:262df65c0ec6bf8d9dcc87454f4330a05fae4b97825f45854af3b136666584c2
 
 FROM ${BASE_IMAGE}
 
