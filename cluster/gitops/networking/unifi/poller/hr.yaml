@@ -32,7 +32,7 @@ spec:
           unpoller:
             image:
               repository: ghcr.io/unpoller/unpoller
-              tag: v5.8.3@sha256:6a474f5202d40864affe6be9882492061331d77d474593bb1cd4a8c737dc834f
+              tag: v5.9.3@sha256:6284b0799f8350179fc948b50435623e41e1c95331b91fc463ee12fe1aa4ec71
             env:
               UP_INFLUXDB_DISABLE: "true"
               # Poll live per scrape. The background cache serves the last good
