@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/base:ubuntu26.04@sha256:91eff046d5c12318fc98e59258982b87ba896c467427ed8b5dab5a02107a5db7
+FROM mcr.microsoft.com/devcontainers/base:ubuntu26.04@sha256:b1e3b08610ae0b2599f57c3a492eebc93d1d26dbaefb4a0bad0caa7149e4ec95
 
 # Generally helpful tools
 RUN apt update && apt install --no-install-recommends -y \
@@ -65,7 +65,7 @@ COPY --from=ghcr.io/fluxcd/flux-cli:v2.10.0@sha256:1a5178b1770052d6e88ab1c7c8434
 COPY --from=ghcr.io/coder/coder:v2.38.4@sha256:e5f4489f3fac3ee6d975552d989458b50882e78f0560d4f91253053f3797a019 /opt/coder /usr/local/bin/coder
 
 # Terraform
-COPY --from=hashicorp/terraform:1.17@sha256:4d1b496a256f2989bccdb04b9104a4ede97234b10fba90259e173e905ec4fb58 /bin/terraform /usr/local/bin/terraform
+COPY --from=hashicorp/terraform:1.17@sha256:a5d5a5a892c98f60fcbfa81eac2a40fc19e7b3fa7719bccae10ff6111d22524a /bin/terraform /usr/local/bin/terraform
 
 # tflint
 COPY --from=ghcr.io/terraform-linters/tflint:v0.65.0@sha256:2788f4d4fc663c0e953b011b01bf443fe5bfce7587ee916e588e6057b85d6359 /usr/local/bin/tflint /usr/local/bin/tflint
