@@ -38,6 +38,12 @@
   internalChecksFilter: "none",
   prCreation: "not-pending",
   prNotPendingHours: 80,
+  // There is no CI, so renovate/stability-days is the only status. By default
+  // Renovate doesn't count its own passing checks, so the branch stays pending
+  // forever and, once the release age is met, prNotPendingHours no longer
+  // applies: the PR never opens. Count the internal check. Automerge is off, so
+  // this lets nothing merge.
+  internalChecksAsSuccess: true,
   // The resulting "did not have a releaseTimestamp, ... proceeding" WARNs are
   // the expected outcome of the above, but count as repository problems and
   // operator warnings. Per-dep detail stays at debug.
