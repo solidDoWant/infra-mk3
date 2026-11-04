@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/sholdee/charts/crd-schema-publisher
   ref:
-    tag: 2026.1102.63220
-    digest: sha256:e0ef729f49666736616321aee161c0d2bd72fd706f217c8c6deb9256302432cd
+    tag: 2026.1104.230219
+    digest: sha256:64d6e566850ca61108b64f99d6c28d9358f4ba14ac30d670665e1200e8cd08a4
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -28,7 +28,7 @@ spec:
     fullnameOverride: crd-schema-publisher
     image:
       repository: ghcr.io/sholdee/crd-schema-publisher
-      tag: v2026.1102.63220@sha256:9d94be689894935c9ecfb5994044d8c6e13b97ed6c3924c6aeba29e9740761e0
+      tag: v2026.1104.230219@sha256:c1225ec035e293aaa6e4a9494a312d7f7407295d475e442824c9baff6f0c639f
     # Serve mode requires a single replica; the chart forces Recreate.
     mode: controller
     config:
