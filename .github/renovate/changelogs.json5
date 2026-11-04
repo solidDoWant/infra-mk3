@@ -90,6 +90,12 @@
       sourceUrl: "https://github.com/ceph/ceph-csi",
     },
     {
+      description: "Source label points at a Rocky Linux build repo; no GitHub releases, notes are on docs.ceph.com",
+      matchPackageNames: ["quay.io/ceph/ceph"],
+      sourceUrl: "https://github.com/ceph/ceph",
+      changelogUrl: "https://docs.ceph.com/en/latest/releases/",
+    },
+    {
       description: "Operator image + the drivers chart mirror (same vX.Y.Z releases)",
       matchPackageNames: ["quay.io/cephcsi/ceph-csi-operator", "ghcr.io/home-operations/charts-mirror/ceph-csi-drivers"],
       sourceUrl: "https://github.com/ceph/ceph-csi-operator",
