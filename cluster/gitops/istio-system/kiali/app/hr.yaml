@@ -13,7 +13,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: kiali-charts
-      version: 2.33.0
+      version: 2.34.1
   values:
     # TODO auth
     auth:
@@ -86,4 +86,4 @@ spec:
                     containers:
                       - name: kiali
                         # renovate: image
-                        image: quay.io/kiali/kiali:v2.34.0@sha256:5db2fd9c95064c61fb23099269db56d0ed964589acc7641a556de6fa7ff58d2a
+                        image: quay.io/kiali/kiali:v2.34.1@sha256:88d96c7b7b9bd9ceaf3b2a8097c0b0d2c5ae15f8d3a17017a5f3a163f5115d2c
