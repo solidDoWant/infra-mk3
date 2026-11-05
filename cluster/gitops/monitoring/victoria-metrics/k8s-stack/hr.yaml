@@ -73,6 +73,9 @@ spec:
           value: "false"
         - name: VM_VMAGENTDEFAULT_USEDEFAULTRESOURCES
           value: "false"
+        # VLSingle (victoria-logs-1/2) sets explicit resources without a CPU limit
+        - name: VM_VLSINGLEDEFAULT_USEDEFAULTRESOURCES
+          value: "false"
         # Without this the operator generates in-cluster addresses as the bare
         # `<svc>.<ns>.svc` (e.g. the `srv+vmselectinternal-...monitoring.svc` backends in
         # the vmclusterlb config), which cannot resolve absolutely -- the zone is

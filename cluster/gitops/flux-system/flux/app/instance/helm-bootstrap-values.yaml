@@ -55,7 +55,8 @@ instance:
         target: &performance_controllers_target
           kind: Deployment
           name: "(kustomize-controller|helm-controller|source-controller)"
-      # Increase resource limits
+      # Increase resource limits. helm-controller and kustomize-controller peak
+      # ~590Mi (60d, 2026-11-05).
       - patch: |
           apiVersion: apps/v1
           kind: Deployment
@@ -72,7 +73,44 @@ instance:
                       requests:
                         memory: 1Gi
                         cpu: 100m
-        target: *performance_controllers_target
+        target:
+          kind: Deployment
+          name: "(kustomize-controller|helm-controller)"
+      # source-controller peaks ~230Mi working set (180d, 2026-11-05)
+      - patch: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: source-controller
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: manager
+                    resources:
+                      limits:
+                        memory: 512Mi
+                      requests:
+                        memory: 512Mi
+                        cpu: 100m
+        target:
+          kind: Deployment
+          name: source-controller
+      # notification-controller peaks ~105Mi (180d, 2026-11-05). The chart default
+      # is 64Mi request / 1Gi limit with a CPU limit; memory request == limit here,
+      # and no CPU limit.
+      - patch: |
+          - op: replace
+            path: /spec/template/spec/containers/0/resources
+            value:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 256Mi
+        target:
+          kind: Deployment
+          name: notification-controller
       # Remove CPU resource limit
       - patch: |
           - op: remove

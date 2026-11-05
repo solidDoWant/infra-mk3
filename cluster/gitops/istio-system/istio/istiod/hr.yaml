@@ -41,10 +41,12 @@ spec:
       # is a small mesh, so pilot never approaches the upstream defaults, which
       # are sized for a large one. Memory request == limit (incompressible;
       # see the vmselect block for the reasoning).
+      # 2026-11-05: RSS was 320-500Mi before 2026-08 but has stayed 140-240Mi
+      # since (working set peak 240Mi over 90d), so 512Mi is ~2x the current peak.
       resources:
         requests:
           cpu: 25m
-          memory: &istiod_memory 768Mi
+          memory: &istiod_memory 512Mi
         limits:
           memory: *istiod_memory
       env:

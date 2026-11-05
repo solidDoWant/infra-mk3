@@ -16,6 +16,12 @@ spec:
       # client-supplied XFF entry as trusted. Explicit (0 is also the default) so
       # the trust boundary can't drift if a global default is ever set.
       proxy.istio.io/config: '{"gatewayTopology":{"numTrustedProxies":0}}'
+    # Deployment overlay for the generated gateway Deployment. The kube-gateway
+    # template ignores the sidecar.istio.io/proxyMemory annotations.
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: internal-gateway-options
   addresses:
     - type: IPAddress
       value: 10.34.0.1
@@ -52,6 +58,28 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: games
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: internal-gateway-options
+data:
+  # Strategic-merge overlay on the Deployment Istio generates for this Gateway.
+  # Envoy peaks ~270Mi working set (180d, 2026-11-05); Istio's default is 128Mi
+  # request / 1Gi limit plus a 2-core CPU limit. Memory request == limit, and
+  # `cpu: null` deletes the CPU limit.
+  deployment: |
+    spec:
+      template:
+        spec:
+          containers:
+            - name: istio-proxy
+              resources:
+                requests:
+                  memory: 512Mi
+                limits:
+                  cpu: null
+                  memory: 512Mi
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
