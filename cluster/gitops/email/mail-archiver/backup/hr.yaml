@@ -53,7 +53,7 @@ spec:
           # ASP.NET data protection keys. Not needed to read the archive, but
           # restoring them keeps existing sessions valid.
           - name: data-protection-keys
-            pvc: mail-archiver-data-protection-keys
+            pvc: mail-archiver
             snapshotClass: ssd-replicated-3x-block
             exclude:
               - glob: lost+found
