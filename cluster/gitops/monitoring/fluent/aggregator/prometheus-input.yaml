@@ -13,6 +13,9 @@ spec:
           <source>
             @type prometheus
             port 2021 # This must match what the operator deploys (not configurable)
+            # fluent-plugin-prometheus 2.3.0 changed the default bind to 127.0.0.1,
+            # which makes the endpoint unreachable for vmagent
+            bind 0.0.0.0
             metrics_path /worker_metrics
             aggregated_metrics_path /metrics
           </source>
