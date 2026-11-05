@@ -8,8 +8,11 @@ spec:
     - name: postfix-exporter
       rules:
         # The exporter stays scrapeable (`up` = 1) when it cannot read showq.
+        # Only the showq series is checked. The mail.log series starts at 0 and
+        # turns 1 only when the exporter reads a new log line, so on a quiet relay
+        # it stays 0 for hours after every restart.
         - alert: PostfixExporterCannotReadQueue
-          expr: postfix_up == 0
+          expr: postfix_up{path=~".*showq"} == 0
           for: 15m
           labels:
             severity: warning

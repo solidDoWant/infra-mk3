@@ -125,6 +125,13 @@ spec:
                 value:
                   name: postfix-public
                   mountPath: /var/spool/postfix/public
+              # The log tailer's inotify watch never fires under kata: postfix
+              # writes mail.log through the mail container's virtiofs mount, and
+              # the exporter's separate mount doesn't get those events. Polling
+              # with stat sees the writes.
+              - op: add
+                path: /spec/template/spec/containers/1/args/-
+                value: --postfix.logfile_poll
             target:
               group: apps
               version: v1
