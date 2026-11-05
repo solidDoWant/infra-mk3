@@ -36,9 +36,12 @@ spec:
         containers:
           app: &container
             image:
-              # Only published to Docker Hub
-              repository: mirror.gcr.io/armsnyder/a2s-exporter
-              tag: v0.4.0@sha256:76c98734c8e56f056d8f5f090601b3b8320a297c4e6f4acadbb153ffe219aaef
+              # Fork build: its go-a2s discards replies that arrive after their
+              # query timed out. Upstream reads them as the next answer, so one
+              # slow reply (e.g. a map change) left the exporter reporting the
+              # server down until it was restarted.
+              repository: ghcr.io/soliddowant/a2s-exporter
+              tag: v0.4.1-develop.1@sha256:b9462d1f5a2127ee73aec9bb1c0c8180aa4cae763fbbc021b7878c0ecc35135b
             env: &env
               # srcds answers A2S queries on the game port
               A2S_EXPORTER_QUERY_ADDRESS: insurgency-server.tug2.svc.cluster.local:27000
