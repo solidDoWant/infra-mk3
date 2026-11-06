@@ -53,7 +53,7 @@ COPY --from=ghcr.io/siderolabs/talosctl:v1.14.5@sha256:0b852e35c1f513ee5eacc2218
 COPY --from=ghcr.io/postfinance/topf:v0.6.2@sha256:745b33c5f900df7cd9885557a037fcc5471b167b1fc20046385639112e3e6deb /usr/local/bin/topf /usr/local/bin/topf
 
 # helmfile
-COPY --from=ghcr.io/helmfile/helmfile:v1.8.2@sha256:5dbdc37016c7e286d4a1a64ac1e360cee79590df2949891823bf73618003381b /usr/local/bin/helmfile /usr/local/bin/helmfile
+COPY --from=ghcr.io/helmfile/helmfile:v1.8.3@sha256:4b48dff9278362abea796067eea5b8f9682d101431403a7de50ca4fab82265f4 /usr/local/bin/helmfile /usr/local/bin/helmfile
 
 # kubectl
 COPY --from=registry.k8s.io/kubectl:v1.37.2@sha256:fe049faa65ae483ac200009a949a68fa4c9985daea12c9cb1195c9c7965301fc /bin/kubectl /usr/local/bin/kubectl
