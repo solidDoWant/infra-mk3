@@ -62,7 +62,7 @@ COPY --from=registry.k8s.io/kubectl:v1.37.2@sha256:fe049faa65ae483ac200009a949a6
 COPY --from=ghcr.io/fluxcd/flux-cli:v2.10.0@sha256:1a5178b1770052d6e88ab1c7c8434c5ac9bca8a8ab984dcaf6b9df31814ce9f2 /usr/local/bin/flux /usr/local/bin/flux
 
 # Coder
-COPY --from=ghcr.io/coder/coder:v2.38.4@sha256:e5f4489f3fac3ee6d975552d989458b50882e78f0560d4f91253053f3797a019 /opt/coder /usr/local/bin/coder
+COPY --from=ghcr.io/coder/coder:v2.39.0@sha256:5fb8f624dc0d33be89c72c7b2e384cdc7c2c5ac0d5847348d3aa0edaf058605c /opt/coder /usr/local/bin/coder
 
 # Terraform
 COPY --from=hashicorp/terraform:1.17@sha256:a5d5a5a892c98f60fcbfa81eac2a40fc19e7b3fa7719bccae10ff6111d22524a /bin/terraform /usr/local/bin/terraform
