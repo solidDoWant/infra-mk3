@@ -129,6 +129,19 @@ RUN kubectl krew update && \
 RUN find /usr/local/krew -type d -exec chmod 777 {} \; && \
     find /usr/local/krew -type f -exec chmod ugo+w {} \;
 
+# krr (Kubernetes resource recommender)
+# Not in the krew index. The release is a PyInstaller bundle (binary + _internal/), amd64 only.
+# `krr` on PATH is a wrapper that port-forwards to vmselect (krr can't auth to the
+# apiserver proxy with client certs). Also linked as kubectl-krr so `kubectl krr` works.
+# renovate: datasource=github-releases depName=robusta-dev/krr
+ARG KRR_VERSION=v1.31.3
+RUN mkdir -pv /tmp/krr && \
+    curl -fsSL -o /tmp/krr/krr.zip "https://github.com/robusta-dev/krr/releases/download/${KRR_VERSION}/krr-ubuntu-latest-${KRR_VERSION}.zip" && \
+    unzip -q /tmp/krr/krr.zip -d /opt && \
+    rm -rvf /tmp/krr
+COPY --chmod=755 krr-wrapper.sh /usr/local/bin/krr
+RUN ln -sfv /usr/local/bin/krr /usr/local/bin/kubectl-krr
+
 # diffoci
 # renovate: datasource=github-releases depName=reproducible-containers/diffoci
 ARG DIFFOCI_VERSION=v0.1.8
@@ -180,4 +193,6 @@ RUN \
     docker completion bash | sudo tee /etc/bash_completion.d/docker.bash > /dev/null && \
     cmtool completion bash | sudo tee /etc/bash_completion.d/cmtool.bash > /dev/null && \
     coder completion -s bash | sudo tee /etc/bash_completion.d/coder.bash > /dev/null && \
+    # krr's PyInstaller bundle lacks shellingham.posix, so shell auto-detection crashes; skip it
+    _TYPER_COMPLETE_TEST_DISABLE_SHELL_DETECTION=1 krr --show-completion bash | sudo tee /etc/bash_completion.d/krr.bash > /dev/null && \
     echo "complete -C $(which terraform) terraform" | sudo tee /etc/bash_completion.d/terraform.bash > /dev/null
