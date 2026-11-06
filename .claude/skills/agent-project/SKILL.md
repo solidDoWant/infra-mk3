@@ -174,6 +174,12 @@ Operator rules:
 - Don't touch worktrees or the main checkout while a cycle is running; fix stray state between cycles.
 - **Run a friction analysis after ~25 merged PRs** (and again per phase): a read-only subagent mines PR reviews (rounds, blocking-finding categories), PR CI failures, follow-up vs planned issues, #51/#52, and tool errors in the cycle transcripts (`jq -c 'select(.type=="user")|.message.content[]?|select(.type=="tool_result" and .is_error==true)'`). Turn confirmed patterns into one playbook PR, then sync the templates in this skill.
 - **VM disk:** `~/.cache/go-build` grows fast (31 GB in ~22 h — Go only trims entries unused for 5 days) and dominates disk growth; `/tmp` is on the **30 GB root disk** (not tmpfs) and collects one `nix-shell.*` dir per `nix develop` session (~10 GB/day). Safe anytime: `find /tmp -maxdepth 1 -name 'nix-shell.*' -mmin +360 -exec rm -rf {} +` (freed 6 GB of 42 dirs on day 2). When the persistent disk passes ~75%, run `go clean -cache` **between cycles** (in-flight builds can fail). Reviewer scratch worktrees under `/tmp/rv*` belong to git — leave them to the PM's worktree cleanup.
+  - **Run a trim loop from day one** (toolgate, 2026-11-06). A tmux window, `pm:trim`, runs a script every 30 minutes that:
+    - deletes Go build cache entries unused for 90 minutes (`find ~/.cache/go-build -type f -mmin +90 -delete`). Go treats a missing entry as a cache miss, so this is safe while builds run;
+    - runs `docker image prune -a -f --filter until=2h`;
+    - runs `sudo nix-store --gc` once the persistent disk passes 60%. `/nix` lives on the persistent disk and grows with every e2e image build and dev shell. On toolgate it reached 38 GB in a day and one GC freed 29 GB. Running processes keep the store paths they use.
+
+    The cache grew about 7 GB an hour with 4 agents. Restart the window together with the scheduler loop after a VM reboot.
 - Report the notional per-cycle cost from cycles.log occasionally; a long cycle cost ~$60 equivalent. The PM, its subagents, and this session all draw on the user's subscription limits.
 
 ## Lessons from the first run (already folded into the templates)
@@ -246,6 +252,35 @@ Operator rules:
 
   The phase-end findings (3 critical, 3 high) came mostly from **design gaps**, and the code with two of them had passed a reviewer. Keep reviews off. Spend the review effort on an **independent design review, including its interaction matrix, before issues are filed**.
   The `design-reviewer` template does this. The planner queues it at phase start and keeps the phase's issues blocked until its critical and high findings are answered in the design.
+- **Phase throughput is bounded by the dependency chain, not by worker speed** (toolgate, 2026-11-06). In phase 4, workers took a median of 14 minutes to open a PR, and PRs a median of 17 minutes to merge. But half the issues formed one chain, so most of the 6 slots sat idle. There were two fixes.
+  - **Split chain issues into parallel parts** before they become ready, when they can be split: the API/CLI part versus the tool or UI part, storage versus behaviour, and tests or docs that need only the interface. Put this in the decomposition step, and keep blockers first in the scheduling order.
+  - **Workers never run a whole package's integration or e2e tier locally,** only `-run` with their own tests. The slowest workers (30–37 minutes) spent most of their time re-running the full gateway integration package, which CI runs anyway. The worker template now says so.
+- **Default workers to Sonnet. Use Opus only where a mistake is costly** (toolgate, 2026-11-06). The owner's rule: Sonnet costs about half as much as Opus, so it pays off on any issue where it needs less than twice Opus's tokens. Here is what toolgate measured once workers moved off all-Opus:
+
+  | Workers | Issues | Avg cost / issue | Median | Worker runs / issue |
+  |---|---|---|---|---|
+  | All Opus (phases 1–2) | 81 | $1.90 | $1.66 | 1.3 |
+  | Sonnet | 37 | $0.62 | $0.39 | 1.2 |
+  | Opus (`model:opus` issues) | 31 | $3.24 | $2.81 | 1.7 |
+
+  Sonnet issues cost about 3× less, and needed no more rework. Sonnet got the easier issues, which explains part of the gap. The catch: the planner labelled 45% of issues `model:opus`, and those took about 80% of worker spend. The operator had asked for Opus on whole areas (auth, connectors, protocol routing), which is broader than "critical only".
+
+  How to set it up:
+  - Use the scheduler's `role_models` and `label_models` (reference: toolgate's `scripts/agents/scheduler.py`).
+  - **Sonnet:** workers and merge-fixers.
+  - **Opus:** the planner, design reviews, phase-end hunts and releases.
+  - **`model:opus` on an issue only when it is security-sensitive or cross-cutting:**
+    - authentication and authorization decisions;
+    - cryptography or protocol state machines;
+    - changes across several packages' contracts.
+
+    Don't give it to a whole area by default.
+  - **Escalate on failure, not up front:** the planner adds `model:opus` to a Sonnet issue when Sonnet shows it can't do it:
+    - CI is red twice in a row on the issue's PR: the first failure, then again after the worker's fix;
+    - the scheduler gives up on the worker (repeated failed runs, or a "stuck" hand-back).
+
+    A first red, a design-question hand-back (that's a design gap, and Opus would ask too), a merge conflict, or a flaky or infra failure doesn't count. This is a planner rule, not scheduler code, so put it in the planner playbook.
+  - **Check the split at each phase end:** compare the hunts' findings in Sonnet-built and Opus-built code. Tighten or loosen the Opus share from that, not from impressions.
 
 ## Files
 
