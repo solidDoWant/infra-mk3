@@ -2,33 +2,6 @@
 apiVersion: cilium.io/v2
 kind: CiliumBGPClusterConfig
 metadata:
-  name: cilium-bgp
-spec:
-  # Nodes peering with the routers directly. Nodes with bgp-mode `talos` use
-  # cilium-bgp-talos instead (talos/patches/all/26-bgp.yaml.tpl).
-  nodeSelector:
-    matchLabels:
-      cilium.home.arpa/node.bgp-enabled: "true"
-      cilium.home.arpa/node.bgp-mode: direct
-  bgpInstances:
-    - name: opnsense-as
-      localASN: 0xFC01
-      peers:
-        - &opnsense_peer
-          name: router-01
-          peerASN: 0xFC00
-          # This currently seems to be ignored due to a Cilium bug. See debug
-          # log when connection fails for evidence
-          peerAddress: 10.3.0.1
-          peerConfigRef:
-            name: opnsense-router
-        - <<: *opnsense_peer
-          name: router-02
-          peerAddress: 10.3.0.2
----
-apiVersion: cilium.io/v2
-kind: CiliumBGPClusterConfig
-metadata:
   name: cilium-bgp-talos
 spec:
   # Peers with the node-local Talos BGP instance, which re-advertises to the
@@ -36,7 +9,6 @@ spec:
   nodeSelector:
     matchLabels:
       cilium.home.arpa/node.bgp-enabled: "true"
-      cilium.home.arpa/node.bgp-mode: talos
   bgpInstances:
     - name: talos-local
       localASN: 64515

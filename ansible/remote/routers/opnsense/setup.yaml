@@ -23,9 +23,9 @@
 #     - name: talos-k8s-mixed-01
 #       peer IP: 10.3.1.1
 #       Remote ASN: 64513
-#       Password: <password> (bgpMode `direct` nodes only; Talos BGP has no
-#         TCP-MD5 support, see talos/patches/all/26-bgp.yaml.tpl)
-#       BFD: enabled (bgpMode `talos` nodes)
+#       Password: none (Talos BGP has no TCP-MD5 support, see
+#         talos/patches/all/26-bgp.yaml.tpl)
+#       BFD: enabled
 #       Weight: 20
 #       Initiator IP: 10.3.0.1
 #       Next-hop-self
