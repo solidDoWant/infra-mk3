@@ -1,8 +1,6 @@
 ---
 # No $schema: it rejects the templated addresses.
 #
-# Only rendered for nodes with `bgpMode: talos` (topf.yaml).
-#
 # Cilium peers with a local Talos BGP instance ("cilium") over a veth instead of
 # the routers. The "fabric" instance imports the service routes and advertises
 # them to the routers with BFD, so a dead node's routes drop in ~1s instead of
@@ -12,12 +10,11 @@
 # VRF so the two ends route like separate hosts. Cilium skips veths without a
 # default route, so the veth is not a Cilium datapath device.
 #
-# Switching a node to `talos`:
-#   1. topf apply the node. Cilium moves to the local peer; the fabric sessions
-#      stay down until step 2 (the routers still require the TCP-MD5 password,
-#      which Talos BGP doesn't support).
-#   2. OPNsense FRR: on this node's neighbor, clear the password and enable BFD.
-{{- if eq .Node.Data.bgpMode "talos" }}
+# The router neighbors have no password: Talos BGP doesn't support TCP-MD5.
+#
+# Because Cilium's AS (64515) stays in the AS path, every node must peer this
+# way. A node advertising with a shorter path would win every route and the
+# routers would stop spreading traffic across the nodes.
 apiVersion: v1alpha1
 kind: VethConfig
 name: veth-cilium
@@ -37,6 +34,14 @@ table: 89
 links:
   - veth-crouter
 up: true
+---
+# Cilium's address (10.63.255.254) is local in the main table, and the local
+# table rule comes before the l3mdev rule. Without this, veth-crouter drops
+# Cilium's ARP requests as "martian source" and the session never comes up.
+apiVersion: v1alpha1
+kind: SysctlConfig
+params:
+  net.ipv4.conf.veth-crouter.accept_local: "1"
 ---
 # Cilium's side. Routes stay in this instance's RIB; "fabric" imports them.
 apiVersion: v1alpha1
@@ -77,4 +82,3 @@ neighbors:
     peerASN: 64512
     holdTime: 9s
     bfd: *bfd
-{{- end }}

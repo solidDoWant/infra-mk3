@@ -170,9 +170,9 @@ VLANs are further subdivided (on paper, within the same subnet) for specific pur
 
 #### Kubernetes route propagation
 
-Kubernetes pods may be scheduled on multiple nodes, and load balancer virtual IP addresses need to be reachable from several nodes. All nodes running Cilium (Kubernetes CNI) have BGP peering setup with the routers. Pod and load balancer IP addresses are announced from all nodes in the cluster.
+Kubernetes pods may be scheduled on multiple nodes, and load balancer virtual IP addresses need to be reachable from several nodes. Cluster IP and load balancer IP addresses are announced from all nodes in the cluster, and the routers spread traffic across them (ECMP).
 
-Unfortunately, [Cilium doesn't support BFD yet](https://github.com/cilium/cilium/issues/22394). When/if BFD support is added, I will deploy it. For now, I just have to accept packet loss when a node goes offline.
+[Cilium doesn't support BFD](https://github.com/cilium/cilium/issues/22394), so Cilium doesn't peer with the routers directly. Instead, it peers with a BGP instance built into Talos on the same node, over a veth pair. A second Talos instance advertises the routes to the routers with BFD, so the routers drop a dead node's routes in about a second instead of waiting for the BGP hold timer. See [26-bgp.yaml.tpl](talos/patches/all/26-bgp.yaml.tpl).
 
 #### Firewall rules and NAT port forwarding
 
