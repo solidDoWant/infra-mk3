@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         namespace: flux-system
         name: temporal-charts
-      version: 1.7.0
+      version: 1.8.0
   valuesFrom:
     - kind: ConfigMap
       name: &archival_hr_vars temporal-archival-hr-vars
@@ -62,7 +62,7 @@ spec:
         repository: mirror.gcr.io/temporalio/server
         # When bumping: if the release includes temporalio/temporal#11429 (PR #11431),
         # drop the Temporal excludeFilters in cilium/cilium/app/helm-bootstrap-values.yaml.
-        tag: 1.32.1@sha256:acecbab5b0b8ae9cf4012b508866ca97feda3709577bf157b537239f40029049
+        tag: 1.32.2@sha256:7bf69188a6232fea14869b9cef3d94aa82a1601d99517f7e86c71f22da4e0670
       # Default replicas for every server component (frontend/history/matching/worker).
       replicaCount: 2
       # Applied to every server pod (frontend/internal-frontend/history/matching/
@@ -375,7 +375,7 @@ spec:
       enabled: true
       image:
         repository: mirror.gcr.io/temporalio/admin-tools
-        tag: 1.32.1@sha256:9ef0dc5b063bf4ffd5c1512de72e0e73e225bd2c7006a18ce69bd592a8862a83
+        tag: 1.32.2@sha256:4a95866efba29d7e17ab012df5232795e8b0ad0f7d5f9d1ec4df321f7792a754
       # Same fsGroup reasoning as schema.securityContext — admintools mounts the
       # same postgres TLS secrets, and its image runs as user 1000.
       securityContext:
@@ -420,7 +420,7 @@ spec:
       replicaCount: 2
       image:
         repository: mirror.gcr.io/temporalio/ui
-        tag: 2.57.0@sha256:d944f959d0923c35cd991a17a0edbe087770eff843724b181933e0cfdd563ab2
+        tag: 2.58.0@sha256:d36185e811d0ce1720b8d3ca4d9ac4dac504b67181e9b5e3d3ca72b2294f3590
       # TEMPORAL_ADDRESS is hardcoded by the chart (web-deployment.yaml) using the
       # release name + namespace + frontend port — including it here causes a
       # duplicate-env-key error on apply. Don't re-add it.
