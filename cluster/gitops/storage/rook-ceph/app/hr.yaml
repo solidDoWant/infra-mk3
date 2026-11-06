@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/rook/rook-ceph
   ref:
-    tag: 1.21.1
-    digest: sha256:d06737200d28294e6f621696ff27f01369611eb0d1055a64125e13c60b1952fd
+    tag: 1.21.2
+    digest: sha256:57e04865cd2b34c2b099edcba7048d312fee0477b58f5f90a20c084ee44991df
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -27,7 +27,7 @@ spec:
   values:
     image:
       repository: ghcr.io/rook/ceph
-      tag: v1.21.1@sha256:a9882f8220542cf0106478a5c41fd444501d6adf6fa713350e76b6df6ca71fb6
+      tag: v1.21.2@sha256:cc0f2d2cba5174d92ae3068bd8c5b9a6a6dea6f8a2321e3aa4f09630863c3942
     resources:
       limits:
         memory: 256Mi
