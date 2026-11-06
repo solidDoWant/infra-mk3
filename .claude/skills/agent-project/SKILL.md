@@ -42,6 +42,14 @@ The operator then made a dozen local process fixes: follow-up rules, design-gap 
 6. **More rigor is a product decision, not a fix for failing tests.** Moving from randomized simulation to formal methods, or adding a new class of guarantee, needs the owner's decision with a cost and time estimate. First ask whether the requirement that keeps failing is actually needed.
 7. **Agree a budget per phase** (spend and calendar time) with the owner. If it runs out, stop and review with the owner. Don't extend it silently, and don't move a cutoff you announced.
 8. **Measure progress as acceptance scenarios that pass on master**, out of the checklist total, and report the rate against spend. Closed issues and merged PRs don't count. The owner cares about steady, real progress, not calendar estimates; agents can do hours of human work quickly, so don't pad timelines. If the passing count doesn't rise across about $50 of spend, or over a working half-day, stop and find the cause.
+10. **Estimate from measured throughput, not human pace.** Before toolgate (2026-11-04), the operator estimated it would take weeks. It took about 1.5 days. The estimate was anchored on vault-sync's first run, which had no finish line, and on human-sized issues.
+    - **Toolgate's actuals,** for calibration (frozen checklist, design first, scheduler with 4 slots, Sonnet and Opus workers):
+      - phase 1 (30 scenarios): about 13.5 h, including about 80 min of usage-limit pause;
+      - phase 2 (20 scenarios): about 7.5 h, including design, review, hunts and release;
+      - about 20–40 min per issue from start to merge, and 3–5 issues per hour;
+      - about 2–3 h of fixed overhead per phase.
+    - **The time drivers** were usage-limit pauses, design questions waiting on the owner, and CI wall-clock time, not coding effort.
+    - **How to estimate:** give an opening estimate as a range from these numbers. Re-estimate at every check-in from the project's own issues per hour and scenarios per hour. Name the drivers instead of giving one figure.
 9. **When the operator sees divergence, find the requirement that generates the work.** Rising issue counts, repeated design rounds, long PRs, or obligations deferred downstream are all signs. Before changing any process, ask which requirement generates this work and whether the owner needs it. A process fix that only changes where the work lands is not a fix.
 
 ## Step 1 — Design and spec
