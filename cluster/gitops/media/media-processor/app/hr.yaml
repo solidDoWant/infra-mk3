@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/soliddowant/charts/media-processor
   ref:
-    tag: 0.0.39
-    digest: sha256:db71d0f579571d30e4b5ecc52dd353d9770a6bc72d3bd19a10af32031eff7f42
+    tag: 0.0.40
+    digest: sha256:b8a7e7c06c0e14e43a21251a2a30a3aa9bb8c1475dd64649e3e198a53b315138
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -160,7 +160,7 @@ spec:
             watcher:
               image:
                 repository: ghcr.io/soliddowant/media-processor/watcher
-                tag: 0.0.39@sha256:aaef29739a608391fce5b80b97982dddfd7d58133b8deeb78e5da727f0202bf8
+                tag: 0.0.40@sha256:b0de3a3c6c0ddae3ba15a33a81dcd7523a84842b7de51f6bf247237e00bc77eb
           serviceAccount:
             identifier: media-processor
           pod:
@@ -269,7 +269,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/soliddowant/media-processor/worker
-                tag: 0.0.39@sha256:c637f805c37a083878b6f6400bfe75a3f3d22157a34aa39c7d52edfc495e28fa
+                tag: 0.0.40@sha256:45a1832817340c57dfc8f8f2aa0bb2f7f41394037110fd7845b57563f5b45738
 
         transcode:
           type: scaledjob
@@ -351,7 +351,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/soliddowant/media-processor/worker
-                tag: 0.0.39@sha256:c637f805c37a083878b6f6400bfe75a3f3d22157a34aa39c7d52edfc495e28fa
+                tag: 0.0.40@sha256:45a1832817340c57dfc8f8f2aa0bb2f7f41394037110fd7845b57563f5b45738
               securityContext:
                 capabilities:
                   add:
