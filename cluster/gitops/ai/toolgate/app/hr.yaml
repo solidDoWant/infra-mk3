@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.3
-    digest: sha256:c6131a737a618674ec453aee2d5257897d89f7d7dec1a186bf93cac49ddf23f9
+    tag: 0.4.4
+    digest: sha256:ea4b5aa6661c90c3a6931074c78d9cac6900ee8a2b2d005201101bc2c775c052
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -25,7 +25,7 @@ spec:
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
-        tag: 0.4.3@sha256:1c8e62aa37523be969d1c2ca5ca6b3e5ae967dbf9b520c0eb6f8e255d7113d14
+        tag: 0.4.4@sha256:a9fe939f65fe89e49b8db5683e0fa1bb9d0aa7413b0e681c33dac5d419504936
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
@@ -63,6 +63,17 @@ spec:
         issuerURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/toolgate/
         # The Authentik client ID: access tokens from `toolgate login`.
         audience: toolgate
+        # Published at /.well-known/toolgate-client, so `toolgate login`
+        # needs no --client-id.
+        cliClientID: toolgate
+        # Coder workspaces: Coder external auth `toolgate` holds each user's
+        # consent to the `coder-toolgate` provider, and workspaces send its
+        # access tokens (`coder external-auth access-token toolgate`).
+        # Authentik gives each provider its own issuer, so it's listed here.
+        # Same subject mode as the CLI provider: one identity per person.
+        additionalIssuers:
+          - issuerURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/coder-toolgate/
+            audience: coder-toolgate
       ui:
         publicURL: https://toolgate.${SECRET_PUBLIC_DOMAIN_NAME}
         # The same public client as the CLI (authorization code with PKCE), so
@@ -96,10 +107,6 @@ spec:
       extraEnv:
         - name: TOOLGATE_SECRETS_KEYSET_FILE
           value: /etc/toolgate/keyset/keyset.json
-        # Published at /.well-known/toolgate-client so `toolgate login` needs
-        # no --client-id. Move to the chart value once it exists (toolgate #488).
-        - name: TOOLGATE_OIDC_CLI_CLIENT_ID
-          value: toolgate
     resources:
       defaultPodOptions:
         securityContext:
