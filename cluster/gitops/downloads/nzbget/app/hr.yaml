@@ -60,6 +60,15 @@ spec:
                 enabled: true
               liveness:
                 enabled: true
+            # RSS is ~100Mi. Post-processing (par2 check + unrar) reads each download
+            # back twice, so tens of GiB of file cache show up as "working set" and
+            # make krr ask for ~31Gi. The limit just caps that cache; the kernel frees
+            # it rather than OOM-killing.
+            resources:
+              requests:
+                memory: &app_memory 1Gi
+              limits:
+                memory: *app_memory
           exporter:
             image:
               repository: mirror.gcr.io/frebib/nzbget-exporter
