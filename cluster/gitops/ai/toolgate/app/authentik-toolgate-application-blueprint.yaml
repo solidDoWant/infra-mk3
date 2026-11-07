@@ -116,6 +116,71 @@ stringData:
           provider: !KeyOf toolgate-provider
           policy_engine_mode: any
           meta_launch_url: https://toolgate.${SECRET_PUBLIC_DOMAIN_NAME}/ui/
+      # Coder external auth: Coder holds each user's consent and hands their
+      # workspaces an access token (`coder external-auth access-token
+      # toolgate`), so workspaces need no `toolgate login`. Confidential:
+      # the Coder server keeps the secret. Same subject mode as the CLI
+      # provider, so a user is one identity in toolgate.
+      - model: authentik_providers_oauth2.oauth2provider
+        id: coder-toolgate-provider
+        identifiers:
+          name: coder-toolgate
+        attrs:
+          name: coder-toolgate
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, explicit-authorization-flow]]
+          client_type: confidential
+          client_id: coder-toolgate
+          client_secret: "${SECRET_CODER_TOOLGATE_CLIENT_SECRET}"
+          grant_types:
+            - authorization_code
+            - refresh_token
+          redirect_uris:
+            - url: https://coder.${SECRET_PUBLIC_DOMAIN_NAME}/external-auth/toolgate/callback
+              matching_mode: strict
+          signing_key:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          access_code_validity: minutes=1
+          access_token_validity: hours=1
+          # Coder refreshes on demand; a long refresh lifetime keeps workspaces
+          # signed in without the user re-linking.
+          refresh_token_validity: days=90
+          property_mappings:
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "OpenID 'email' (verified)"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'offline_access'"],
+              ]
+          sub_mode: hashed_user_id
+          include_claims_in_id_token: true
+          issuer_mode: per_provider
+      - model: authentik_core.application
+        id: coder-toolgate-application
+        identifiers:
+          slug: coder-toolgate
+        attrs:
+          name: toolgate (Coder workspaces)
+          slug: coder-toolgate
+          group: Development access
+          provider: !KeyOf coder-toolgate-provider
+          policy_engine_mode: any
       - model: authentik_core.group
         id: toolgate-group
         identifiers:
@@ -128,3 +193,8 @@ stringData:
           order: 0
           group: !KeyOf toolgate-group
           target: !KeyOf toolgate-application
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf toolgate-group
+          target: !KeyOf coder-toolgate-application
