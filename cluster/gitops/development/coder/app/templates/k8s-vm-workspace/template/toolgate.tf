@@ -105,7 +105,10 @@ resource "coder_script" "install_toolgate" {
     fi
 
     claude plugin marketplace add solidDoWant/toolgate || claude plugin marketplace update toolgate
+    # Install on first start; on later starts, update to the marketplace's
+    # current version.
     claude plugin install toolgate@toolgate --scope user || true
+    claude plugin update toolgate@toolgate --scope user || true
     printf '{"gateway_url":"%s"}' "${local.toolgate_gateway}" | claude plugin configure toolgate@toolgate --values-stdin
   EOT
 }
