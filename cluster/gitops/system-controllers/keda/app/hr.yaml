@@ -31,10 +31,13 @@ spec:
     crds:
       install: false
 
-    # Only ScaledJob is used here, which talks to the operator directly.
-    # The metrics-apiserver is only needed for ScaledObject (HPA External Metrics).
+    # Serves HPA External Metrics for ScaledObjects. The HTTP add-on scales its
+    # interceptor with one, and the add-on's routes each pair with one. Only one
+    # replica serves at a time; the second only shortens a failover.
     metricsServer:
-      enabled: false
+      enabled: true
+      replicaCount: 2
+      revisionHistoryLimit: 1
 
     # Parent keys aren't `image`, so the flux manager can't see these; a
     # custom manager in .github/renovate/managers.json5 matches the full repository.
@@ -47,6 +50,10 @@ spec:
         registry: ""
         repository: ghcr.io/kedacore/keda-admission-webhooks
         tag: 2.21.0@sha256:e1969628cca6123e32eea13c47c75817091af2657fa68d9d0d58a8620d1b75b1
+      metricsApiServer:
+        registry: ""
+        repository: ghcr.io/kedacore/keda-metrics-apiserver
+        tag: 2.21.0@sha256:255375037fe592732eeb554743aae360c2da88cf0b9b1258d0a987ef885f0881
 
     priorityClassName: system-cluster-critical
 
@@ -55,6 +62,9 @@ spec:
         format: json
       webhooks:
         format: json
+      metricServer:
+        # klog verbosity; 0 is info
+        level: 0
 
     # Applies to all KEDA components. grpc-go's DNS resolver does a TXT lookup at
     # `_grpc_config.<target>` for service config before dialing; CoreDNS never serves
@@ -97,11 +107,18 @@ spec:
         rollingUpdate:
           maxUnavailable: 1
           maxSurge: 1
+      metricsApiServer:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 1
+          maxSurge: 1
 
     podDisruptionBudget:
       operator:
         minAvailable: 1
       webhooks:
+        minAvailable: 1
+      metricServer:
         minAvailable: 1
 
     # KEDA's Temporal scaler ignores its `ca` auth parameter on the API-key
@@ -123,24 +140,36 @@ spec:
             subPath: ca.pem
             readOnly: true
 
-    # CPU limits omitted to allow bursting; memory limits pinned to requests
-    # per cluster convention.
+    # No CPU limits, to allow bursting; memory limits pinned to requests per
+    # cluster convention. `cpu: null` drops the chart's default CPU limit.
     resources:
       operator:
         requests:
           cpu: 100m
           memory: &memory 256Mi
         limits:
+          cpu: null
           memory: *memory
       webhooks:
         requests:
           cpu: 100m
           memory: *memory
         limits:
+          cpu: null
+          memory: *memory
+      metricServer:
+        requests:
+          cpu: 100m
+          memory: *memory
+        limits:
+          cpu: null
           memory: *memory
 
     # The TLS cert covers the admission webhook (kube-apiserver -> webhook
-    # over HTTPS, validates ScaledJob/ScaledObject configs at admission time).
+    # over HTTPS, validates ScaledJob/ScaledObject configs at admission time),
+    # the metrics API server (kube-apiserver -> metrics apiserver over HTTPS),
+    # and the gRPC link from the metrics apiserver to the operator (mTLS, so
+    # the cert is also a client cert).
     # cainjector reads the issued cert and injects the CA into the
     # ValidatingWebhookConfiguration's caBundle (chart wires the
     # `cert-manager.io/inject-ca-from` annotation automatically).
@@ -217,12 +246,10 @@ spec:
   # Patch the chart-rendered Certificate to fit the namespace issuer + the
   # repo's admission-cert pattern:
   #   * dnsNames: drop bare-namespace forms (violate the issuer's critical
-  #     nameConstraints) and the metrics-apiserver SANs (metricsServer disabled).
+  #     nameConstraints).
   #   * commonName: removed; cert-manager defaults to the first dnsName, which
   #     keeps the request inside the namespace issuer's name constraints and
   #     mirrors the other admission certs in this repo (k8tz).
-  #   * usages: drop `client auth` — only the webhook server cert is in use,
-  #     metricsServer (which would have used client auth) is disabled.
   postRenderers:
     - kustomize:
         patches:
@@ -237,11 +264,9 @@ spec:
                 value:
                   - keda-operator.system-controllers.svc
                   - keda-operator.system-controllers.svc.cluster.local
+                  - keda-operator-metrics-apiserver.system-controllers.svc
+                  - keda-operator-metrics-apiserver.system-controllers.svc.cluster.local
                   - keda-admission-webhooks.system-controllers.svc
                   - keda-admission-webhooks.system-controllers.svc.cluster.local
               - op: remove
                 path: /spec/commonName
-              - op: replace
-                path: /spec/usages
-                value:
-                  - server auth

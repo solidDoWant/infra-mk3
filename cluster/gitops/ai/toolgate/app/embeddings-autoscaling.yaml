@@ -1,0 +1,51 @@
+---
+# Scale the embeddings server to zero when nothing uses it. The gateway sends
+# its embeddings requests here (config.toolSearchEmbeddings.url). This name
+# resolves to the KEDA HTTP add-on's interceptor, which routes on the Host
+# header, counts the request, and holds it until the server is ready.
+apiVersion: v1
+kind: Service
+metadata:
+  name: toolgate-embeddings-proxy
+spec:
+  type: ExternalName
+  externalName: keda-add-ons-http-interceptor-proxy.system-controllers.svc.cluster.local
+---
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: toolgate-embeddings
+spec:
+  rules:
+    # The interceptor strips the port before it matches.
+    - hosts:
+        - toolgate-embeddings-proxy.ai.svc.cluster.local
+  target:
+    # The chart's Service for the embeddings server
+    service: toolgate-embeddings
+    portName: http
+  scalingMetric:
+    concurrency:
+      targetValue: 10
+  timeouts:
+    # Room for a cold start: schedule the pod, pull the image the first time on
+    # a node, and load the model. The gateway's own timeout is 60s.
+    readiness: 55s
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: toolgate-embeddings
+spec:
+  scaleTargetRef:
+    name: toolgate-embeddings
+  minReplicaCount: 0
+  # One replica is plenty for one gateway's queries and tool descriptions.
+  maxReplicaCount: 1
+  # Stay up between bursts of searches in a working session.
+  cooldownPeriod: 900
+  triggers:
+    - type: external-push
+      metadata:
+        interceptorRoute: toolgate-embeddings
+        scalerAddress: keda-add-ons-http-external-scaler.system-controllers.svc.cluster.local:9090

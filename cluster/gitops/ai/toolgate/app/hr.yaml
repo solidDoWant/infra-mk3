@@ -1,0 +1,163 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: toolgate
+spec:
+  interval: 1h
+  # Not cosign-signed upstream, so there is no `verify` block.
+  url: oci://ghcr.io/soliddowant/charts/toolgate
+  ref:
+    tag: 0.4.0
+    digest: sha256:4e8624584b60f576a33928bbafd69b81adf6458f688ee7f7317631ee7caebbd5
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: toolgate
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: toolgate
+  values:
+    config:
+      image:
+        tag: 0.4.0@sha256:76d0269bf4e0081e2c2402af8ccc5bbd2d37826b56e89db674d9abf2b3c4445f
+      database:
+        # Split roles: the gateway connects as toolgate_app (rows only), and the
+        # chart's pre-install/pre-upgrade hook Job runs the migrations as
+        # toolgate_migrator (the schema owner). See backend/postgres/hr.yaml.
+        existingSecret: toolgate-database
+        secretKey: app-url
+        migrateOnStart: false
+        migrationSecret: toolgate-database
+        migrationSecretKey: migrator-url
+        # The Job's chart-made NetworkPolicy. The Job's CiliumNetworkPolicy in
+        # netpol.yaml allows the same.
+        migrationEgress:
+          - to:
+              - podSelector:
+                  matchLabels:
+                    cnpg.io/cluster: toolgate-postgres
+            ports:
+              - protocol: TCP
+                port: 5432
+      oidc:
+        # The public Authentik URL, not the in-cluster openid-configuration-proxy:
+        # clients get their tokens from Authentik over the public hostname, and
+        # the gateway requires the token `iss` to match this exactly (trailing
+        # slash included). The chart has no setting for an extra CA, and the
+        # internal gateway serves a publicly trusted cert.
+        issuerURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/toolgate/
+        # The Authentik client ID: access tokens from `toolgate login`.
+        audience: toolgate
+      ui:
+        publicURL: https://toolgate.${SECRET_PUBLIC_DOMAIN_NAME}
+        # The same public client as the CLI (authorization code with PKCE), so
+        # there is no client secret to manage. Authentik gives each provider its
+        # own issuer, and the gateway takes only one.
+        clientID: toolgate
+        # Authentik's built-in superuser group.
+        adminGroup: authentik Admins
+      # Tool search is on for sessions that don't ask for it either way.
+      toolSearch: true
+      toolSearchEmbeddings:
+        # Through the KEDA HTTP add-on, which holds the request while it scales
+        # the embeddings server up from zero (see embeddings-autoscaling.yaml).
+        # The ExternalName Service resolves to the interceptor, and the
+        # interceptor routes on this host name.
+        url: http://toolgate-embeddings-proxy.ai.svc.cluster.local:8080
+        model: BAAI/bge-small-en-v1.5
+        # The default is 2s. A cold start (schedule the pod, load the model)
+        # takes longer, and a timeout opens toolgate's circuit breaker for 30s,
+        # during which search falls back to words only.
+        timeout: 60s
+      serviceMonitor:
+        enabled: true
+    resources:
+      defaultPodOptions:
+        securityContext:
+          # Lets the non-root user read the client certificate key files.
+          fsGroup: 65532
+          fsGroupChangePolicy: OnRootMismatch
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "1"
+      controllers:
+        gateway:
+          containers:
+            gateway:
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: &gateway_memory 384Mi
+                limits:
+                  memory: *gateway_memory
+      persistence:
+        postgres-ca:
+          type: secret
+          name: toolgate-postgres-serving-cert
+          defaultMode: 0444
+          items:
+            - key: ca.crt
+              path: ca.crt
+          advancedMounts:
+            gateway:
+              gateway:
+                - path: /etc/toolgate/certs/postgres/ca
+                  readOnly: true
+            migrate:
+              migrate:
+                - path: /etc/toolgate/certs/postgres/ca
+                  readOnly: true
+        postgres-app-cert:
+          type: secret
+          name: toolgate-postgres-toolgate-app-user
+          defaultMode: 0440
+          advancedMounts:
+            gateway:
+              gateway:
+                - path: /etc/toolgate/certs/postgres/app
+                  readOnly: true
+        postgres-migrator-cert:
+          type: secret
+          name: toolgate-postgres-toolgate-migrator-user
+          defaultMode: 0440
+          advancedMounts:
+            migrate:
+              migrate:
+                - path: /etc/toolgate/certs/postgres/migrator
+                  readOnly: true
+    embeddings:
+      server:
+        enabled: true
+        cache:
+          # Created in models-pvc.yaml so it outlives the release, and so the
+          # pre-upgrade download Job can mount it while the server runs.
+          existingClaim: toolgate-models
+    dashboards:
+      grafanaOperator:
+        enabled: true
+        instanceSelector:
+          matchLabels:
+            grafana.home.arpa/instance: grafana
+        folder: toolgate
+        allowCrossNamespaceImport: true
+  postRenderers:
+    - kustomize:
+        patches:
+          # KEDA owns the embeddings server's replica count (0 or 1). Drop the
+          # chart's fixed `replicas: 1`, and have drift detection ignore it.
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: toolgate-embeddings
+            patch: |
+              - op: remove
+                path: /spec/replicas
+              - op: add
+                path: /metadata/labels/patches.flux.home.arpa~1deployment.ignore-replicas
+                value: "true"

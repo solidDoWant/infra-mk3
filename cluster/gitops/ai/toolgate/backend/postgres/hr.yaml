@@ -1,0 +1,86 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: toolgate-postgres
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/postgres/cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    clusterName: toolgate
+    certificates:
+      client:
+        ca:
+          subject: &subject
+            countries:
+              - US
+            provinces:
+              - ${SECRET_STATE}
+            organizations:
+              - infra-mk3
+      serving:
+        issuerRef:
+          name: ai-intermediary-ca
+        subject: *subject
+    # toolgate runs with split roles: toolgate_migrator owns the schema and runs
+    # the migrations (the chart's pre-install/pre-upgrade hook Job), and the
+    # gateway connects as toolgate_app, which can only read and write rows. Both
+    # roles are created by the bootstrap SQL below, because it must reference
+    # them right after initdb, before CNPG reconciles any managed role. These
+    # blocks only issue the client certificates (CN = role name).
+    users:
+      toolgate-migrator:
+        username: toolgate_migrator
+        # toolgate re-reads the cert files for every new connection, so a
+        # rotation needs no restart.
+        disableReloading: true
+      toolgate-app:
+        username: toolgate_app
+        disableReloading: true
+    # Runs once, as the superuser, in the `toolgate` database right after
+    # initdb. This is toolgate's documented split-role setup:
+    #   https://github.com/solidDoWant/toolgate/blob/0.4.0/docs/admin/chart.md#database-rights-and-the-migration-job
+    # The extensions are created here because `vector` isn't a trusted
+    # extension and neither role is a superuser. The standard CNPG image ships
+    # pgvector and pg_trgm. Neither role gets a password: pg_hba only allows
+    # client certificate auth.
+    postInitApplicationSQL:
+      - CREATE ROLE toolgate_migrator LOGIN
+      - CREATE ROLE toolgate_app LOGIN
+      - CREATE SCHEMA toolgate AUTHORIZATION toolgate_migrator
+      - CREATE EXTENSION IF NOT EXISTS pg_trgm
+      - CREATE EXTENSION IF NOT EXISTS vector
+      - ALTER ROLE toolgate_migrator SET search_path = toolgate
+      - ALTER ROLE toolgate_app SET search_path = toolgate
+      - GRANT USAGE ON SCHEMA toolgate TO toolgate_app
+      - >-
+        ALTER DEFAULT PRIVILEGES FOR ROLE toolgate_migrator IN SCHEMA toolgate
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO toolgate_app
+      - >-
+        ALTER DEFAULT PRIVILEGES FOR ROLE toolgate_migrator IN SCHEMA toolgate
+        GRANT USAGE, SELECT ON SEQUENCES TO toolgate_app
+      - >-
+        ALTER DEFAULT PRIVILEGES FOR ROLE toolgate_migrator IN SCHEMA toolgate
+        GRANT EXECUTE ON FUNCTIONS TO toolgate_app
+    bucket:
+      endpoint: https://s3.${SECRET_PUBLIC_DOMAIN_NAME}
+    netpol:
+      applicationAccess:
+        selectors:
+          # The gateway pods (toolgate_app)
+          - matchLabels:
+              app.kubernetes.io/name: toolgate
+              app.kubernetes.io/instance: toolgate
+              app.kubernetes.io/controller: gateway
+          # The migration hook Job (toolgate_migrator)
+          - matchLabels:
+              app.kubernetes.io/name: toolgate
+              app.kubernetes.io/instance: toolgate
+              app.kubernetes.io/controller: migrate

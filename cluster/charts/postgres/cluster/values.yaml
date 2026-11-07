@@ -98,6 +98,13 @@ extensions: []
 #   - vchord
 sharedPreloadLibraries: []
 
+# SQL run once as the superuser in the application database, right after a fresh
+# initdb (spec.bootstrap.initdb.postInitApplicationSQL). Not run on recovery, and
+# not run again on an existing cluster, so a change here needs a manual run there.
+# Use it for setup that managed roles and the Database CR can't express, such as
+# default privileges or untrusted extensions owned by a non-superuser schema.
+postInitApplicationSQL: []
+
 # managed:
 #   roles:
 #     - name: ${DATABASE_NAME:=${NAME}}

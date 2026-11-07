@@ -46,6 +46,16 @@ specs:
           - ports:
               - port: "7233"
                 protocol: TCP
+      # HTTP add-on external scaler (gRPC) -- the `external-push` trigger of the
+      # add-on's ScaledObjects (its interceptor, and each InterceptorRoute's)
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: http-add-on
+              app.kubernetes.io/component: scaler
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
     ingress:
       # Liveness/readiness probes from kubelet on the host.
       - &from_healthcheck
@@ -54,6 +64,15 @@ specs:
         toPorts:
           - ports:
               - port: "8081"
+                protocol: TCP
+      # The metrics API server reads scaler metrics from the operator over
+      # mTLS gRPC.
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: keda-operator-metrics-apiserver
+        toPorts:
+          - ports:
+              - port: "9666"
                 protocol: TCP
       # Victoria Metrics agent scrapes the operator's /metrics endpoint.
       - &from_monitoring
@@ -87,3 +106,34 @@ specs:
       - *from_healthcheck
       # Metrics scraping.
       - *from_monitoring
+
+  - description: keda-operator-metrics-apiserver
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: keda-operator-metrics-apiserver
+    egress:
+      # Delegated authn/authz for the apiserver's requests, and reading
+      # ScaledObjects.
+      - *to_apiserver
+      - *to_dns_resolver
+      # Scaler metrics from the operator (mTLS gRPC)
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: keda-operator
+        toPorts:
+          - ports:
+              - port: "9666"
+                protocol: TCP
+    ingress:
+      # kube-apiserver proxies external.metrics.k8s.io requests (from the HPA
+      # controller) to this APIService backend.
+      - fromEntities:
+          - kube-apiserver
+        toPorts: &metrics_apiserver_ports
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Liveness/readiness probes (HTTPS on the same port).
+      - fromEntities:
+          - host
+        toPorts: *metrics_apiserver_ports
