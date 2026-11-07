@@ -48,13 +48,25 @@ spec:
               LOGSTDOUT: "true"
               # LB IP address
               SYSTEM_IP: 10.34.0.4
+              # Trimmed for a single-AP site; it used ~1.5Gi with the defaults:
+              # * glibc gave the JVM ~37 malloc arenas (up to 8x the 27 visible CPUs)
+              #   holding ~440Mi of freed native memory.
+              # * 1024M heap with G1, which never hands idle heap back.
+              # Serial GC shrinks the heap after full collections, and C1-only JIT
+              # avoids C2's large compile arenas (CPU doesn't matter here). The GC log
+              # shows the live heap for tuning JVM_MAX_HEAP_SIZE.
+              MALLOC_ARENA_MAX: "2"
+              JVM_MAX_HEAP_SIZE: 512M
+              JVM_EXTRA_OPTS: >-
+                -XX:+UseSerialGC
+                -XX:TieredStopAtLevel=1
+                -Xlog:gc:file=/usr/lib/unifi/logs/gc.log:time,uptime:filecount=2,filesize=2m
             resources:
               requests:
                 cpu: 100m
-                memory: 2Gi
+                memory: &memory 1280Mi
               limits:
-                cpu: 1
-                memory: 2Gi
+                memory: *memory
             # See https://help.ui.com/hc/en-us/articles/218506997-Required-Ports-Reference
             ports:
               - name: http
