@@ -1,12 +1,9 @@
 ---
-# toolgate keeps each MCP session in memory on the replica that created it,
-# and answers 404 to a request for a session it doesn't hold. Claude Code
-# doesn't start a new session after that 404, so the gateway must keep each
-# session on one replica. Hash on X-Toolgate-Session, which the plugin's
-# headers helper sends on every request of a Claude Code session, initialize
-# included. (Mcp-Session-Id doesn't work: initialize has none, so it lands on
-# a random replica and the rest of the session hashes elsewhere.) Gateway
-# rollouts still end open sessions; shared sessions are planned in toolgate.
+# Optional since toolgate 0.4.5: MCP sessions are shared through PostgreSQL,
+# so any replica serves any session and a replica that dies or rolls ends
+# none. Hashing on X-Toolgate-Session (sent on every request of a Claude Code
+# session, initialize included) keeps a session on one replica, which saves
+# the other replicas from adopting it.
 apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:

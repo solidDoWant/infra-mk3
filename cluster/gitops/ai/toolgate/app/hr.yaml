@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.4
-    digest: sha256:ea4b5aa6661c90c3a6931074c78d9cac6900ee8a2b2d005201101bc2c775c052
+    tag: 0.4.5
+    digest: sha256:f4e6135b8d7227df9f460fb1164b19c072dc023545e74008d34bff83b1a7c1b5
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -25,7 +25,7 @@ spec:
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
-        tag: 0.4.4@sha256:a9fe939f65fe89e49b8db5683e0fa1bb9d0aa7413b0e681c33dac5d419504936
+        tag: 0.4.5@sha256:51773b31f5349e54902ff8ac76a49b458d5a709a1a2fa0769863c9a2c321174e
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
