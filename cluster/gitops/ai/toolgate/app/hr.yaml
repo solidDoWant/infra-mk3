@@ -147,9 +147,11 @@ spec:
       server:
         enabled: true
         cache:
-          # Created in models-pvc.yaml so it outlives the release, and so the
-          # pre-upgrade download Job can mount it while the server runs.
-          existingClaim: toolgate-models
+          # The chart creates `toolgate-models` once (Helm keeps it on
+          # uninstall). RWX so the pre-upgrade download Job can mount it while
+          # the server runs. bge-small-en-v1.5 is about 130 MiB.
+          storageClassName: ssd-replicated-filesystem
+          size: 5Gi
         # The gateway's leader scales the server to zero when no session has
         # used tool search for idleTimeout, and back to one when one does.
         # Searches while it starts use words only.
