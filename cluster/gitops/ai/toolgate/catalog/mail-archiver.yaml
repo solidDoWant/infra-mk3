@@ -12,7 +12,8 @@ metadata:
   name: mail-archiver
 spec:
   description: Search and read your archived mail (mail-archiver), read-only.
-  scope: per-user
+  # No `scope`: the header uses a per-user secret, so toolgate makes one
+  # connection per user.
   idleStop: 1h
   access:
     # A real restriction: only people who can use mail-archiver itself (the
