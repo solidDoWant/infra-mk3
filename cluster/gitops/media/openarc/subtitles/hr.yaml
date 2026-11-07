@@ -86,6 +86,10 @@ spec:
               qwen3-4b-instruct-int4-awq
             OPENARC_LOG_FILE: /dev/null
             NUMBA_CACHE_DIR: /tmp/numba-cache
+            # glibc gives each busy thread its own malloc arena (up to 8x the 27
+            # visible CPUs); with ~200 threads the runtime held ~440Mi of mostly
+            # freed native memory in them.
+            MALLOC_ARENA_MAX: "2"
         initContainers:
           # Per-model: download from HF + `openarc add`. No GPU access
           # needed (compile happens later in the warm container).
