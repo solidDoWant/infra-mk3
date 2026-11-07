@@ -1,0 +1,108 @@
+---
+# kubesearch-mcp: search kubesearch.dev (Flux/Argo deployments across public
+# home-ops repos), and clone repos to read their manifests.
+# https://github.com/perfectra1n/kubesearch-mcp
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: kubesearch
+spec:
+  description: >-
+    Search kubesearch.dev: how public home-ops Kubernetes repos deploy Helm
+    charts and images, real-world Helm values, and read those repos' manifests.
+  # One instance for everyone: it's read-only public data, and the instance
+  # keeps the ~44 MB database cache and the warm repo pool between users.
+  scope: shared
+  idleStop: 2h
+  startTimeout: 5m
+  access:
+    groups: ["toolgate access"]
+    environments: any
+  endpoint: {service: kubesearch, port: 3000, path: /mcp}
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: kubesearch
+        labels: {app: kubesearch}
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000 # the image's `node` user
+          runAsGroup: 1000
+          fsGroup: 1000
+          seccompProfile: {type: RuntimeDefault}
+        containers:
+          - name: server
+            image: ghcr.io/perfectra1n/kubesearch-mcp:1.3.0@sha256:4620f09fffb30672b429b9bbffb8a657d34dcee420729598c3f65732a3c89079
+            ports: [{name: http, containerPort: 3000}]
+            env:
+              - {name: MCP_TRANSPORT, value: http}
+              - {name: KUBESEARCH_CACHE_DIR, value: /data}
+              # Clone only from the forges the index covers; the netpol below
+              # allows only these hosts anyway.
+              - {name: KUBESEARCH_CLONE_ALLOWED_HOSTS, value: "github.com,gitlab.com"}
+            readinessProbe:
+              httpGet: {path: /healthz, port: http}
+              periodSeconds: 10
+            resources:
+              requests: {cpu: 100m, memory: 512Mi}
+              limits: {memory: 512Mi}
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: {drop: [ALL]}
+            volumeMounts:
+              - {name: data, mountPath: /data}
+              - {name: tmp, mountPath: /tmp}
+        volumes:
+          # The databases and clones are a cache: re-downloaded on restart.
+          - name: data
+            emptyDir: {sizeLimit: 2Gi}
+          - name: tmp
+            emptyDir: {sizeLimit: 256Mi}
+    - apiVersion: v1
+      kind: Service
+      metadata: {name: kubesearch}
+      spec:
+        selector: {app: kubesearch}
+        ports: [{name: http, port: 3000, targetPort: http}]
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata: {name: kubesearch}
+      spec:
+        endpointSelector:
+          matchLabels: {app: kubesearch}
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - {port: "53", protocol: UDP}
+                  - {port: "53", protocol: TCP}
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          # The index databases are GitHub release assets
+          # (whazor/k8s-at-home-search), and repo clones go to GitHub/GitLab.
+          - toFQDNs:
+              - matchName: github.com
+              - matchName: api.github.com
+              - matchName: codeload.github.com
+              - matchName: objects.githubusercontent.com
+              - matchName: release-assets.githubusercontent.com
+              - matchName: gitlab.com
+            toPorts:
+              - ports:
+                  - {port: "443", protocol: TCP}
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities: [host]
+            toPorts:
+              - ports:
+                  - {port: "3000", protocol: TCP}

@@ -74,6 +74,17 @@ spec:
       toolSearch: true
       serviceMonitor:
         enabled: true
+      # Encrypts user secrets (the secrets API, the web UI's Secrets page and
+      # `toolgate secret set`). The keyset never goes in PostgreSQL; the SOPS
+      # file in git is its off-cluster backup. A database backup is useless
+      # without it.
+      extraEnv:
+        - name: TOOLGATE_SECRETS_KEYSET_FILE
+          value: /etc/toolgate/keyset/keyset.json
+        # Published at /.well-known/toolgate-client so `toolgate login` needs
+        # no --client-id. Move to the chart value once it exists (toolgate #488).
+        - name: TOOLGATE_OIDC_CLI_CLIENT_ID
+          value: toolgate
     resources:
       defaultPodOptions:
         securityContext:
@@ -109,6 +120,15 @@ spec:
                 - identifier: gateway
                   port: 80
       persistence:
+        secrets-keyset:
+          type: secret
+          name: toolgate-keyset # toolgate-keyset.sops.yaml
+          defaultMode: 0440
+          advancedMounts:
+            gateway:
+              gateway:
+                - path: /etc/toolgate/keyset
+                  readOnly: true
         postgres-ca:
           type: secret
           name: toolgate-postgres-serving-cert

@@ -66,11 +66,19 @@ specs:
           - ports:
               - port: "80"
                 protocol: TCP
-      # No MCP servers yet. Each instance runs in its own `tg-*` namespace;
-      # when templates are added, allow egress here to their pods, selected by
-      # the namespace label toolgate sets
-      # (io.cilium.k8s.namespace.labels.toolgate.soliddowant.dev/writable: "true")
-      # on each template's endpoint port.
+      # MCP server instances. Each runs in a namespace toolgate creates and
+      # labels writable (its own `tg-*` namespaces, and the shared one if
+      # configured); only an admin or toolgate can label a namespace. The
+      # endpoint port is per template, so any TCP port. Each instance
+      # namespace's own policy admits only the gateway pods.
+      - toEndpoints:
+          - matchLabels:
+              io.cilium.k8s.namespace.labels.toolgate.soliddowant.dev/writable: "true"
+        toPorts:
+          - ports:
+              - port: "1"
+                endPort: 65535
+                protocol: TCP
     ingress:
       # Kubelet probes (/healthz and /readyz on the main port)
       - fromEntities:
