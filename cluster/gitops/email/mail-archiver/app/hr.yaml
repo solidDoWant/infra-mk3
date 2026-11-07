@@ -102,11 +102,13 @@ spec:
               # Fetches release notes from api.github.com; updates come through
               # Renovate instead.
               ReleaseNotes__Enabled: false
-              # The image enables Server GC, which sees all 27 node CPUs (no CPU
-              # limit), collects lazily and fills its 75%-of-limit heap cap; with
-              # ~100Mi of mapped files plus native buffers on top, that hit the 1Gi
-              # limit and got OOM-killed several times a day. Workstation GC suits
-              # this mostly idle app.
+              # The pod was OOM-killed several times a day at 1Gi. A heap dump showed
+              # only ~12Mi of managed heap; ~420Mi sat in glibc malloc thread arenas
+              # (one per busy thread, up to 8x the 27 visible CPUs), which keep freed
+              # native memory (TLS to IMAP/Postgres etc.) instead of returning it.
+              MALLOC_ARENA_MAX: "2"
+              # The image enables Server GC, sized for all 27 node CPUs. Workstation
+              # GC suits this mostly idle app.
               DOTNET_gcServer: "0"
               Api__Enabled: false
               Mcp__Enabled: false
