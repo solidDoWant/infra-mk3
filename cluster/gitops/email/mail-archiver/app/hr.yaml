@@ -111,7 +111,11 @@ spec:
               # GC suits this mostly idle app.
               DOTNET_gcServer: "0"
               Api__Enabled: false
-              Mcp__Enabled: false
+              # The MCP endpoint (/mcp), read-only, authenticated with each
+              # user's own API key (created under API Keys in the UI). Reached
+              # only by the toolgate gateway (netpol), which sends the calling
+              # user's key from their toolgate secret mail-archiver-api-key.
+              Mcp__Enabled: true
             ports:
               - name: http
                 containerPort: &http_port 5000

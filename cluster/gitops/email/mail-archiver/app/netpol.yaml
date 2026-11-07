@@ -115,3 +115,12 @@ specs:
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: internal-gateway
         toPorts: *http_ports
+      # toolgate MCP gateway: calls /mcp with the user's API key (remote
+      # template ai/toolgate/catalog/mail-archiver.yaml)
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: ai
+              app.kubernetes.io/name: toolgate
+              app.kubernetes.io/instance: toolgate
+              app.kubernetes.io/controller: gateway
+        toPorts: *http_ports
