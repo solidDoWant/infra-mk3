@@ -88,6 +88,12 @@ resource "coder_script" "install_toolgate" {
     curl -fsSL -o "$WORK/checksums.txt" "$BASE/checksums.txt"
     (cd "$WORK" && grep ' toolgate-linux-amd64$' checksums.txt | sha256sum -c -)
     install -m 0755 "$WORK/toolgate-linux-amd64" "$BIN_DIR/toolgate"
+    # ~/.local/bin isn't on the workspace PATH. Link the CLI into Coder's
+    # script bin directory, which is (as the Claude Code module does for
+    # `claude`), so shells and the plugin's hook and headers helper find it.
+    if [ -n "$${CODER_SCRIPT_BIN_DIR:-}" ]; then
+      ln -sf "$BIN_DIR/toolgate" "$CODER_SCRIPT_BIN_DIR/toolgate"
+    fi
     echo "Installed $(toolgate version)"
 
     # Sign-in settings go in the CLI's config file: the plugin's helpers
