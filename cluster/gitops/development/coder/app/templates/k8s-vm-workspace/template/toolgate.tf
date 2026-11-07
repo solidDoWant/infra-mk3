@@ -3,7 +3,10 @@
 #
 # - User identity: Coder external auth `toolgate` (Authentik provider
 #   `coder-toolgate`) holds the owner's consent. The CLI gets an access token
-#   from `coder external-auth access-token toolgate` (TOOLGATE_TOKEN_COMMAND).
+#   from `coder external-auth access-token toolgate`, set as the CLI's token
+#   command with `toolgate configure` (not an environment variable: Claude
+#   Code removes credential-like variables, such as *_TOKEN_*, from plugin
+#   helpers).
 # - No workspace attestation yet for VM workspaces: their sessions count as
 #   unverified (see the k8s-workspace template for the attested pod version).
 
@@ -43,14 +46,6 @@ data "coder_external_auth" "toolgate" {
 }
 
 # Resources
-resource "coder_env" "toolgate_token_command" {
-  count = local.enable_toolgate ? 1 : 0
-
-  agent_id = coder_agent.main.id
-  name     = "TOOLGATE_TOKEN_COMMAND"
-  value    = "coder external-auth access-token toolgate"
-}
-
 resource "coder_env" "toolgate_gateway" {
   count = local.enable_toolgate ? 1 : 0
 
@@ -90,6 +85,15 @@ resource "coder_script" "install_toolgate" {
     (cd "$WORK" && grep ' toolgate-linux-amd64$' checksums.txt | sha256sum -c -)
     install -m 0755 "$WORK/toolgate-linux-amd64" "$BIN_DIR/toolgate"
     echo "Installed $(toolgate version)"
+
+    # Sign-in settings go in the CLI's config file: the plugin's helpers
+    # don't get credential-like environment variables. The token command reads
+    # the agent token from a 0600 file for the same reason.
+    install -d -m 700 "$HOME/.config/coder"
+    (umask 077 && printf '%s' "$CODER_AGENT_TOKEN" > "$HOME/.config/coder/agent-token")
+    toolgate configure \
+      --gateway "${local.toolgate_gateway}" \
+      --token-command "coder external-auth access-token toolgate --agent-token-file $HOME/.config/coder/agent-token"
 
     for _ in $(seq 1 120); do
       command -v claude >/dev/null 2>&1 && break
