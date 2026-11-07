@@ -279,3 +279,7 @@ socketLB:
   enabled: true
   hostNamespaceOnly: true # Required for kata-containers
   terminatePodConnections: true
+updateStrategy:
+  rollingUpdate:
+    # The chart default (2) restarts the datapath on two of the three nodes at once.
+    maxUnavailable: 1

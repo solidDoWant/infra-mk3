@@ -11,9 +11,11 @@ specs:
         app.kubernetes.io/name: vlsingle
     # egress:
     ingress:
-      # Kubelet for healthcheck
+      # Kubelet for healthcheck, and the apiserver service proxy for ad-hoc queries
+      # (an apiserver on another node shows up as kube-apiserver, not host)
       - fromEntities:
           - host
+          - kube-apiserver
         toPorts:
           - ports:
               - port: "9428"
@@ -76,9 +78,10 @@ specs:
               - port: "6443"
                 protocol: TCP
     ingress:
-      # Kubelet for healthcheck
+      # Kubelet for healthcheck, and the apiserver service proxy for ad-hoc queries
       - fromEntities:
           - host
+          - kube-apiserver
         toPorts:
           - ports:
               - port: "9428"
