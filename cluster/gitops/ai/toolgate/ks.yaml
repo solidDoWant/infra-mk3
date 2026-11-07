@@ -47,6 +47,7 @@ spec:
   dependsOn:
     - name: toolgate-backend
     - name: gateway-crds
+    - name: istio-base # DestinationRule CRD
     - name: grafana-crds
     - name: prometheus-crds
     - name: rook-ceph-cluster
