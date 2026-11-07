@@ -1,0 +1,17 @@
+---
+# toolgate keeps each MCP session in memory on the replica that created it,
+# and answers 404 to a request for a session it doesn't hold. Claude Code
+# doesn't start a new session after that 404, so the gateway must keep each
+# session on one replica: hash on the MCP session header. Requests without it
+# (initialize) go to any replica. Gateway rollouts still end open sessions;
+# shared sessions are planned in toolgate.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: toolgate
+spec:
+  host: toolgate.ai.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        httpHeaderName: Mcp-Session-Id
