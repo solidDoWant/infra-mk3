@@ -29,9 +29,10 @@ data "coder_parameter" "enable_toolgate" {
 
 locals {
   enable_toolgate = tobool(data.coder_parameter.enable_toolgate.value)
-  # The gateway is the `toolgate.` host next to Coder's own `coder.` host;
-  # derived so the public domain stays out of git.
-  toolgate_gateway          = replace(data.coder_workspace.me.access_url, "://coder.", "://toolgate.")
+  # The public domain comes from the coder-workspace-cluster-info ConfigMap
+  # (local.public_domain): the template never sees Flux substitution, and
+  # Coder's access URL inside the cluster is the internal service URL.
+  toolgate_gateway          = "https://toolgate.${local.public_domain}"
   toolgate_attestation_dir  = "/var/run/secrets/toolgate"
   toolgate_attestation_file = "${local.toolgate_attestation_dir}/token"
 }
