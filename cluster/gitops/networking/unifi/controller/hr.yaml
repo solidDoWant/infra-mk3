@@ -56,7 +56,8 @@ spec:
               # avoids C2's large compile arenas (CPU doesn't matter here). The GC log
               # shows the live heap for tuning JVM_MAX_HEAP_SIZE.
               MALLOC_ARENA_MAX: "2"
-              JVM_MAX_HEAP_SIZE: 512M
+              # Live heap is ~100M after a full GC.
+              JVM_MAX_HEAP_SIZE: 256M
               JVM_EXTRA_OPTS: >-
                 -XX:+UseSerialGC
                 -XX:TieredStopAtLevel=1
@@ -64,7 +65,8 @@ spec:
             resources:
               requests:
                 cpu: 100m
-                memory: &memory 1280Mi
+                # ~1.5x the ~800Mi peak (JVM ~530Mi + bundled MongoDB ~250Mi).
+                memory: &memory 1200Mi
               limits:
                 memory: *memory
             # See https://help.ui.com/hc/en-us/articles/218506997-Required-Ports-Reference

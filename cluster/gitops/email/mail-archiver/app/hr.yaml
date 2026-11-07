@@ -136,7 +136,8 @@ spec:
             resources:
               requests:
                 cpu: 100m
-                memory: &memory 1Gi
+                # Steady at ~230Mi anon (peak ~340Mi) since MALLOC_ARENA_MAX.
+                memory: &memory 512Mi
               limits:
                 memory: *memory
             securityContext:
