@@ -23,6 +23,8 @@ spec:
   values:
     config:
       image:
+        # Repeated from the chart default so Renovate sees repository + tag.
+        repository: ghcr.io/soliddowant/toolgate
         tag: 0.4.3@sha256:1c8e62aa37523be969d1c2ca5ca6b3e5ae967dbf9b520c0eb6f8e255d7113d14
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
