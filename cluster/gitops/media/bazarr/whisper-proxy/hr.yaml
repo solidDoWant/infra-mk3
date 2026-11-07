@@ -49,6 +49,10 @@ spec:
               # Flush stdout immediately so logs aren't held until shutdown.
               PYTHONUNBUFFERED: "1"
               MAX_AUDIO_BYTES: "536870912" # 512 MiB
+              # The default (AUTO) also compiles the aligner for CPU so it can start
+              # inferring while the GPU build compiles, and that CPU copy of the
+              # weights then stays resident (~1.9Gi anon after one request).
+              ALIGNER_DEVICE: GPU
             ports:
               - name: web
                 # App binds 0.0.0.0:9000 (hardcoded in whisper_proxy.__main__).
