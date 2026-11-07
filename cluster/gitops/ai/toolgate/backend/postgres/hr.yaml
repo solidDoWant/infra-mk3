@@ -45,20 +45,18 @@ spec:
         username: toolgate_app
         disableReloading: true
     # Runs once, as the superuser, in the `toolgate` database right after
-    # initdb. This is toolgate's documented split-role setup:
+    # initdb. It holds only what nothing declarative can do: default
+    # privileges. The roles and the schema have to be here too, because this
+    # runs before CNPG reconciles managed roles or the Database CR, and the
+    # grants name them. The extensions are in database.yaml, and each role's
+    # search_path is in its connection string (app/database.yaml).
+    # Based on toolgate's split-role setup:
     #   https://github.com/solidDoWant/toolgate/blob/0.4.0/docs/admin/chart.md#database-rights-and-the-migration-job
-    # The extensions are created here because `vector` isn't a trusted
-    # extension and neither role is a superuser. The standard CNPG image ships
-    # pgvector and pg_trgm. Neither role gets a password: pg_hba only allows
-    # client certificate auth.
+    # Neither role gets a password: pg_hba only allows client certificate auth.
     postInitApplicationSQL:
       - CREATE ROLE toolgate_migrator LOGIN
       - CREATE ROLE toolgate_app LOGIN
       - CREATE SCHEMA toolgate AUTHORIZATION toolgate_migrator
-      - CREATE EXTENSION IF NOT EXISTS pg_trgm
-      - CREATE EXTENSION IF NOT EXISTS vector
-      - ALTER ROLE toolgate_migrator SET search_path = toolgate
-      - ALTER ROLE toolgate_app SET search_path = toolgate
       - GRANT USAGE ON SCHEMA toolgate TO toolgate_app
       - >-
         ALTER DEFAULT PRIVILEGES FOR ROLE toolgate_migrator IN SCHEMA toolgate

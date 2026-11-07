@@ -2,7 +2,9 @@
 # Connection strings for the two database roles. No passwords: pg_hba only
 # allows client certificate auth (CN = role name), and the certificates are
 # mounted by the HelmRelease. So this holds nothing secret and isn't encrypted.
-# toolgate re-reads the certificate files for every new connection.
+# toolgate re-reads the certificate files for every new connection. pgx sends
+# `search_path` as a session setting, so tables and the extension types resolve
+# in the `toolgate` schema.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -17,6 +19,7 @@ stringData:
     sslrootcert=/etc/toolgate/certs/postgres/ca/ca.crt
     sslcert=/etc/toolgate/certs/postgres/app/tls.crt
     sslkey=/etc/toolgate/certs/postgres/app/tls.key
+    search_path=toolgate
   migrator-url: >-
     host=toolgate-postgres-rw.ai.svc.cluster.local
     dbname=toolgate
@@ -25,3 +28,4 @@ stringData:
     sslrootcert=/etc/toolgate/certs/postgres/ca/ca.crt
     sslcert=/etc/toolgate/certs/postgres/migrator/tls.crt
     sslkey=/etc/toolgate/certs/postgres/migrator/tls.key
+    search_path=toolgate

@@ -1,0 +1,25 @@
+---
+# Declaratively create the extensions toolgate needs, run by the CNPG operator
+# (superuser) against the initdb-created `toolgate` database. `vector` isn't a
+# trusted extension, and neither toolgate role is a superuser, so toolgate's
+# migrations can't create it. Once present, their CREATE EXTENSION IF NOT
+# EXISTS is a no-op. The standard CNPG image ships both.
+#
+# Both go in the `toolgate` schema, not `public`: the roles' search_path is
+# only `toolgate`, and the migrations use the `vector` type unqualified.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: toolgate
+spec:
+  name: toolgate
+  owner: toolgate
+  cluster:
+    name: toolgate-postgres
+  extensions:
+    - name: vector
+      ensure: present
+      schema: toolgate
+    - name: pg_trgm
+      ensure: present
+      schema: toolgate
