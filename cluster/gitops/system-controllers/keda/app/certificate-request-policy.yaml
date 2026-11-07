@@ -1,7 +1,5 @@
 ---
-# Approve KEDA's one certificate: the admission webhook and the metrics API
-# server serve with it, and the metrics API server also presents it to the
-# operator's gRPC server (mTLS), so it needs client auth too.
+# Approve the the keda admission webhook certificate specifically.
 apiVersion: policy.cert-manager.io/v1alpha1
 kind: CertificateRequestPolicy
 metadata:
@@ -21,12 +19,9 @@ spec:
       values:
         - keda-operator.system-controllers.svc
         - keda-operator.system-controllers.svc.cluster.local
-        - keda-operator-metrics-apiserver.system-controllers.svc
-        - keda-operator-metrics-apiserver.system-controllers.svc.cluster.local
         - keda-admission-webhooks.system-controllers.svc
         - keda-admission-webhooks.system-controllers.svc.cluster.local
     usages:
       - server auth
-      - client auth
   constraints:
     maxDuration: 1h

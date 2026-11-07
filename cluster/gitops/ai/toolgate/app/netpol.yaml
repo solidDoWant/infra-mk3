@@ -54,16 +54,17 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
-      # Embeddings for tool search, through the KEDA HTTP add-on's interceptor
-      # (toolgate-embeddings-proxy is an ExternalName Service for it)
+      # Embeddings for tool search, from the chart's server (which the leader
+      # scales between 0 and 1 replicas through the Kubernetes API)
       - toEndpoints:
-          - matchLabels:
-              io.kubernetes.pod.namespace: system-controllers
-              app.kubernetes.io/name: http-add-on
-              app.kubernetes.io/component: interceptor
+          - &embeddings_selector
+            matchLabels:
+              app.kubernetes.io/name: toolgate
+              app.kubernetes.io/instance: toolgate
+              app.kubernetes.io/component: embeddings
         toPorts:
           - ports:
-              - port: "8080"
+              - port: "80"
                 protocol: TCP
       # No MCP servers yet. Each instance runs in its own `tg-*` namespace;
       # when templates are added, allow egress here to their pods, selected by
@@ -107,11 +108,7 @@ specs:
       - *to_postgres
   - description: embeddings-server
     # No egress: the server runs offline from the downloaded model.
-    endpointSelector:
-      matchLabels:
-        app.kubernetes.io/name: toolgate
-        app.kubernetes.io/instance: toolgate
-        app.kubernetes.io/component: embeddings
+    endpointSelector: *embeddings_selector
     ingress:
       # Kubelet probes (/health)
       - fromEntities:
@@ -120,13 +117,12 @@ specs:
           - ports:
               - port: "80"
                 protocol: TCP
-      # The KEDA HTTP add-on's interceptor forwards the gateway's requests
-      # straight to the pod
+      # The gateway's embeddings requests
       - fromEndpoints:
           - matchLabels:
-              io.kubernetes.pod.namespace: system-controllers
-              app.kubernetes.io/name: http-add-on
-              app.kubernetes.io/component: interceptor
+              app.kubernetes.io/name: toolgate
+              app.kubernetes.io/instance: toolgate
+              app.kubernetes.io/controller: gateway
         toPorts: *embeddings_ports
   - description: embeddings-download
     # The pre-install/pre-upgrade hook Job that downloads the pinned model

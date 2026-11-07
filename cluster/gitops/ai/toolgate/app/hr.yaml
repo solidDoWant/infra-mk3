@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.0
-    digest: sha256:4e8624584b60f576a33928bbafd69b81adf6458f688ee7f7317631ee7caebbd5
+    tag: 0.4.1
+    digest: sha256:5c86e4af26dfd757eb166dbc16ff8e509325d56d1e3b8d17a6e84d39f583b636
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -23,7 +23,7 @@ spec:
   values:
     config:
       image:
-        tag: 0.4.0@sha256:76d0269bf4e0081e2c2402af8ccc5bbd2d37826b56e89db674d9abf2b3c4445f
+        tag: 0.4.1@sha256:7f20a805bbba88393dbdd33022406f73732eb77c89e09959e443f49ef0fef505
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
@@ -60,19 +60,9 @@ spec:
         clientID: toolgate
         # Authentik's built-in superuser group.
         adminGroup: authentik Admins
-      # Tool search is on for sessions that don't ask for it either way.
+      # Tool search is on for sessions that don't ask for it either way. The
+      # chart points it at its own embeddings server (embeddings.server below).
       toolSearch: true
-      toolSearchEmbeddings:
-        # Through the KEDA HTTP add-on, which holds the request while it scales
-        # the embeddings server up from zero (see embeddings-autoscaling.yaml).
-        # The ExternalName Service resolves to the interceptor, and the
-        # interceptor routes on this host name.
-        url: http://toolgate-embeddings-proxy.ai.svc.cluster.local:8080
-        model: BAAI/bge-small-en-v1.5
-        # The default is 2s. A cold start (schedule the pod, load the model)
-        # takes longer, and a timeout opens toolgate's circuit breaker for 30s,
-        # during which search falls back to words only.
-        timeout: 60s
       serviceMonitor:
         enabled: true
     resources:
@@ -137,6 +127,12 @@ spec:
           # Created in models-pvc.yaml so it outlives the release, and so the
           # pre-upgrade download Job can mount it while the server runs.
           existingClaim: toolgate-models
+        # The gateway's leader scales the server to zero when no session has
+        # used tool search for idleTimeout, and back to one when one does.
+        # Searches while it starts use words only.
+        scaleToZero:
+          enabled: true
+          idleTimeout: 15m
     dashboards:
       grafanaOperator:
         enabled: true
@@ -148,16 +144,14 @@ spec:
   postRenderers:
     - kustomize:
         patches:
-          # KEDA owns the embeddings server's replica count (0 or 1). Drop the
-          # chart's fixed `replicas: 1`, and have drift detection ignore it.
+          # The gateway owns the embeddings server's replica count (0 or 1), and
+          # the chart leaves `replicas` out. Have drift detection ignore it.
           - target:
               group: apps
               version: v1
               kind: Deployment
               name: toolgate-embeddings
             patch: |
-              - op: remove
-                path: /spec/replicas
               - op: add
                 path: /metadata/labels/patches.flux.home.arpa~1deployment.ignore-replicas
                 value: "true"
