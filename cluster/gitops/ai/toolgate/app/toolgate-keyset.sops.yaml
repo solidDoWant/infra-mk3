@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: toolgate-keyset
+type: Opaque
+stringData:
+  keyset.json: ENC[AES256_GCM,data:ypgUmmgPodXNDBOV4fV+obrWtBFOVtJk1cxLeLJ2QVoA6pQVY32UvorLTe5ni04Uc/5+8esduhQqOySwaPHbspAXg5+bE7HvRP8WLSdSiBzh95NVSZy+aXiRDbI9njS820vkX4fUNGcD3JFR10UtTRcPBZ727/JLT+8Xvi5s+A1Jqd4oK5giYHB39O6P92VbvQIv/Ahggv1wnxbBK8+v6OhRK0hhj88cbFMZyEIAFfeyzXVl1N0GfLAjYqvnIvMQXXXA/kvHLvvXCdIfiPO9Bcec3AY4QqcpKf4SiVMw+eG42jKPCBxCUoQKlDWYXy5jkAiwKHop1p97xH2FnVBwPmZlvG30oMzn,iv:Txibt6KXPw/ReQW3XxU546zC2Rd1gJtZKOG1ifpYQMc=,tag:5T958j4exZu4F3aNNgn+7w==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBaNXMvdlFtM2FnZStaSmNV
+        MVNFWnpmaTE4NFpjOG9GelJTMElBOWI1YzNFCnoxYzlmN2pqRTRoSHFJaEpOS1U5
+        RWhIWUluU1hUMGROb0oxT2pPRDVQaHcKLS0tIElvNWluZW5IaEFLcWk3RVNEYnhv
+        VWo4ZmtnVGpOVnRRd25Sci9oM20vZVkKdCbX9nv8RmcDy7YAU2kXt5mNtKgfp4zP
+        smiiFkHE/GWwihNdpO67Ev3a4NbFuI6uHfM60C7KAcIX8ra3M8llgA==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAzMGNwbWxsQjlQalVHYzVv
+        VzZKS3d2MzZ4VGgvNXFQMU4vSGZUSGF0UEI0CjJUa0hxaG9pSFpHY0s1amIxYmt6
+        dDZSVm9OWEdDVzBpQUM5eGtFL3FRL0EKLS0tIGUrTWhsZTFLMjlwQ01JeXNyL3VJ
+        d0xQaTI2MmQrWnRkOXVQY2JQc2MrTjgK2+iNuPYQtw4MdXG9S8ya3XeoIyJtqNK8
+        +FothSKN4Ms8xSJ8fpfiRD6f4AnGjS+kKtWgn9u6GPJlChmaLNzfmQ==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-07T10:10:43Z"
+  mac: ENC[AES256_GCM,data:tzREtbeyqsxibKCkKO6C4ms859ZFmFYK5oaBNMmXLhX6sJ+hBghe+fpR/CmeGjUHVwQJy/GXaxu10NQthyYviBIbA5BHNkXAHEi78dBzsCGohccc/zdXksKyXHTQkI8Lup/DiYPK+po8bJ91/vkK9vEPGXnQUa1xnwWB8RYK6HA=,iv:hvE5FAeLmJGmdGI4a9AkBp4Xwny/depU7fJrxrcxM8s=,tag:U6gtNoKOaFiZYCdpgzZMqA==,type:str]
+  mac_only_encrypted: true
+  version: 3.13.3

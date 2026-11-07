@@ -23,6 +23,8 @@ spec:
   values:
     config:
       image:
+        # Repeated from the chart default so Renovate sees repository + tag.
+        repository: ghcr.io/soliddowant/toolgate
         tag: 0.4.3@sha256:1c8e62aa37523be969d1c2ca5ca6b3e5ae967dbf9b520c0eb6f8e255d7113d14
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
@@ -74,6 +76,17 @@ spec:
       toolSearch: true
       serviceMonitor:
         enabled: true
+      # Encrypts user secrets (the secrets API, the web UI's Secrets page and
+      # `toolgate secret set`). The keyset never goes in PostgreSQL; the SOPS
+      # file in git is its off-cluster backup. A database backup is useless
+      # without it.
+      extraEnv:
+        - name: TOOLGATE_SECRETS_KEYSET_FILE
+          value: /etc/toolgate/keyset/keyset.json
+        # Published at /.well-known/toolgate-client so `toolgate login` needs
+        # no --client-id. Move to the chart value once it exists (toolgate #488).
+        - name: TOOLGATE_OIDC_CLI_CLIENT_ID
+          value: toolgate
     resources:
       defaultPodOptions:
         securityContext:
@@ -109,6 +122,15 @@ spec:
                 - identifier: gateway
                   port: 80
       persistence:
+        secrets-keyset:
+          type: secret
+          name: toolgate-keyset # toolgate-keyset.sops.yaml
+          defaultMode: 0440
+          advancedMounts:
+            gateway:
+              gateway:
+                - path: /etc/toolgate/keyset
+                  readOnly: true
         postgres-ca:
           type: secret
           name: toolgate-postgres-serving-cert
