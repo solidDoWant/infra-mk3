@@ -1,0 +1,10 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: 3
+
+tasks:
+  generate-endpoints:
+    desc: Regenerate the encrypted CiliumCIDRGroup of VPN servers the gateway may reach
+    silent: true
+    cmd: >-
+      {{ shellQuote .TASKFILE_DIR }}/generate-endpoints.sh

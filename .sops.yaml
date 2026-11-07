@@ -19,6 +19,11 @@ creation_rules:
     mac_only_encrypted: true
   - <<: *flux_apply_files_config
     path_regex: ^cluster/bootstrap/.*\.sops\.ya?ml$
+  # CiliumCIDRGroups whose addresses shouldn't be public (e.g. they'd reveal the VPN
+  # provider). Must come before the generic gitops rule: the first match wins.
+  - <<: *flux_apply_files_config
+    path_regex: ^cluster/gitops/.*\.cidrs\.sops\.ya?ml$
+    encrypted_regex: ^spec$
   - <<: *flux_apply_files_config
     path_regex: ^cluster/gitops/.*\.sops\.ya?ml$
   - path_regex: ".*\\.sops\\.md$"

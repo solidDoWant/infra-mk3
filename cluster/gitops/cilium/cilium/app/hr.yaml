@@ -29,11 +29,14 @@ spec:
     - kind: ConfigMap
       name: helm-bootstrap-values
   # These values are added now that the cluster has been bootstrapped
+  # Scrape intervals are 30s instead of the chart's 10s: every agent scrape walks all
+  # ~1300 BPF maps/programs, which was over half the agent's allocation churn.
   values:
     hubble:
       metrics:
         serviceMonitor:
           enabled: true
+          interval: &scrape_interval 30s
           metricRelabelings:
             - action: drop
               regex: ICMPv6
@@ -43,14 +46,18 @@ spec:
         prometheus:
           serviceMonitor:
             enabled: true
+            interval: *scrape_interval
     prometheus:
       serviceMonitor:
         enabled: true
+        interval: *scrape_interval
     envoy:
       prometheus:
         serviceMonitor:
           enabled: true
+          interval: *scrape_interval
     operator:
       prometheus:
         serviceMonitor:
           enabled: true
+          interval: *scrape_interval

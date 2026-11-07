@@ -22,6 +22,11 @@ bpf:
   # masquerade: true # Enable eBPF for IP masquerading (SNAT)
   preallocateMaps: true # Trade increased memory usage for latency reduction
   tproxy: true
+  # Sizes the CT/NAT/nodeport maps from node RAM: 0.0025 (the default) gave ~866k CT
+  # entries and ~400Mi of maps per 92GiB node with a 14-day peak fill of 31%. This
+  # gives ~520k entries (~50% peak fill). Changing it makes the agent recreate those
+  # maps on restart, which drops existing conntrack/NAT state.
+  mapDynamicSizeRatio: 0.0015
 cgroup:
   # Don't re-mount thet cgroup fs under /run
   autoMount:
