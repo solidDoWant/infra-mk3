@@ -96,8 +96,7 @@ specs:
               - port: "9090"
                 protocol: TCP
   - description: migrate
-    # The pre-install/pre-upgrade hook Job that runs the migrations. The chart
-    # also gives it a Kubernetes NetworkPolicy with the same egress.
+    # The pre-install/pre-upgrade hook Job that runs the migrations
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: toolgate
