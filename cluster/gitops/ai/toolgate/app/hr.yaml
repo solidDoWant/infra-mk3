@@ -85,6 +85,20 @@ spec:
                   memory: &gateway_memory 384Mi
                 limits:
                   memory: *gateway_memory
+      route:
+        gateway:
+          hostnames:
+            - toolgate.${SECRET_PUBLIC_DOMAIN_NAME}
+          parentRefs:
+            - name: internal-gateway
+              namespace: networking
+          # Everything on the main port: MCP (/mcp), the OAuth metadata, the
+          # web UI (/ui/) and the admin API (/api/v1/). Metrics are on a
+          # separate port that isn't routed.
+          rules:
+            - backendRefs:
+                - identifier: gateway
+                  port: 80
       persistence:
         postgres-ca:
           type: secret
