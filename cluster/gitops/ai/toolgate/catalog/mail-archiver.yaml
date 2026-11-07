@@ -15,7 +15,12 @@ spec:
   scope: per-user
   idleStop: 1h
   access:
-    groups: ["Mail Archiver access"]
+    # A real restriction: only people who can use mail-archiver itself (the
+    # same Authentik group as its own app). Each user also needs their own
+    # mail-archiver API key, which only shows the mailboxes their account can.
+    groups:
+      - Mail Archiver access
+    # Usable from any signed-in machine, attested or not.
     environments: any
   remote:
     url: http://mail-archiver.email.svc.cluster.local:5000/mcp
