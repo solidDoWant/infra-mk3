@@ -110,7 +110,8 @@ spec:
               # The image enables Server GC, sized for all 27 node CPUs. Workstation
               # GC suits this mostly idle app.
               DOTNET_gcServer: "0"
-              Api__Enabled: false
+              # Needed for MCP server to be able to create API keys
+              Api__Enabled: true
               # The MCP endpoint (/mcp), read-only, authenticated with each
               # user's own API key (created under API Keys in the UI). Reached
               # only by the toolgate gateway (netpol), which sends the calling
