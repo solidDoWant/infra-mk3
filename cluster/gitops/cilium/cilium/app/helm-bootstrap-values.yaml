@@ -279,6 +279,13 @@ socketLB:
   enabled: true
   hostNamespaceOnly: true # Required for kata-containers
   terminatePodConnections: true
+# Agent working set ~650-860Mi (about half BPF maps, half Go heap) after the
+# map-size and CIDR-group trims; headroom for the heap's slow growth.
+resources:
+  requests:
+    memory: &agent_memory 1536Mi
+  limits:
+    memory: *agent_memory
 updateStrategy:
   rollingUpdate:
     # The chart default (2) restarts the datapath on two of the three nodes at once.
