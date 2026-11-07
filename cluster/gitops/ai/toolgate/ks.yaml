@@ -1,0 +1,52 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name toolgate-backend
+spec:
+  targetNamespace: ai
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ai/toolgate/backend
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: prometheus-crds
+    - name: cluster-issuers
+    - name: ai-namespace-issuer
+    - name: cloudnative-pg
+    - name: kyverno-app
+    - name: rook-ceph-cluster
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name toolgate-app
+spec:
+  targetNamespace: ai
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ai/toolgate/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  # The chart's hooks (model download, migrations) run before the release
+  # applies, and the first model download can take a few minutes.
+  timeout: 10m
+  dependsOn:
+    - name: toolgate-backend
+    - name: gateway-crds
+    - name: grafana-crds
+    - name: prometheus-crds
+    - name: rook-ceph-cluster

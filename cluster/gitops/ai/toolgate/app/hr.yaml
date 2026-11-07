@@ -1,0 +1,182 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: toolgate
+spec:
+  interval: 1h
+  # Not cosign-signed upstream, so there is no `verify` block.
+  url: oci://ghcr.io/soliddowant/charts/toolgate
+  ref:
+    tag: 0.4.3
+    digest: sha256:c6131a737a618674ec453aee2d5257897d89f7d7dec1a186bf93cac49ddf23f9
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: toolgate
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: toolgate
+  values:
+    config:
+      image:
+        tag: 0.4.3@sha256:1c8e62aa37523be969d1c2ca5ca6b3e5ae967dbf9b520c0eb6f8e255d7113d14
+      database:
+        # Split roles: the gateway connects as toolgate_app (rows only), and the
+        # chart's pre-install/pre-upgrade hook Job runs the migrations as
+        # toolgate_migrator (the schema owner). See backend/postgres/hr.yaml.
+        # Inline, because the strings hold no password: pg_hba only allows
+        # client certificate auth (CN = role name), with the certificates
+        # mounted below. toolgate re-reads them for every new connection.
+        # pgx sends search_path as a session setting, so tables and the
+        # extension types resolve in the `toolgate` schema.
+        url: >-
+          host=toolgate-postgres-rw.ai.svc.cluster.local
+          dbname=toolgate
+          user=toolgate_app
+          sslmode=verify-full
+          sslrootcert=/etc/toolgate/certs/postgres/ca/ca.crt
+          sslcert=/etc/toolgate/certs/postgres/app/tls.crt
+          sslkey=/etc/toolgate/certs/postgres/app/tls.key
+          search_path=toolgate
+        migrateOnStart: false
+        migrationUrl: >-
+          host=toolgate-postgres-rw.ai.svc.cluster.local
+          dbname=toolgate
+          user=toolgate_migrator
+          sslmode=verify-full
+          sslrootcert=/etc/toolgate/certs/postgres/ca/ca.crt
+          sslcert=/etc/toolgate/certs/postgres/migrator/tls.crt
+          sslkey=/etc/toolgate/certs/postgres/migrator/tls.key
+          search_path=toolgate
+      oidc:
+        # The public Authentik URL, not the in-cluster openid-configuration-proxy:
+        # clients get their tokens from Authentik over the public hostname, and
+        # the gateway requires the token `iss` to match this exactly (trailing
+        # slash included). The chart has no setting for an extra CA, and the
+        # internal gateway serves a publicly trusted cert.
+        issuerURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/toolgate/
+        # The Authentik client ID: access tokens from `toolgate login`.
+        audience: toolgate
+      ui:
+        publicURL: https://toolgate.${SECRET_PUBLIC_DOMAIN_NAME}
+        # The same public client as the CLI (authorization code with PKCE), so
+        # there is no client secret to manage. Authentik gives each provider its
+        # own issuer, and the gateway takes only one.
+        clientID: toolgate
+        # Authentik's built-in superuser group.
+        adminGroup: authentik Admins
+      # Tool search is on for sessions that don't ask for it either way. The
+      # chart points it at its own embeddings server (embeddings.server below).
+      toolSearch: true
+      serviceMonitor:
+        enabled: true
+    resources:
+      defaultPodOptions:
+        securityContext:
+          # Lets the non-root user read the client certificate key files.
+          fsGroup: 65532
+          fsGroupChangePolicy: OnRootMismatch
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "1"
+      controllers:
+        gateway:
+          containers:
+            gateway:
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: &gateway_memory 384Mi
+                limits:
+                  memory: *gateway_memory
+      route:
+        gateway:
+          hostnames:
+            - toolgate.${SECRET_PUBLIC_DOMAIN_NAME}
+          parentRefs:
+            - name: internal-gateway
+              namespace: networking
+          # Everything on the main port: MCP (/mcp), the OAuth metadata, the
+          # web UI (/ui/) and the admin API (/api/v1/). Metrics are on a
+          # separate port that isn't routed.
+          rules:
+            - backendRefs:
+                - identifier: gateway
+                  port: 80
+      persistence:
+        postgres-ca:
+          type: secret
+          name: toolgate-postgres-serving-cert
+          defaultMode: 0444
+          items:
+            - key: ca.crt
+              path: ca.crt
+          advancedMounts:
+            gateway:
+              gateway:
+                - path: /etc/toolgate/certs/postgres/ca
+                  readOnly: true
+            migrate:
+              migrate:
+                - path: /etc/toolgate/certs/postgres/ca
+                  readOnly: true
+        postgres-app-cert:
+          type: secret
+          name: toolgate-postgres-toolgate-app-user
+          defaultMode: 0440
+          advancedMounts:
+            gateway:
+              gateway:
+                - path: /etc/toolgate/certs/postgres/app
+                  readOnly: true
+        postgres-migrator-cert:
+          type: secret
+          name: toolgate-postgres-toolgate-migrator-user
+          defaultMode: 0440
+          advancedMounts:
+            migrate:
+              migrate:
+                - path: /etc/toolgate/certs/postgres/migrator
+                  readOnly: true
+    embeddings:
+      server:
+        enabled: true
+        cache:
+          # The chart creates `toolgate-models` once (Helm keeps it on
+          # uninstall). RWX so the pre-upgrade download Job can mount it while
+          # the server runs. bge-small-en-v1.5 is about 130 MiB.
+          storageClassName: ssd-replicated-filesystem
+          size: 5Gi
+        # The gateway's leader scales the server to zero when no session has
+        # used tool search for idleTimeout, and back to one when one does.
+        # Searches while it starts use words only.
+        scaleToZero:
+          enabled: true
+          idleTimeout: 15m
+    dashboards:
+      grafanaOperator:
+        enabled: true
+        instanceSelector:
+          matchLabels:
+            grafana.home.arpa/instance: grafana
+        folder: toolgate
+        allowCrossNamespaceImport: true
+  postRenderers:
+    - kustomize:
+        patches:
+          # The gateway owns the embeddings server's replica count (0 or 1), and
+          # the chart leaves `replicas` out. Have drift detection ignore it.
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: toolgate-embeddings
+            patch: |
+              - op: add
+                path: /metadata/labels/patches.flux.home.arpa~1deployment.ignore-replicas
+                value: "true"

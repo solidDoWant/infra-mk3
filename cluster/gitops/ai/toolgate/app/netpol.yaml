@@ -1,0 +1,158 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: toolgate
+specs:
+  - description: gateway
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: toolgate
+        app.kubernetes.io/instance: toolgate
+        app.kubernetes.io/controller: gateway
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Kubernetes API: the leader Lease, the catalog CRDs, TokenReviews, and
+      # creating and watching the objects of MCP server instances
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # PostgreSQL (CNPG), including the LISTEN connection
+      - &to_postgres
+        toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: toolgate-postgres
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+      # Internal gateway: Authentik's public hostname for the OIDC discovery doc
+      # and JWKS, and the web UI's token exchange
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # Embeddings for tool search, from the chart's server (which the leader
+      # scales between 0 and 1 replicas through the Kubernetes API)
+      - toEndpoints:
+          - &embeddings_selector
+            matchLabels:
+              app.kubernetes.io/name: toolgate
+              app.kubernetes.io/instance: toolgate
+              app.kubernetes.io/component: embeddings
+        toPorts:
+          - ports:
+              - port: "80"
+                protocol: TCP
+      # No MCP servers yet. Each instance runs in its own `tg-*` namespace;
+      # when templates are added, allow egress here to their pods, selected by
+      # the namespace label toolgate sets
+      # (io.cilium.k8s.namespace.labels.toolgate.soliddowant.dev/writable: "true")
+      # on each template's endpoint port.
+    ingress:
+      # Kubelet probes (/healthz and /readyz on the main port)
+      - fromEntities:
+          - host
+        toPorts: &http_ports
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # MCP clients, the web UI and the admin API, through the internal gateway
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: *http_ports
+      # Metrics scraping
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
+  - description: migrate
+    # The pre-install/pre-upgrade hook Job that runs the migrations
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: toolgate
+        app.kubernetes.io/instance: toolgate
+        app.kubernetes.io/controller: migrate
+    egress:
+      - *dns_resolution
+      - *to_postgres
+  - description: embeddings-server
+    # No egress: the server runs offline from the downloaded model.
+    endpointSelector: *embeddings_selector
+    ingress:
+      # Kubelet probes (/health)
+      - fromEntities:
+          - host
+        toPorts: &embeddings_ports
+          - ports:
+              - port: "80"
+                protocol: TCP
+      # The gateway's embeddings requests
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: toolgate
+              app.kubernetes.io/instance: toolgate
+              app.kubernetes.io/controller: gateway
+        toPorts: *embeddings_ports
+  - description: embeddings-download
+    # The pre-install/pre-upgrade hook Job that downloads the pinned model
+    # revision into the toolgate-models claim, with `uvx hf`.
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: toolgate
+        app.kubernetes.io/instance: toolgate
+        app.kubernetes.io/component: embeddings-download
+    egress:
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns: &download_fqdns
+                # Hugging Face: the model files, and the CDN they redirect to
+                - matchPattern: huggingface.co
+                - matchPattern: "**.huggingface.co"
+                - matchPattern: "**.hf.co"
+                # PyPI: `uvx` installs huggingface_hub
+                - matchName: pypi.org
+                - matchName: files.pythonhosted.org
+      - toFQDNs: *download_fqdns
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
