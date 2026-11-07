@@ -94,6 +94,19 @@ RUN mkdir -pv /tmp/cilium && \
     tar -xzvf /tmp/cilium/cilium.tar.gz -C /usr/local/bin cilium && \
     rm -rvf /tmp/cilium
 
+# toolgate CLI (MCP gateway client: `toolgate login`, secrets, workspace defaults)
+# renovate: datasource=github-releases depName=solidDoWant/toolgate
+ARG TOOLGATE_VERSION=0.4.5
+RUN mkdir -pv /tmp/toolgate && \
+    # Vars for determining download URLs
+    KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \
+    PRETTY_ARCH="$(case "$(uname -m)" in 'x86_64') echo "amd64";; 'aarch64') echo "arm64";; *) uname -m;; esac)" && \
+    curl -fsSL -o "/tmp/toolgate/toolgate-${KERNEL}-${PRETTY_ARCH}" "https://github.com/solidDoWant/toolgate/releases/download/${TOOLGATE_VERSION}/toolgate-${KERNEL}-${PRETTY_ARCH}" && \
+    curl -fsSL -o /tmp/toolgate/checksums.txt "https://github.com/solidDoWant/toolgate/releases/download/${TOOLGATE_VERSION}/checksums.txt" && \
+    (cd /tmp/toolgate && grep " toolgate-${KERNEL}-${PRETTY_ARCH}\$" checksums.txt | sha256sum -c -) && \
+    install -m 0755 "/tmp/toolgate/toolgate-${KERNEL}-${PRETTY_ARCH}" /usr/bin/toolgate && \
+    rm -rvf /tmp/toolgate
+
 # openspi2jsonschema CRD to schema converter
 # renovate: datasource=github-tags depName=yannh/kubeconform
 ARG KUBECONFORM_VERSION=v0.8.0
