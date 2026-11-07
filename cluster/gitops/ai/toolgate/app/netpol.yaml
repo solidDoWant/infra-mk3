@@ -66,6 +66,17 @@ specs:
           - ports:
               - port: "80"
                 protocol: TCP
+      # Remote MCP server: mail-archiver's /mcp (catalog/mail-archiver.yaml)
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: email
+              app.kubernetes.io/name: mail-archiver
+              app.kubernetes.io/instance: mail-archiver
+              app.kubernetes.io/controller: mail-archiver
+        toPorts:
+          - ports:
+              - port: "5000"
+                protocol: TCP
       # MCP server instances. Each runs in a namespace toolgate creates and
       # labels writable (its own `tg-*` namespaces, and the shared one if
       # configured); only an admin or toolgate can label a namespace. The

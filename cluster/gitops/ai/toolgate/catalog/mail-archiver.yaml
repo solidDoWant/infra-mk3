@@ -1,0 +1,24 @@
+---
+# mail-archiver's built-in MCP server (read-only: list accounts and folders,
+# search, read mail and attachments). toolgate starts nothing: it calls
+# mail-archiver's /mcp with each user's own API key, so a user sees exactly
+# the mailboxes their mail-archiver account can. Each user creates a key in
+# mail-archiver (API Keys) and stores it with:
+#   toolgate secret set mail-archiver-api-key
+# `$${` is Flux's escape: it reaches toolgate as a literal `${secret:...}`.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: mail-archiver
+spec:
+  description: Search and read your archived mail (mail-archiver), read-only.
+  scope: per-user
+  idleStop: 1h
+  access:
+    groups: ["Mail Archiver access"]
+    environments: any
+  remote:
+    url: http://mail-archiver.email.svc.cluster.local:5000/mcp
+    headers:
+      Authorization: "Bearer $${secret:mail-archiver-api-key}"
+    timeout: 30s
