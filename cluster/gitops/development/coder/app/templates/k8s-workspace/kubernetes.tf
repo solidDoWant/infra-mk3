@@ -388,7 +388,13 @@ resource "kubectl_manifest" "deployment" {
                   mountPath = local.cluster_ca_mount_path
                   subPath   = "cluster-pki-root.crt"
                   readOnly  = true
-                }]
+                }],
+                # toolgate workspace attestation (toolgate.tf)
+                local.enable_toolgate ? [{
+                  name      = "toolgate-attestation"
+                  mountPath = local.toolgate_attestation_dir
+                  readOnly  = true
+                }] : []
               )
               resources = merge(
                 {
@@ -434,7 +440,22 @@ resource "kubectl_manifest" "deployment" {
                     path = "cluster-pki-root.crt"
                   }]
                 }
-              }]
+              }],
+              # Bound to this pod: the gateway reads the pod's Coder labels to
+              # attest the workspace. Rotated by the kubelet.
+              local.enable_toolgate ? [{
+                name = "toolgate-attestation"
+                projected = {
+                  defaultMode = 292 # 0444: the workspace user reads it
+                  sources = [{
+                    serviceAccountToken = {
+                      audience          = "toolgate"
+                      expirationSeconds = 3600
+                      path              = "token"
+                    }
+                  }]
+                }
+              }] : []
             )
             hostAliases = [{
               hostnames = local.blackhole_domains
