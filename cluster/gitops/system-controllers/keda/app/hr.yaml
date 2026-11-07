@@ -123,20 +123,22 @@ spec:
             subPath: ca.pem
             readOnly: true
 
-    # CPU limits omitted to allow bursting; memory limits pinned to requests
-    # per cluster convention.
+    # No CPU limits, to allow bursting; memory limits pinned to requests per
+    # cluster convention. `cpu: null` drops the chart's default CPU limit.
     resources:
       operator:
         requests:
           cpu: 100m
           memory: &memory 256Mi
         limits:
+          cpu: null
           memory: *memory
       webhooks:
         requests:
           cpu: 100m
           memory: *memory
         limits:
+          cpu: null
           memory: *memory
 
     # The TLS cert covers the admission webhook (kube-apiserver -> webhook
