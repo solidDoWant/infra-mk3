@@ -102,6 +102,12 @@ spec:
               # Fetches release notes from api.github.com; updates come through
               # Renovate instead.
               ReleaseNotes__Enabled: false
+              # The image enables Server GC, which sees all 27 node CPUs (no CPU
+              # limit), collects lazily and fills its 75%-of-limit heap cap; with
+              # ~100Mi of mapped files plus native buffers on top, that hit the 1Gi
+              # limit and got OOM-killed several times a day. Workstation GC suits
+              # this mostly idle app.
+              DOTNET_gcServer: "0"
               Api__Enabled: false
               Mcp__Enabled: false
             ports:
