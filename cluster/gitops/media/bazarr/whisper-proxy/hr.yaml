@@ -49,10 +49,6 @@ spec:
               # Flush stdout immediately so logs aren't held until shutdown.
               PYTHONUNBUFFERED: "1"
               MAX_AUDIO_BYTES: "536870912" # 512 MiB
-              # glibc gives each busy thread its own malloc arena (up to 8x the 27
-              # visible CPUs); the proxy held ~780Mi in 19 of them, mostly freed
-              # audio buffers that were never returned.
-              MALLOC_ARENA_MAX: "2"
             ports:
               - name: web
                 # App binds 0.0.0.0:9000 (hardcoded in whisper_proxy.__main__).
