@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/dragonflydb/dragonfly-operator/helm/dragonfly-operator
   ref:
-    tag: v1.7.1
-    digest: sha256:334cdd6cd58e08e77289b87ec8756b9f65fd085929ac8bb31e8b847981023376
+    tag: v1.8.0
+    digest: sha256:c52cf016eafb100f2b4f8d7f4f1469b743aac0787a992dbda88cac4544a2eb14
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -26,7 +26,7 @@ spec:
     manager:
       image:
         repository: ghcr.io/dragonflydb/operator
-        tag: v1.7.1@sha256:bc0067369a456810d00715d7292da32b82f6df491fd51d6c57f2b2b3193ab490
+        tag: v1.8.0@sha256:953b5aab07963e2ccc4c61ab6e6bc0d27bfdda6301d81dc2b807396dfef6e6a3
       extraArgs:
         - --metrics-bind-address=0.0.0.0:8080
     serviceMonitor:
