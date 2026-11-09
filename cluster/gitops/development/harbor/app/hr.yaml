@@ -84,7 +84,7 @@ spec:
     portal:
       image:
         repository: ghcr.io/goharbor/harbor-portal
-        tag: v2.15.4@sha256:01edf478505b21dba23a83c095f6ecac0c1e705690093edbab41e9a4d6754a75
+        tag: v2.16.0@sha256:1f1cfe13943815bd037a28bc61e287a69c0fecf00f010248948783b66ce7c9f3
       replicas: 2
       revisionHistoryLimit: 1
       podLabels: &external_access_labels
@@ -92,7 +92,7 @@ spec:
     core:
       image:
         repository: ghcr.io/goharbor/harbor-core
-        tag: v2.15.4@sha256:7d2ba5304a729887cdec7cb222a82b500278423de230ae5150c386a6c332b112
+        tag: v2.16.0@sha256:616f43eb663944d214b5ec042bef072f32170adaa93bfb101773ce2cef946e49
       replicas: 2
       revisionHistoryLimit: 1
       podLabels: *external_access_labels
@@ -141,7 +141,7 @@ spec:
     jobservice:
       image:
         repository: ghcr.io/goharbor/harbor-jobservice
-        tag: v2.15.4@sha256:f143578ef30e2be5c48873298257ed0fca31545025958c534e536a06765d2b82
+        tag: v2.16.0@sha256:002f45f596c6c15de17d2dce4e47bc059c4473078e303dce72e061fe3f71e84b
       replicas: 2
       revisionHistoryLimit: 1
       jobLoggers:
@@ -153,11 +153,11 @@ spec:
       registry:
         image:
           repository: ghcr.io/goharbor/registry-photon
-          tag: v2.15.4@sha256:dc0cb388a6445c69c8a0c406679290d2991c9698833d9e6e86a23bdfaf2f83c3
+          tag: v2.16.0@sha256:878a8976185ded8a1812d0e903ca87c09b8044b6413b63a6271a9ab85f6e930f
       controller:
         image:
           repository: ghcr.io/goharbor/harbor-registryctl
-          tag: v2.15.4@sha256:30bd1ace4e3bb390d75b84673f98ddb4a69fcc6d116932ea764391df01943fb7
+          tag: v2.16.0@sha256:5675659682e784e2d86acccbce7a3424cb68e1c502a000ecbf43f40dfdc0c86a
       replicas: 2
       revisionHistoryLimit: 1
       credentials:
@@ -167,7 +167,7 @@ spec:
     trivy:
       image:
         repository: ghcr.io/goharbor/trivy-adapter-photon
-        tag: v2.15.4@sha256:813ca81b4a4ea0f44f5fa81cca2645eeb58d4b1f6c66b428df9d506174bb71d9
+        tag: v2.16.0@sha256:ad047545d23ae3175e526b075afff3cb51e5154555bcce2928bac0ccf7bc1699
       replicas: 2
       resources:
         requests:
@@ -207,7 +207,7 @@ spec:
       internal:
         image:
           repository: ghcr.io/goharbor/valkey-photon
-          tag: v2.15.4@sha256:bb022e8f236f56f53cee7bb1f609595e497da67d829048e0af2284f97e6eb54f
+          tag: v2.16.0@sha256:2aa24c52899cd2b464d50656b87950b296de59aacab868caec68b0b494cc1648
       # This does not currently work due to https://github.com/envoyproxy/envoy/issues/41659
       # type: external
       # external:
@@ -217,7 +217,7 @@ spec:
     exporter:
       image:
         repository: ghcr.io/goharbor/harbor-exporter
-        tag: v2.15.4@sha256:9ffede33dc519b4be035596a72f00f354754a22a3769077731f81ee7d6852f4f
+        tag: v2.16.0@sha256:58de1ed2ecafa8e131264e545013d754d18ef9128911bd44a6a08fe021e3c708
       revisionHistoryLimit: 1
       # TODO, this will require changing the ServiceMonitor to avoid metric duplication
       # replicas: 2
