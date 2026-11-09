@@ -420,7 +420,7 @@ spec:
       replicaCount: 2
       image:
         repository: mirror.gcr.io/temporalio/ui
-        tag: 2.58.0@sha256:d36185e811d0ce1720b8d3ca4d9ac4dac504b67181e9b5e3d3ca72b2294f3590
+        tag: 2.58.1@sha256:ac3c13eddb4547d830991bb5eee93a5d97140134522b7297fdb2be1fe25ef925
       # TEMPORAL_ADDRESS is hardcoded by the chart (web-deployment.yaml) using the
       # release name + namespace + frontend port — including it here causes a
       # duplicate-env-key error on apply. Don't re-add it.
