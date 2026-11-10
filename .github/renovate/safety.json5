@@ -100,6 +100,14 @@
       versioning: "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-victorialogs)?$",
     },
     {
+      // v1.120.1 (pushed 2026-03-19) is a stray tag next to the real v1.20.x
+      // releases; without this, Renovate offers it as the newest forever.
+      description: "mcp-victoriametrics: ignore the stray v1.120.x tag",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/victoriametrics/mcp-victoriametrics"],
+      allowedVersions: "!/^v1\\.120\\./",
+    },
+    {
       description: "Release tags are vX.Y.Z; the Ansible/Nix vars are bare",
       matchDatasources: ["github-releases"],
       matchPackageNames: ["prometheus-community/smartctl_exporter", "coder/coder"],
