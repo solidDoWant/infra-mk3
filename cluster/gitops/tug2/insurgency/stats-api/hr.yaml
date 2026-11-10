@@ -211,10 +211,13 @@ spec:
             port: *metrics_port
     serviceMonitor:
       # /metrics on port 9090; scraped on both replicas of each instance (per-pod
-      # metrics). The job label (the service name) tells the instances apart.
+      # metrics). The job label comes from the service name (stats-api-main,
+      # stats-api-test) so the dashboard's job variable tells the instances apart;
+      # the default, app.kubernetes.io/name, is stats-api for both.
       main:
         service:
           identifier: main
+        jobLabel: &job_label app.kubernetes.io/service
         endpoints: &service_monitor_endpoints
           - port: metrics
             path: /metrics
@@ -227,6 +230,7 @@ spec:
       test:
         service:
           identifier: test
+        jobLabel: *job_label
         endpoints: *service_monitor_endpoints
     route:
       stats-api:
