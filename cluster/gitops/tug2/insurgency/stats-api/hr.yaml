@@ -28,7 +28,7 @@ spec:
   values:
     controllers:
       # Serves the public game server's stats (the public schema) under /main.
-      stats-api:
+      main:
         replicas: 2
         podDisruptionBudget:
           minAvailable: 1
@@ -51,7 +51,7 @@ spec:
               PGUSER: &pg_user stats-api
               # Tells this instance's sessions apart from stats-api-test's, which use the
               # same role.
-              PGAPPNAME: stats-api
+              PGAPPNAME: stats-api-main
               # The pooler serving cert SAN matches the FQDN above, so verify-full is safe.
               PGSSLMODE: &pg_sslmode verify-full
               PGSSLCERT: &pg_sslcert /etc/stats-api/certs/postgres/tls.crt
@@ -168,7 +168,7 @@ spec:
           - key: tls.key
             path: tls.key
         advancedMounts:
-          stats-api:
+          main:
             app:
               - &postgres_cert_mount
                 path: /etc/stats-api/certs/postgres
@@ -185,7 +185,7 @@ spec:
           - key: ca.crt
             path: ca.crt
         advancedMounts:
-          stats-api:
+          main:
             app:
               - &root_ca_mount
                 path: /etc/stats-api/certs/root-ca
@@ -193,8 +193,8 @@ spec:
             app:
               - *root_ca_mount
     service:
-      stats-api:
-        controller: stats-api
+      main:
+        controller: main
         ports:
           web:
             port: *web_port
@@ -212,9 +212,9 @@ spec:
     serviceMonitor:
       # /metrics on port 9090; scraped on both replicas of each instance (per-pod
       # metrics). The job label (the service name) tells the instances apart.
-      stats-api:
+      main:
         service:
-          identifier: stats-api
+          identifier: main
         endpoints: &service_monitor_endpoints
           - port: metrics
             path: /metrics
@@ -248,7 +248,7 @@ spec:
                   type: PathPrefix
                   value: /main
             backendRefs:
-              - identifier: stats-api
+              - identifier: main
                 port: *web_port
           - matches:
               - path:

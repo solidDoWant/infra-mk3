@@ -4,11 +4,11 @@ kind: CiliumNetworkPolicy
 metadata:
   name: stats-api
 specs:
-  - description: stats-api
+  - description: stats-api-main
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: stats-api
-        app.kubernetes.io/controller: stats-api
+        app.kubernetes.io/controller: main
         app.kubernetes.io/instance: stats-api
     egress:
       # DNS resolution (used to resolve the pooler service FQDN)

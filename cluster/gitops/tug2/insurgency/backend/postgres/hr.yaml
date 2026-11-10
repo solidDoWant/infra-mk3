@@ -74,7 +74,7 @@ spec:
           # pooler ingress as well; stats-api's own egress policy restricts it to the pooler.
           - matchLabels:
               app.kubernetes.io/name: stats-api
-              app.kubernetes.io/controller: stats-api
+              app.kubernetes.io/controller: main
               app.kubernetes.io/instance: stats-api
           # stats-api-test connects to the cluster directly (it needs PGOPTIONS, which the
           # pooler drops), as the stats-api role.
