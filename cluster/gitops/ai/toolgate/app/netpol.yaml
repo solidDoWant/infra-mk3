@@ -77,6 +77,15 @@ specs:
           - ports:
               - port: "5000"
                 protocol: TCP
+      # Claude Code's usage metrics (OTLP), to VictoriaMetrics' load balancer
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/time-series-receiver: "true"
+        toPorts:
+          - ports:
+              - port: "8427"
+                protocol: TCP
       # MCP server instances. Each runs in a namespace toolgate creates and
       # labels writable (its own `tg-*` namespaces, and the shared one if
       # configured); only an admin or toolgate can label a namespace. The

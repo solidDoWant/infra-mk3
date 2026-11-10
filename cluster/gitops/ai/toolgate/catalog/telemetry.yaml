@@ -1,0 +1,31 @@
+---
+# Turns on Claude Code's usage telemetry for everyone who uses toolgate. The
+# toolgate plugin writes these settings into ~/.claude/settings.json when a
+# session starts, and they take effect in the next session.
+#
+# Claude Code sends metrics (tokens, cost) and log events to the gateway's
+# OTLP ingest, signed in with `toolgate otel-headers`. The gateway stamps the
+# verified user and workspace, then sends metrics to VictoriaMetrics and
+# writes the log events to its stdout (see config.otlp* in app/hr.yaml). No
+# traces: there's no trace backend. Prompts and tool content stay off.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: SettingsProfile
+metadata:
+  name: telemetry
+spec:
+  selector:
+    groups:
+      - toolgate access
+  settings:
+    otelHeadersHelper: toolgate otel-headers
+    env:
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: https://toolgate.${SECRET_PUBLIC_DOMAIN_NAME}
+      # Both VictoriaMetrics and the gateway's ingest need cumulative counters.
+      OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: cumulative
+      # Re-run the headers helper every 4 minutes, so the token in the headers
+      # never expires between runs.
+      CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS: "240000"

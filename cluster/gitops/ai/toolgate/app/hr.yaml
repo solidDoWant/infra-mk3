@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.8
-    digest: sha256:31fdfd358c8b79373ac58b098a0ec1010419081cea2c44a8c1c16221518ccd61
+    tag: 0.4.9
+    digest: sha256:02efa75ba6d5d1bba5a13bce59cc0672198098bb2724d5f48cf1d685281799b4
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -25,7 +25,7 @@ spec:
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
-        tag: 0.4.8@sha256:5a0415cd9493dd9da00a83c9aa5ce8ed98184be29513f70606a1844947039738
+        tag: 0.4.9@sha256:cce75cbf61c8a1097a5b87f761aa5b44c55b78659dbc0ec166f6c1c3fac09734
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
@@ -85,12 +85,21 @@ spec:
       # Tool search is on for sessions that don't ask for it either way. The
       # chart points it at its own embeddings server (embeddings.server below).
       toolSearch: true
-      # List toolgate_enable_server in search mode too. The default (`auto`)
-      # hides it there, but a remote server without `declaredTools`
-      # (mail-archiver) has no searchable tools until it runs, so once it
-      # idles out the model has no way to start it again.
-      metaTools:
-        enableDisable: always
+      # Claude Code's usage telemetry (tokens, cost, events), sent by clients
+      # that get the `telemetry` SettingsProfile (catalog/telemetry.yaml). The
+      # gateway stamps the verified user and workspace on each record and
+      # strips prompt and tool content (`telemetry.allowContent` stays off).
+      otlpIngest: true
+      # Metrics: VictoriaMetrics' OTLP endpoint, through the vmauth load
+      # balancer (the gateway adds /v1/metrics).
+      otlpMetricsEndpoint: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427/insert/0/opentelemetry
+      # Logs: one JSON line per record on the gateway's stdout, so the normal
+      # log pipeline ships them to both VictoriaLogs instances.
+      otlpLogsEndpoint: stdout
+      # Traces: no backend, so the gateway discards them (its own too).
+      otlpTracesEndpoint: ""
+      # A bounded set of metric series; per-session detail is in the logs.
+      dropSessionIdFromMetrics: true
       serviceMonitor:
         enabled: true
       # Coder workspace sessions are attested: the client sends the workspace
@@ -125,6 +134,10 @@ spec:
               value: "1"
       controllers:
         gateway:
+          pod:
+            labels:
+              # Pushes Claude Code's usage metrics to VictoriaMetrics.
+              endpoints.netpols.home.arpa/time-series-writer: "true"
           containers:
             gateway:
               resources:
@@ -213,6 +226,10 @@ spec:
           matchLabels:
             grafana.home.arpa/instance: grafana
         allowCrossNamespaceImport: true
+      # "toolgate / Claude Code usage": tokens and cost by user, workspace
+      # and model, from the telemetry above.
+      usage:
+        enabled: true
   postRenderers:
     - kustomize:
         patches:
