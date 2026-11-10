@@ -228,6 +228,7 @@ spec:
             podMetadata:
               labels:
                 endpoints.netpols.home.arpa/time-series-supplier: "true"
+                endpoints.netpols.home.arpa/time-series-receiver: "true"
             podDisruptionBudget:
               minAvailable: 1
             replicaCount: 2

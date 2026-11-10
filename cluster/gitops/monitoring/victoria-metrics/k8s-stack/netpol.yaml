@@ -302,6 +302,14 @@ specs:
                 operator: In
                 values:
                   - "true"
+          # Clients that push metrics, from any namespace
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/time-series-writer
+                operator: In
+                values:
+                  - "true"
           # Metrics collection and pushing
           - matchLabels:
               endpoints.netpols.home.arpa/metrics-scraper: "true"
