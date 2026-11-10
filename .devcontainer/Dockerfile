@@ -96,7 +96,7 @@ RUN mkdir -pv /tmp/cilium && \
 
 # toolgate CLI (MCP gateway client: `toolgate login`, secrets, workspace defaults)
 # renovate: datasource=github-releases depName=solidDoWant/toolgate
-ARG TOOLGATE_VERSION=0.4.9
+ARG TOOLGATE_VERSION=0.4.10
 RUN mkdir -pv /tmp/toolgate && \
     # Vars for determining download URLs
     KERNEL="$(uname -s | tr '[:upper:]' '[:lower:]')" && \

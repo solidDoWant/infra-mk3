@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.9
-    digest: sha256:02efa75ba6d5d1bba5a13bce59cc0672198098bb2724d5f48cf1d685281799b4
+    tag: 0.4.10
+    digest: sha256:d7926a4a85dc63e270157eb740421deb92f8be73cda1706487edd56e85c7a66a
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -25,7 +25,7 @@ spec:
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
-        tag: 0.4.9@sha256:cce75cbf61c8a1097a5b87f761aa5b44c55b78659dbc0ec166f6c1c3fac09734
+        tag: 0.4.10@sha256:5eb0f4908801c757ca798ce18a2432bee249617805e50b377b5b19127d9cff9e
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
@@ -98,8 +98,12 @@ spec:
       otlpLogsEndpoint: stdout
       # Traces: no backend, so the gateway discards them (its own too).
       otlpTracesEndpoint: ""
-      # A bounded set of metric series; per-session detail is in the logs.
-      dropSessionIdFromMetrics: true
+      # Keep `session.id` on metrics. Without it, sessions that run at the
+      # same time with the same user, workspace and model (agents running many
+      # `claude -p` in one VM) write their cumulative counters to one series,
+      # and the totals come out too high. Each session adds about 20-40
+      # short-lived series, which is fine at this scale.
+      dropSessionIdFromMetrics: false
       serviceMonitor:
         enabled: true
       # Coder workspace sessions are attested: the client sends the workspace
