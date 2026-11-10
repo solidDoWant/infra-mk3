@@ -44,7 +44,7 @@ spec:
         disableReloading: true
         role:
           comment: Test game server
-      # Read-only consumer (stats-api)
+      # Read-only consumer (stats-api, both the main and test instances)
       stats-api:
         username: stats-api
         disableReloading: true
@@ -74,5 +74,11 @@ spec:
           # pooler ingress as well; stats-api's own egress policy restricts it to the pooler.
           - matchLabels:
               app.kubernetes.io/name: stats-api
-              app.kubernetes.io/controller: stats-api
+              app.kubernetes.io/controller: main
+              app.kubernetes.io/instance: stats-api
+          # stats-api-test connects to the cluster directly (it needs PGOPTIONS, which the
+          # pooler drops), as the stats-api role.
+          - matchLabels:
+              app.kubernetes.io/name: stats-api
+              app.kubernetes.io/controller: test
               app.kubernetes.io/instance: stats-api

@@ -4,15 +4,16 @@ kind: CiliumNetworkPolicy
 metadata:
   name: stats-api
 specs:
-  - description: stats-api
+  - description: stats-api-main
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: stats-api
-        app.kubernetes.io/controller: stats-api
+        app.kubernetes.io/controller: main
         app.kubernetes.io/instance: stats-api
     egress:
       # DNS resolution (used to resolve the pooler service FQDN)
-      - toEndpoints:
+      - &dns_egress
+        toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               endpoints.netpols.home.arpa/cluster-dns: "true"
@@ -33,7 +34,7 @@ specs:
           - ports:
               - port: "5432"
                 protocol: TCP
-    ingress:
+    ingress: &ingress
       # Kubelet for liveness/readiness probes
       - fromEntities:
           - host
@@ -61,3 +62,25 @@ specs:
           - ports:
               - port: "9090"
                 protocol: TCP
+  - description: stats-api-test
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: stats-api
+        app.kubernetes.io/controller: test
+        app.kubernetes.io/instance: stats-api
+    egress:
+      # DNS resolution (used to resolve the cluster's ro service FQDN)
+      - *dns_egress
+      # PostgreSQL directly on the cluster instances (the ro service routes to the
+      # replicas). Not through the pooler, which drops the PGOPTIONS that select the
+      # test schema.
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/cluster: insurgency-postgres
+              cnpg.io/podRole: instance
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
+    # Same as stats-api: probes, both gateways, metrics scraping
+    ingress: *ingress

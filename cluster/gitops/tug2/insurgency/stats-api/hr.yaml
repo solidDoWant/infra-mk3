@@ -27,39 +27,47 @@ spec:
     name: stats-api
   values:
     controllers:
-      stats-api:
+      # Serves the public game server's stats (the public schema) under /main.
+      main:
         replicas: 2
         podDisruptionBudget:
           minAvailable: 1
         strategy: RollingUpdate
         containers:
           app:
-            image:
+            image: &image
               repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/stats-api
-              tag: 0.0.7
+              tag: 0.0.8
             env:
               LISTEN_ADDR: ":8080"
+              # Both instances share the insurgency-stats hostname; the gateway forwards
+              # the prefix intact, and the app serves its API, docs and spec under it.
+              BASE_PATH: /main
               # Read-only access through the PgBouncer ro pooler (routes to the replicas).
               # pgx reads the standard libpq env vars when DATABASE_URL is unset.
               PGHOST: insurgency-postgres-pooler-ro.tug2.svc.cluster.local
               PGPORT: "5432"
-              PGDATABASE: sourcemod-insurgency-stats
-              PGUSER: stats-api
+              PGDATABASE: &pg_database sourcemod-insurgency-stats
+              PGUSER: &pg_user stats-api
+              # Tells this instance's sessions apart from stats-api-test's, which use the
+              # same role.
+              PGAPPNAME: stats-api-main
               # The pooler serving cert SAN matches the FQDN above, so verify-full is safe.
-              PGSSLMODE: verify-full
-              PGSSLCERT: /etc/stats-api/certs/postgres/tls.crt
-              PGSSLKEY: /etc/stats-api/certs/postgres/tls.key
-              PGSSLROOTCERT: /etc/stats-api/certs/root-ca/ca.crt
+              PGSSLMODE: &pg_sslmode verify-full
+              PGSSLCERT: &pg_sslcert /etc/stats-api/certs/postgres/tls.crt
+              PGSSLKEY: &pg_sslkey /etc/stats-api/certs/postgres/tls.key
+              PGSSLROOTCERT: &pg_sslrootcert /etc/stats-api/certs/root-ca/ca.crt
               PGOPTIONS: -c statement_timeout=5000 # Fail fast if the database is unresponsive
               # Replaces k8tz injection (see pod annotation). distroless/static ships tzdata.
-              TZ: America/Chicago
-            ports:
+              TZ: &tz America/Chicago
+            ports: &ports
               - name: web
                 containerPort: &web_port 8080
               - name: metrics
                 containerPort: &metrics_port 9090
-            probes:
-              # /readyz pings the database; /livez does not.
+            probes: &probes
+              # /readyz pings the database; /livez does not. Both stay at the root
+              # whatever BASE_PATH is.
               readiness:
                 enabled: true
                 type: HTTP
@@ -68,20 +76,20 @@ spec:
                 enabled: true
                 type: HTTP
                 path: /livez
-            securityContext:
+            securityContext: &container_security_context
               readOnlyRootFilesystem: true
               allowPrivilegeEscalation: false
               capabilities:
                 drop:
                   - ALL
-            resources:
+            resources: &resources
               requests:
                 cpu: 25m
                 memory: &memory 128Mi
               limits:
                 memory: *memory
                 cpu: 500m
-        pod:
+        pod: &pod
           annotations:
             # k8tz's nested zoneinfo + /etc/localtime mounts break kata: every pod
             # deleted (weekly, by descheduler PodLifeTime) left an orphaned
@@ -95,6 +103,44 @@ spec:
           # the Kyverno policy in pull-credentials-policy.yaml.
           imagePullSecrets:
             - name: tug2-pull-credentials-dockerconfig
+      # Serves the test game server's stats (the insurgency-test schema) under /test.
+      test:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        strategy: RollingUpdate
+        containers:
+          app:
+            image: *image
+            env:
+              LISTEN_ADDR: ":8080"
+              BASE_PATH: /test
+              # Connects to the replicas directly rather than through the pooler. The app's
+              # table names are unqualified, so the test schema is selected with a
+              # connect-time search_path (PGOPTIONS below), and PgBouncer drops the
+              # `options` startup parameter (ignore_startup_parameters).
+              PGHOST: insurgency-postgres-ro.tug2.svc.cluster.local
+              PGPORT: "5432"
+              PGDATABASE: *pg_database
+              # Same read-only role and client cert as stats-api (pg_read_all_data covers
+              # the test schema too).
+              PGUSER: *pg_user
+              PGAPPNAME: stats-api-test
+              # Keeps the total well under max_connections now that this instance doesn't
+              # share the pooler.
+              DATABASE_URL: postgres:///?pool_max_conns=4
+              # The cluster serving cert SAN matches the FQDN above, so verify-full is safe.
+              PGSSLMODE: *pg_sslmode
+              PGSSLCERT: *pg_sslcert
+              PGSSLKEY: *pg_sslkey
+              PGSSLROOTCERT: *pg_sslrootcert
+              PGOPTIONS: -c search_path=insurgency-test -c statement_timeout=5000
+              TZ: *tz
+            ports: *ports
+            probes: *probes
+            securityContext: *container_security_context
+            resources: *resources
+        pod: *pod
     defaultPodOptions:
       # Run under the kata-containers runtime for VM-level isolation (public-facing API).
       runtimeClassName: kata
@@ -122,9 +168,13 @@ spec:
           - key: tls.key
             path: tls.key
         advancedMounts:
-          stats-api:
+          main:
             app:
-              - path: /etc/stats-api/certs/postgres
+              - &postgres_cert_mount
+                path: /etc/stats-api/certs/postgres
+          test:
+            app:
+              - *postgres_cert_mount
       # Cluster root CA (TLS trust anchor) in its own directory — mounting it as a
       # subPath file inside the postgres cert dir fails (nested volume mount points).
       root-ca:
@@ -135,12 +185,24 @@ spec:
           - key: ca.crt
             path: ca.crt
         advancedMounts:
-          stats-api:
+          main:
             app:
-              - path: /etc/stats-api/certs/root-ca
+              - &root_ca_mount
+                path: /etc/stats-api/certs/root-ca
+          test:
+            app:
+              - *root_ca_mount
     service:
-      stats-api:
-        controller: stats-api
+      main:
+        controller: main
+        ports:
+          web:
+            port: *web_port
+            primary: true
+          metrics:
+            port: *metrics_port
+      test:
+        controller: test
         ports:
           web:
             port: *web_port
@@ -148,9 +210,12 @@ spec:
           metrics:
             port: *metrics_port
     serviceMonitor:
-      stats-api:
-        endpoints:
-          # /metrics on port 9090; scraped on both replicas (per-pod metrics).
+      # /metrics on port 9090; scraped on both replicas of each instance (per-pod
+      # metrics). The job label (the service name) tells the instances apart.
+      main:
+        service:
+          identifier: main
+        endpoints: &service_monitor_endpoints
           - port: metrics
             path: /metrics
             relabelings:
@@ -159,6 +224,10 @@ spec:
                 sourceLabels:
                   - __meta_kubernetes_pod_name
                 targetLabel: instance
+      test:
+        service:
+          identifier: test
+        endpoints: *service_monitor_endpoints
     route:
       stats-api:
         labels:
@@ -170,26 +239,81 @@ spec:
             namespace: networking
           - name: external-gateway
             namespace: networking
+        # Only the two base paths reach the app, so the root-level kubelet-only health
+        # endpoints (/readyz, /livez) get the gateway's 404. The prefix is forwarded
+        # intact: the app expects it.
         rules:
-          # Block the kubelet-only health endpoints from gateway access by rewriting to a
-          # path the app doesn't recognize (so it returns a real 404). Kubelet probes the
-          # pod directly, not through the gateway, so they are unaffected.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /main
+            backendRefs:
+              - identifier: main
+                port: *web_port
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /test
+            backendRefs:
+              - identifier: test
+                port: *web_port
+          # The API used to be served at the root. Redirect the old paths to /main so
+          # existing clients and links keep working.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  statusCode: 301
+                  path:
+                    type: ReplacePrefixMatch
+                    replacePrefixMatch: /main/api
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /schemas
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  statusCode: 301
+                  path:
+                    type: ReplacePrefixMatch
+                    replacePrefixMatch: /main/schemas
           - matches:
               - path:
                   type: Exact
-                  value: /readyz
+                  value: /
               - path:
                   type: Exact
-                  value: /livez
+                  value: /docs
             filters:
-              - type: URLRewrite
-                urlRewrite:
+              - type: RequestRedirect
+                requestRedirect:
+                  statusCode: 301
                   path:
                     type: ReplaceFullPath
-                    replaceFullPath: /health-not-exposed-via-gateway
-            backendRefs:
-              - identifier: stats-api
-                port: *web_port
-          - backendRefs:
-              - identifier: stats-api
-                port: *web_port
+                    replaceFullPath: /main/docs
+          - matches:
+              - path:
+                  type: Exact
+                  value: /openapi.json
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  statusCode: 301
+                  path:
+                    type: ReplaceFullPath
+                    replaceFullPath: /main/openapi.json
+          - matches:
+              - path:
+                  type: Exact
+                  value: /openapi.yaml
+            filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  statusCode: 301
+                  path:
+                    type: ReplaceFullPath
+                    replaceFullPath: /main/openapi.yaml
