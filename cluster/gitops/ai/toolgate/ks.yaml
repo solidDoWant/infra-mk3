@@ -72,25 +72,3 @@ spec:
   dependsOn:
     # The MCPServerTemplate CRD comes from the toolgate chart.
     - name: toolgate-app
----
-# The Grafana MCP server's Viewer account (in Grafana's namespace) and the
-# policy that copies its token into the server's instance namespaces.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
-  name: &app_name toolgate-grafana-mcp
-spec:
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/ai/toolgate/grafana-mcp
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: grafana-app
-    - name: kyverno-app

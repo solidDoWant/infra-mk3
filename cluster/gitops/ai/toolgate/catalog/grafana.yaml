@@ -5,10 +5,10 @@
 # https://github.com/grafana/mcp-grafana
 #
 # It calls Grafana's API with the token of a Viewer service account
-# (../grafana-mcp/). A Kyverno policy there copies the token into each
-# instance namespace of this template when toolgate creates it; the Secret goes
-# away with the namespace. If the Pod starts before the copy exists, the
-# kubelet retries the mount until it does.
+# (cluster/gitops/monitoring/grafana/mcp/). A Kyverno policy there copies the
+# token into each instance namespace of this template when toolgate creates
+# it; the Secret goes away with the namespace. If the Pod starts before the
+# copy exists, the kubelet retries the mount until it does.
 #
 # `$${` is Flux's escape: it reaches toolgate as a literal `${`.
 #
@@ -111,7 +111,7 @@ spec:
               - name: tmp
                 mountPath: /tmp
         volumes:
-          # Copied in by the Kyverno policy in ../grafana-mcp/.
+          # Copied in by the Kyverno policy in monitoring/grafana/mcp/.
           - name: token
             secret:
               secretName: grafana-mcp-token
