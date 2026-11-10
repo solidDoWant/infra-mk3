@@ -85,6 +85,12 @@ spec:
       # Tool search is on for sessions that don't ask for it either way. The
       # chart points it at its own embeddings server (embeddings.server below).
       toolSearch: true
+      # List toolgate_enable_server in search mode too. The default (`auto`)
+      # hides it there, but a remote server without `declaredTools`
+      # (mail-archiver) has no searchable tools until it runs, so once it
+      # idles out the model has no way to start it again.
+      metaTools:
+        enableDisable: always
       serviceMonitor:
         enabled: true
       # Coder workspace sessions are attested: the client sends the workspace
