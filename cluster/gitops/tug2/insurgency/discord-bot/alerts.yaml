@@ -1,0 +1,137 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: discord-bot
+spec:
+  groups:
+    - name: tug2-discord-bot
+      rules:
+        - alert: DiscordBotDown
+          expr: |
+            up{namespace="tug2", job="discord-bot"} == 0
+              or absent(up{namespace="tug2", job="discord-bot"})
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: The tug2 Discord bot is not running or can't be scraped
+            description: |
+              The discord-bot pod has not been scraped for 10m. It runs a single
+              replica, so nobody's questions are being answered. Check the pod: a
+              configuration error (logged at startup, all problems at once) stops it
+              from starting.
+
+        - alert: DiscordBotDisconnected
+          expr: discordbot_discord_connected{namespace="tug2"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: The tug2 Discord bot has lost its Discord connection
+            description: |
+              The bot has been disconnected from the Discord gateway for 5m and is
+              missing every message. Check its logs and the gateway egress
+              (*.discord.gg) in its network policy; a reset bot token also does this.
+
+        # Spend is estimated from the billed token counts at Claude Haiku 5.5 prices
+        # (USD per million tokens: input 0.10, cache read 0.01, cache write 0.125,
+        # output 0.50), the same defaults as the dashboard. Update the prices here if
+        # LLM_MODEL changes.
+        - alert: DiscordBotSpendBurst
+          expr: |
+            (
+                sum(increase(discordbot_model_tokens_total{namespace="tug2", type="input"}[1h])) * 0.10
+              + sum(increase(discordbot_model_tokens_total{namespace="tug2", type="cache_read"}[1h])) * 0.01
+              + sum(increase(discordbot_model_tokens_total{namespace="tug2", type="cache_write"}[1h])) * 0.125
+              + sum(increase(discordbot_model_tokens_total{namespace="tug2", type="output"}[1h])) * 0.50
+            ) / 1e6 > 0.50
+          labels:
+            severity: warning
+          annotations:
+            summary: "Discord bot Claude spend over the last hour is {{ $value | printf \"%.2f\" }} USD"
+            description: |
+              Estimated Claude API spend in the last hour is above $0.50. A typical
+              question costs about $0.001 and the worst case about $0.06, so this is
+              heavy use or abuse. Check the "answered" log lines for who is asking,
+              and lower their limit with USER_LIMITS if needed.
+
+        - alert: DiscordBotDailySpendHigh
+          expr: |
+            (
+                sum(increase(discordbot_model_tokens_total{namespace="tug2", type="input"}[24h])) * 0.10
+              + sum(increase(discordbot_model_tokens_total{namespace="tug2", type="cache_read"}[24h])) * 0.01
+              + sum(increase(discordbot_model_tokens_total{namespace="tug2", type="cache_write"}[24h])) * 0.125
+              + sum(increase(discordbot_model_tokens_total{namespace="tug2", type="output"}[24h])) * 0.50
+            ) / 1e6 > 2
+          labels:
+            severity: warning
+          annotations:
+            summary: "Discord bot Claude spend over the last 24h is {{ $value | printf \"%.2f\" }} USD"
+            description: |
+              Estimated Claude API spend in the last 24h is above $2. The Anthropic
+              Console is the source of truth for the actual bill.
+
+        - alert: DiscordBotModelErrors
+          expr: |
+            (
+                sum by (model) (increase(discordbot_model_requests_total{namespace="tug2", result!="ok"}[15m]))
+              / sum by (model) (increase(discordbot_model_requests_total{namespace="tug2"}[15m]))
+            ) > 0.25
+            and sum by (model) (increase(discordbot_model_requests_total{namespace="tug2"}[15m])) >= 4
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanizePercentage }} of Claude API requests are failing"
+            description: |
+              More than a quarter of requests to {{ $labels.model }} failed over 15m.
+              The result label on discordbot_model_requests_total says why:
+              client_error is usually a bad API key or an exhausted credit balance;
+              rate_limited, overloaded and server_error are on Anthropic's side;
+              network is the bot's egress (api.anthropic.com).
+
+        - alert: DiscordBotToolErrors
+          expr: |
+            (
+                sum by (tool) (increase(discordbot_tool_calls_total{namespace="tug2", result="error"}[30m]))
+              / sum by (tool) (increase(discordbot_tool_calls_total{namespace="tug2", result!="skipped"}[30m]))
+            ) > 0.5
+            and sum by (tool) (increase(discordbot_tool_calls_total{namespace="tug2", result!="skipped"}[30m])) >= 3
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Discord bot tool {{ $labels.tool }} is failing {{ $value | humanizePercentage }} of calls"
+            description: |
+              Over half of the {{ $labels.tool }} calls failed over 30m. This usually
+              means something the bot reads can't be reached: a stats-api instance, a
+              game server (A2S), a Discord channel it lacks permission for, or GitHub.
+              The "tool call" log lines have the errors.
+
+        - alert: DiscordBotQuestionErrors
+          expr: |
+            (
+                sum(increase(discordbot_questions_total{namespace="tug2", outcome="error"}[30m]))
+              / sum(increase(discordbot_questions_total{namespace="tug2", outcome=~"answered|limited|refused|error"}[30m]))
+            ) > 0.25
+            and sum(increase(discordbot_questions_total{namespace="tug2", outcome=~"answered|limited|refused|error"}[30m])) >= 4
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanizePercentage }} of Discord bot questions are ending in an error"
+            description: |
+              More than a quarter of questions over 30m ended in an error instead of
+              an answer. Check DiscordBotModelErrors and the bot's logs.
+
+        - alert: DiscordBotIssueFilingFailed
+          expr: sum(increase(discordbot_issues_total{namespace="tug2", action="failed"}[1h])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: The Discord bot failed to file a GitHub issue
+            description: |
+              GitHub rejected an issue a user confirmed in the last hour. Check the
+              GitHub App: still installed on solidDoWant/tug2, Issues read/write
+              permission, private key not revoked, and the configured labels exist.

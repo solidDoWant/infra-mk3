@@ -85,6 +85,34 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
+  name: &app_name tug2-insurgency-discord-bot
+spec:
+  targetNamespace: tug2
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/tug2/insurgency/discord-bot
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # The pull-secret Kyverno policy lives in the stats-api directory, and the bot
+    # reads stats from it.
+    - name: tug2-insurgency-stats-api
+    # Kyverno generates the pull secret and restarts the bot when its secret changes.
+    - name: kyverno-app
+    # ServiceMonitor and PrometheusRule CRDs.
+    - name: prometheus-crds
+    # GrafanaDashboard CRD.
+    - name: grafana-crds
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
   name: &app_name tug2-insurgency-fastdl
 spec:
   targetNamespace: tug2

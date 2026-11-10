@@ -53,6 +53,12 @@ specs:
               app.kubernetes.io/name: ingress-gateways
               gateway.networking.k8s.io/gateway-name: external-gateway
         toPorts: *api_port
+      # Stats lookups from the Discord bot
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: discord-bot
+              app.kubernetes.io/instance: discord-bot
+        toPorts: *api_port
       # Prometheus metrics scraping
       - fromEndpoints:
           - matchLabels:

@@ -127,10 +127,14 @@ specs:
               - port: "27001"
                 protocol: UDP
       # A2S queries from the metrics exporter (in-cluster pods are not `world`)
+      # and from the Discord bot (live server state)
       - fromEndpoints:
           - matchLabels:
               app.kubernetes.io/name: insurgency-a2s-exporter
               app.kubernetes.io/instance: insurgency-a2s-exporter
+          - matchLabels:
+              app.kubernetes.io/name: discord-bot
+              app.kubernetes.io/instance: discord-bot
         toPorts:
           - ports:
               - port: "27000"

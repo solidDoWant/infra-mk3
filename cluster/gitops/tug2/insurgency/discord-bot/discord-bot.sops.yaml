@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: discord-bot
+  labels:
+    # The Kyverno workload-reloader restarts the bot when this secret changes; it
+    # only reads its settings at startup.
+    kyverno.home.arpa/reload: "true"
+type: Opaque
+stringData:
+  #ENC[AES256_GCM,data:kDtvIqmht17MMrmvviUA7uFUTKgg3abFUROVq+/kG2Eu8u0xE4ZpMK+JXljtEQiEvroE/1tRT30GnESAMK7UbeX/Sd9FxyymE8u4U+u3TXgrCh2AUQ==,iv:TZBWMzXQnl/eIWu6AtTYGlVLz6c2rHNoTDvpfaQX9P8=,tag:fdhc0R9IRl7XTyYhIjBRVQ==,type:comment]
+  DISCORD_TOKEN: ENC[AES256_GCM,data:rmSh+GHXVtpWtHq5y1rVY2Vz3nHp3WSg1dkX0RX7HAEb0lVuMyF21FvA5KOyq2jghoFJ/u0j3FeB9n3bRqTmsUa/Pkj5R9eL,iv:yZm2mx8z50pfUpqCybFFgH6FbzJMYsjcXGLxRFOmXdY=,tag:UZ6qFddVy+rHJKjTW5nkDw==,type:str]
+  #ENC[AES256_GCM,data:AygxtPTg7R/pcHEtC5c9HSpWDeYneRna7QFmExtvY91APWpAIzVcxCZr,iv:A3fhuQWI73eFyniERcV837xADFqJHAYAgYAQlLbJT08=,tag:yC/G0UHd7sb11Ze0lFvPMw==,type:comment]
+  DISCORD_CHANNEL_ID: ENC[AES256_GCM,data:KqWWNnJywkiHkEQWzhsfYC2KMA==,iv:IXdstAzZVi0vwpgsRCSedgOFK5wRg6rzgRzKRJZQS5E=,tag:4ze3JzVnBdj43zTIljV6vQ==,type:str]
+  #ENC[AES256_GCM,data:P7FYp592gl+wKEuvn8MqMX7m4l7TxYvMHmXP6ccOae3kGmDZieI1Xf2vEfu7UQzUurBftq7+uFlbZ7SJlEBvkKwUn0KSxJwc9ZZz4Q==,iv:qxiWbKoTPf/+Tc5hFn2X7+GEQ8pm+/AN3N6rS6uyn/4=,tag:MICL9J9B+ajerzZKRqQiTQ==,type:comment]
+  GITHUB_APP_ID: ENC[AES256_GCM,data:mA8/hEEFCw==,iv:YOtzH9g1c2o56TjGfRseaaftSJyFAg33ZNSIFAbV/lM=,tag:YNtKDKace4APdniJiIW1bQ==,type:str]
+  GITHUB_APP_PRIVATE_KEY: ENC[AES256_GCM,data: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,iv:UxrIQgSOrYExUckRo/7WrIfgmshQGsm7+sViXak8V1Q=,tag:gYiRUOPuhnzHLcQ3qf3T0Q==,type:str]
+  #ENC[AES256_GCM,data:+VHsK2QYZhLG1H3y4rg9vXnfJcZgQxJ2Ma4kHbdMyWpjm5BqHUT20p09bEJAt/ukLliBTFUZR3I=,iv:lsCkaj4BHDyhi1mCJTc4/4/TGr06cxrJuFLnaNt9S6s=,tag:Ep7O1pU5CEjYS4vjyOuowQ==,type:comment]
+  #ENC[AES256_GCM,data:rrLgRl8b5MlvooHAEoC2VHriNE4TTD5hV5wAL0nNndTqXM/GjN8oV2iQgEAGWV6ieAScId/hNICRiAT9lPw51og9mLi/IYKdR5DTjjuVwhI4ZUwn/bk=,iv:SOTKq4wuz33KBhcSuoC7ZfK2H47VRPazbE5sgGHlc7E=,tag:Vhv4KohyYOpGtEDQF9dGuQ==,type:comment]
+  USER_LIMITS: ENC[AES256_GCM,data:/yvu9mkhh1deeU4R5uQBRRJQBj8ureucNrS8b/v6d6SEvGTseU64rNDfyCZzSmMnl4yGdupvPivmBNwCQ/bRJ6IIFy964aCcF0mqXVEmynOlNMYElXmLQm7IoUPD0aivdADRPEfhDXEe5VqPjOQ=,iv:xTb3eFoec9CNANQ1DsP2zGn7+gfF3ovteGszyrXAADI=,tag:BShjom1Y4J2zeATgu+XLFA==,type:str]
+  ANTHROPIC_FEDERATION_RULE_ID: ENC[AES256_GCM,data:B5G6Cf+SHzbvjwtoxl2jGhF6dD+EtHTtQeWEumI=,iv:kcdkI/9GS4Ap3oBVBz2GFoiPSe9nONRKtODI+z5oVwg=,tag:FpYx3/PGGOEqN0GvjxkcEQ==,type:str]
+  ANTHROPIC_ORGANIZATION_ID: ENC[AES256_GCM,data:bz6FxKxRUYBq8r6diiI+0ZSPkczBg53Zyymvly4Yc5IM7Enn,iv:OcjzO410xfu720VVdwt7moPvMap3DWGatPxeqpg84FU=,tag:eYzpjh9/MVk7xxT9mvvUGw==,type:str]
+  ANTHROPIC_SERVICE_ACCOUNT_ID: ENC[AES256_GCM,data:y6NZ1UT2GZqrP/JPxp8I+VDP30MgeAznYP8+YlY=,iv:bcuBAQ91Aoa3PVTIzVtWhKvp94GIs3wKyx88kaKBmfQ=,tag:b/tS94yjp1FNWmC8RaguqA==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBZREJOVnRCRXJNam5taTVG
+        WkxXT2tQMWVaaGp5MDZMdWdWaHhGOGlOR0hrCmNiL0JqUzEzcW4zeStKUXB5MEZk
+        dTRzbGZpSWg4ZDZZR2Nma3lqaVVkV0kKLS0tIEdaUit4ZzkxZWJ5VmRvMFVCemp6
+        VHlGQ1hoSUJGV2FkSkpxSWV1dnp6czQKnB90o7LMa08wBJ3j1D0Nuo/+EeqoveOE
+        iS2jqPZP63xEBN5IhZASFpJxPILD1chlmN7iwCyUh/aV3EWxLYYqEg==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBMMzAvUk1wdDlxbVdMUVc0
+        ME1oUHhiMDRCUE5KZjgvODJ4R0FiZ29Ja2tNCjhaTmVlWjhuTWFRZG9sK3BZYWht
+        YS9Ha2RXaUhzQXVMdGxrWFVGWHBVRzAKLS0tIERjWDZLb3A1QXlPbnc2SVlNTkZu
+        L1hDWU1DdDd0QkpwM3NiRmhPNmJMaFUKtiRu3xWLmd7mfTxB9XsSh9Ts/R6P6Jsx
+        0tHtqrtUheaYcKLgO8LhjlKWwelin5xlwIzz0F5Fzu5ZgCTa4pduug==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-10T23:55:53Z"
+  mac: ENC[AES256_GCM,data:HYLqlUYUF1byt9YVAimEdP3YlhCe/aiij0C0hL7S1E0sJ88hgS0egw1JHlq8s/dQaiSNBXNEjBj5tt0IvPRrTtOCLUiKMlvxQoLoKFA/eFGJcLj40Zf/E+KOIlhjpLNkXKKf5MsKyvdPlNHo/jwQg8v5CgQkBptmx+EYVilivUc=,iv:I5xeIOyJJaARJFZ5hkSeNP3RaZ7yER/7XDMyVIEkprQ=,tag:eSKB7fsEwh1r/mzuPpWetQ==,type:str]
+  mac_only_encrypted: true
+  version: 3.13.3

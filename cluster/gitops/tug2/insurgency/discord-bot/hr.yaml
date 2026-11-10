@@ -1,0 +1,177 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: discord-bot
+spec:
+  interval: 1h
+  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+  ref:
+    tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/bjw-s-labs/helm-charts/\.github/workflows/chart-release-steps\.yaml@refs/.+$
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: discord-bot
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: discord-bot
+  values:
+    controllers:
+      main:
+        # Exactly one replica, replaced with Recreate. Every gateway connection made
+        # with the bot token receives every message, so two pods (including an old
+        # and a new one mid-rollout) would both answer each mention. The bot keeps
+        # no state worth protecting, so there is no PDB.
+        replicas: 1
+        strategy: Recreate
+        # The Claude API trusts this service account's tokens (workload identity
+        # federation), so the bot needs no API key.
+        serviceAccount:
+          identifier: discord-bot
+        containers:
+          app:
+            image:
+              repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/discord-bot
+              tag: 0.0.5@sha256:874c8642f0ad1e577fc4ba9b24fddb5c9806efb1327f77f30227b564320029d3
+            env:
+              HEALTH_ADDR: ":8080"
+              METRICS_ADDR: ":9090"
+              # The first server is the default when a question doesn't name one.
+              # stats_api_url is the in-cluster address (never shown to users), and
+              # includes each instance's BASE_PATH. query_address is the game port,
+              # where srcds answers A2S queries.
+              SERVERS: |
+                [
+                  {
+                    "name": "main",
+                    "description": "the main public server",
+                    "stats_api_url": "http://stats-api-main.tug2.svc.cluster.local:8080/main",
+                    "public_stats_api_url": "https://insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}/main",
+                    "query_address": "insurgency-server.tug2.svc.cluster.local:27000"
+                  },
+                  {
+                    "name": "test",
+                    "description": "the test server, where changes are tried before main",
+                    "stats_api_url": "http://stats-api-test.tug2.svc.cluster.local:8080/test",
+                    "public_stats_api_url": "https://insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}/test",
+                    "query_address": "insurgency-server.tug2.svc.cluster.local:27001"
+                  }
+                ]
+              # The model can read every text/announcement channel where the bot has
+              # View Channel and Read Message History (anything it can read, anyone can
+              # read through it). These optional descriptions, keyed by channel ID,
+              # replace the channel topic to help the model pick a channel, e.g.
+              #   { "<channel id>": "Server update notes, newest first" }
+              CHANNEL_DESCRIPTIONS: |
+                {}
+              GITHUB_REPO: solidDoWant/tug2
+              # Claude API access through workload identity federation: the SDK swaps
+              # the projected service account token below for a short-lived API token.
+              # The federation rule (Claude Console) trusts this cluster's API server as
+              # an issuer (inline JWKS, since the issuer URL is cluster-internal) and
+              # matches sub=system:serviceaccount:tug2:discord-bot. If the cluster's
+              # service account signing key changes, update the issuer's keys there.
+              # The rule, organization and service account IDs come from the secret.
+              ANTHROPIC_IDENTITY_TOKEN_FILE: /var/run/secrets/anthropic.com/token
+            envFrom:
+              - secretRef:
+                  name: discord-bot
+            ports:
+              - name: health
+                containerPort: &health_port 8080
+              - name: metrics
+                containerPort: &metrics_port 9090
+            probes:
+              # /readyz only passes while the Discord gateway connection is up.
+              readiness:
+                enabled: true
+                type: HTTP
+                path: /readyz
+                port: *health_port
+              liveness:
+                enabled: true
+                type: HTTP
+                path: /livez
+                port: *health_port
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 10m
+                memory: &memory 128Mi
+              limits:
+                memory: *memory
+        pod:
+          annotations:
+            # k8tz's nested zoneinfo + /etc/localtime mounts break kata (orphaned
+            # containerd-shim-kata-v2 per deleted pod).
+            k8tz.io/inject: "false"
+          # Harbor project tug2 is private. The pull secret is generated by the
+          # Kyverno policy in ../stats-api/pull-credentials-policy.yaml.
+          imagePullSecrets:
+            - name: tug2-pull-credentials-dockerconfig
+    defaultPodOptions:
+      # Kata for VM-level isolation: the bot acts on text from any Discord user.
+      runtimeClassName: kata
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+    serviceAccount:
+      discord-bot: {}
+    persistence:
+      # Projected token for the Claude API token exchange. 600s is the shortest
+      # lifetime Kubernetes allows; the kubelet replaces the file at 80% of it, so
+      # each exchange (Anthropic accepts each token's jti only once) gets a new one.
+      anthropic-token:
+        type: custom
+        volumeSpec:
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 600
+                  audience: https://api.anthropic.com
+        globalMounts:
+          - path: /var/run/secrets/anthropic.com
+            readOnly: true
+    service:
+      main:
+        controller: main
+        ports:
+          metrics:
+            port: *metrics_port
+            primary: true
+    serviceMonitor:
+      main:
+        service:
+          identifier: main
+        endpoints:
+          - port: metrics
+            path: /metrics
+            relabelings:
+              # Report `instance` as the pod name rather than the default <pod-ip>:<port>.
+              - action: replace
+                sourceLabels:
+                  - __meta_kubernetes_pod_name
+                targetLabel: instance

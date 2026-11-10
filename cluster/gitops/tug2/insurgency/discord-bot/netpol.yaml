@@ -1,0 +1,78 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: discord-bot
+specs:
+  - description: discord-bot
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: discord-bot
+        app.kubernetes.io/instance: discord-bot
+    egress:
+      # DNS resolution (in-cluster service names, and the FQDN rules below)
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      - toFQDNs:
+          # Discord REST API
+          - matchName: discord.com
+          # Discord gateway (websocket): gateway.discord.gg, plus the regional
+          # gateway-*.discord.gg hosts Discord hands out for session resumes
+          - matchPattern: "*.discord.gg"
+          # Claude API
+          - matchName: api.anthropic.com
+          # GitHub API, for installation tokens and searching/filing issues
+          - matchName: api.github.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # The stats-api instances (main and test), for player/weapon/map stats
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: stats-api
+              app.kubernetes.io/instance: stats-api
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # A2S queries to the game servers, for live server state
+      - toEndpoints:
+          - matchLabels:
+              kubevirt.io/vm: insurgency-server
+        toPorts:
+          - ports:
+              # tug2-insurgency-main
+              - port: "27000"
+                protocol: UDP
+              # tug2-insurgency-test
+              - port: "27001"
+                protocol: UDP
+    ingress:
+      # Kubelet for liveness/readiness probes
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Prometheus metrics scraping
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
