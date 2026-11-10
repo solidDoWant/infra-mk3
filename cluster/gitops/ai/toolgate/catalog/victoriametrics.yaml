@@ -58,6 +58,10 @@ spec:
                 value: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427
               - name: VM_INSTANCE_TYPE
                 value: cluster
+              # The upstream defaults plus `documentation`: its embedded docs
+              # search index takes ~500 MiB, against ~20 MiB without it.
+              - name: MCP_DISABLED_TOOLS
+                value: export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules,documentation
               - name: MCP_LOG_FORMAT
                 value: json
             readinessProbe:
