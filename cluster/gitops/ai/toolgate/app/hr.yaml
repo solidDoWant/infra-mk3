@@ -98,8 +98,12 @@ spec:
       otlpLogsEndpoint: stdout
       # Traces: no backend, so the gateway discards them (its own too).
       otlpTracesEndpoint: ""
-      # A bounded set of metric series; per-session detail is in the logs.
-      dropSessionIdFromMetrics: true
+      # Keep `session.id` on metrics. Without it, sessions that run at the
+      # same time with the same user, workspace and model (agents running many
+      # `claude -p` in one VM) write their cumulative counters to one series,
+      # and the totals come out too high. Each session adds about 20-40
+      # short-lived series, which is fine at this scale.
+      dropSessionIdFromMetrics: false
       serviceMonitor:
         enabled: true
       # Coder workspace sessions are attested: the client sends the workspace
