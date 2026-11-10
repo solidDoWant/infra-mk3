@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.10
-    digest: sha256:d7926a4a85dc63e270157eb740421deb92f8be73cda1706487edd56e85c7a66a
+    tag: 0.4.11
+    digest: sha256:663415d2ec5843a365dc4c57f9fc84b4c662bab954b2fa73a1fa85331ab2585b
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -25,7 +25,7 @@ spec:
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
-        tag: 0.4.10@sha256:5eb0f4908801c757ca798ce18a2432bee249617805e50b377b5b19127d9cff9e
+        tag: 0.4.11@sha256:385ee1cf1b8ada3e67ae5b2e73ba532b32857f54a5371ebbf6ee5952668edfe0
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
@@ -104,6 +104,11 @@ spec:
       # and the totals come out too high. Each session adds about 20-40
       # short-lived series, which is fine at this scale.
       dropSessionIdFromMetrics: false
+      # Keep session titles, so the usage dashboard names each session. A
+      # title is written from the user's prompts, so it counts as content.
+      # This also lets through prompt and tool content that a client opts
+      # into with OTEL_LOG_*; the `telemetry` profile turns none of those on.
+      allowContent: true
       serviceMonitor:
         enabled: true
       # Coder workspace sessions are attested: the client sends the workspace
