@@ -121,3 +121,26 @@ spec:
   wait: true
   dependsOn:
     - name: grafana-crds
+---
+# The Viewer account of the toolgate catalog's Grafana MCP server, and the
+# policy that copies its token into the server's instance namespaces.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name grafana-mcp
+spec:
+  targetNamespace: monitoring
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/monitoring/grafana/mcp
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: grafana-app
+    - name: kyverno-app

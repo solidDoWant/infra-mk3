@@ -1,0 +1,47 @@
+---
+# Copies the Grafana MCP server's token into each namespace that toolgate
+# creates for an instance of the `grafana` template, where the instance's Pod
+# mounts it. toolgate deletes the namespace, and with it the copy, when the
+# instance stops.
+#
+# Only toolgate (and cluster admins) can create namespaces, and toolgate sets
+# these labels from the template, so no other namespace gets the token.
+#
+# The rule builds a new Secret from the token value instead of cloning the
+# operator's Secret: a clone would carry the operator's ownerReference to the
+# GrafanaServiceAccount, which is invalid across namespaces.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: toolgate-grafana-mcp-token
+spec:
+  rules:
+    - name: copy-grafana-mcp-token
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  app.kubernetes.io/managed-by: toolgate
+                  toolgate.soliddowant.dev/template: grafana
+                  toolgate.soliddowant.dev/template-namespace: ai
+      context:
+        - name: grafanaMCPToken
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/monitoring/secrets/grafana-mcp-token
+            jmesPath: data.token
+      generate:
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: grafana-mcp-token
+        namespace: >-
+          {{ request.object.metadata.name }}
+        data:
+          type: Opaque
+          data:
+            token: >-
+              {{ grafanaMCPToken }}
