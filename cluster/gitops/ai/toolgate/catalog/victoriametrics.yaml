@@ -1,0 +1,131 @@
+---
+# VictoriaMetrics' MCP server: MetricsQL queries, metric/label/series
+# exploration, cardinality (tsdb_status), alerting and recording rules with
+# their active alerts (vmselect proxies those to vmalert), and query explain.
+# https://github.com/VictoriaMetrics/mcp-victoriametrics
+#
+# No `scope`: the template references nothing user-specific, so toolgate runs
+# one shared instance. The metrics API has no auth; who can use the server is
+# decided by `access` below.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: victoriametrics
+spec:
+  description: >-
+    Query the cluster's metrics in VictoriaMetrics (MetricsQL): metrics,
+    labels, series, cardinality, alerting rules and firing alerts. Read-only.
+  idleStop: 2h
+  access:
+    # The same people who can query everything through Grafana.
+    groups:
+      - Grafana admins
+    # Usable from any signed-in machine, attested or not.
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: victoriametrics
+    port: 8080
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: victoriametrics
+        labels:
+          app: victoriametrics
+          endpoints.netpols.home.arpa/time-series-querier: "true"
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000 # the image's `mcp` user
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            image: ghcr.io/victoriametrics/mcp-victoriametrics:v1.20.2@sha256:bcbf84f945d6efb03fb8b2d2ccc3294420dccdc0b445752dce96f02619416dfe
+            ports:
+              - name: http
+                containerPort: 8080
+            env:
+              - name: MCP_SERVER_MODE
+                value: http
+              - name: MCP_LISTEN_ADDR
+                value: ":8080"
+              # The vmauth load balancer in front of vmselect/vminsert.
+              - name: VM_INSTANCE_ENTRYPOINT
+                value: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8427
+              - name: VM_INSTANCE_TYPE
+                value: cluster
+              - name: MCP_LOG_FORMAT
+                value: json
+            readinessProbe:
+              httpGet:
+                path: /health/readiness
+                port: http
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: victoriametrics
+      spec:
+        selector:
+          app: victoriametrics
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: victoriametrics
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: victoriametrics
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          # Metrics queries, through the vmauth load balancer
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: monitoring
+                  endpoints.netpols.home.arpa/time-series-supplier: "true"
+            toPorts:
+              - ports:
+                  - port: "8427"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP

@@ -1,0 +1,130 @@
+---
+# VictoriaLogs' MCP server: LogsQL queries, hit counts over time, stats
+# queries, and stream/field/value exploration.
+# https://github.com/VictoriaMetrics/mcp-victorialogs
+#
+# No `scope`: the template references nothing user-specific, so toolgate runs
+# one shared instance. The logs API has no auth; who can use the server is
+# decided by `access` below.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: victorialogs
+spec:
+  description: >-
+    Search the cluster's logs in VictoriaLogs (LogsQL): queries, hit counts,
+    stats, and log streams and fields. Read-only.
+  idleStop: 2h
+  access:
+    # The same people who can query everything through Grafana. Logs can hold
+    # tokens and personal data, so not everyone.
+    groups:
+      - Grafana admins
+    # Usable from any signed-in machine, attested or not.
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: victorialogs
+    port: 8080
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: victorialogs
+        labels:
+          app: victorialogs
+          endpoints.netpols.home.arpa/logs-querier: "true"
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000 # the image's `mcp` user
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            image: ghcr.io/victoriametrics/mcp-victorialogs:v1.9.0@sha256:753bb4fbe402ca1a782842f44636830f9895736f11d7fe783b924f8a0daf083d
+            ports:
+              - name: http
+                containerPort: 8080
+            env:
+              - name: MCP_SERVER_MODE
+                value: http
+              - name: MCP_LISTEN_ADDR
+                value: ":8080"
+              # The same vmauth that Grafana queries, so results cover both
+              # VictoriaLogs instances.
+              - name: VL_INSTANCE_ENTRYPOINT
+                value: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
+              - name: MCP_LOG_FORMAT
+                value: json
+            readinessProbe:
+              httpGet:
+                path: /health/readiness
+                port: http
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: victorialogs
+      spec:
+        selector:
+          app: victorialogs
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: victorialogs
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: victorialogs
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          # Log queries, through the VictoriaLogs vmauth
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: monitoring
+                  endpoints.netpols.home.arpa/logs-supplier: "true"
+            toPorts:
+              - ports:
+                  - port: "9428"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP

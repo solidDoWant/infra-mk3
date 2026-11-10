@@ -1,0 +1,172 @@
+---
+# Grafana's MCP server, read-only: search and read dashboards, list alert
+# rules and their state (including vmalert's rules, through the VictoriaMetrics
+# datasource), annotations, and queries through Grafana's datasources.
+# https://github.com/grafana/mcp-grafana
+#
+# It calls Grafana's API with the token of a Viewer service account
+# (../grafana-mcp/). A Kyverno policy there copies the token into each
+# instance namespace of this template when toolgate creates it; the Secret goes
+# away with the namespace. If the Pod starts before the copy exists, the
+# kubelet retries the mount until it does.
+#
+# `$${` is Flux's escape: it reaches toolgate as a literal `${`.
+#
+# No `scope`: `${instance.namespace}` isn't per-user, so toolgate runs one
+# shared instance. Everyone it admits uses the same Viewer token.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: grafana
+spec:
+  description: >-
+    Read Grafana: search and read dashboards, alert rules and which are
+    firing, annotations, and queries through Grafana's datasources. Read-only.
+  idleStop: 1h
+  access:
+    # The same people who can use Grafana's own UI.
+    groups:
+      - Grafana admins
+    # Usable from any signed-in machine, attested or not.
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: grafana
+    port: 8000
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: grafana
+        labels:
+          app: grafana-mcp
+          endpoints.netpols.home.arpa/internal-dashboard-querier: "true"
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000 # the image's `mcp-grafana` user
+          runAsGroup: 999
+          fsGroup: 999
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            # Upstream publishes only to Docker Hub; mirror.gcr.io serves the
+            # same digests without its rate limits.
+            image: mirror.gcr.io/grafana/mcp-grafana:2.2.0@sha256:697336440e34878f8e0b26a69675db8d7e97b4d0daec25ec5441c85ac6c60e81
+            command:
+              - /app/mcp-grafana
+            args:
+              - --transport=streamable-http
+              - --address=0.0.0.0:8000
+              # The gateway connects as <service>.<namespace>.svc:<port>, and
+              # the server rejects any other Host header.
+              - --allowed-hosts=grafana.$${instance.namespace}.svc:8000
+              # Probes go to a side listener without the Host check.
+              - --healthz-address=:8080
+              - --disable-write
+              # Categories with nothing behind them here (no such plugin or
+              # datasource), or that call the internet (docs).
+              - --disable-incident
+              - --disable-oncall
+              - --disable-asserts
+              - --disable-pyroscope
+              - --disable-loki
+              - --disable-provisioning
+              - --disable-docs
+              - --usage-stats=disabled
+            ports:
+              - name: http
+                containerPort: 8000
+              - name: health
+                containerPort: 8080
+            env:
+              - name: GRAFANA_URL
+                value: http://grafana-service.monitoring.svc.cluster.local:3000
+              # Read on every request, so a new token needs no restart.
+              - name: GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE
+                value: /etc/grafana-mcp/token/token
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: health
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            volumeMounts:
+              - name: token
+                mountPath: /etc/grafana-mcp/token
+                readOnly: true
+              - name: tmp
+                mountPath: /tmp
+        volumes:
+          # Copied in by the Kyverno policy in ../grafana-mcp/.
+          - name: token
+            secret:
+              secretName: grafana-mcp-token
+          - name: tmp
+            emptyDir:
+              sizeLimit: 64Mi
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: grafana
+      spec:
+        selector:
+          app: grafana-mcp
+        ports:
+          - name: http
+            port: 8000
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: grafana-mcp
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: grafana-mcp
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          # Grafana's API
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: monitoring
+                  endpoints.netpols.home.arpa/internal-dashboard-supplier: "true"
+            toPorts:
+              - ports:
+                  - port: "3000"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP
