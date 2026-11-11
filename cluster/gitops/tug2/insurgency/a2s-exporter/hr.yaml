@@ -39,9 +39,10 @@ spec:
               # Fork build: its go-a2s discards replies that arrive after their
               # query timed out. Upstream reads them as the next answer, so one
               # slow reply (e.g. a map change) left the exporter reporting the
-              # server down until it was restarted.
+              # server down until it was restarted. It also serializes queries,
+              # because both vmagent replicas scrape at the same moment.
               repository: ghcr.io/soliddowant/a2s-exporter
-              tag: v0.4.1-develop.1@sha256:b9462d1f5a2127ee73aec9bb1c0c8180aa4cae763fbbc021b7878c0ecc35135b
+              tag: v0.4.1-develop.3@sha256:c308423855559836ec7482e1dd85d36e3c9f0988a0b405c50ed40fdd7021f077
             env: &env
               # srcds answers A2S queries on the game port
               A2S_EXPORTER_QUERY_ADDRESS: insurgency-server.tug2.svc.cluster.local:27000
