@@ -74,16 +74,6 @@
       separateMultipleMajor: true,
     },
     {
-      // v3.4.0 binds its metrics ports (8081/8082) to localhost only
-      // (exporter-prometheus 0.300 defaults host to "localhost"), which breaks
-      // the microservices liveness probe and metrics scraping. Before taking a
-      // later 3.4.x, check that the metrics ports listen on 0.0.0.0 again.
-      description: "Immich v3.4.0: metrics ports bind to localhost only",
-      matchDatasources: ["docker"],
-      matchPackageNames: ["/^ghcr\\.io/immich-app//"],
-      allowedVersions: "!/^v3\\.4\\.0(-|$)/",
-    },
-    {
       // GHCR has a mistyped v1.120.1 tag, pushed 9 minutes before the real
       // v1.20.1 build. It sorts above every real release, so without this
       // rule Renovate offers it as an upgrade and hides real ones.
