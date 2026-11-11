@@ -54,9 +54,26 @@ spec:
           comment: Read-only stats API consumer
           inRoles:
             - pg_read_all_data
+      # Read-only SQL for the Discord bot's query_stats tool, which runs SQL the model writes.
+      # Unlike stats-api it is NOT in pg_read_all_data. Each game server grants it SELECT on an
+      # explicit list of stats tables in its own schema, on every start (tug2's
+      # plugins/sourcemod/configs/sql-init-scripts/pgsql/discord_bot_grants.sql, run by
+      # DatabaseMigrator as the table owner), so connection_log (player IP addresses) stays out of
+      # reach. The bot reloads the cert from disk itself, so a rotation needs no restart.
+      discord-bot:
+        username: discord-bot
+        disableReloading: true
+        role:
+          comment: Discord bot, read-only SQL on the stats tables
+          connectionLimit: 2
       # Enable the PgBouncer backend user so the read-only pooler can authenticate to the cluster.
       pooler:
         disabled: false
+    parameters:
+      # Caps the temp files one session's query can write. Set cluster-wide because only a
+      # superuser can set it per role; the game servers and stats-api never come close, and it
+      # bounds the Discord bot's model-written queries (which also time out after 3s).
+      temp_file_limit: 1GB
     # Read-only PgBouncer pooler (type: ro, routes to the replicas). stats-api connects here.
     pooler:
       ro:
@@ -76,6 +93,11 @@ spec:
               app.kubernetes.io/name: stats-api
               app.kubernetes.io/controller: main
               app.kubernetes.io/instance: stats-api
+          # The Discord bot reaches the read-only pooler for query_stats; its own egress policy
+          # restricts it to the pooler.
+          - matchLabels:
+              app.kubernetes.io/name: discord-bot
+              app.kubernetes.io/instance: discord-bot
           # stats-api-test connects to the cluster directly (it needs PGOPTIONS, which the
           # pooler drops), as the stats-api role.
           - matchLabels:

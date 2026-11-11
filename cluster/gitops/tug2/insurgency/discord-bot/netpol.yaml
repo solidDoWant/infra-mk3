@@ -47,6 +47,14 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+      # PostgreSQL via the read-only PgBouncer pooler, for query_stats
+      - toEndpoints:
+          - matchLabels:
+              cnpg.io/poolerName: insurgency-postgres-pooler-ro
+        toPorts:
+          - ports:
+              - port: "5432"
+                protocol: TCP
       # A2S queries to the game servers, for live server state
       - toEndpoints:
           - matchLabels:
