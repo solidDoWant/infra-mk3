@@ -55,32 +55,11 @@ spec:
           inRoles:
             - pg_read_all_data
       # Read-only SQL for the Discord bot's query_stats tool, which runs SQL the model writes.
-      # Unlike stats-api it is NOT in pg_read_all_data: it reads only the tables granted to it
-      # below, so connection_log (player IP addresses) stays out of reach. The bot reloads the
-      # cert from disk itself, so a rotation needs no restart.
-      #
-      # Table grants and role settings aren't declarative here (postInitApplicationSQL only runs
-      # on a fresh initdb), so they are applied once by hand as the superuser, e.g.
-      #   kubectl -n tug2 exec -i insurgency-postgres-1 -c postgres -- psql -d sourcemod-insurgency-stats
-      # A table created later (or dropped and re-created) is unreadable until granted. Keep the
-      # list in step with the schema doc in tug2's tools/discord-bot/statsdb_schema.go.
-      #   ALTER ROLE "discord-bot" SET temp_file_limit = '256MB';
-      #   ALTER ROLE "discord-bot" SET statement_timeout = '5s';
-      #   ALTER ROLE "discord-bot" SET default_transaction_read_only = on;
-      #   GRANT USAGE ON SCHEMA "insurgency-test" TO "discord-bot";
-      #   DO $$ DECLARE s text; t text; BEGIN
-      #     FOREACH s IN ARRAY ARRAY['public', 'insurgency-test'] LOOP
-      #       FOREACH t IN ARRAY ARRAY['player_stats', 'player_kills', 'weapon_stats', 'bot_kills',
-      #           'map_stats', 'win_loss_log', 'maps', 'medics', 'fire_support', 'player_tks',
-      #           'player_tk_logs', 'player_drag_mode', 'player_fy_opt_out', 'players_smoke_cache',
-      #           'smoke_warning_seen', 'gg2_messages_rotating_player', 'gg2_messages_rotating_admin',
-      #           'gg2_messages_join_player'] LOOP
-      #         IF to_regclass(format('%I.%I', s, t)) IS NOT NULL THEN
-      #           EXECUTE format('GRANT SELECT ON %I.%I TO "discord-bot"', s, t);
-      #         END IF;
-      #       END LOOP;
-      #     END LOOP;
-      #   END $$;
+      # Unlike stats-api it is NOT in pg_read_all_data. Each game server grants it SELECT on an
+      # explicit list of stats tables in its own schema, on every start (tug2's
+      # plugins/sourcemod/configs/sql-init-scripts/pgsql/discord_bot_grants.sql, run by
+      # DatabaseMigrator as the table owner), so connection_log (player IP addresses) stays out of
+      # reach. The bot reloads the cert from disk itself, so a rotation needs no restart.
       discord-bot:
         username: discord-bot
         disableReloading: true
@@ -90,6 +69,11 @@ spec:
       # Enable the PgBouncer backend user so the read-only pooler can authenticate to the cluster.
       pooler:
         disabled: false
+    parameters:
+      # Caps the temp files one session's query can write. Set cluster-wide because only a
+      # superuser can set it per role; the game servers and stats-api never come close, and it
+      # bounds the Discord bot's model-written queries (which also time out after 3s).
+      temp_file_limit: 1GB
     # Read-only PgBouncer pooler (type: ro, routes to the replicas). stats-api connects here.
     pooler:
       ro:
