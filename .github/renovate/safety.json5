@@ -84,6 +84,15 @@
       allowedVersions: "!/^v3\\.4\\.0(-|$)/",
     },
     {
+      // GHCR has a mistyped v1.120.1 tag, pushed 9 minutes before the real
+      // v1.20.1 build. It sorts above every real release, so without this
+      // rule Renovate offers it as an upgrade and hides real ones.
+      description: "mcp-victoriametrics: ignore the mistyped v1.120.1 tag",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/victoriametrics/mcp-victoriametrics"],
+      allowedVersions: "!/^v?1\\.120\\.1$/",
+    },
+    {
       // Full tag as the version: the commit digest is looked up by tag name.
       description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
       matchDatasources: ["github-tags"],
