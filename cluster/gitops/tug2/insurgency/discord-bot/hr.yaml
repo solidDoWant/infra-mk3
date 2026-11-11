@@ -92,6 +92,19 @@ spec:
               - name: metrics
                 containerPort: &metrics_port 9090
             probes:
+              # The health server only listens once the Claude API check and the
+              # Discord login finish (~1-2s after start), so hold the other probes
+              # until it answers instead of logging connection-refused failures.
+              startup:
+                enabled: true
+                type: HTTP
+                path: /livez
+                port: *health_port
+                spec:
+                  initialDelaySeconds: 3
+                  periodSeconds: 1
+                  timeoutSeconds: 1
+                  failureThreshold: 60
               # /readyz only passes while the Discord gateway connection is up.
               readiness:
                 enabled: true
