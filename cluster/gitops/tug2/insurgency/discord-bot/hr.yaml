@@ -42,7 +42,7 @@ spec:
           app:
             image:
               repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/discord-bot
-              tag: 0.0.10@sha256:67deacd9fbac6c9939ab6a20db9701633a2e76515751f7b3926e425e8bf70b44
+              tag: 0.0.11@sha256:aa7a595fc5e05c24706b0c09218289efcc5d23e22ba28edd29255cf5f10f808a
             env:
               HEALTH_ADDR: ":8080"
               METRICS_ADDR: ":9090"
