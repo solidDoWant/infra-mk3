@@ -5,8 +5,12 @@
 # Anthropic's servers.
 # https://github.com/microsoft/playwright-mcp
 #
-# Per-user, so people never share cookies or open tabs. `--isolated` keeps the
-# browser profile in memory, so nothing outlives the instance.
+# Per-session: a browser holds one task's state (open tabs, the current page,
+# and the element refs from the last snapshot), so two sessions sharing one
+# would navigate away from each other's pages. It also stops cookies from one
+# task reaching another. The cost is a pod start the first time a session
+# calls it. `--isolated` keeps the browser profile in memory, so nothing
+# outlives the instance, which stops when its session ends or disables it.
 #
 # `$${` is Flux's escape: it reaches toolgate as a literal `${`.
 apiVersion: toolgate.soliddowant.dev/v1alpha1
@@ -19,8 +23,7 @@ spec:
     connection: open pages, read them as text snapshots, click, type and fill
     forms. Use it when the built-in web fetch fails or a page needs JavaScript.
     Call browser_snapshot after navigating to read the page.
-  scope: per-user
-  idleStop: 30m
+  scope: per-session
   startTimeout: 5m
   access:
     users:
