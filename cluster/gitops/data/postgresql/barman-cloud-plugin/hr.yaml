@@ -36,10 +36,10 @@ spec:
       registry: ghcr.io
       repository: cloudnative-pg/plugin-barman-cloud-sidecar
       tag: v0.16.0@sha256:c669259e20ed1e11fad821f735c396c19d929985aa05b9544b13ecc8b5a386d0
-    # The CNPG-I plugin uses leader election, so run two replicas: if the plugin
-    # is down, WAL archival and restore for every cluster using it fails.
-    # Both replicas report Ready (probes hit :8081), but only the leader serves
-    # gRPC on 9090; the operator's connection pool retries onto the leader.
+    # The CNPG-I plugin is on the WAL archive/restore path of every cluster
+    # using it, so run two replicas: both serve gRPC (only the ObjectStore
+    # controller is leader-elected). The chart's Recreate strategy means this
+    # covers pod/node loss, not plugin upgrades.
     replicaCount: 2
     priorityClassName: system-cluster-critical
     crds:
