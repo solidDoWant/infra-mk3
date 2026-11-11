@@ -74,6 +74,16 @@
       separateMultipleMajor: true,
     },
     {
+      // v3.4.0 binds its metrics ports (8081/8082) to localhost only
+      // (exporter-prometheus 0.300 defaults host to "localhost"), which breaks
+      // the microservices liveness probe and metrics scraping. Before taking a
+      // later 3.4.x, check that the metrics ports listen on 0.0.0.0 again.
+      description: "Immich v3.4.0: metrics ports bind to localhost only",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^ghcr\\.io/immich-app//"],
+      allowedVersions: "!/^v3\\.4\\.0(-|$)/",
+    },
+    {
       // Full tag as the version: the commit digest is looked up by tag name.
       description: "kubernetes/autoscaler is a monorepo; VPA releases are tagged vertical-pod-autoscaler-X.Y.Z",
       matchDatasources: ["github-tags"],
