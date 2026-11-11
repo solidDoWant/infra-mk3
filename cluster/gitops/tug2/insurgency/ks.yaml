@@ -102,6 +102,8 @@ spec:
     # The pull-secret Kyverno policy lives in the stats-api directory, and the bot
     # reads stats from it.
     - name: tug2-insurgency-stats-api
+    # The bot's Postgres role, client cert and pooler access (query_stats).
+    - name: tug2-insurgency-backend
     # Kyverno generates the pull secret and restarts the bot when its secret changes.
     - name: kyverno-app
     # ServiceMonitor and PrometheusRule CRDs.

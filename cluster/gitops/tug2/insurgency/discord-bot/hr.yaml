@@ -49,7 +49,8 @@ spec:
               # The first server is the default when a question doesn't name one.
               # stats_api_url is the in-cluster address (never shown to users), and
               # includes each instance's BASE_PATH. query_address is the game port,
-              # where srcds answers A2S queries.
+              # where srcds answers A2S queries. stats_db_schema is the server's schema
+              # in the stats database, for query_stats.
               SERVERS: |
                 [
                   {
@@ -57,14 +58,16 @@ spec:
                     "description": "the main public server",
                     "stats_api_url": "http://stats-api-main.tug2.svc.cluster.local:8080/main",
                     "public_stats_api_url": "https://insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}/main",
-                    "query_address": "insurgency-server.tug2.svc.cluster.local:27000"
+                    "query_address": "insurgency-server.tug2.svc.cluster.local:27000",
+                    "stats_db_schema": "public"
                   },
                   {
                     "name": "test",
                     "description": "the test server, where changes are tried before main",
                     "stats_api_url": "http://stats-api-test.tug2.svc.cluster.local:8080/test",
                     "public_stats_api_url": "https://insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}/test",
-                    "query_address": "insurgency-server.tug2.svc.cluster.local:27001"
+                    "query_address": "insurgency-server.tug2.svc.cluster.local:27001",
+                    "stats_db_schema": "insurgency-test"
                   }
                 ]
               # The model can read every text/announcement channel where the bot has
@@ -74,6 +77,21 @@ spec:
               #   { "<channel id>": "Server update notes, newest first" }
               CHANNEL_DESCRIPTIONS: |
                 {}
+              # Read-only SQL for the query_stats tool, through the ro pooler (replicas).
+              # The discord-bot role can read only the stats tables granted to it (see the
+              # postgres HelmRelease). pgx reads the libpq env vars for the rest; the pool
+              # size and per-query limits are set in the bot.
+              STATS_DB_URL: postgres:///
+              PGHOST: insurgency-postgres-pooler-ro.tug2.svc.cluster.local
+              PGPORT: "5432"
+              PGDATABASE: sourcemod-insurgency-stats
+              PGUSER: discord-bot
+              PGAPPNAME: discord-bot
+              # The pooler serving cert SAN matches the FQDN above.
+              PGSSLMODE: verify-full
+              PGSSLCERT: /etc/discord-bot/certs/postgres/tls.crt
+              PGSSLKEY: /etc/discord-bot/certs/postgres/tls.key
+              PGSSLROOTCERT: /etc/discord-bot/certs/root-ca/ca.crt
               GITHUB_REPO: solidDoWant/tug2
               # Claude API access through workload identity federation: the SDK swaps
               # the projected service account token below for a short-lived API token.
@@ -167,6 +185,31 @@ spec:
                   audience: https://api.anthropic.com
         globalMounts:
           - path: /var/run/secrets/anthropic.com
+            readOnly: true
+      # Postgres client cert (CN=discord-bot) issued by the postgres chart. It rotates
+      # hourly; the bot re-reads it from disk, so no restart is needed.
+      postgres-user-cert:
+        type: secret
+        name: insurgency-postgres-discord-bot-user
+        defaultMode: 0440
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        globalMounts:
+          - path: /etc/discord-bot/certs/postgres
+            readOnly: true
+      # Cluster root CA, in its own directory (nested secret mounts fail).
+      root-ca:
+        type: secret
+        name: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.crt
+            path: ca.crt
+        globalMounts:
+          - path: /etc/discord-bot/certs/root-ca
             readOnly: true
     service:
       main:
