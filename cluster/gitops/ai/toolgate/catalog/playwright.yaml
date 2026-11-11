@@ -83,6 +83,12 @@ spec:
               # read. browser_snapshot still returns the snapshot inline.
               - --snapshot-mode=none
               - --output-dir=/tmp/playwright-mcp
+              # Headless Chromium reports "HeadlessChrome" in its user agent,
+              # which many sites block outright (Anubis ships a DENY rule for
+              # it). Send desktop Chrome's string instead, with the major
+              # version matching the bundled Chromium; bump it with the image.
+              - --user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36
+              - --init-script=/etc/playwright-mcp/init.js
             ports:
               - name: http
                 containerPort: 8931
@@ -91,12 +97,13 @@ spec:
               tcpSocket:
                 port: http
               periodSeconds: 10
+            # Peaked at ~970Mi passing an Anubis challenge (4 workers).
             resources:
               requests:
                 cpu: 100m
-                memory: 1Gi
+                memory: 2Gi
               limits:
-                memory: 1Gi
+                memory: 2Gi
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
@@ -104,6 +111,9 @@ spec:
                 drop:
                   - ALL
             volumeMounts:
+              - name: init-script
+                mountPath: /etc/playwright-mcp
+                readOnly: true
               # The working directory, also Chromium's config and cache.
               - name: home
                 mountPath: /home/node
@@ -111,12 +121,29 @@ spec:
               - name: tmp
                 mountPath: /tmp
         volumes:
+          - name: init-script
+            configMap:
+              name: playwright-init-script
           - name: home
             emptyDir:
               sizeLimit: 256Mi
           - name: tmp
             emptyDir:
               sizeLimit: 1Gi
+    # Runs in every page before the page's own scripts.
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: playwright-init-script
+      data:
+        init.js: |
+          // The kata VM shows the browser every host CPU (32), and
+          // proof-of-work challenges such as Anubis start one worker per
+          // reported CPU. That many workers ran the pod out of memory, so
+          // report a typical desktop's count.
+          Object.defineProperty(Navigator.prototype, "hardwareConcurrency", {
+            get: () => 4,
+          });
     - apiVersion: v1
       kind: Service
       metadata:
