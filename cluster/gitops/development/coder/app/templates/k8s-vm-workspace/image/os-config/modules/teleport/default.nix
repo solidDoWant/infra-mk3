@@ -1,131 +1,72 @@
 { pkgs, ... }:
-# Teleport for the workspace VM: built from source, with BPF enhanced session
-# recording enabled.
+# Teleport for the workspace VM: the official release binaries, patched to run
+# on NixOS.
 #
-# Two things here are not stock nixpkgs:
+# Not nixpkgs' source build, for two reasons:
 #
-#   1. The version. The Linux desktop service (see ../teleport-node) needs
-#      Teleport >= 18.11.0, and nixpkgs is still on 18.10.0 on every channel,
-#      master included. So the generic builder is called directly with the version
-#      and hashes we want instead of going through pkgs.teleport_18.
+#   1. Upstream stopped publishing source tags after v18.11.1 (later 18.11.x
+#      tags and their GitHub archive tarballs return 404), so a source build
+#      can't follow the cluster's version. The cluster runs 18.11.8.
+#   2. The Linux desktop service (../desktop) needs Teleport >= 18.11.0, which
+#      nixpkgs doesn't have, and building 18.11 from nixpkgs' builder needed a
+#      vendored copy of it with several fixes.
 #
-#   2. The builder. pkgs.buildTeleport cannot build 18.11.0 - see the header of
-#      ./nixpkgs-build-support/default.nix for the details and the one-line fix.
-#      That directory is a vendored copy of the nixpkgs build support, carried
-#      only until nixpkgs catches up.
+# The official binaries are built with the `bpf` tag, so enhanced session
+# recording (ssh_service.enhanced_recording in ../teleport-node) works without
+# compiling the BPF bytecode here.
 #
-# The BPF bytecode build below is unchanged: nixpkgs builds teleport without the
-# `bpf` build tag, so enhanced recording (ssh_service.enhanced_recording in
-# ../teleport-node) needs the bytecode compiled and the tag added by hand.
+# nixpkgs also patches the PATH that Teleport gives sessions to include the
+# NixOS profile directories. The official binary takes it from ENV_PATH and
+# ENV_SUPATH in /etc/login.defs instead, set in ../teleport-node.
 #
-# UPGRADING: bump `version`, set each of the four hashes to pkgs.lib.fakeHash in
-# turn and take the "got:" value from the build failure. Check whether the release
-# still needs the version-file fixup in postPatch below.
+# UPGRADING: Renovate bumps `version` but can't update `hash`. Take the new
+# hash from `nix store prefetch-file
+# https://cdn.teleport.dev/teleport-v<version>-linux-amd64-bin.tar.gz` (it must
+# match the sha256 published next to the tarball, at the same URL plus
+# `.sha256`).
 let
   # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
   version = "18.11.8";
-
-  # pnpm_10 is pinned at 10.34.0, which nixpkgs marks insecure; 10_latest carries
-  # the fixes.
-  teleport = pkgs.callPackage ./nixpkgs-build-support { pnpm_10 = pkgs.pnpm_10_latest; } {
-    inherit version;
-    hash = "sha256-6e+ViJfNzFMqJ7WsENQuy7cB6pAe+0EflHFGqQq+l2A=";
-    vendorHash = "sha256-9W/4Rkq8+Vq8GggOaJq6aopqnAENCF5Ono3rUYwk23g=";
-    pnpmHash = "sha256-rWYRVxVGDIsJ9T0DlfTx47FFrHw2orGSwMAkAkPKLKQ=";
-    cargoHash = "sha256-J8rhAOFn/A4lKnrUwhoBfSc1uijlG/iLes705x07AyI=";
-
-    wasm-bindgen-cli = pkgs.wasm-bindgen-cli_0_2_122;
-    # nixpkgs' teleport_18 uses buildGo125Module, but 18.11.0's go.mod requires
-    # go >= 1.25.14 and nixpkgs' 1.25 is on 1.25.13, so the build stops at
-    # "GOTOOLCHAIN=local". Go 1.26 satisfies the floor (GOTOOLCHAIN cannot fetch a
-    # toolchain inside the build sandbox, so raising it here is the only option).
-    buildGoModule = pkgs.buildGo126Module;
-  };
-
-  # Build BPF bytecode separately
-  bpfBytecode = pkgs.stdenv.mkDerivation {
-    name = "teleport-bpf-bytecode-${version}";
-    src = teleport.src;
-
-    nativeBuildInputs = [
-      pkgs.llvmPackages.clang-unwrapped
-      pkgs.llvmPackages.bintools-unwrapped
-    ];
-
-    buildInputs = [
-      pkgs.libbpf
-      pkgs.elfutils
-      pkgs.zlib
-      pkgs.linuxHeaders
-    ];
-
-    buildPhase = ''
-      # Compile BPF bytecode
-      mkdir -p lib/bpf/bytecode
-
-      KERNEL_ARCH=$(uname -m | sed 's/x86_64/x86/g; s/aarch64/arm64/g')
-
-      pushd bpf/enhancedrecording
-      for src in *.bpf.c; do
-        clang -g -O2 -target bpf \
-          -D__TARGET_ARCH_$KERNEL_ARCH \
-          -I${pkgs.libbpf}/include \
-          -I${pkgs.linuxHeaders}/include \
-          -c "$src" -o "../../lib/bpf/bytecode/$(basename "$src" .c).o"
-        llvm-strip -g "../../lib/bpf/bytecode/$(basename "$src" .c).o"
-      done
-      popd
-    '';
-
-    installPhase = ''
-      mkdir -p $out
-      cp -r lib/bpf/bytecode $out/
-    '';
-  };
+  hash = "sha256-5WV7hlTpfynvW2hEPqeGhoC/tD9iajnUISHxICirOp8=";
 in
 {
-  package = teleport.overrideAttrs (oldAttrs: {
-    tags = oldAttrs.tags ++ [ "bpf" ];
+  package = pkgs.stdenv.mkDerivation {
+    pname = "teleport";
+    inherit version;
 
-    buildInputs = oldAttrs.buildInputs ++ [
-      pkgs.libbpf
-      pkgs.elfutils
-      pkgs.zlib
-    ];
+    src = pkgs.fetchurl {
+      url = "https://cdn.teleport.dev/teleport-v${version}-linux-amd64-bin.tar.gz";
+      inherit hash;
+    };
 
-    # api/version.go and the Makefile's VERSION are generated files ("make
-    # version"), and at the v18.11.0 tag upstream left them at 18.10.7 - they ran
-    # the version bump after tagging. The binary takes its version from that
-    # constant, so an unpatched build of this tag reports 18.10.7 while being the
-    # 18.11.0 release (the official release artifact, built with VERSION passed in,
-    # reports v18.11.0). Regenerate the file so the agent reports what it actually
-    # is; without this the installCheckPhase's version grep also fails.
-    #
-    # Check on every bump whether upstream has corrected this - if version.go
-    # matches the tag, the whole block can go.
-    postPatch = (oldAttrs.postPatch or "") + ''
-      cat > api/version.go <<EOF
-      // Code generated by "make version". DO NOT EDIT.
+    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+    # The binaries link only glibc and libgcc_s.
+    buildInputs = [ pkgs.stdenv.cc.cc.lib ];
 
-      package api
+    dontConfigure = true;
+    dontBuild = true;
+    # Go binaries: stripping can break them, and they carry no debug sections
+    # worth removing.
+    dontStrip = true;
 
-      const Version = "${version}"
-
-      const VersionMajor = ${pkgs.lib.versions.major version}
-      const VersionMinor = ${pkgs.lib.versions.minor version}
-      const VersionPatch = ${pkgs.lib.versions.patch version}
-      const VersionPreRelease = ""
-      const VersionMetadata = ""
-      EOF
+    installPhase = ''
+      runHook preInstall
+      for bin in teleport tctl tsh tbot fdpass-teleport; do
+        install -Dm755 "$bin" "$out/bin/$bin"
+      done
+      runHook postInstall
     '';
 
-    # Copy BPF bytecode before building
-    preBuild = oldAttrs.preBuild + ''
-      mkdir -p lib/bpf/bytecode
-      cp -r ${bpfBytecode}/bytecode/* lib/bpf/bytecode/
+    doInstallCheck = true;
+    installCheckPhase = ''
+      $out/bin/teleport version | grep -F "v${version} "
     '';
 
-    CGO_CFLAGS = "-I${pkgs.libbpf}/include";
-    CGO_LDFLAGS = "-L${pkgs.libbpf}/lib64 -lbpf -lelf -lz";
-  });
+    meta = {
+      description = "Teleport (official release binaries)";
+      homepage = "https://goteleport.com/";
+      platforms = [ "x86_64-linux" ];
+      mainProgram = "teleport";
+    };
+  };
 }

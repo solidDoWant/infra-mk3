@@ -2,7 +2,8 @@
 # ServiceAccount projected into every k8s-vm-workspace VM (via a KubeVirt
 # serviceAccount volume) so the in-guest Teleport node can join the cluster with
 # the kubernetes join method. It has no RBAC permissions - it exists only as a
-# verifiable identity for the Teleport join below.
+# verifiable identity for the Teleport join below. Launcher pods running as it
+# also get a toolgate-audience token (vm-workspace-tokens.yaml).
 apiVersion: v1
 kind: ServiceAccount
 metadata:

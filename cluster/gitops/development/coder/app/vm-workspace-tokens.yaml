@@ -1,0 +1,136 @@
+---
+# Workload tokens for VM workspaces, one per audience. Adds two projected
+# service-account tokens to the compute container of every VM workspace
+# launcher pod. The kubelet mints them, binds them to that pod and rotates them.
+# The template shares each mount with the guest as a KubeVirt containerPath
+# volume (template/vm.tf; feature gate ContainerPathVolumes in
+# system-controllers/kubevirt/app/kubevirt.yaml):
+#
+# - toolgate-token (audience `toolgate`, /var/run/secrets/toolgate): toolgate
+#   workspace attestation. The CLI sends it to the gateway, which checks the
+#   pod's Coder labels against the user (see ai/toolgate/app/hr.yaml). Shared
+#   only when the workspace enables toolgate.
+# - teleport-token (audience = the Teleport cluster name,
+#   /var/run/secrets/teleport): the in-guest Teleport node's kubernetes join
+#   (teleport-vm-workspace.yaml). Teleport accepts a token whose audience is
+#   its cluster name.
+#
+# The guest gets no token with the API server's audience: the template keeps
+# KubeVirt's serviceAccount volume only so the launcher pod runs as
+# coder-vm-workspace, and doesn't share it.
+#
+# KubeVirt can't do this itself: its serviceAccount volume only re-shares the
+# pod's API-audience token, and the VM spec can't add volumes to the pod.
+#
+# Matched on the launcher pod's service account, so every VM workspace gets
+# both mounts and its containerPath volumes never point at a missing path.
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: coder-vm-workspace-tokens
+spec:
+  # A launcher pod without the mount fails to start a VM that asks for it, so
+  # fail the pod rather than create it without.
+  failurePolicy: Fail
+  reinvocationPolicy: Never
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: development
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+  matchConditions:
+    - name: vm-workspace-launcher
+      expression: >-
+        object.spec.serviceAccountName == 'coder-vm-workspace' &&
+        has(object.metadata.labels) &&
+        object.metadata.labels[?'kubevirt.io'].orValue('') == 'virt-launcher'
+    - name: not-yet-added
+      expression: >-
+        !has(object.spec.volumes) ||
+        !object.spec.volumes.exists(v, v.name == 'toolgate-token')
+    - name: has-compute-container
+      expression: >-
+        object.spec.containers.exists(c, c.name == 'compute')
+  # JSONPatch, not ApplyConfiguration: an apply configuration can't set
+  # projected.sources, which is an atomic list.
+  mutations:
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >-
+          (has(object.spec.volumes) ? [] : [
+            JSONPatch{op: "add", path: "/spec/volumes", value: []}
+          ]) + [
+            JSONPatch{
+              op: "add",
+              path: "/spec/volumes/-",
+              value: Object.spec.volumes{
+                name: "toolgate-token",
+                projected: Object.spec.volumes.projected{
+                  sources: [
+                    Object.spec.volumes.projected.sources{
+                      serviceAccountToken: Object.spec.volumes.projected.sources.serviceAccountToken{
+                        audience: "toolgate",
+                        expirationSeconds: 3600,
+                        path: "token"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            JSONPatch{
+              op: "add",
+              path: "/spec/volumes/-",
+              value: Object.spec.volumes{
+                name: "teleport-token",
+                projected: Object.spec.volumes.projected{
+                  sources: [
+                    Object.spec.volumes.projected.sources{
+                      serviceAccountToken: Object.spec.volumes.projected.sources.serviceAccountToken{
+                        audience: "teleport.${SECRET_PUBLIC_DOMAIN_NAME}",
+                        expirationSeconds: 3600,
+                        path: "token"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            JSONPatch{
+              op: "add",
+              path: "/spec/containers/" +
+                string(object.spec.containers.map(c, c.name).indexOf("compute")) +
+                "/volumeMounts/-",
+              value: Object.spec.containers.volumeMounts{
+                name: "toolgate-token",
+                mountPath: "/var/run/secrets/toolgate",
+                readOnly: true
+              }
+            },
+            JSONPatch{
+              op: "add",
+              path: "/spec/containers/" +
+                string(object.spec.containers.map(c, c.name).indexOf("compute")) +
+                "/volumeMounts/-",
+              value: Object.spec.containers.volumeMounts{
+                name: "teleport-token",
+                mountPath: "/var/run/secrets/teleport",
+                readOnly: true
+              }
+            }
+          ]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicyBinding
+metadata:
+  name: coder-vm-workspace-tokens
+spec:
+  policyName: coder-vm-workspace-tokens

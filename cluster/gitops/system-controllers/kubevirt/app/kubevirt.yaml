@@ -9,6 +9,11 @@ spec:
       featureGates:
         - EnableVirtioFsStorageVolumes
         - CPUManager
+        # Alpha (v1.8+). Shares a path from the virt-launcher compute container
+        # with the guest over virtiofs. VM workspaces use it for the toolgate
+        # attestation token that a MutatingAdmissionPolicy adds to their
+        # launcher pods (development/coder/app/vm-workspace-tokens.yaml).
+        - ContainerPathVolumes
         - DeclarativeHotplugVolumes
         - ImageVolume
         - NodeRestriction

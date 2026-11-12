@@ -75,7 +75,7 @@ locals {
   # survives. Do the Update while the workspace is STOPPED (Stop -> Update ->
   # Start): KubeVirt won't swap a live VMI's disk, and Terraform can only destroy
   # the old root PVC cleanly once it is unmounted.
-  image_version = "20261016233836" # tag pushed by ./image (see above)
+  image_version = "20261112015548" # tag pushed by ./image (see above)
 
   # The desktop variant is a SEPARATE image built from the same os-config with the
   # Xfce/Teleport-desktop module added (see ../image/os-config/flake.nix). Both
@@ -108,10 +108,11 @@ locals {
   # authenticate to Harbor for the root DataVolume import (see vm.tf).
   image_pull_secret = "coder-pull-credentials"
 
-  # ServiceAccount projected into the VM for the Teleport kubernetes join. It is
-  # Flux-managed (created once, see coder/app/teleport-vm-workspace.yaml) and
-  # authorized by the matching TeleportProvisionToken; the template only mounts
-  # it. Not created here - per-workspace creation would race and conflict.
+  # ServiceAccount the launcher pod runs as. The guest's Teleport and toolgate
+  # tokens are issued for it (see vm.tf). It is Flux-managed (created once, see
+  # coder/app/teleport-vm-workspace.yaml) and authorized by the matching
+  # TeleportProvisionToken; the template only references it. Not created here -
+  # per-workspace creation would race and conflict.
   teleport_service_account = "coder-vm-workspace"
 
   env_vars = {

@@ -10,6 +10,7 @@
     ./modules/git
     ./modules/persistence
     ./modules/teleport-node
+    ./modules/toolgate-attestation
   ];
 
   nixpkgs = {

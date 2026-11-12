@@ -115,10 +115,13 @@ spec:
       # pod's projected service-account token (audience `toolgate`) next to
       # the user token, and the gateway checks the pod's Coder labels against
       # the user. Only the Coder provisioner can create or change pods and
-      # VMs in `development` (RBAC checked 2026-11-07: workspace service
+      # VMs in `development` (RBAC checked 2026-11-12: workspace service
       # accounts `default` and `coder-vm-workspace` can't create, patch or
       # update pods, virtualmachines or virtualmachineinstances there). The
-      # label keys are Coder's defaults, which the templates set.
+      # label keys are Coder's defaults, which the templates set. VM
+      # workspaces get the token from a MutatingAdmissionPolicy on their
+      # launcher pods, shared with the guest over virtiofs
+      # (coder/app/vm-workspace-tokens.yaml).
       workspaceAttestation:
         namespaces: [development]
         match:

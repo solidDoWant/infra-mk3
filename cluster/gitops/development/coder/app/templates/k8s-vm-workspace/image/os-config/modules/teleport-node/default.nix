@@ -7,10 +7,13 @@
 # Joins the VM to the Teleport cluster as an SSH node on boot, using the
 # kubernetes join method - the same approach as the insurgency server.
 #
-# The VM mounts the `coder-vm-workspace` ServiceAccount token via a KubeVirt
-# serviceAccount volume (virtiofs; see vm.tf). Teleport's auth validates that
-# token against the TeleportProvisionToken that allows
-# development:coder-vm-workspace, then admits the node. The node registers under
+# The VM gets a `coder-vm-workspace` ServiceAccount token whose audience is the
+# Teleport cluster name, bound to its launcher pod: a MutatingAdmissionPolicy
+# adds it to the pod (coder/app/vm-workspace-tokens.yaml) and the template
+# shares it as the `teleport-token` virtiofs volume (a KubeVirt containerPath
+# volume; see vm.tf). Teleport's auth validates that token against the
+# TeleportProvisionToken that allows development:coder-vm-workspace, then
+# admits the node. The guest never gets an API-server-audience token. The node registers under
 # its hostname (set per-workspace by cloud-init), so `tsh ssh coder@<workspace>`
 # works.
 #
@@ -21,17 +24,26 @@ let
   teleportPkgs = import ../teleport { inherit pkgs; };
 in
 {
+  # The PATH Teleport gives sessions before the shell's profile runs (and for
+  # commands run without a login shell). The official binary (../teleport) reads
+  # it from here; the defaults miss every NixOS profile directory. The same
+  # paths nixpkgs patches into its build.
+  security.loginDefs.settings = {
+    ENV_PATH = "PATH=/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:/bin:/usr/bin:/usr/local/bin:/sbin";
+    ENV_SUPATH = "PATH=/run/wrappers/bin:/etc/profiles/per-user/root/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  };
+
   # Lets the unprivileged kube-sa-bindfs service use the allow_other mount option
   # so root (teleport) can read the bindfs overlay it mounts as uid 107.
   programs.fuse.userAllowOther = true;
 
-  # Stage the raw Kubernetes service account virtiofs share here. virtiofsd runs
+  # Stage the raw Teleport join token virtiofs share here. virtiofsd runs
   # unprivileged as the host qemu uid (107) and only serves a guest reader whose
   # uid is also 107, so even root in the guest is denied. The canonical path that
   # teleport reads is instead provided by the kube-sa-bindfs overlay (which runs
   # as uid 107) from this staging mount.
   fileSystems."/run/kubesaraw" = {
-    device = "serviceaccount";
+    device = "teleport-token";
     fsType = "virtiofs";
     options = [
       "ro"

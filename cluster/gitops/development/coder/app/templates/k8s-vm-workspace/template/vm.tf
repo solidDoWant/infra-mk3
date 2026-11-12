@@ -201,7 +201,7 @@ resource "kubectl_manifest" "vm" {
                   disk = { bus = "virtio" }
                 }
               ]
-              filesystems = [
+              filesystems = concat([
                 {
                   # Cluster PKI root CA; the guest builds a combined trust bundle
                   # from it at boot (see nix/.../modules/ca-trust).
@@ -209,12 +209,19 @@ resource "kubectl_manifest" "vm" {
                   virtiofs = {}
                 },
                 {
-                  # Kubernetes ServiceAccount token, read by Teleport (via the
-                  # in-guest bindfs workaround) to join the cluster as a node.
-                  name     = "serviceaccount"
+                  # Teleport join token (see the volume below), read by Teleport
+                  # (via the in-guest bindfs workaround) to join the cluster as
+                  # a node.
+                  name     = "teleport-token"
                   virtiofs = {}
                 }
-              ]
+                ], local.enable_toolgate ? [
+                {
+                  # toolgate attestation token (see the volume below).
+                  name     = "toolgate-token"
+                  virtiofs = {}
+                }
+              ] : [])
               interfaces = [
                 {
                   name       = "default"
@@ -231,7 +238,7 @@ resource "kubectl_manifest" "vm" {
             }
           ]
 
-          volumes = [
+          volumes = concat([
             {
               name = "rootfs"
               # The standalone per-workspace root DataVolume
@@ -255,13 +262,41 @@ resource "kubectl_manifest" "vm" {
               }
             },
             {
-              # The workspace ServiceAccount, projected into the guest for the
-              # Teleport kubernetes join (token allows development:coder-vm-workspace).
+              # Makes the launcher pod run as this ServiceAccount, so the tokens
+              # below name it. Deliberately not shared with the guest (no
+              # filesystem): that would give the guest a token for the API
+              # server's audience.
               name = "serviceaccount"
               serviceAccount = {
                 serviceAccountName = local.teleport_service_account
               }
             },
+            {
+              # Teleport kubernetes join token (TeleportProvisionToken
+              # coder-vm-workspace allows development:coder-vm-workspace): a
+              # token whose audience is the Teleport cluster name, bound to the
+              # launcher pod. The coder-vm-workspace-tokens
+              # MutatingAdmissionPolicy (coder/app/vm-workspace-tokens.yaml)
+              # mounts it in the compute container, and this shares that mount
+              # with the guest. Needs KubeVirt's ContainerPathVolumes feature
+              # gate.
+              name = "teleport-token"
+              containerPath = {
+                path = "/var/run/secrets/teleport"
+              }
+            },
+            ], local.enable_toolgate ? [
+            {
+              # toolgate workspace attestation: a token with audience
+              # `toolgate`, bound to the launcher pod, from the same policy.
+              # The image's toolgate-attestation module exposes it to the coder
+              # user.
+              name = "toolgate-token"
+              containerPath = {
+                path = "/var/run/secrets/toolgate"
+              }
+            }
+            ] : [], [
             {
               name = "cloudinit"
               # By reference, not inline: virtualmachine-validator rejects an
@@ -278,7 +313,7 @@ resource "kubectl_manifest" "vm" {
                 }
               }
             }
-          ]
+          ])
 
           # Spread workspace VMs across nodes.
           affinity = {

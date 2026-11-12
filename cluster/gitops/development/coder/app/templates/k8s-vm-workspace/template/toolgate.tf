@@ -7,8 +7,11 @@
 #   command with `toolgate configure` (not an environment variable: Claude
 #   Code removes credential-like variables, such as *_TOKEN_*, from plugin
 #   helpers).
-# - No workspace attestation yet for VM workspaces: their sessions count as
-#   unverified (see the k8s-workspace template for the attested pod version).
+# - Workspace attestation: the CLI sends a projected token with audience
+#   `toolgate`, bound to the VM's virt-launcher pod (the toolgate-token volume
+#   in vm.tf). The gateway checks the launcher pod's Coder labels (vm.tf puts
+#   them on spec.template) against the user and marks the session attested as
+#   coder/<owner>/<workspace>.
 
 # Parameters
 locals {
@@ -97,9 +100,24 @@ resource "coder_script" "install_toolgate" {
     # the agent token from a 0600 file for the same reason.
     install -d -m 700 "$HOME/.config/coder"
     (umask 077 && printf '%s' "$CODER_AGENT_TOKEN" > "$HOME/.config/coder/agent-token")
+    # Workspace attestation: the VM's toolgate-audience token, which the
+    # image's toolgate-attestation module exposes to this user (see the
+    # toolgate-token volume in vm.tf). Wait briefly for the mount; without it,
+    # sessions are unverified.
+    ATTESTATION=""
+    for _ in $(seq 1 30); do
+      [ -r /run/toolgate-attestation/token ] && ATTESTATION=/run/toolgate-attestation/token && break
+      sleep 1
+    done
+    [ -n "$ATTESTATION" ] || echo "Workspace attestation unavailable: no readable toolgate token; sessions will be unverified."
+
+    # An empty value removes a setting. --attestation-token-request clears the
+    # token exchange that template versions before 0.0.25 configured.
     toolgate configure \
       --gateway "${local.toolgate_gateway}" \
-      --token-command "coder external-auth access-token toolgate --agent-token-file $HOME/.config/coder/agent-token"
+      --token-command "coder external-auth access-token toolgate --agent-token-file $HOME/.config/coder/agent-token" \
+      --attestation-token-request "" \
+      --attestation-token-file "$ATTESTATION"
 
     for _ in $(seq 1 120); do
       command -v claude >/dev/null 2>&1 && break
