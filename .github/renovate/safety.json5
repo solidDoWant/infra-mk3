@@ -96,13 +96,6 @@
       versioning: "regex:^kyverno-chart-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
     },
     {
-      description: "xpumanager dashboard: tags mix V/v prefixes, and v2 dropped rest/grafana-dashboard.json",
-      matchDatasources: ["github-tags"],
-      matchPackageNames: ["intel/xpumanager"],
-      versioning: "regex:^[vV](?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
-      allowedVersions: "/^[vV]1\\./",
-    },
-    {
       description: "VictoriaLogs tags dropped the -victorialogs suffix after v1.17.0",
       matchDatasources: ["docker"],
       matchPackageNames: ["quay.io/victoriametrics/victoria-logs"],

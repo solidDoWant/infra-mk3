@@ -25,11 +25,9 @@ spec:
       dynamicPath: /var/cdi/dynamic
     kubeletPlugin:
       # Health monitoring requires Intel's xpumd daemon on a gRPC socket at
-      # /run/xpumd. The cluster does not run it -- note that the xpumanager
-      # deployment in this repo is the REST metrics exporter, a different thing
-      # on a different (emptyDir) socket, and is currently disabled anyway. With
-      # monitoring enabled and no xpumd, the plugin panics after ~5m and every
-      # GPU claim in the cluster becomes unsatisfiable.
+      # /run/xpumd. The cluster does not run it. With monitoring enabled and no
+      # xpumd, the plugin panics after ~5m and every GPU claim in the cluster
+      # becomes unsatisfiable.
       healthMonitoring:
         enabled: false
       # Required when healthMonitoring is disabled: hardware details (VRAM size)
