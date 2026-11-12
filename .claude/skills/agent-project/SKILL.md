@@ -87,10 +87,15 @@ coder create NAME-vm --template k8s-vm-workspace --yes \
   --parameter repo_setup=clone --parameter clone_repo_url=https://github.com/OWNER/REPO \
   --parameter "clone_repo_branch=<default branch>" --parameter enable_github_integration=true \
   --parameter github_external_auth_permissions=github-restricted --parameter install_github_cli=true \
-  --parameter "Enable Claude Code=true" --parameter "Coder Token=false" \
-  --parameter enable_desktop=false --parameter enable_nfs=false
+  --parameter "Enable Claude Code=true" --parameter "Coder Token=false" --parameter enable_toolgate=true \
+  --parameter enable_desktop=false --parameter enable_nfs=false </dev/null
 timeout 1200 coder ssh NAME-vm --wait yes -- 'echo ok'   # waits for the agent
 ```
+
+- **Enable toolgate (owner's default).** `enable_toolgate=true` installs the toolgate CLI and Claude Code plugin and signs Claude Code in to the gateway, so agents in the VM get the homelab's MCP servers: Playwright, kubesearch, Grafana and the rest. Leave it on unless the owner says otherwise.
+- **Parameter names are not all display names.** Use `enable_toolgate`; its display name "Enable toolgate" is rejected. `coder create` prompts for any parameter the command leaves out, and with `--yes` and no terminal it fails with `prepare build: EOF`. Redirect stdin from `/dev/null` so a newly added template parameter fails loudly instead of hanging. The error names the parameter and suggests its real name ("Did you mean: enable_toolgate").
+- **Changing a parameter later:** `coder restart NAME-vm --yes --parameter name=value`. `coder update` only rebuilds an outdated workspace and ignores the change.
+- `clone_repo_branch` must be the repo's real default branch. `gh repo create --add-readme` currently makes `master`.
 
 8 CPU / 16 GiB is the template maximum; there is no swap, so cap concurrency in the playbook: 5 subagents total, 3 workers + 2 reviewers by default, shifting to 2 + 3 (and pausing filler work) while 3+ PRs await review. At 5 agents the VM had ~9 GiB free and load ~6 — the binding constraint is the user's usage limit, not the VM. Repo lands at `/workspace/REPO` (persistent disk). VM facts:
 
