@@ -37,7 +37,7 @@ spec:
           app:
             image: &image
               repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/stats-api
-              tag: 0.0.10
+              tag: 0.0.11
             env:
               LISTEN_ADDR: ":8080"
               # Both instances share the insurgency-stats hostname; the gateway forwards
