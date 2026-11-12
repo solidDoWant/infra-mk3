@@ -72,3 +72,5 @@ spec:
   dependsOn:
     # The MCPServerTemplate CRD comes from the toolgate chart.
     - name: toolgate-app
+    # ClusterPolicies that copy API keys into instance namespaces.
+    - name: kyverno-app

@@ -154,6 +154,15 @@ specs:
               app.kubernetes.io/name: houndarr
               app.kubernetes.io/controller: houndarr
               app.kubernetes.io/instance: houndarr
+          # Generic Sonarr API clients, e.g. the toolgate catalog's servarr MCP
+          # server, whose instance namespaces vary.
+          - matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
+              - key: endpoints.netpols.home.arpa/servarr-api-client
+                operator: In
+                values:
+                  - "true"
         toPorts: *webservice_ports
   - description: exportarr
     endpointSelector: *exportarr_selector

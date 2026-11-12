@@ -1,0 +1,258 @@
+---
+# servarr: browse and manage Sonarr (TV) and Radarr (movies): the library,
+# calendar, queue, history, wanted lists and indexer searches, plus adding
+# shows and movies and grabbing releases.
+# https://github.com/CarlDog/servarr-mcp
+#
+# Third-party, single-maintainer project with no releases: images are tagged
+# `main-<commit>`, so bump the tag and digest together after reading the diff.
+#
+# It holds Sonarr's and Radarr's API keys, which can't be scoped. The key
+# limits here:
+# - toolFilter exposes reads, searches and add/edit/grab. Queue removal,
+#   manual import and import-list or notification settings stay hidden.
+# - Every tool that adds, edits or grabs needs a person's approval.
+# - The server never deletes series, movies or files; it has no tool for it.
+# - Egress reaches only the Sonarr and Radarr pods.
+#
+# The API keys are copied into each instance namespace by the Kyverno policy
+# in servarr-api-keys.yaml.
+#
+# `$${` is Flux's escape: it reaches toolgate as a literal `${`.
+#
+# No `scope`: everyone it admits uses the same API keys, so toolgate runs one
+# shared instance.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: servarr
+spec:
+  description: >-
+    Sonarr (TV) and Radarr (movies): browse the library, calendar, download
+    queue, history and missing or below-cutoff lists; look up and add shows
+    and movies; trigger searches and grab releases. Adding, editing and
+    grabbing need approval.
+  idleStop: 1h
+  startTimeout: 2m
+  access:
+    # The same people who can use Sonarr's and Radarr's own UIs.
+    groups:
+      - Downloads access
+    # Usable from any signed-in machine, attested or not.
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: servarr
+    port: 8080
+  toolFilter:
+    allow:
+      # Reads
+      - sonarr_list_series
+      - sonarr_get_series
+      - sonarr_lookup_series
+      - sonarr_list_episodes
+      - sonarr_get_episode
+      - sonarr_calendar
+      - sonarr_queue
+      - sonarr_history
+      - sonarr_history_series
+      - sonarr_wanted_missing
+      - sonarr_wanted_cutoff
+      - sonarr_release_search
+      - sonarr_get_command
+      - sonarr_health
+      - sonarr_diskspace
+      - sonarr_list_quality_profiles
+      - sonarr_list_root_folders
+      - sonarr_list_tags
+      - radarr_list_movies
+      - radarr_get_movie
+      - radarr_lookup_movie
+      - radarr_lookup_tmdb
+      - radarr_lookup_imdb
+      - radarr_calendar
+      - radarr_queue
+      - radarr_history
+      - radarr_history_movie
+      - radarr_wanted_missing
+      - radarr_wanted_cutoff
+      - radarr_release_search
+      - radarr_get_command
+      - radarr_health
+      - radarr_diskspace
+      - radarr_list_quality_profiles
+      - radarr_list_root_folders
+      - radarr_list_tags
+      # Searches and refreshes: they queue indexer searches or rescans, and
+      # change nothing in the library.
+      - sonarr_search_missing
+      - sonarr_search_series
+      - sonarr_search_season
+      - sonarr_search_episode
+      - sonarr_refresh_series
+      - radarr_search_missing
+      - radarr_search_movie
+      - radarr_refresh_movie
+      # Writes, each approval-gated below.
+      - sonarr_add_series
+      - sonarr_quick_add_series
+      - sonarr_edit_series
+      - sonarr_grab_release
+      - sonarr_queue_regrab
+      - sonarr_history_mark_failed
+      - radarr_add_movie
+      - radarr_quick_add_movie
+      - radarr_edit_movie
+      - radarr_grab_release
+      - radarr_queue_regrab
+      - radarr_history_mark_failed
+  tools:
+    sonarr_add_series:
+      approval: required
+    sonarr_quick_add_series:
+      approval: required
+    sonarr_edit_series:
+      approval: required
+    sonarr_grab_release:
+      approval: required
+    sonarr_queue_regrab:
+      approval: required
+    sonarr_history_mark_failed:
+      approval: required
+    radarr_add_movie:
+      approval: required
+    radarr_quick_add_movie:
+      approval: required
+    radarr_edit_movie:
+      approval: required
+    radarr_grab_release:
+      approval: required
+    radarr_queue_regrab:
+      approval: required
+    radarr_history_mark_failed:
+      approval: required
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: servarr
+        labels:
+          app: servarr-mcp
+          endpoints.netpols.home.arpa/servarr-api-client: "true"
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 100 # the image's `servarr` user
+          runAsGroup: 101
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            image: ghcr.io/carldog/servarr-mcp:main-83f05c2@sha256:33d3ddf920219efe89a51360c440556e62d333e6dc3cff9955d3f7770cf48d9a
+            env:
+              # Setting a port selects the HTTP transport instead of stdio.
+              - name: MCP_PORT
+                value: "8080"
+              # The gateway connects as <service>.<namespace>.svc:<port>, and
+              # the server rejects any other Host header.
+              - name: MCP_ALLOWED_HOSTS
+                value: servarr.$${instance.namespace}.svc
+              # No MCP_AUTH_TOKEN: the network policy admits only the gateway,
+              # which does the authentication. The server logs a warning.
+              - name: SONARR_URL
+                value: http://sonarr.media.svc.cluster.local:8989
+              - name: SONARR_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: servarr-api-keys
+                    key: sonarr
+              - name: RADARR_URL
+                value: http://radarr.media.svc.cluster.local:7878
+              - name: RADARR_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: servarr-api-keys
+                    key: radarr
+            ports:
+              - name: http
+                containerPort: 8080
+            readinessProbe:
+              httpGet:
+                path: /health
+                port: http
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 10m
+                memory: 192Mi
+              limits:
+                memory: 192Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            volumeMounts:
+              - name: tmp
+                mountPath: /tmp
+        volumes:
+          - name: tmp
+            emptyDir:
+              sizeLimit: 64Mi
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: servarr
+      spec:
+        selector:
+          app: servarr-mcp
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs: Sonarr and Radarr only.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: servarr-mcp
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: servarr-mcp
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: media
+                  endpoints.netpols.home.arpa/servarr-api-server: "true"
+            toPorts:
+              - ports:
+                  # Sonarr
+                  - port: "8989"
+                    protocol: TCP
+                  # Radarr
+                  - port: "7878"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP
