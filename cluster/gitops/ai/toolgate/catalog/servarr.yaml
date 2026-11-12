@@ -35,9 +35,11 @@ spec:
   idleStop: 1h
   startTimeout: 2m
   access:
-    # The same people who can use Sonarr's and Radarr's own UIs.
+    # People who can use Sonarr's or Radarr's own UI. Either group admits
+    # both apps' tools: toolgate can't restrict tools per group.
     groups:
-      - Downloads access
+      - Sonarr access
+      - Radarr access
     # Usable from any signed-in machine, attested or not.
     environments: any
   # MCP is served at the default path, /mcp.
