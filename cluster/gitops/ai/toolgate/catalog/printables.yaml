@@ -1,0 +1,115 @@
+---
+# printables: search printables.com and get direct download links for 3D
+# model files. Agents download the files themselves from the links, so the
+# files never pass through the conversation.
+# https://github.com/solidDoWant/mcp-servers/tree/master/servers/printables
+#
+# No `scope`: the server keeps no state and reads only public data, so toolgate
+# runs one shared instance for everyone.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: printables
+spec:
+  description: >-
+    Search printables.com for 3D-printable models, read a model's description,
+    license and file list, and get direct download links (valid 24 hours) for
+    its STL/3MF/STEP, G-code or zip files. Download the links with curl or wget.
+  idleStop: 2h
+  startTimeout: 2m
+  access:
+    users:
+      - "*"
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: printables
+    port: 8080
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: printables
+        labels:
+          app: printables-mcp
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65532
+          runAsGroup: 65532
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            image: ghcr.io/soliddowant/mcp-printables:0.1.0@sha256:cbd848e80ba8ebfebd5f0f13e0b3f8b86b73f4b5264264f46162c526244f88d7
+            ports:
+              - name: http
+                containerPort: 8080
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: http
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 64Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: printables
+      spec:
+        selector:
+          app: printables-mcp
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs: Printables' API only.
+    # Agents download files from files.printables.com themselves.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: printables-mcp
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: printables-mcp
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          - toFQDNs:
+              - matchName: api.printables.com
+            toPorts:
+              - ports:
+                  - port: "443"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP
