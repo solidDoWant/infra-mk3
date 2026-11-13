@@ -22,29 +22,34 @@ spec:
         "etcd-mixin",
         "vm-k8s-stack"
       ],
-      "annotations": {},
       "templating": {
         "list": [
           {
             "name": "datasource",
             "label": "Data Source",
             "type": "datasource",
-            "query": "prometheus",
-            "hide": ""
+            "query": "prometheus"
+          },
+          {
+            "name": "k8s_cluster",
+            "label": "k8s_cluster",
+            "type": "constant",
+            "query": ".*",
+            "definition": ".*",
+            "multi": false,
+            "includeAll": false,
+            "hide": 2,
+            "allValue": ".*"
           },
           {
             "name": "cluster",
             "label": "cluster",
-            "type": "constant",
-            "query": ".*",
-            "definition": ".*",
+            "type": "query",
+            "query": "label_values(etcd_server_has_leader{job=~\".*etcd.*\",cluster=~\"$k8s_cluster\"}, job)",
             "datasource": {
               "type": "prometheus",
               "uid": "${datasource}"
             },
-            "multi": false,
-            "includeAll": false,
-            "hide": 2,
             "refresh": 2
           }
         ]
@@ -58,7 +63,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "sum(etcd_server_has_leader{job=~\".*etcd.*\",cluster=~\"$cluster\"}) by(cluster)",
+              "expr": "sum(etcd_server_has_leader{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}) by(cluster)",
               "legendFormat": "{{cluster}} - {{namespace}}\n"
             }
           ],
@@ -94,7 +99,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "sum(rate(grpc_server_started_total{job=~\".*etcd.*\",cluster=~\"$cluster\",grpc_type=\"unary\"}[$__rate_interval])) by(cluster)",
+              "expr": "sum(rate(grpc_server_started_total{job=~\".*etcd.*\",job=\"$cluster\",grpc_type=\"unary\",cluster=~\"$k8s_cluster\"}[$__rate_interval])) by(cluster)",
               "legendFormat": "RPC rate"
             },
             {
@@ -102,7 +107,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "sum(rate(grpc_server_handled_total{job=~\".*etcd.*\",cluster=~\"$cluster\",grpc_type=\"unary\",grpc_code=~\"Unknown|FailedPrecondition|ResourceExhausted|Internal|Unavailable|DataLoss|DeadlineExceeded\"}[$__rate_interval])) by(cluster)",
+              "expr": "sum(rate(grpc_server_handled_total{job=~\".*etcd.*\",job=\"$cluster\",grpc_type=\"unary\",grpc_code=~\"Unknown|FailedPrecondition|ResourceExhausted|Internal|Unavailable|DataLoss|DeadlineExceeded\",cluster=~\"$k8s_cluster\"}[$__rate_interval])) by(cluster)",
               "legendFormat": "RPC failed rate"
             }
           ],
@@ -139,7 +144,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "sum(grpc_server_started_total{job=~\".*etcd.*\",cluster=~\"$cluster\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\"}) by(cluster) - sum(grpc_server_handled_total{cluster=~\"$cluster\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\"}) by(cluster)",
+              "expr": "sum(grpc_server_started_total{job=~\".*etcd.*\",job=\"$cluster\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\",cluster=~\"$k8s_cluster\"}) by(cluster) - sum(grpc_server_handled_total{job=\"$cluster\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\",cluster=~\"$k8s_cluster\"}) by(cluster)",
               "legendFormat": "Watch streams"
             },
             {
@@ -147,7 +152,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "sum(grpc_server_started_total{job=~\".*etcd.*\",cluster=~\"$cluster\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\"}) by(cluster) - sum(grpc_server_handled_total{cluster=~\"$cluster\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\"}) by(cluster)",
+              "expr": "sum(grpc_server_started_total{job=~\".*etcd.*\",job=\"$cluster\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\",cluster=~\"$k8s_cluster\"}) by(cluster) - sum(grpc_server_handled_total{job=\"$cluster\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\",cluster=~\"$k8s_cluster\"}) by(cluster)",
               "legendFormat": "Lease streams"
             }
           ],
@@ -183,7 +188,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "etcd_mvcc_db_total_size_in_bytes{job=~\".*etcd.*\",cluster=~\"$cluster\"}",
+              "expr": "etcd_mvcc_db_total_size_in_bytes{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}",
               "legendFormat": "{{instance}} DB size"
             },
             {
@@ -191,7 +196,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "etcd_mvcc_db_total_size_in_use_in_bytes{job=~\".*etcd.*\",cluster=~\"$cluster\"}",
+              "expr": "etcd_mvcc_db_total_size_in_use_in_bytes{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}",
               "legendFormat": "{{instance}} DB size in use"
             }
           ],
@@ -229,7 +234,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=~\".*etcd.*\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,le,cluster))",
+              "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[$__rate_interval])) by(instance,le,cluster))",
               "legendFormat": "{{instance}} WAL fsync"
             },
             {
@@ -237,7 +242,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=~\".*etcd.*\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,le,cluster))",
+              "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[$__rate_interval])) by(instance,le,cluster))",
               "legendFormat": "{{instance}} DB fsync"
             }
           ],
@@ -274,7 +279,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "process_resident_memory_bytes{job=~\".*etcd.*\",cluster=~\"$cluster\"}",
+              "expr": "process_resident_memory_bytes{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}",
               "legendFormat": "{{instance}} resident memory"
             }
           ],
@@ -311,7 +316,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=~\".*etcd.*\",cluster=~\"$cluster\"}[$__rate_interval])",
+              "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[$__rate_interval])",
               "legendFormat": "{{instance}} client traffic in"
             }
           ],
@@ -348,7 +353,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=~\".*etcd.*\",cluster=~\"$cluster\"}[$__rate_interval])",
+              "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[$__rate_interval])",
               "legendFormat": "{{instance}} client traffic out"
             }
           ],
@@ -385,7 +390,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=~\".*etcd.*\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,cluster)",
+              "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[$__rate_interval])) by(instance,cluster)",
               "legendFormat": "{{instance}} peer traffic in"
             }
           ],
@@ -422,7 +427,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=~\".*etcd.*\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,cluster)",
+              "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[$__rate_interval])) by(instance,cluster)",
               "legendFormat": "{{instance}} peer traffic out"
             }
           ],
@@ -459,7 +464,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "changes(etcd_server_leader_changes_seen_total{job=~\".*etcd.*\",cluster=~\"$cluster\"}[1d])",
+              "expr": "changes(etcd_server_leader_changes_seen_total{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[1d])",
               "legendFormat": "{{instance}} total leader elections per day"
             }
           ],
@@ -495,7 +500,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "changes(etcd_server_leader_changes_seen_total{job=~\".*etcd.*\",cluster=~\"$cluster\"}[1d])",
+              "expr": "changes(etcd_server_leader_changes_seen_total{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[1d])",
               "legendFormat": "{{instance}} total leader elections per day"
             }
           ],
@@ -531,7 +536,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=~\".*etcd.*\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,le,cluster))",
+              "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=~\".*etcd.*\",job=\"$cluster\",cluster=~\"$k8s_cluster\"}[$__rate_interval])) by(instance,le,cluster))",
               "legendFormat": "{{instance}} peer round trip time"
             }
           ],

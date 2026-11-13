@@ -26,7 +26,7 @@ spec:
       "annotations": {
         "list": [
           {
-            "name": "Annotations \u0026 Alerts",
+            "name": "Annotations & Alerts",
             "datasource": {
               "type": "datasource",
               "uid": "grafana"
@@ -1744,7 +1744,7 @@ spec:
                 "type": "prometheus",
                 "uid": "${datasource}"
               },
-              "expr": "sum(rate(container_cpu_cfs_throttled_seconds_total{image!=\"\",cluster=~\"$cluster\"}[$__rate_interval])) by(namespace,cluster) \u003e 0",
+              "expr": "sum(rate(container_cpu_cfs_throttled_seconds_total{image!=\"\",cluster=~\"$cluster\"}[$__rate_interval])) by(namespace,cluster) > 0",
               "editorMode": "code",
               "exemplar": true,
               "interval": "$resolution",
@@ -2198,7 +2198,7 @@ spec:
                 "type": "prometheus",
                 "uid": "${datasource}"
               },
-              "expr": "sum(increase(container_oom_events_total{cluster=~\"$cluster\"}[$__rate_interval])) by(namespace,cluster) \u003e 0",
+              "expr": "sum(increase(container_oom_events_total{cluster=~\"$cluster\"}[$__rate_interval])) by(namespace,cluster) > 0",
               "editorMode": "code",
               "exemplar": true,
               "interval": "",
@@ -2304,7 +2304,7 @@ spec:
                 "type": "prometheus",
                 "uid": "${datasource}"
               },
-              "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$cluster\"}[$__rate_interval])) by(namespace,cluster) \u003e 0",
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=~\"$cluster\"}[$__rate_interval])) by(namespace,cluster) > 0",
               "editorMode": "code",
               "exemplar": true,
               "interval": "",

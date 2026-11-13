@@ -25,7 +25,7 @@ spec:
       "annotations": {
         "list": [
           {
-            "name": "Annotations \u0026 Alerts",
+            "name": "Annotations & Alerts",
             "datasource": {
               "type": "datasource",
               "uid": "grafana"
@@ -63,11 +63,21 @@ spec:
             "type": "datasource",
             "query": "prometheus",
             "includeAll": false,
-            "hide": "",
             "current": {},
             "options": [],
             "refresh": 1,
             "regex": ""
+          },
+          {
+            "name": "cluster",
+            "label": "cluster",
+            "type": "constant",
+            "query": ".*",
+            "definition": ".*",
+            "multi": false,
+            "includeAll": false,
+            "hide": 2,
+            "allValue": ".*"
           },
           {
             "name": "job",
@@ -82,7 +92,6 @@ spec:
               "uid": "$ds"
             },
             "includeAll": false,
-            "hide": "",
             "current": {},
             "options": [],
             "refresh": 2,
@@ -101,7 +110,6 @@ spec:
               "uid": "$ds"
             },
             "includeAll": true,
-            "hide": "",
             "current": {},
             "options": [],
             "refresh": 2,
@@ -134,19 +142,8 @@ spec:
               "type": "prometheus",
               "uid": "$ds"
             },
-            "hide": "",
             "baseFilters": [],
             "filters": []
-          },
-          {
-            "name": "cluster",
-            "label": "cluster",
-            "type": "constant",
-            "query": ".*",
-            "multi": false,
-            "includeAll": false,
-            "hide": 2,
-            "allValue": ".*"
           }
         ]
       },
@@ -1106,7 +1103,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "sum(rate(controller_runtime_reconcile_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(controller,cluster) \u003e 0",
+              "expr": "sum(rate(controller_runtime_reconcile_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(controller,cluster) > 0",
               "editorMode": "code",
               "exemplar": false,
               "instant": false,
@@ -1119,7 +1116,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "sum(rate(controller_runtime_reconcile_total{job=~\"$job\",instance=~\"$instance\",result=\"error\",cluster=~\"$cluster\"}[$__rate_interval])) by(controller,cluster) \u003e 0",
+              "expr": "sum(rate(controller_runtime_reconcile_total{job=~\"$job\",instance=~\"$instance\",result=\"error\",cluster=~\"$cluster\"}[$__rate_interval])) by(controller,cluster) > 0",
               "editorMode": "code",
               "hide": false,
               "legendFormat": "result errors: {{controller}}",
