@@ -1,0 +1,159 @@
+---
+# sendcutsend: upload flat parts to SendCutSend, price them with bending,
+# tapping and finishing, and build saved carts the user checks out in their
+# own browser. Nothing here orders or pays.
+# https://github.com/solidDoWant/mcp-servers/tree/master/servers/sendcutsend
+#
+# SendCutSend has no API keys. Each user signs in to the site with their own
+# account's `user_credentials` cookie, which they store with:
+#   toolgate secret set sendcutsend-credentials
+# (sign in at https://app.sendcutsend.com and copy the cookie's value from the
+# browser's developer tools). It stays valid until that account signs out or
+# changes its password. The server reads it from a file on every call, so a
+# replaced secret takes effect when the instance restarts.
+#
+# `$${` is Flux's escape: it reaches toolgate as a literal `${secret:...}`.
+#
+# No `scope`: the secret makes toolgate run one instance per user.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: sendcutsend
+spec:
+  description: >-
+    SendCutSend laser cutting: upload a flat part (DXF inline, or any CAD file
+    by upload URL), price it in every material or with bending, tapping and
+    powder coat/anodizing/plating, and build a saved cart to check out in the
+    browser. Uses your own SendCutSend account; saved carts and deletes need
+    approval.
+  idleStop: 1h
+  startTimeout: 2m
+  access:
+    # Everyone may enable it, but each user works in their own SendCutSend
+    # account through their own cookie, so no one sees another's parts.
+    users:
+      - "*"
+    # Usable from any signed-in machine, attested or not.
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: sendcutsend
+    port: 8080
+  tools:
+    # Writes to the account a person should see first. Uploading parts and
+    # pricing change nothing they'd miss.
+    create_saved_cart:
+      approval: required
+    delete_part:
+      approval: required
+    delete_saved_cart:
+      approval: required
+  resources:
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: sendcutsend-credentials
+      stringData:
+        user_credentials: $${secret:sendcutsend-credentials}
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: sendcutsend
+        labels:
+          app: sendcutsend-mcp
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65532
+          runAsGroup: 65532
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            image: ghcr.io/soliddowant/mcp-sendcutsend:0.1.0@sha256:50c61b293f441b7b08c53280bd15a0cea03ad1b8a24c43bc4873a13914c23a9f
+            env:
+              - name: SENDCUTSEND_CREDENTIALS_FILE
+                value: /var/run/secrets/sendcutsend/user_credentials
+            ports:
+              - name: http
+                containerPort: 8080
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: http
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            volumeMounts:
+              - name: credentials
+                mountPath: /var/run/secrets/sendcutsend
+                readOnly: true
+        volumes:
+          - name: credentials
+            secret:
+              secretName: sendcutsend-credentials
+              defaultMode: 0400
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: sendcutsend
+      spec:
+        selector:
+          app: sendcutsend-mcp
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs: SendCutSend's web app,
+    # its CDN (parts' processed geometry) and its S3 upload bucket. Agents that
+    # upload with get_upload_url reach the bucket themselves.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: sendcutsend-mcp
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: sendcutsend-mcp
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          - toFQDNs:
+              - matchName: app.sendcutsend.com
+              - matchName: cdn.sendcutsend.com
+              - matchName: sendcutsend.s3-accelerate.amazonaws.com
+            toPorts:
+              - ports:
+                  - port: "443"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP
