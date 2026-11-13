@@ -1,16 +1,17 @@
-# DigiKey and Mouser API keys for the shared `parts` server (parts.yaml).
+# DigiKey and Mouser API keys for the shared `electronic-components`
+# server (electronic-components.yaml).
 # Empty values leave a source off; jlcsearch needs no key. Fill them in with
-#   sops cluster/gitops/ai/toolgate/catalog/parts-api-keys.sops.yaml
+#   sops cluster/gitops/ai/toolgate/catalog/electronic-components-api-keys.sops.yaml
 # - digikey_client_id / digikey_client_secret: a DigiKey API app with
 #   Product Information v4 (https://developer.digikey.com/).
 # - mouser_api_key: a Mouser *Search* API key
 #   (https://www.mouser.com/api-search/), which can't reach Mouser's cart or
 #   order APIs.
-# parts-api-keys.yaml copies this Secret into each instance namespace.
+# electronic-components-api-keys.yaml copies this Secret into each instance namespace.
 apiVersion: v1
 kind: Secret
 metadata:
-    name: parts-api-keys
+    name: electronic-components-api-keys
 type: Opaque
 stringData:
     digikey_client_id: ENC[AES256_GCM,data:vYvqd/5Yg+clhX85IQn4OR+6L2dohc5avuojHV+RVT6BbvzqRNgkq1uGVqKMfyFe,iv:k/yooiFhnECJCHsHgTlav3YSjUG9222DbsnSeg2Wkek=,tag:m8guXipBNf11zvV7Aaom/g==,type:str]
