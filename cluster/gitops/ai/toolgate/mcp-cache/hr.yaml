@@ -1,0 +1,50 @@
+---
+# A Dragonfly cluster shared by toolgate's MCP servers as their response
+# cache and request-budget store (mcp-servers internal/cache). Each server
+# connects with mTLS (a client certificate issued here, copied into its
+# instance namespace) and signs in as its own ACL user (acl.sops.yaml),
+# limited to its key prefix. The servers use standard Redis commands only,
+# so another Redis-compatible server can replace Dragonfly.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mcp-cache-dragonfly
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/dragonfly/cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    serviceName: mcp-cache
+    certificates:
+      serving:
+        issuerRef:
+          name: ai-intermediary-ca
+    aclFromSecret:
+      name: mcp-cache-acl
+      key: users.acl
+    users:
+      # The client certificate (CN=electronic-components) the
+      # electronic-components MCP server presents.
+      electronic-components:
+        username: electronic-components
+        # The server re-reads its certificate for every new connection, so
+        # renewals (hourly) needn't restart it.
+        disableReloading: true
+    podLabels:
+      endpoints.netpols.home.arpa/mcp-cache-server: "true"
+    netpol:
+      applicationAccess:
+        # MCP servers run in namespaces toolgate creates per instance, so
+        # match the role label in any namespace.
+        selectors:
+          - matchLabels:
+              endpoints.netpols.home.arpa/mcp-cache-client: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists

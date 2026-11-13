@@ -55,6 +55,7 @@ spec:
           metadata:
             labels:
               app: electronic-components-mcp
+              endpoints.netpols.home.arpa/mcp-cache-client: "true"
           spec:
             automountServiceAccountToken: false
             securityContext:
@@ -67,7 +68,7 @@ spec:
                 type: RuntimeDefault
             containers:
               - name: server
-                image: ghcr.io/soliddowant/mcp-electronic-components:0.3.0@sha256:464d25afade6541b910059402df30c114aaa19b04e810304a6770c37b2bea679
+                image: ghcr.io/soliddowant/mcp-electronic-components:0.4.0@sha256:0f51779e890942508ca7417a606891ec70f4e83ca6c83ee241cec1d96efe44a2
                 env:
                   - name: DIGIKEY_CLIENT_ID_FILE
                     value: /var/run/secrets/electronic-components/digikey_client_id
@@ -75,6 +76,21 @@ spec:
                     value: /var/run/secrets/electronic-components/digikey_client_secret
                   - name: MOUSER_API_KEY_FILE
                     value: /var/run/secrets/electronic-components/mouser_api_key
+                  # The shared MCP cache (mcp-cache/hr.yaml): answers and daily
+                  # budgets survive restarts. mTLS with a client certificate
+                  # renewed hourly, plus this server's own ACL user, whose
+                  # password is in the connection string.
+                  - name: CACHE_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: electronic-components-api-keys
+                        key: cache_url
+                  - name: CACHE_TLS_CERT_FILE
+                    value: /var/run/secrets/mcp-cache/tls.crt
+                  - name: CACHE_TLS_KEY_FILE
+                    value: /var/run/secrets/mcp-cache/tls.key
+                  - name: CACHE_TLS_CA_FILE
+                    value: /var/run/secrets/root-ca/ca.crt
                 ports:
                   - name: http
                     containerPort: 8080
@@ -99,6 +115,12 @@ spec:
                   - name: api-keys
                     mountPath: /var/run/secrets/electronic-components
                     readOnly: true
+                  - name: cache-client-cert
+                    mountPath: /var/run/secrets/mcp-cache
+                    readOnly: true
+                  - name: root-ca
+                    mountPath: /var/run/secrets/root-ca
+                    readOnly: true
             volumes:
               - name: api-keys
                 secret:
@@ -107,6 +129,15 @@ spec:
                   # Not optional: Kyverno makes the copy just after toolgate makes
                   # the namespace, and the pod must wait for it rather than start
                   # without its keys. Empty keys in the Secret are fine.
+              # The MCP cache's client certificate, copied in the same way.
+              - name: cache-client-cert
+                secret:
+                  secretName: mcp-cache-client-cert
+                  defaultMode: 0440
+              # Kyverno puts the cluster's root CA in every namespace.
+              - name: root-ca
+                configMap:
+                  name: root-ca-pub-cert
     - apiVersion: v1
       kind: Service
       metadata:
@@ -142,6 +173,15 @@ spec:
                 rules:
                   dns:
                     - matchPattern: "*"
+          # The shared MCP cache.
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: ai
+                  endpoints.netpols.home.arpa/mcp-cache-server: "true"
+            toPorts:
+              - ports:
+                  - port: "6379"
+                    protocol: TCP
           - toFQDNs:
               - matchName: api.digikey.com
               - matchName: api.mouser.com

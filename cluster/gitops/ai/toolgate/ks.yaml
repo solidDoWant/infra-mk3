@@ -24,6 +24,32 @@ spec:
     - name: kyverno-app
     - name: rook-ceph-cluster
 ---
+# The shared cache for MCP servers (Dragonfly), kept apart from toolgate's
+# own backend so a cache problem never blocks the gateway.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name toolgate-mcp-cache
+spec:
+  targetNamespace: ai
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ai/toolgate/mcp-cache
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: prometheus-crds
+    - name: cluster-issuers
+    - name: ai-namespace-issuer
+    - name: dragonfly-operator
+    - name: kyverno-app
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -74,3 +100,5 @@ spec:
     - name: toolgate-app
     # ClusterPolicies that copy API keys into instance namespaces.
     - name: kyverno-app
+    # The MCP cache's client certificates, copied into instance namespaces.
+    - name: toolgate-mcp-cache

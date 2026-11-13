@@ -13,6 +13,13 @@ spec:
     {{- with .Values.args }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
+  {{- with .Values.aclFromSecret }}
+  aclFromSecret: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.podLabels }}
+  podMetadata:
+    labels: {{ toYaml . | nindent 6 }}
+  {{- end }}
   authentication:
     clientCaCertSecret:
       key: ca.crt

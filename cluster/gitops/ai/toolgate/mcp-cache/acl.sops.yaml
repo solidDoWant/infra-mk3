@@ -1,0 +1,42 @@
+# Redis ACL users of the shared MCP cache (hr.yaml), loaded by the Dragonfly
+# operator (aclFromSecret). One user per MCP server, limited to its own key
+# and channel prefix, with commands that list or count other servers' keys
+# denied. Passwords are stored as SHA-256 hashes (#...); each server's
+# plain password is in its own catalog Secret's cache_url.
+#
+# mTLS signs every client in as `default`, so `default` is off. It keeps
+# its permissions: Dragonfly checks AUTH itself against default's
+# permissions, and the operator manages the server through the admin port as
+# default.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mcp-cache-acl
+type: Opaque
+stringData:
+  users.acl: ENC[AES256_GCM,data:MJmWFt8nvorUBaFlXn143Q19c9k9okDy5dXWi1Q+07N0v2pqM4d7HFPqDRBYHBVy9cBuEKCeo0UKm41biQN2dnHWK1OwU4dGTmOKRQfDw3YY4HiuVmUBtfw2coMPt7hYiLL/06xmlYnFj6xdFeWZOV1LLfCAKVDQbZjRyEymX1uB73Ns4yIFmA6a0AgKgeBO0jyKQtN6ogbLDBZ20l+ejS+a0r3CbR01pCxsQcvm1VtlxhCo2hbgchM5NDJpFvEnTDUA/ZVt50bIrY85UyGi67PKDhlG1a8KFVaQAlgAVn2nYf7h0ShwEME=,iv:TmaofKpyI0sub6nVd0V8DgUG2/gG1NeITFpOQyzsdDE=,tag:GqUDLyKlFAjVUXzCuXKvYw==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAyeHpoS3V6NVJBRGh1YXU5
+        MHR1ektDSzFzc3pEbW5hTnIrWTBSOXdmSUE4CnRFaThISTRUSmU4TUQ3aUlhY1p6
+        c2I5S2xxT1FGeUxrSUZlNEhsclAxNHcKLS0tIG13WU1uckZtbXVZK0VXaUFBcC8z
+        cjcrQUJkcWNVMlJVeW1XVllxa2E1a1kKOhk02Oq/9A8sZFse7A41oMIKwov9q/tl
+        H3duI5GKvryPjNuiOipFT0rY0ZYCturOXW6Aw7i8exV/MFAuwbQEvw==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAzNGJHR0VrTzJwcmRjcnZx
+        TDVKUGpGTnQ0RnlLellhMUo3NnZjbmhUc21jClQ4cEhHakdnV0Y4aW5SbGxIeENk
+        czd0bWp5VWFydmdJdnBlQnl0aW4rS0EKLS0tIE84S2dXUWVmUk5XZXpOQlJnaE9q
+        Q1FBVTBtTU9FYlJ1a1ZUTy9VaWFrdG8K7EF0tM+Vlj0nme92W2RnuWmPOk5LlDy1
+        4eVpqspPzoi2udClxedhpYQ2/BcZ2eAn/0DubD5fhpzZENsVcEbOqQ==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-13T21:56:32Z"
+  mac: ENC[AES256_GCM,data:XfJ0P7v8I9CDZE1AVXYE+BObUempy4og2XXCWoopTMWvfgj781iQkwazXxn6TJkZqPL4mBh5AzBb7cFfk4ICxLA6AyxEiBObii70WWcbNjIg0zYV01s1SwJnUB7C/OdSR9mj0ttgMPY7DvwRAR+wolSXXYpswwuNvGXyytxSgWA=,iv:mbnS3GTDJBvAju6ka7ILg6nektsroAtx9+ulxpbWh6I=,tag:xIWx6GoQZ92v++6nnhDqZA==,type:str]
+  mac_only_encrypted: true
+  version: 3.13.3
