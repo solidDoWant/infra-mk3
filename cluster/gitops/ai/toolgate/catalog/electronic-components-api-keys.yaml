@@ -44,3 +44,28 @@ spec:
         clone:
           namespace: ai
           name: electronic-components-api-keys
+    # The client certificate for the shared MCP cache (mcp-cache/hr.yaml),
+    # renewed hourly. synchronize keeps the copy current; the source has no
+    # reload label, because the server re-reads the certificate for every
+    # new connection instead of restarting.
+    - name: copy-electronic-components-cache-client-cert
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  app.kubernetes.io/managed-by: toolgate
+                  toolgate.soliddowant.dev/template: electronic-components
+                  toolgate.soliddowant.dev/template-namespace: ai
+      generate:
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: mcp-cache-client-cert
+        namespace: >-
+          {{ request.object.metadata.name }}
+        clone:
+          namespace: ai
+          name: mcp-cache-dragonfly-electronic-components-user

@@ -72,6 +72,20 @@ netpol:
       # - matchLabels:
       #     app: some-application-2
 
+# ACL users from a Secret holding a Redis ACL file, for a server shared by
+# several services. mTLS alone signs every client in as the `default` user,
+# so a shared server needs a password user per service and `default` off.
+# Keep default's permissions when turning it off (`user default off nopass
+# ~* &* +@all`): Dragonfly checks AUTH itself against default's permissions,
+# and the operator manages the server through the admin port as default.
+aclFromSecret: {}
+#   name: example-acl
+#   key: users.acl
+
+# Extra pod labels, e.g. generic netpol role labels from
+# docs/labels and annotations.md.
+podLabels: {}
+
 # Dragonfly exits unless maxmemory (80% of the memory limit) >= 256MB per thread
 proactorThreads: 1
 resources:
