@@ -12,6 +12,9 @@ apiVersion: v1
 kind: Secret
 metadata:
     name: electronic-components-api-keys
+    labels:
+        # Restart workloads that mount it (or a copy) when the keys change.
+        kyverno.home.arpa/reload: "true"
 type: Opaque
 stringData:
     digikey_client_id: ENC[AES256_GCM,data:vYvqd/5Yg+clhX85IQn4OR+6L2dohc5avuojHV+RVT6BbvzqRNgkq1uGVqKMfyFe,iv:k/yooiFhnECJCHsHgTlav3YSjUG9222DbsnSeg2Wkek=,tag:m8guXipBNf11zvV7Aaom/g==,type:str]
