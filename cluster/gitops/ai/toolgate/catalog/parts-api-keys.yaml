@@ -1,0 +1,47 @@
+---
+# Copies the DigiKey and Mouser API keys (parts-api-keys.sops.yaml) into each
+# namespace that toolgate creates for an instance of the `parts` template
+# (parts.yaml), where the instance's Pod reads them. toolgate deletes the
+# namespace, and with it the copy, when the instance stops.
+#
+# Only toolgate (and cluster admins) can create namespaces, and toolgate sets
+# these labels from the template, so no other namespace gets the keys.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: toolgate-parts-api-keys
+spec:
+  rules:
+    - name: copy-parts-api-keys
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  app.kubernetes.io/managed-by: toolgate
+                  toolgate.soliddowant.dev/template: parts
+                  toolgate.soliddowant.dev/template-namespace: ai
+      context:
+        - name: keys
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/ai/secrets/parts-api-keys
+            jmesPath: data
+      generate:
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: parts-api-keys
+        namespace: >-
+          {{ request.object.metadata.name }}
+        data:
+          type: Opaque
+          data:
+            digikey_client_id: >-
+              {{ keys.digikey_client_id || '' }}
+            digikey_client_secret: >-
+              {{ keys.digikey_client_secret || '' }}
+            mouser_api_key: >-
+              {{ keys.mouser_api_key || '' }}
