@@ -5,14 +5,14 @@ metadata:
   name: victoria-logs
 spec:
   port: "9428"
-  hostAliases:
-    - hostnames:
-        - license.victoriametrics.com
-      ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-  license:
-    keyRef:
-      key: licenseKey
-      name: victoria-metrics-license-key
+  # Pinned: without spec.license the operator would default to the community
+  # image at its own default version.
+  image:
+    repository: quay.io/victoriametrics/vmauth
+    tag: v1.156.0-enterprise@sha256:3642e74646d082b916e5ab5929a63f669032ff7da7e7aef42f36788861d93902
+  extraArgs:
+    # Accept the VictoriaMetrics Enterprise ESA (https://victoriametrics.com/legal/esa/).
+    eula: "true"
   podDisruptionBudget:
     minAvailable: 1
   priorityClassName: system-cluster-critical
@@ -21,21 +21,8 @@ spec:
   podMetadata:
     labels:
       app.kubernetes.io/part-of: victoria-logs
-      endpoints.netpols.home.arpa/victoriametrics-enterprise-component: "true"
       endpoints.netpols.home.arpa/logs-supplier: "true"
   useStrictSecurity: true
-  volumeMounts:
-    - mountPath: /etc/ssl/certs/ca.crt
-      name: victoria-metrics-license-service-serving-cert
-      subPath: ca.crt
-  volumes:
-    - name: victoria-metrics-license-service-serving-cert
-      secret:
-        defaultMode: 288
-        items:
-          - key: ca.crt
-            path: ca.crt
-        secretName: victoria-metrics-license-service-serving-cert
   # TODO figure out auth and ideally multitenancy
   unauthorizedUserAccessSpec:
     url_map:

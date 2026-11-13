@@ -90,16 +90,6 @@ specs:
           - ports:
               - port: "8427"
                 protocol: TCP
-      # Access to the license service
-      - &to_license_service
-        toEndpoints:
-          - matchLabels:
-              app.kubernetes.io/instance: victoria-metrics-license-service
-              app.kubernetes.io/name: victoria-metrics-license-service
-        toPorts:
-          - ports:
-              - port: "443"
-                protocol: TCP
       # Access to the k8s API server for service discovery, and for the
       # config-reloader to read the config Secret
       - &to_apiserver
@@ -152,7 +142,6 @@ specs:
     egress:
       - *dns_resolution
       - *to_vmcluster_lb
-      - *to_license_service
       # Access to trigger alerts
       - toEndpoints:
           - matchLabels:
@@ -254,7 +243,6 @@ specs:
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
     egress:
       - *dns_resolution
-      - *to_license_service
       # Read metrics
       - toEndpoints:
           - matchLabels:
@@ -324,7 +312,6 @@ specs:
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
     egress:
       - *dns_resolution
-      - *to_license_service
       # Access to query stored metrics
       - &to_vmstorage
         toEndpoints:
@@ -371,7 +358,6 @@ specs:
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
     egress:
       - *dns_resolution
-      - *to_license_service
       # Access to store ingested metrics
       - <<: *to_vmstorage
         toPorts:
@@ -404,8 +390,7 @@ specs:
       matchLabels:
         app.kubernetes.io/name: vmstorage
         app.kubernetes.io/instance: victoria-metrics-k8s-stack
-    egress:
-      - *to_license_service
+    # egress:
     ingress:
       # Kubelet for healthcheck
       - fromEntities:
