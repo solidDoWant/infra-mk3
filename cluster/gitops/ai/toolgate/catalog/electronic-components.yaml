@@ -1,10 +1,10 @@
 ---
-# parts: search DigiKey, Mouser and JLCPCB's parts library for electronic
+# electronic-components: search DigiKey, Mouser and JLCPCB's parts library for electronic
 # components and compare offers. Read-only.
-# https://github.com/solidDoWant/mcp-servers/tree/master/servers/parts
+# https://github.com/solidDoWant/mcp-servers/tree/master/servers/electronic-components
 #
-# One shared instance with one set of API keys (parts-api-keys.sops.yaml,
-# copied into the instance namespace by parts-api-keys.yaml), so nobody needs
+# One shared instance with one set of API keys (electronic-components-api-keys.sops.yaml,
+# copied into the instance namespace by electronic-components-api-keys.yaml), so nobody needs
 # their own keys to search. A source whose keys are empty stays off; jlcsearch
 # needs none. The server reads the keys when it starts.
 #
@@ -17,7 +17,7 @@
 apiVersion: toolgate.soliddowant.dev/v1alpha1
 kind: MCPServerTemplate
 metadata:
-  name: parts
+  name: electronic-components
 spec:
   description: >-
     Search electronic component distributors and compare offers: DigiKey,
@@ -32,15 +32,15 @@ spec:
     environments: any
   # MCP is served at the default path, /mcp.
   endpoint:
-    service: parts
+    service: electronic-components
     port: 8080
   resources:
     - apiVersion: v1
       kind: Pod
       metadata:
-        name: parts
+        name: electronic-components
         labels:
-          app: parts-mcp
+          app: electronic-components-mcp
       spec:
         automountServiceAccountToken: false
         securityContext:
@@ -53,14 +53,14 @@ spec:
             type: RuntimeDefault
         containers:
           - name: server
-            image: ghcr.io/soliddowant/mcp-parts:0.1.0@sha256:a31301456393bffd4fcb3579e3c2464563ac98d08b2d63333287c29b96db823c
+            image: ghcr.io/soliddowant/mcp-electronic-components:0.1.0@sha256:95ab023ba33619579e38c51d1c794170faac646064b22bcafed8023bf168abb2
             env:
               - name: DIGIKEY_CLIENT_ID_FILE
-                value: /var/run/secrets/parts/digikey_client_id
+                value: /var/run/secrets/electronic-components/digikey_client_id
               - name: DIGIKEY_CLIENT_SECRET_FILE
-                value: /var/run/secrets/parts/digikey_client_secret
+                value: /var/run/secrets/electronic-components/digikey_client_secret
               - name: MOUSER_API_KEY_FILE
-                value: /var/run/secrets/parts/mouser_api_key
+                value: /var/run/secrets/electronic-components/mouser_api_key
             ports:
               - name: http
                 containerPort: 8080
@@ -83,12 +83,12 @@ spec:
                   - ALL
             volumeMounts:
               - name: api-keys
-                mountPath: /var/run/secrets/parts
+                mountPath: /var/run/secrets/electronic-components
                 readOnly: true
         volumes:
           - name: api-keys
             secret:
-              secretName: parts-api-keys
+              secretName: electronic-components-api-keys
               defaultMode: 0440
               # Without the copy (e.g. before Kyverno makes it), the server
               # still starts with jlcsearch alone.
@@ -96,24 +96,24 @@ spec:
     - apiVersion: v1
       kind: Service
       metadata:
-        name: parts
+        name: electronic-components
       spec:
         selector:
-          app: parts-mcp
+          app: electronic-components-mcp
         ports:
           - name: http
             port: 8080
             targetPort: http
     # toolgate's own policy in the instance namespace admits only the gateway
-    # and DNS. This adds the egress the server needs: the three parts APIs.
+    # and DNS. This adds the egress the server needs: the three distributor APIs.
     - apiVersion: cilium.io/v2
       kind: CiliumNetworkPolicy
       metadata:
-        name: parts-mcp
+        name: electronic-components-mcp
       spec:
         endpointSelector:
           matchLabels:
-            app: parts-mcp
+            app: electronic-components-mcp
         egress:
           - toEndpoints:
               - matchLabels:
