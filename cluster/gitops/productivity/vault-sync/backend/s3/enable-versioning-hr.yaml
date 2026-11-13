@@ -48,7 +48,7 @@ spec:
           aws:
             image:
               repository: public.ecr.aws/aws-cli/aws-cli
-              tag: 2.40.1@sha256:4ade0fe3e60e0b9e1fb0910f86c6d992baf4e12d3172c25a3c8c11f6c81cee08
+              tag: 2.40.2@sha256:acc32af784911165a8e78b63950625d174ba79b800a66a436c974689c87cd755
             # Bucket name (random suffix) + endpoint come from the OBC ConfigMap;
             # credentials (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, read natively
             # by aws-cli) come from the OBC Secret. Both are named after the OBC.
