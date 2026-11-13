@@ -38,6 +38,30 @@ stringData:
           identifiers:
             name: Blueprint library
           required: true
+      # Replaces the default 'profile' mapping for this provider. The operator
+      # stores the groups claim twice (once in the session, once inside the raw
+      # ID token kept for logout) in a cookie limited to 4 KB, so it only gets
+      # the groups it authorizes on. picture is omitted for the same reason.
+      - model: authentik_providers_oauth2.scopemapping
+        id: renovate-profile-scope
+        identifiers:
+          name: Renovate profile
+        attrs:
+          name: Renovate profile
+          scope_name: profile
+          description: General profile information, Renovate groups only
+          expression: |
+            return delete_none_values({
+                "name": request.user.name,
+                "given_name": ak_obj_attr(request.user, "given_name", "name"),
+                "family_name": ak_obj_attr(request.user, "family_name"),
+                "preferred_username": request.user.username,
+                "nickname": request.user.username,
+                "groups": [
+                    group.name
+                    for group in request.user.groups.filter(name__startswith="Renovate ")
+                ],
+            })
       # Application
       - model: authentik_providers_oauth2.oauth2provider
         id: renovate-provider
@@ -79,10 +103,7 @@ stringData:
                 authentik_providers_oauth2.scopemapping,
                 [name, "authentik default OAuth Mapping: OpenID 'openid'"],
               ]
-            - !Find [
-                authentik_providers_oauth2.scopemapping,
-                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
-              ]
+            - !KeyOf renovate-profile-scope
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
           issuer_mode: per_provider
