@@ -25,7 +25,7 @@ spec:
       "annotations": {
         "list": [
           {
-            "name": "Annotations \u0026 Alerts",
+            "name": "Annotations & Alerts",
             "datasource": {
               "type": "datasource",
               "uid": "grafana"
@@ -76,7 +76,6 @@ spec:
             "type": "datasource",
             "query": "prometheus",
             "includeAll": false,
-            "hide": "",
             "current": {
               "text": "VictoriaMetrics - cluster",
               "value": "PAF93674D0B4E9963"
@@ -84,6 +83,17 @@ spec:
             "options": [],
             "refresh": 1,
             "regex": ""
+          },
+          {
+            "name": "cluster",
+            "label": "cluster",
+            "type": "constant",
+            "query": ".*",
+            "definition": ".*",
+            "multi": false,
+            "includeAll": false,
+            "hide": 2,
+            "allValue": ".*"
           },
           {
             "name": "job",
@@ -99,7 +109,6 @@ spec:
             },
             "multi": true,
             "includeAll": true,
-            "hide": "",
             "current": {},
             "options": [],
             "refresh": 1,
@@ -119,7 +128,6 @@ spec:
             },
             "multi": true,
             "includeAll": true,
-            "hide": "",
             "allValue": ".*",
             "current": {},
             "options": [],
@@ -140,7 +148,6 @@ spec:
             },
             "multi": true,
             "includeAll": true,
-            "hide": "",
             "allValue": ".*",
             "current": {},
             "options": [],
@@ -161,7 +168,6 @@ spec:
             },
             "multi": true,
             "includeAll": true,
-            "hide": "",
             "allValue": ".*",
             "current": {},
             "options": [],
@@ -173,7 +179,6 @@ spec:
             "type": "custom",
             "query": "5, 10, 20, 30, 40, 50",
             "includeAll": false,
-            "hide": "",
             "current": {
               "text": "5",
               "value": "5"
@@ -218,19 +223,8 @@ spec:
               "type": "prometheus",
               "uid": "${ds}"
             },
-            "hide": "",
             "baseFilters": [],
             "filters": []
-          },
-          {
-            "name": "cluster",
-            "label": "cluster",
-            "type": "constant",
-            "query": ".*",
-            "multi": false,
-            "includeAll": false,
-            "hide": 2,
-            "allValue": ".*"
           }
         ]
       },
@@ -255,7 +249,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "count(vmalert_config_last_reload_successful{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} \u003c 1) by(cluster)",
+              "expr": "count(vmalert_config_last_reload_successful{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} < 1) by(cluster)",
               "editorMode": "code",
               "exemplar": false,
               "interval": "",
@@ -538,7 +532,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "count(vmalert_recording_rules_last_evaluation_samples{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} \u003c 1) by(cluster)",
+              "expr": "count(vmalert_recording_rules_last_evaluation_samples{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} < 1) by(cluster)",
               "editorMode": "code",
               "exemplar": false,
               "interval": "",
@@ -1149,7 +1143,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "sum(rate(vmalert_execution_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) \u003e 0",
+              "expr": "sum(rate(vmalert_execution_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) > 0",
               "editorMode": "code",
               "exemplar": false,
               "interval": "",
@@ -1873,7 +1867,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "CPU pressure based on [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).\n\n**Lower is better.**\n\nPressure is measured as amount of time within 1sec time window the process was:\n- waiting: at least one task in the process was ready to run (runnable) but couldn't get scheduled on the CPU.\n- stalled: all tasks in the process (except idle ones) were unable to get CPU time — a full CPU stall.\n\nIf there's a CPU burst, it's normal to see waiting or stalled \u003e 100ms. It only becomes a concern if it consistently climbs above 50-100ms and aligns with latency spikes or GC slowdowns.",
+              "description": "CPU pressure based on [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).\n\n**Lower is better.**\n\nPressure is measured as amount of time within 1sec time window the process was:\n- waiting: at least one task in the process was ready to run (runnable) but couldn't get scheduled on the CPU.\n- stalled: all tasks in the process (except idle ones) were unable to get CPU time — a full CPU stall.\n\nIf there's a CPU burst, it's normal to see waiting or stalled > 100ms. It only becomes a concern if it consistently climbs above 50-100ms and aligns with latency spikes or GC slowdowns.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -2768,7 +2762,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(increase(vmalert_iteration_missed_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,cluster) \u003e 0",
+                  "expr": "sum(increase(vmalert_iteration_missed_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "1m",
@@ -2870,7 +2864,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(changes(vm_app_start_timestamp{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) \u003e 0) by(job,cluster)",
+                  "expr": "sum(changes(vm_app_start_timestamp{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) > 0) by(job,cluster)",
                   "editorMode": "code",
                   "format": "time_series",
                   "instant": false,
@@ -2974,7 +2968,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(increase(vmalert_iteration_reset_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,cluster) \u003e 0",
+                  "expr": "sum(increase(vmalert_iteration_reset_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "1m",
@@ -3094,7 +3088,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "topk($topk, sum(vmalert_alerts_firing{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}) by(job,group,file,alertname,cluster) \u003e 0) by(cluster)",
+                  "expr": "topk($topk, sum(vmalert_alerts_firing{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}) by(job,group,file,alertname,cluster) > 0) by(cluster)",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "",
@@ -3196,7 +3190,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(increase(vmalert_alerting_rules_errors_total{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,alertname,cluster) \u003e 0",
+                  "expr": "sum(increase(vmalert_alerting_rules_errors_total{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,alertname,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "",
@@ -3298,7 +3292,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(vmalert_alerts_pending{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}) by(job,group,file,alertname,cluster) \u003e 0",
+                  "expr": "sum(vmalert_alerts_pending{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}) by(job,group,file,alertname,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "",
@@ -3400,10 +3394,10 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vmalert_alerts_send_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,addr,cluster) \u003e 0",
+                  "expr": "sum(rate(vmalert_alerts_send_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,addr,cluster) > 0",
                   "exemplar": false,
                   "interval": "",
-                  "legendFormat": "{{instance}} =\u003e {{addr}}",
+                  "legendFormat": "{{instance}} => {{addr}}",
                   "refId": "A"
                 }
               ],
@@ -3499,11 +3493,11 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vmalert_alerts_sent_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,addr,cluster) \u003e 0",
+                  "expr": "sum(rate(vmalert_alerts_sent_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,addr,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "",
-                  "legendFormat": "{{job}} =\u003e {{addr}}",
+                  "legendFormat": "{{job}} => {{addr}}",
                   "range": true,
                   "refId": "A"
                 }
@@ -3614,7 +3608,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "topk($topk, max(sum(vmalert_recording_rules_last_evaluation_samples{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}) by(job,instance,group,file,recording,cluster) \u003e 0) by(job,group,file,recording,cluster)) by(cluster)",
+                  "expr": "topk($topk, max(sum(vmalert_recording_rules_last_evaluation_samples{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}) by(job,instance,group,file,recording,cluster) > 0) by(job,group,file,recording,cluster)) by(cluster)",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "",
@@ -3716,7 +3710,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "count(vmalert_recording_rules_last_evaluation_samples{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"} \u003c 1) by(job,group,file,recording,cluster)",
+                  "expr": "count(vmalert_recording_rules_last_evaluation_samples{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"} < 1) by(job,group,file,recording,cluster)",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "",
@@ -3818,7 +3812,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(increase(vmalert_recording_rules_errors_total{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,recording,cluster) \u003e 0",
+                  "expr": "sum(increase(vmalert_recording_rules_errors_total{job=~\"$job\",instance=~\"$instance\",group=~\"$group\",file=~\"$file\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,group,file,recording,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": false,
                   "interval": "",
@@ -4029,7 +4023,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vmalert_remotewrite_conn_bytes_written_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) \u003e 0",
+                  "expr": "sum(rate(vmalert_remotewrite_conn_bytes_written_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": true,
                   "interval": "",
@@ -4137,7 +4131,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vmalert_remotewrite_dropped_rows_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) \u003e 0",
+                  "expr": "sum(rate(vmalert_remotewrite_dropped_rows_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) > 0",
                   "editorMode": "code",
                   "legendFormat": "__auto",
                   "range": true,
@@ -4236,7 +4230,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "max(histogram_quantile(0.99, sum(increase(vmalert_remotewrite_queue_size_bucket{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,vmrange,cluster))) by(cluster) \u003e 1",
+                  "expr": "max(histogram_quantile(0.99, sum(increase(vmalert_remotewrite_queue_size_bucket{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(instance,vmrange,cluster))) by(cluster) > 1",
                   "editorMode": "code",
                   "legendFormat": "current",
                   "range": true,

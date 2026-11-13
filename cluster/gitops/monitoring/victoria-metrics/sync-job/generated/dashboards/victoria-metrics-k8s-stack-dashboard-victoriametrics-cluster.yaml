@@ -25,7 +25,7 @@ spec:
       "annotations": {
         "list": [
           {
-            "name": "Annotations \u0026 Alerts",
+            "name": "Annotations & Alerts",
             "datasource": {
               "type": "datasource",
               "uid": "grafana"
@@ -88,7 +88,6 @@ spec:
             "type": "datasource",
             "query": "prometheus",
             "includeAll": false,
-            "hide": "",
             "current": {
               "text": "VictoriaMetrics - cluster",
               "value": "PAF93674D0B4E9963"
@@ -96,6 +95,17 @@ spec:
             "options": [],
             "refresh": 1,
             "regex": ""
+          },
+          {
+            "name": "cluster",
+            "label": "cluster",
+            "type": "constant",
+            "query": ".*",
+            "definition": ".*",
+            "multi": false,
+            "includeAll": false,
+            "hide": 2,
+            "allValue": ".*"
           },
           {
             "name": "job",
@@ -111,7 +121,6 @@ spec:
             },
             "multi": true,
             "includeAll": true,
-            "hide": "",
             "current": {
               "text": "All",
               "value": [
@@ -211,7 +220,6 @@ spec:
             },
             "multi": true,
             "includeAll": true,
-            "hide": "",
             "allValue": ".*",
             "current": {
               "text": "All",
@@ -230,19 +238,8 @@ spec:
               "type": "prometheus",
               "uid": "$ds"
             },
-            "hide": "",
             "baseFilters": [],
             "filters": []
-          },
-          {
-            "name": "cluster",
-            "label": "cluster",
-            "type": "constant",
-            "query": ".*",
-            "multi": false,
-            "includeAll": false,
-            "hide": 2,
-            "allValue": ".*"
           }
         ]
       },
@@ -1059,7 +1056,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "sum(rate(vm_rows_inserted_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) \u003e 0",
+              "expr": "sum(rate(vm_rows_inserted_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) > 0",
               "editorMode": "code",
               "exemplar": true,
               "interval": "",
@@ -1172,7 +1169,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "sum(rate(vm_http_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(path,cluster) \u003e 0",
+              "expr": "sum(rate(vm_http_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(path,cluster) > 0",
               "editorMode": "code",
               "format": "time_series",
               "intervalFactor": 1,
@@ -1390,7 +1387,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "max(vm_request_duration_seconds{job=~\"$job\",instance=~\"$instance\",quantile=\"0.99\",cluster=~\"$cluster\"}) by(path,cluster) \u003e 0",
+              "expr": "max(vm_request_duration_seconds{job=~\"$job\",instance=~\"$instance\",quantile=\"0.99\",cluster=~\"$cluster\"}) by(path,cluster) > 0",
               "editorMode": "code",
               "format": "time_series",
               "intervalFactor": 1,
@@ -1500,7 +1497,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "sum(rate(vm_http_request_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,path,cluster) \u003e 0",
+              "expr": "sum(rate(vm_http_request_errors_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,path,cluster) > 0",
               "editorMode": "code",
               "format": "time_series",
               "intervalFactor": 1,
@@ -1610,7 +1607,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "expr": "sum(rate(vm_log_messages_total{job=~\"$job\",instance=~\"$instance\",level!=\"info\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,level,cluster) \u003e 0",
+              "expr": "sum(rate(vm_log_messages_total{job=~\"$job\",instance=~\"$instance\",level!=\"info\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,level,cluster) > 0",
               "editorMode": "code",
               "exemplar": true,
               "format": "time_series",
@@ -1670,7 +1667,7 @@ spec:
                 {
                   "targetBlank": true,
                   "title": "Drilldown",
-                  "url": "/d/oS7Bi_0Wz?viewPanel=203\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                  "url": "/d/oS7Bi_0Wz?viewPanel=203&var-job=${__field.labels.job}&var-ds=$ds&${__url_time_range}"
                 }
               ],
               "mappings": [],
@@ -1789,12 +1786,12 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown - RSS memory usage",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=189\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=189&var-job=${__field.labels.job}&var-ds=$ds&${__url_time_range}"
                     },
                     {
                       "targetBlank": true,
                       "title": "Drilldown - Memory usage breakdown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=225\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=225&var-job=${__field.labels.job}&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -1911,7 +1908,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=192\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=192&var-job=${__field.labels.job}&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -2027,7 +2024,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=190\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=190&var-job=${__field.labels.job}&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -2115,7 +2112,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "CPU pressure based on [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).\n\n**Lower is better.**\n\nPressure is measured as amount of time within 1sec time window the process was:\n- waiting: at least one task in the process was ready to run (runnable) but couldn't get scheduled on the CPU.\n- stalled: all tasks in the process (except idle ones) were unable to get CPU time — a full CPU stall.\n\nIf there's a CPU burst, it's normal to see waiting or stalled \u003e 100ms. It only becomes a concern if it consistently climbs above 50-100ms and aligns with latency spikes or GC slowdowns.",
+              "description": "CPU pressure based on [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).\n\n**Lower is better.**\n\nPressure is measured as amount of time within 1sec time window the process was:\n- waiting: at least one task in the process was ready to run (runnable) but couldn't get scheduled on the CPU.\n- stalled: all tasks in the process (except idle ones) were unable to get CPU time — a full CPU stall.\n\nIf there's a CPU burst, it's normal to see waiting or stalled > 100ms. It only becomes a concern if it consistently climbs above 50-100ms and aligns with latency spikes or GC slowdowns.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -2882,7 +2879,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "Shows IO pressure based on [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).\n\n**Lower is better.**\n\nPressure is measured as amount of time within 1sec time window the process was:\n- waiting: at least one runnable thread blocked on IO (disk, NVMe, network-storage) while others could still make progress.\n- stalled: all non-idle threads simultaneously waiting on `I/O`.\n\nIf stalled \u003e 0, consider increasing queue depth on NVMe, raising blk-mq budgets, or relaxing cgroup I/O limits.",
+              "description": "Shows IO pressure based on [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).\n\n**Lower is better.**\n\nPressure is measured as amount of time within 1sec time window the process was:\n- waiting: at least one runnable thread blocked on IO (disk, NVMe, network-storage) while others could still make progress.\n- stalled: all non-idle threads simultaneously waiting on `I/O`.\n\nIf stalled > 0, consider increasing queue depth on NVMe, raising blk-mq budgets, or relaxing cgroup I/O limits.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -3816,7 +3813,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "The percentage of [slow inserts](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-a-slow-insert) compared to the total ingestion rate. \n\nThe lower the better. \n\nIn short, slow insert is a cache miss. There are following reasons for slow inserts to go up: \n* Ingestion of completely new, not seen before time series;\n* [Re-routing](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#cluster-availability) of series when one or more vmstorage nodes are unavailable;\n* Not enough memory to maintain big enough caches for the current workload.\n\nIf percentage remains high (\u003e10%) during extended periods of time, then it is likely more RAM is needed for optimal handling of the current number of [active time series](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-an-active-time-series). \n\nSee [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/3976#issuecomment-1476883183) for details.",
+              "description": "The percentage of [slow inserts](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-a-slow-insert) compared to the total ingestion rate. \n\nThe lower the better. \n\nIn short, slow insert is a cache miss. There are following reasons for slow inserts to go up: \n* Ingestion of completely new, not seen before time series;\n* [Re-routing](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#cluster-availability) of series when one or more vmstorage nodes are unavailable;\n* Not enough memory to maintain big enough caches for the current workload.\n\nIf percentage remains high (>10%) during extended periods of time, then it is likely more RAM is needed for optimal handling of the current number of [active time series](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-an-active-time-series). \n\nSee [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/3976#issuecomment-1476883183) for details.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -3911,7 +3908,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(increase(vm_assisted_merges_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) \u003e 0",
+                  "expr": "sum(increase(vm_assisted_merges_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
@@ -4235,7 +4232,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "max((rate(vm_cache_misses_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) / rate(vm_cache_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) and ((vm_cache_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} / (vm_cache_size_max_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} \u003e 0)) \u003e= 0.95)) by(type,cluster)",
+                  "expr": "max((rate(vm_cache_misses_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) / rate(vm_cache_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) and ((vm_cache_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} / (vm_cache_size_max_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} > 0)) >= 0.95)) by(type,cluster)",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
@@ -4251,7 +4248,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "max((rate(vm_cache_misses_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) / rate(vm_cache_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) and ((vm_cache_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} / (vm_cache_size_max_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} \u003e 0)) \u003c 0.95)) by(type,cluster)",
+                  "expr": "max((rate(vm_cache_misses_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) / rate(vm_cache_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) and ((vm_cache_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} / (vm_cache_size_max_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} > 0)) < 0.95)) by(type,cluster)",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
@@ -4267,7 +4264,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "max((rate(vm_cache_misses_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) / rate(vm_cache_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) unless (vm_cache_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} / (vm_cache_size_max_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} \u003e 0))) by(type,cluster)",
+                  "expr": "max((rate(vm_cache_misses_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]) / rate(vm_cache_requests_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) unless (vm_cache_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} / (vm_cache_size_max_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"} > 0))) by(type,cluster)",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
@@ -4423,13 +4420,13 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(vm_rpc_vmstorage_is_read_only{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}) by(instance,addr,cluster) \u003e 0",
+                  "expr": "sum(vm_rpc_vmstorage_is_read_only{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}) by(instance,addr,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
                   "interval": "",
                   "intervalFactor": 1,
-                  "legendFormat": "{{instance}} =\u003e {{addr}}",
+                  "legendFormat": "{{instance}} => {{addr}}",
                   "range": true,
                   "refId": "A"
                 }
@@ -4540,7 +4537,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_deduplicated_samples_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,type,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_deduplicated_samples_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,type,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
@@ -4772,7 +4769,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(increase(vm_partial_results_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) \u003e 0",
+                  "expr": "sum(increase(vm_partial_results_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "instant": false,
@@ -5009,7 +5006,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(changes(vm_app_start_timestamp{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) \u003e 0",
+                  "expr": "sum(changes(vm_app_start_timestamp{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "instant": false,
@@ -5117,7 +5114,7 @@ spec:
                     "type": "prometheus",
                     "uid": "${ds}"
                   },
-                  "expr": "sum(vm_downsampling_partitions_scheduled_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}) by(cluster) \u003e 0",
+                  "expr": "sum(vm_downsampling_partitions_scheduled_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}) by(cluster) > 0",
                   "editorMode": "code",
                   "legendFormat": "downsampling",
                   "range": true,
@@ -5128,7 +5125,7 @@ spec:
                     "type": "prometheus",
                     "uid": "${ds}"
                   },
-                  "expr": "sum(vm_retention_partitions_scheduled_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}) by(cluster) \u003e 0",
+                  "expr": "sum(vm_retention_partitions_scheduled_size_bytes{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}) by(cluster) > 0",
                   "editorMode": "code",
                   "hide": false,
                   "instant": false,
@@ -5231,7 +5228,7 @@ spec:
                     "type": "prometheus",
                     "uid": "${ds}"
                   },
-                  "expr": "sum(rate(process_major_pagefaults_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) \u003e 0",
+                  "expr": "sum(rate(process_major_pagefaults_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,cluster) > 0",
                   "editorMode": "code",
                   "legendFormat": "__auto",
                   "range": true,
@@ -5286,7 +5283,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=224\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=224&var-job=${__field.labels.job}&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -5485,7 +5482,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "Shows number of pushed and sent rows. \n* `Pushed rows` - rows added to internal inserter buffers before send\n* `Sent rows` - successfully transmitted rows to storage nodes\n\nPlease note, it could be that `Sent \u003e Pushed` because of the replication factor.",
+              "description": "Shows number of pushed and sent rows. \n* `Pushed rows` - rows added to internal inserter buffers before send\n* `Sent rows` - successfully transmitted rows to storage nodes\n\nPlease note, it could be that `Sent > Pushed` because of the replication factor.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -5698,7 +5695,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_rpc_rows_rerouted_to_here_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(addr,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_rpc_rows_rerouted_to_here_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(addr,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
@@ -5802,7 +5799,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_rpc_rows_rerouted_from_here_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(addr,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_rpc_rows_rerouted_from_here_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(addr,cluster) > 0",
                   "exemplar": true,
                   "format": "time_series",
                   "interval": "",
@@ -6148,7 +6145,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "min(((vm_free_disk_space_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"} - vm_free_disk_space_limit_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}) / ignoring(path) (((rate(vm_rows_added_to_storage_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) - sum(rate(vm_deduplicated_samples_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d])) without(type)) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type))) + (rate(vm_new_timeseries_created_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type))))) \u003e 0) by(cluster)",
+                  "expr": "min(((vm_free_disk_space_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"} - vm_free_disk_space_limit_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}) / ignoring(path) (((rate(vm_rows_added_to_storage_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) - sum(rate(vm_deduplicated_samples_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d])) without(type)) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type))) + (rate(vm_new_timeseries_created_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type))))) > 0) by(cluster)",
                   "editorMode": "code",
                   "format": "time_series",
                   "interval": "",
@@ -6206,7 +6203,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=196\u0026${__url_time_range}\u0026${__all_variables}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=196&${__url_time_range}&${__all_variables}"
                     }
                   ],
                   "mappings": [],
@@ -6356,7 +6353,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=192\u0026var-job=$job_storage\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=192&var-job=$job_storage&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -6506,7 +6503,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=190\u0026var-job=$job_storage\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=190&var-job=$job_storage&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -7151,7 +7148,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=200\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=200&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -7363,7 +7360,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "Shows the percentage of used disk space by type: datapoints or indexdb. Normally, indexdb takes much less space comparing to datapoints. But with high [churn rate](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-high-churn-rate) the size of the indexdb could grow significantly.\n\nThe sum of the % can be \u003e 100% since panel shows max % per-job and per-instance. It means different instance can have different ratio between datapoints and indexdb size.",
+              "description": "Shows the percentage of used disk space by type: datapoints or indexdb. Normally, indexdb takes much less space comparing to datapoints. But with high [churn rate](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-high-churn-rate) the size of the indexdb could grow significantly.\n\nThe sum of the % can be > 100% since panel shows max % per-job and per-instance. It means different instance can have different ratio between datapoints and indexdb size.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -7407,7 +7404,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=201\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=201&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -7490,7 +7487,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "How many data points are in RAM queue waiting to be written into storage. The number of pending data points should be in the range from 0 to `5*\u003cingestion_rate\u003e`, since VictoriaMetrics pushes pending data to persistent storage every 5 seconds. The index datapoints value in general is much lower.",
+              "description": "How many data points are in RAM queue waiting to be written into storage. The number of pending data points should be in the range from 0 to `5*<ingestion_rate>`, since VictoriaMetrics pushes pending data to persistent storage every 5 seconds. The index datapoints value in general is much lower.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -7604,7 +7601,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcplistener_read_bytes_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(name,cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcplistener_read_bytes_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(name,cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -7617,7 +7614,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcplistener_written_bytes_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(name,cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcplistener_written_bytes_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(name,cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "hide": false,
@@ -7739,7 +7736,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "vm_storage_is_read_only{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"} \u003e 0",
+                  "expr": "vm_storage_is_read_only{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"} > 0",
                   "editorMode": "code",
                   "exemplar": true,
                   "interval": "",
@@ -7752,7 +7749,7 @@ spec:
                 "type": "prometheus",
                 "uid": "$ds"
               },
-              "description": "Value \u003e 0 means vmstorage is in readonly mode.",
+              "description": "Value > 0 means vmstorage is in readonly mode.",
               "fieldConfig": {
                 "defaults": {
                   "color": {
@@ -7964,7 +7961,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_http_requests_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(path,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_http_requests_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(path,cluster) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -8291,7 +8288,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=192\u0026var-job=$job_select\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=192&var-job=$job_select&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -8435,7 +8432,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=190\u0026var-job=$job_select\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=190&var-job=$job_select&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -8916,7 +8913,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcplistener_read_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcplistener_read_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -8929,7 +8926,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcplistener_written_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcplistener_written_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "hide": false,
@@ -9045,7 +9042,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcpdialer_read_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcpdialer_read_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -9058,7 +9055,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcpdialer_written_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcpdialer_written_bytes_total{job=~\"$job_select\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "hide": false,
@@ -9295,7 +9292,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_rows_inserted_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_rows_inserted_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "interval": "",
@@ -9309,7 +9306,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_metadata_rows_inserted_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_metadata_rows_inserted_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(type,cluster) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "interval": "",
@@ -9566,7 +9563,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_http_requests_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(path,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_http_requests_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(path,cluster) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -9764,7 +9761,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=192\u0026var-job=$job_insert\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=192&var-job=$job_insert&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -9912,7 +9909,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/oS7Bi_0Wz?viewPanel=190\u0026var-job=$job_insert\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/oS7Bi_0Wz?viewPanel=190&var-job=$job_insert&var-ds=$ds&${__url_time_range}"
                     }
                   ],
                   "mappings": [],
@@ -9976,7 +9973,7 @@ spec:
                   "format": "time_series",
                   "interval": "",
                   "intervalFactor": 1,
-                  "legendFormat": "{{instance}} =\u003e {{addr}}",
+                  "legendFormat": "{{instance}} => {{addr}}",
                   "range": true,
                   "refId": "A"
                 }
@@ -10192,7 +10189,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcpdialer_read_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcpdialer_read_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -10205,7 +10202,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcpdialer_written_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcpdialer_written_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -10326,7 +10323,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcplistener_read_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcplistener_read_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -10339,7 +10336,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "(sum(rate(vm_tcplistener_written_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) \u003e 0",
+                  "expr": "(sum(rate(vm_tcplistener_written_bytes_total{job=~\"$job_insert\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(cluster) * 8) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "intervalFactor": 1,
@@ -10993,7 +10990,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "((vm_free_disk_space_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"} - vm_free_disk_space_limit_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}) / ignoring(path) (((rate(vm_rows_added_to_storage_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) - sum(rate(vm_deduplicated_samples_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d])) without(type)) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type))) + (rate(vm_new_timeseries_created_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type))))) \u003e 0",
+                  "expr": "((vm_free_disk_space_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"} - vm_free_disk_space_limit_bytes{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}) / ignoring(path) (((rate(vm_rows_added_to_storage_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) - sum(rate(vm_deduplicated_samples_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d])) without(type)) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type!~\"indexdb.*\",cluster=~\"$cluster\"}) without(type))) + (rate(vm_new_timeseries_created_total{job=~\"$job_storage\",instance=~\"$instance\",cluster=~\"$cluster\"}[1d]) * (sum(vm_data_size_bytes{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type) / sum(vm_rows{job=~\"$job_storage\",instance=~\"$instance\",type=\"indexdb/file\",cluster=~\"$cluster\"}) without(type))))) > 0",
                   "editorMode": "code",
                   "format": "time_series",
                   "interval": "",
@@ -11438,7 +11435,7 @@ spec:
                     "type": "prometheus",
                     "uid": "${ds}"
                   },
-                  "expr": "sum(rate(process_major_pagefaults_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,instance,cluster) \u003e 0",
+                  "expr": "sum(rate(process_major_pagefaults_total{job=~\"$job\",instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,instance,cluster) > 0",
                   "editorMode": "code",
                   "legendFormat": "{{instance}} ({{job}})",
                   "range": true,
@@ -11541,7 +11538,7 @@ spec:
                     "type": "prometheus",
                     "uid": "$ds"
                   },
-                  "expr": "sum(rate(vm_log_messages_total{job=~\"$job\",instance=~\"$instance\",level!=\"info\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,instance,level,app_version,location,cluster) \u003e 0",
+                  "expr": "sum(rate(vm_log_messages_total{job=~\"$job\",instance=~\"$instance\",level!=\"info\",cluster=~\"$cluster\"}[$__rate_interval])) by(job,instance,level,app_version,location,cluster) > 0",
                   "editorMode": "code",
                   "exemplar": true,
                   "format": "time_series",
@@ -11601,7 +11598,7 @@ spec:
                     {
                       "targetBlank": true,
                       "title": "Source Code",
-                      "url": "https://l2s.victoriametrics.com/?app_version=${__field.labels.app_version}\u0026location=${__field.labels.location}"
+                      "url": "https://l2s.victoriametrics.com/?app_version=${__field.labels.app_version}&location=${__field.labels.location}"
                     }
                   ],
                   "mappings": [],

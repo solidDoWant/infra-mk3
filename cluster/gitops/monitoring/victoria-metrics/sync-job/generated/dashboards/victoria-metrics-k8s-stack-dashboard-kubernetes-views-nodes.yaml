@@ -26,7 +26,7 @@ spec:
       "annotations": {
         "list": [
           {
-            "name": "Annotations \u0026 Alerts",
+            "name": "Annotations & Alerts",
             "datasource": {
               "type": "datasource",
               "uid": "grafana"
@@ -471,7 +471,7 @@ spec:
                 {
                   "targetBlank": true,
                   "title": "Pod details",
-                  "url": "/d/k8s_views_pods/kubernetes-views-pods?${datasource:queryparam}\u0026var-namespace=${__data.fields.namespace}\u0026${cluster:queryparam}\u0026var-pod=${__data.fields.pod}\u0026${resolution:queryparam}\u0026${__url_time_range}"
+                  "url": "/d/k8s_views_pods/kubernetes-views-pods?${datasource:queryparam}&var-namespace=${__data.fields.namespace}&${cluster:queryparam}&var-pod=${__data.fields.pod}&${resolution:queryparam}&${__url_time_range}"
                 }
               ],
               "mappings": [],
@@ -1730,7 +1730,7 @@ spec:
           "type": "timeseries"
         },
         {
-          "title": "Context Switches \u0026 Interrupts",
+          "title": "Context Switches & Interrupts",
           "targets": [
             {
               "datasource": {
