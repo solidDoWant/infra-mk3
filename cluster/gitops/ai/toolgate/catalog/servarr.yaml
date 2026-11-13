@@ -134,75 +134,86 @@ spec:
     radarr_history_mark_failed:
       approval: required
   resources:
-    - apiVersion: v1
-      kind: Pod
+    # A Deployment rather than a bare Pod: Kubernetes recreates a deleted or
+    # evicted pod, and the cluster's reloader policy restarts it when a
+    # mounted Secret changes.
+    - apiVersion: apps/v1
+      kind: Deployment
       metadata:
         name: servarr
-        labels:
-          app: servarr-mcp
-          endpoints.netpols.home.arpa/servarr-api-client: "true"
       spec:
-        automountServiceAccountToken: false
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 100 # the image's `servarr` user
-          runAsGroup: 101
-          seccompProfile:
-            type: RuntimeDefault
-        containers:
-          - name: server
-            image: ghcr.io/carldog/servarr-mcp:main-83f05c2@sha256:33d3ddf920219efe89a51360c440556e62d333e6dc3cff9955d3f7770cf48d9a
-            env:
-              # Setting a port selects the HTTP transport instead of stdio.
-              - name: MCP_PORT
-                value: "8080"
-              # The gateway connects as <service>.<namespace>.svc:<port>, and
-              # the server rejects any other Host header.
-              - name: MCP_ALLOWED_HOSTS
-                value: servarr.$${instance.namespace}.svc
-              # No MCP_AUTH_TOKEN: the network policy admits only the gateway,
-              # which does the authentication. The server logs a warning.
-              - name: SONARR_URL
-                value: http://sonarr.media.svc.cluster.local:8989
-              - name: SONARR_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    name: servarr-api-keys
-                    key: sonarr
-              - name: RADARR_URL
-                value: http://radarr.media.svc.cluster.local:7878
-              - name: RADARR_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    name: servarr-api-keys
-                    key: radarr
-            ports:
-              - name: http
-                containerPort: 8080
-            readinessProbe:
-              httpGet:
-                path: /health
-                port: http
-              periodSeconds: 10
-            resources:
-              requests:
-                cpu: 10m
-                memory: 192Mi
-              limits:
-                memory: 192Mi
+        replicas: 1
+        revisionHistoryLimit: 1
+        selector:
+          matchLabels:
+            app: servarr-mcp
+        template:
+          metadata:
+            labels:
+              app: servarr-mcp
+              endpoints.netpols.home.arpa/servarr-api-client: "true"
+          spec:
+            automountServiceAccountToken: false
             securityContext:
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop:
-                  - ALL
-            volumeMounts:
+              runAsNonRoot: true
+              runAsUser: 100 # the image's `servarr` user
+              runAsGroup: 101
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: server
+                image: ghcr.io/carldog/servarr-mcp:main-83f05c2@sha256:33d3ddf920219efe89a51360c440556e62d333e6dc3cff9955d3f7770cf48d9a
+                env:
+                  # Setting a port selects the HTTP transport instead of stdio.
+                  - name: MCP_PORT
+                    value: "8080"
+                  # The gateway connects as <service>.<namespace>.svc:<port>, and
+                  # the server rejects any other Host header.
+                  - name: MCP_ALLOWED_HOSTS
+                    value: servarr.$${instance.namespace}.svc
+                  # No MCP_AUTH_TOKEN: the network policy admits only the gateway,
+                  # which does the authentication. The server logs a warning.
+                  - name: SONARR_URL
+                    value: http://sonarr.media.svc.cluster.local:8989
+                  - name: SONARR_API_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: servarr-api-keys
+                        key: sonarr
+                  - name: RADARR_URL
+                    value: http://radarr.media.svc.cluster.local:7878
+                  - name: RADARR_API_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: servarr-api-keys
+                        key: radarr
+                ports:
+                  - name: http
+                    containerPort: 8080
+                readinessProbe:
+                  httpGet:
+                    path: /health
+                    port: http
+                  periodSeconds: 10
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 192Mi
+                  limits:
+                    memory: 192Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop:
+                      - ALL
+                volumeMounts:
+                  - name: tmp
+                    mountPath: /tmp
+            volumes:
               - name: tmp
-                mountPath: /tmp
-        volumes:
-          - name: tmp
-            emptyDir:
-              sizeLimit: 64Mi
+                emptyDir:
+                  sizeLimit: 64Mi
     - apiVersion: v1
       kind: Service
       metadata:

@@ -38,64 +38,75 @@ spec:
     service: electronic-components
     port: 8080
   resources:
-    - apiVersion: v1
-      kind: Pod
+    # A Deployment rather than a bare Pod: Kubernetes recreates a deleted or
+    # evicted pod, and the cluster's reloader policy restarts it when a
+    # mounted Secret changes.
+    - apiVersion: apps/v1
+      kind: Deployment
       metadata:
         name: electronic-components
-        labels:
-          app: electronic-components-mcp
       spec:
-        automountServiceAccountToken: false
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 65532
-          runAsGroup: 65532
-          # Secret files belong to root; this group lets the server read them.
-          fsGroup: 65532
-          seccompProfile:
-            type: RuntimeDefault
-        containers:
-          - name: server
-            image: ghcr.io/soliddowant/mcp-electronic-components:0.2.0@sha256:bba63ca06982dc807d9b0f51e6919c45bde366b823b37d15e76ffc4abbb2a17f
-            env:
-              - name: DIGIKEY_CLIENT_ID_FILE
-                value: /var/run/secrets/electronic-components/digikey_client_id
-              - name: DIGIKEY_CLIENT_SECRET_FILE
-                value: /var/run/secrets/electronic-components/digikey_client_secret
-              - name: MOUSER_API_KEY_FILE
-                value: /var/run/secrets/electronic-components/mouser_api_key
-            ports:
-              - name: http
-                containerPort: 8080
-            readinessProbe:
-              httpGet:
-                path: /healthz
-                port: http
-              periodSeconds: 10
-            resources:
-              requests:
-                cpu: 10m
-                memory: 128Mi
-              limits:
-                memory: 128Mi
+        replicas: 1
+        revisionHistoryLimit: 1
+        selector:
+          matchLabels:
+            app: electronic-components-mcp
+        template:
+          metadata:
+            labels:
+              app: electronic-components-mcp
+          spec:
+            automountServiceAccountToken: false
             securityContext:
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop:
-                  - ALL
-            volumeMounts:
+              runAsNonRoot: true
+              runAsUser: 65532
+              runAsGroup: 65532
+              # Secret files belong to root; this group lets the server read them.
+              fsGroup: 65532
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: server
+                image: ghcr.io/soliddowant/mcp-electronic-components:0.2.0@sha256:bba63ca06982dc807d9b0f51e6919c45bde366b823b37d15e76ffc4abbb2a17f
+                env:
+                  - name: DIGIKEY_CLIENT_ID_FILE
+                    value: /var/run/secrets/electronic-components/digikey_client_id
+                  - name: DIGIKEY_CLIENT_SECRET_FILE
+                    value: /var/run/secrets/electronic-components/digikey_client_secret
+                  - name: MOUSER_API_KEY_FILE
+                    value: /var/run/secrets/electronic-components/mouser_api_key
+                ports:
+                  - name: http
+                    containerPort: 8080
+                readinessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: http
+                  periodSeconds: 10
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 128Mi
+                  limits:
+                    memory: 128Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop:
+                      - ALL
+                volumeMounts:
+                  - name: api-keys
+                    mountPath: /var/run/secrets/electronic-components
+                    readOnly: true
+            volumes:
               - name: api-keys
-                mountPath: /var/run/secrets/electronic-components
-                readOnly: true
-        volumes:
-          - name: api-keys
-            secret:
-              secretName: electronic-components-api-keys
-              defaultMode: 0440
-              # Not optional: Kyverno makes the copy just after toolgate makes
-              # the namespace, and the pod must wait for it rather than start
-              # without its keys. Empty keys in the Secret are fine.
+                secret:
+                  secretName: electronic-components-api-keys
+                  defaultMode: 0440
+                  # Not optional: Kyverno makes the copy just after toolgate makes
+                  # the namespace, and the pod must wait for it rather than start
+                  # without its keys. Empty keys in the Secret are fine.
     - apiVersion: v1
       kind: Service
       metadata:

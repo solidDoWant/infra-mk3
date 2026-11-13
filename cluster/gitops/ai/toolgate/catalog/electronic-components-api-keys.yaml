@@ -23,6 +23,8 @@ spec:
                   app.kubernetes.io/managed-by: toolgate
                   toolgate.soliddowant.dev/template: electronic-components
                   toolgate.soliddowant.dev/template-namespace: ai
+      # Unused since the rule clones the Secret, but Kyverno forbids removing
+      # anything outside `generate` from an existing generate rule.
       context:
         - name: keys
           apiCall:
@@ -30,18 +32,15 @@ spec:
             urlPath: /api/v1/namespaces/ai/secrets/electronic-components-api-keys
             jmesPath: data
       generate:
+        # A clone with synchronize follows the source: when the keys change,
+        # Kyverno updates every copy, and the copy's reload label (cloned from
+        # the source) makes the workload-reloader policy restart the instance.
         synchronize: true
         apiVersion: v1
         kind: Secret
         name: electronic-components-api-keys
         namespace: >-
           {{ request.object.metadata.name }}
-        data:
-          type: Opaque
-          data:
-            digikey_client_id: >-
-              {{ keys.digikey_client_id || '' }}
-            digikey_client_secret: >-
-              {{ keys.digikey_client_secret || '' }}
-            mouser_api_key: >-
-              {{ keys.mouser_api_key || '' }}
+        clone:
+          namespace: ai
+          name: electronic-components-api-keys
