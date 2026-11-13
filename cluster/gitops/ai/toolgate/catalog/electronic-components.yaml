@@ -67,7 +67,7 @@ spec:
                 type: RuntimeDefault
             containers:
               - name: server
-                image: ghcr.io/soliddowant/mcp-electronic-components:0.2.0@sha256:bba63ca06982dc807d9b0f51e6919c45bde366b823b37d15e76ffc4abbb2a17f
+                image: ghcr.io/soliddowant/mcp-electronic-components:0.3.0@sha256:464d25afade6541b910059402df30c114aaa19b04e810304a6770c37b2bea679
                 env:
                   - name: DIGIKEY_CLIENT_ID_FILE
                     value: /var/run/secrets/electronic-components/digikey_client_id
