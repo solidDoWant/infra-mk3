@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/mogenius/helm-charts/renovate-operator
   ref:
-    tag: 6.8.0
-    digest: sha256:80f7431474c174f2279ddecbb74ae77af8fd2e7ff4c6c57c14a3200a04f3fad2
+    tag: 6.9.0
+    digest: sha256:cb810b9bd0d7617ffbd6cf769602a625d9a611582016971af1181c43e35551d0
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -29,7 +29,7 @@ spec:
     image:
       registry: ghcr.io
       repository: mogenius/renovate-operator
-      tag: 6.8.0@sha256:837ca0d011609f7824c57364498d679b267130669e3cd4f693f94cef7c4addc2
+      tag: 6.9.0@sha256:538c59525e362acc7f9d6e47d73007f325d2801d9d5b0ae0953b9aee27c732d6
     # >1 enables leader election: only the leader runs the scheduler and
     # executor. UI/webhook requests are served by every replica (sessions live
     # in encrypted cookies, triggers are written to RenovateProject status).
