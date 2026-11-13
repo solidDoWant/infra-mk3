@@ -47,6 +47,8 @@ spec:
           runAsNonRoot: true
           runAsUser: 65532
           runAsGroup: 65532
+          # Secret files belong to root; this group lets the server read them.
+          fsGroup: 65532
           seccompProfile:
             type: RuntimeDefault
         containers:
@@ -87,7 +89,7 @@ spec:
           - name: api-keys
             secret:
               secretName: parts-api-keys
-              defaultMode: 0400
+              defaultMode: 0440
               # Without the copy (e.g. before Kyverno makes it), the server
               # still starts with jlcsearch alone.
               optional: true
