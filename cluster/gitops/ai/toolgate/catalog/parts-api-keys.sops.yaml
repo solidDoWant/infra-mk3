@@ -1,0 +1,43 @@
+# DigiKey and Mouser API keys for the shared `parts` server (parts.yaml).
+# Empty values leave a source off; jlcsearch needs no key. Fill them in with
+#   sops cluster/gitops/ai/toolgate/catalog/parts-api-keys.sops.yaml
+# - digikey_client_id / digikey_client_secret: a DigiKey API app with
+#   Product Information v4 (https://developer.digikey.com/).
+# - mouser_api_key: a Mouser *Search* API key
+#   (https://www.mouser.com/api-search/), which can't reach Mouser's cart or
+#   order APIs.
+# parts-api-keys.yaml copies this Secret into each instance namespace.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: parts-api-keys
+type: Opaque
+stringData:
+  digikey_client_id: ""
+  digikey_client_secret: ""
+  mouser_api_key: ""
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBndkxSM3MyK3hoR0lrc1Zv
+        MkxPVzJaMndXamFxM3RhNm92V080K0ZJTlNJCkZVNXBNbFEvQkFPYUJiVzZXeE9W
+        Z0dCK3cxeW1UQU9DaDl2bEM3ZTZ3S2sKLS0tIHJFMUVVSUdSbmRqLzEwQ1ROSzZ2
+        OXp5VHJ3YTNza045cjU5akV6M2dETDAKGbPQU9ar5ocROUw8RuF2XcWoPHd71oGV
+        B7Gl6G1Os3HZIxxWEQb0SM5kW6KrHFmJPsjqyiCPyM+1io/ejUsUQA==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBZQkRyOUtxaXJ3SlJBdWhR
+        VlVSemZaMVhSaS9FLzFzdDBWVDNiMFFqK2pzCmo2ZU93eDQ1T1c2UURDeFVSUHVV
+        OUJqbjhtaUpaYjNIdytqdGQ1VzNtVlkKLS0tIFhMakExR1l0bXo2Y1B5R0RxMk1l
+        WW9zUndaUHJIdGRBVGlWbWhMcUpkSDgKUWOAk9dy4qrBG14tf3EZKF+GWZmVfL4H
+        6j7WAAj8HNK6h0tV402FCWBOQmBPRNx6bqDWoT2I+qKsEq2pJuFeRA==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-13T19:40:19Z"
+  mac: ENC[AES256_GCM,data:llC57DeUOZ7M/cGwLa7HFFOK2Dxmwp9p4xzHVGC5AJtKqcWFzdrwyKjStCZim0Lt/Dj3UtDKZIz72raH1JrujwPNPeAX5rpLOvRkaUaGko8h01oxJmc23myxEd1os0rCJytaeV/tDfkCiXZLzxcJrO62OURJEAwMZ13kxkrm/EE=,iv:paMMHQALwz2G/R+0IQQ4afBJ7TYpPHCpI823ENXm2TQ=,tag:aNeUxJu3t7L2NoNVYx6yQQ==,type:str]
+  mac_only_encrypted: true
+  version: 3.13.3

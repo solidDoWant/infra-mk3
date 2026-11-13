@@ -1,0 +1,144 @@
+---
+# parts: search DigiKey, Mouser and JLCPCB's parts library for electronic
+# components and compare offers. Read-only.
+# https://github.com/solidDoWant/mcp-servers/tree/master/servers/parts
+#
+# One shared instance with one set of API keys (parts-api-keys.sops.yaml,
+# copied into the instance namespace by parts-api-keys.yaml), so nobody needs
+# their own keys to search. A source whose keys are empty stays off; jlcsearch
+# needs none. The server reads the keys when it starts.
+#
+# DigiKey and Mouser allow about 1000 calls a day each. The server caches
+# answers in memory and keeps its own daily budget, so the instance never
+# stops: a restart would empty the cache and reset the count.
+#
+# No `scope`: the template references nothing user-specific, so toolgate runs
+# one shared instance for everyone.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: parts
+spec:
+  description: >-
+    Search electronic component distributors and compare offers: DigiKey,
+    Mouser, and JLCPCB's parts library (with basic/extended assembly status).
+    Price and stock by part number or keyword, the cheapest offer at a
+    quantity, and full specifications for one part.
+  idleStop: "0"
+  startTimeout: 2m
+  access:
+    users:
+      - "*"
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: parts
+    port: 8080
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: parts
+        labels:
+          app: parts-mcp
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65532
+          runAsGroup: 65532
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            image: ghcr.io/soliddowant/mcp-parts:0.1.0@sha256:a31301456393bffd4fcb3579e3c2464563ac98d08b2d63333287c29b96db823c
+            env:
+              - name: DIGIKEY_CLIENT_ID_FILE
+                value: /var/run/secrets/parts/digikey_client_id
+              - name: DIGIKEY_CLIENT_SECRET_FILE
+                value: /var/run/secrets/parts/digikey_client_secret
+              - name: MOUSER_API_KEY_FILE
+                value: /var/run/secrets/parts/mouser_api_key
+            ports:
+              - name: http
+                containerPort: 8080
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: http
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            volumeMounts:
+              - name: api-keys
+                mountPath: /var/run/secrets/parts
+                readOnly: true
+        volumes:
+          - name: api-keys
+            secret:
+              secretName: parts-api-keys
+              defaultMode: 0400
+              # Without the copy (e.g. before Kyverno makes it), the server
+              # still starts with jlcsearch alone.
+              optional: true
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: parts
+      spec:
+        selector:
+          app: parts-mcp
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs: the three parts APIs.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: parts-mcp
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: parts-mcp
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          - toFQDNs:
+              - matchName: api.digikey.com
+              - matchName: api.mouser.com
+              - matchName: jlcsearch.tscircuit.com
+            toPorts:
+              - ports:
+                  - port: "443"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP
