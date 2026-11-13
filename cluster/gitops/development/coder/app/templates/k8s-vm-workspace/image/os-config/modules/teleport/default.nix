@@ -26,7 +26,7 @@
 # `.sha256`).
 let
   # renovate: datasource=docker depName=public.ecr.aws/gravitational/teleport-distroless
-  version = "18.11.8";
+  version = "18.11.10";
   hash = "sha256-5WV7hlTpfynvW2hEPqeGhoC/tD9iajnUISHxICirOp8=";
 in
 {
