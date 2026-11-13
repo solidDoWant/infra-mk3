@@ -93,9 +93,9 @@ spec:
             secret:
               secretName: electronic-components-api-keys
               defaultMode: 0440
-              # Without the copy (e.g. before Kyverno makes it), the server
-              # still starts with jlcsearch alone.
-              optional: true
+              # Not optional: Kyverno makes the copy just after toolgate makes
+              # the namespace, and the pod must wait for it rather than start
+              # without its keys. Empty keys in the Secret are fine.
     - apiVersion: v1
       kind: Service
       metadata:
