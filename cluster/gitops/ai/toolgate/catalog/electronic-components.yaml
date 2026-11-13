@@ -9,8 +9,11 @@
 # needs none. The server reads the keys when it starts.
 #
 # DigiKey and Mouser allow about 1000 calls a day each. The server caches
-# answers in memory and keeps its own daily budget, so the instance never
-# stops: a restart would empty the cache and reset the count.
+# answers in memory for an hour and keeps its own daily count. After two idle
+# hours the cache holds nothing worth keeping, so the instance stops then, and
+# the next call starts one on the template's current image (a shared instance
+# that never stops never picks up a new one). A restart resets the server's
+# own count; DigiKey and Mouser still enforce theirs.
 #
 # No `scope`: the template references nothing user-specific, so toolgate runs
 # one shared instance for everyone.
@@ -24,7 +27,7 @@ spec:
     Mouser, and JLCPCB's parts library (with basic/extended assembly status).
     Price and stock by part number or keyword, the cheapest offer at a
     quantity, and full specifications for one part.
-  idleStop: "0"
+  idleStop: 2h
   startTimeout: 2m
   access:
     users:
