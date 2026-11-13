@@ -7,7 +7,7 @@ spec:
   # Needed until https://github.com/VictoriaMetrics/operator/pull/1305 merges and releases
   image:
     repository: quay.io/victoriametrics/victoria-logs
-    tag: v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
+    tag: v1.54.0@sha256:ee4e820cac3721f5f5d91641b950c22439593adc4224f9655e5333d5a84c1dfe
   priorityClassName: system-cluster-critical
   # Peak RSS ~470Mi over 60d (2026-11-05); the working set reaches ~1.2Gi only
   # from page cache. Memory request == limit. No CPU limit -- see
@@ -58,7 +58,7 @@ spec:
   # Needed until https://github.com/VictoriaMetrics/operator/pull/1305 merges and releases
   image:
     repository: quay.io/victoriametrics/victoria-logs
-    tag: v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
+    tag: v1.54.0@sha256:ee4e820cac3721f5f5d91641b950c22439593adc4224f9655e5333d5a84c1dfe
   priorityClassName: system-cluster-critical
   # Peak RSS ~470Mi over 60d (2026-11-05); the working set reaches ~1.2Gi only
   # from page cache. Memory request == limit. No CPU limit -- see
