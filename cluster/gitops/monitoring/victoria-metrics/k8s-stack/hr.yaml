@@ -28,10 +28,6 @@ spec:
     global:
       cluster:
         dnsDomain: cluster.local
-      license:
-        keyRef:
-          name: victoria-metrics-license-key
-          key: licenseKey
     victoria-metrics-operator:
       fullnameOverride: victoria-metrics-operator
       image:
@@ -221,10 +217,10 @@ spec:
             image:
               repository: quay.io/victoriametrics/vmauth
               tag: v1.156.0-enterprise@sha256:3642e74646d082b916e5ab5929a63f669032ff7da7e7aef42f36788861d93902
-            hostAliases:
-              - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-                hostnames:
-                  - license.victoriametrics.com
+            extraArgs:
+              # Accept the VictoriaMetrics Enterprise ESA (https://victoriametrics.com/legal/esa/).
+              # From v1.156.0 this replaces the license key; it's set on every enterprise component.
+              eula: "true"
             podMetadata:
               labels:
                 endpoints.netpols.home.arpa/time-series-supplier: "true"
@@ -235,18 +231,6 @@ spec:
             useStrictSecurity: true
             # If these components fail then there will be no notification that something is going wrong
             priorityClassName: system-cluster-critical
-            volumes:
-              - name: victoria-metrics-license-service-serving-cert
-                secret:
-                  secretName: victoria-metrics-license-service-serving-cert
-                  defaultMode: 0440
-                  items:
-                    - key: ca.crt
-                      path: ca.crt
-            volumeMounts:
-              - name: victoria-metrics-license-service-serving-cert
-                mountPath: /etc/ssl/certs/ca.crt
-                subPath: ca.crt
         vmselect:
           revisionHistoryLimitCount: 1
           image:
@@ -275,6 +259,7 @@ spec:
               # or the operator re-injects one.
               memory: *vmselect_memory
           extraArgs:
+            eula: "true"
             # Metrics from the last few weeks show a very low average memory usage (~5%). Increasing this
             # from the default of 60% should not increase the cache eviction rate, while allowing for
             # heavier queries.
@@ -282,10 +267,6 @@ spec:
             # Must match vmstorage.
             downsampling.period: &downsampling_period 7d:1m,14d:5m,30d:15m,90d:1h,2y:4h,5y:12h,10y:1d
             dedup.minScrapeInterval: &dedup_interval 20s
-          hostAliases:
-            - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-              hostnames:
-                - license.victoriametrics.com
           podDisruptionBudget:
             minAvailable: 1
           replicaCount: 2
@@ -306,18 +287,6 @@ spec:
               # memory limit.
               medium: Memory
               sizeLimit: 2Gi
-          volumes:
-            - name: victoria-metrics-license-service-serving-cert
-              secret:
-                secretName: victoria-metrics-license-service-serving-cert
-                defaultMode: 0440
-                items:
-                  - key: ca.crt
-                    path: ca.crt
-          volumeMounts:
-            - name: victoria-metrics-license-service-serving-cert
-              mountPath: /etc/ssl/certs/ca.crt
-              subPath: ca.crt
         vminsert:
           revisionHistoryLimitCount: 1
           image:
@@ -330,31 +299,16 @@ spec:
             limits:
               memory: 1Gi
               cpu: 1500m
-          hostAliases:
-            - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-              hostnames:
-                - license.victoriametrics.com
           podDisruptionBudget:
             minAvailable: 1
           replicaCount: 2
           useStrictSecurity: true
           # If these components fail then there will be no notification that something is going wrong
           priorityClassName: system-cluster-critical
-          volumes:
-            - name: victoria-metrics-license-service-serving-cert
-              secret:
-                secretName: victoria-metrics-license-service-serving-cert
-                defaultMode: 0440
-                items:
-                  - key: ca.crt
-                    path: ca.crt
-          volumeMounts:
-            - name: victoria-metrics-license-service-serving-cert
-              mountPath: /etc/ssl/certs/ca.crt
-              subPath: ca.crt
           # This is outrageously high but I'd like to get the data in first so that I can
           # more easily tell which labels I can drop
           extraArgs:
+            eula: "true"
             maxLabelsPerTimeseries: "150"
         vmstorage:
           revisionHistoryLimitCount: 1
@@ -369,10 +323,6 @@ spec:
             limits:
               memory: 6Gi
               cpu: "16"
-          hostAliases:
-            - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-              hostnames:
-                - license.victoriametrics.com
           useStrictSecurity: true
           # If these components fail then there will be no notification that something is going wrong
           priorityClassName: system-cluster-critical
@@ -407,6 +357,7 @@ spec:
                 storageClassName: victoria-metrics-vmstorage
                 volumeMode: Filesystem
           extraArgs:
+            eula: "true"
             downsampling.period: *downsampling_period
             # Both vmagent replicas scrape every target, so each sample arrives
             # twice, milliseconds apart. Matches the scrape interval.
@@ -414,28 +365,12 @@ spec:
             # Per-pool harbor_task_concurrency series (~529k/day) are kept for a day.
             # TODO set retention filters for other low value, high volume metrics
             retentionFilter: '{__name__="harbor_task_concurrency",pool!=""}:1d'
-          volumes:
-            - name: victoria-metrics-license-service-serving-cert
-              secret:
-                secretName: victoria-metrics-license-service-serving-cert
-                defaultMode: 0440
-                items:
-                  - key: ca.crt
-                    path: ca.crt
-          volumeMounts:
-            - name: victoria-metrics-license-service-serving-cert
-              mountPath: /etc/ssl/certs/ca.crt
-              subPath: ca.crt
           # vmBackup: # TODO maybe. Metrics are not critical to back up.
     alertmanager:
       spec:
         image:
           repository: quay.io/prometheus/alertmanager
           tag: v0.35.0@sha256:5f6e66c01bd610aef6dd671642a52eee775fd3a89bd8788ebada33efaf373d10
-        hostAliases:
-          - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-            hostnames:
-              - license.victoriametrics.com
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
@@ -485,10 +420,6 @@ spec:
         image:
           repository: quay.io/victoriametrics/vmalert
           tag: v1.156.0-enterprise@sha256:7b2b46796586138cadd43e04476f9691a06c0509e1df5b88aab34f1833731dcc
-        hostAliases:
-          - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-            hostnames:
-              - license.victoriametrics.com
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
@@ -507,6 +438,7 @@ spec:
           limits:
             memory: 500Mi
         extraArgs:
+          eula: "true"
           # This will be used in the "source" links in the alert messages.
           # This will add grafana links to alerts.
           external.url: https://grafana.${SECRET_PUBLIC_DOMAIN_NAME}
@@ -520,28 +452,12 @@ spec:
           url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/select/0/prometheus
         remoteWrite:
           url: http://vmclusterlb-victoria-metrics-k8s-stack.monitoring.svc.cluster.local.:8427/insert/0/prometheus
-        volumes:
-          - name: victoria-metrics-license-service-serving-cert
-            secret:
-              secretName: victoria-metrics-license-service-serving-cert
-              defaultMode: 0440
-              items:
-                - key: ca.crt
-                  path: ca.crt
-        volumeMounts:
-          - name: victoria-metrics-license-service-serving-cert
-            mountPath: /etc/ssl/certs/ca.crt
-            subPath: ca.crt
     vmagent:
       # TODO check each instance to verify that they're all scraping the same targets
       spec:
         image:
           repository: quay.io/victoriametrics/vmagent
           tag: v1.156.0-enterprise@sha256:a602300eef4ff48086d57fbb3ece39c28f22acf9037d455c26685562b76256a7
-        hostAliases:
-          - ip: ${VICTORIA_METRICS_LICENSE_SERVICE_IP}
-            hostnames:
-              - license.victoriametrics.com
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
@@ -568,6 +484,7 @@ spec:
             # VM_VMAGENTDEFAULT_USEDEFAULTRESOURCES=false above.
             memory: *vmagent_memory
         extraArgs:
+          eula: "true"
           # This is because cilium is exporting a ton of metrics, largely due to some pods making IPv6 requests which are unsupported on my network.
           # TODO find the pods and fix them
           promscrape.maxScrapeSize: 32MiB
@@ -604,18 +521,6 @@ spec:
             # This is a workaround for the hubble UI, which requires "prometheus" scrapers to be
             # labeled like this, for filtering.
             app: prometheus
-        volumes:
-          - name: victoria-metrics-license-service-serving-cert
-            secret:
-              secretName: victoria-metrics-license-service-serving-cert
-              defaultMode: 0440
-              items:
-                - key: ca.crt
-                  path: ca.crt
-        volumeMounts:
-          - name: victoria-metrics-license-service-serving-cert
-            mountPath: /etc/ssl/certs/ca.crt
-            subPath: ca.crt
     defaultDatasources:
       grafanaOperator: *grafana_operator
       victoriametrics:

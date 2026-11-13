@@ -41,27 +41,6 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name victoria-metrics-license-service
-spec:
-  targetNamespace: monitoring
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/monitoring/victoria-metrics/license-service
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: cluster-issuers
-    - name: prometheus-crds
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
   name: &app_name victoria-metrics-k8s-stack
 spec:
   targetNamespace: monitoring
@@ -78,7 +57,6 @@ spec:
   dependsOn:
     - name: victoria-metrics-crds
     - name: victoria-metrics-storage-classes
-    - name: victoria-metrics-license-service
     - name: monitoring-namespace-issuer
     - name: grafana-crds
     - name: prometheus-crds
@@ -111,6 +89,10 @@ spec:
     - name: victoria-metrics-crds
     - name: grafana-crds
 # Haven't really used this so I'm disabling it.
+# vmanomaly still verifies its license key against license.victoriametrics.com.
+# Before re-enabling, restore the license service that stood in for it
+# (victoria-metrics/license-service, its Kustomization and
+# VICTORIA_METRICS_LICENSE_SERVICE_IP) from git history.
 # ---
 # apiVersion: kustomize.toolkit.fluxcd.io/v1
 # kind: Kustomization
@@ -131,7 +113,6 @@ spec:
 #   wait: true
 #   dependsOn:
 #     - name: victoria-metrics-storage-classes
-#     - name: victoria-metrics-license-service
 #     - name: monitoring-namespace-issuer
 #     - name: grafana-crds
 #     - name: prometheus-crds
@@ -162,6 +143,5 @@ spec:
     - name: grafana-crds
     - name: gateway-crds
     - name: victoria-metrics-crds
-    - name: victoria-metrics-license-service
     - name: openebs
     - name: victoria-metrics-k8s-stack

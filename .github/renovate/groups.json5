@@ -293,9 +293,13 @@
     // digest. Overrides stop following the chart, so they share its PR.
     // Images shared across charts at different versions are scoped by file.
     {
-      description: "VictoriaMetrics: images pinned in the k8s-stack values",
+      description: "VictoriaMetrics: images pinned in the k8s-stack values (and the logs vmauth, which is the same vmauth)",
       groupName: "victoria-metrics-operator",
-      matchFileNames: ["cluster/gitops/monitoring/victoria-metrics/k8s-stack/**"],
+      matchFileNames: [
+        "cluster/gitops/monitoring/victoria-metrics/k8s-stack/**",
+        // Not logs/**: that would pull the victoria-logs image out of its own group.
+        "cluster/gitops/monitoring/victoria-metrics/logs/vmauth.yaml",
+      ],
       matchDatasources: ["docker"],
       matchPackageNames: [
         "/^quay\\.io/victoriametrics//",

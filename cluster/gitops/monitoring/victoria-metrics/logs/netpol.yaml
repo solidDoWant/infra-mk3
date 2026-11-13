@@ -61,15 +61,6 @@ specs:
           - ports:
               - port: "9428"
                 protocol: TCP
-      # To license service
-      - toEndpoints:
-          - matchLabels:
-              app.kubernetes.io/instance: victoria-metrics-license-service
-              app.kubernetes.io/name: victoria-metrics-license-service
-        toPorts:
-          - ports:
-              - port: "443"
-                protocol: TCP
       # Operator-injected config-reloader reads the config Secret
       - toEntities:
           - kube-apiserver
