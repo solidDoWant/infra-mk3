@@ -67,6 +67,8 @@ spec:
           runAsNonRoot: true
           runAsUser: 65532
           runAsGroup: 65532
+          # Secret files belong to root; this group lets the server read them.
+          fsGroup: 65532
           seccompProfile:
             type: RuntimeDefault
         containers:
@@ -103,7 +105,7 @@ spec:
           - name: credentials
             secret:
               secretName: sendcutsend-credentials
-              defaultMode: 0400
+              defaultMode: 0440
     - apiVersion: v1
       kind: Service
       metadata:
