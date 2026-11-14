@@ -16,6 +16,9 @@ spec:
     license and file list, and get direct download links (valid 24 hours) for
     its STL/3MF/STEP, G-code or zip files. Download the links with curl or wget.
   idleStop: 2h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
   startTimeout: 2m
   access:
     users:

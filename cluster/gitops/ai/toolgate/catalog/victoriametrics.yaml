@@ -16,6 +16,9 @@ spec:
     Query the cluster's metrics in VictoriaMetrics (MetricsQL): metrics,
     labels, series, cardinality, alerting rules and firing alerts. Read-only.
   idleStop: 2h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
   access:
     # The same people who can query everything through Grafana.
     groups:

@@ -31,6 +31,11 @@ spec:
     forms. Use it when the built-in web fetch fails or a page needs JavaScript.
     Call browser_snapshot after navigating to read the page.
   scope: per-session
+  # Keeps browser state (tabs, cookies): replace an outdated instance only
+  # after 10 minutes without calls, so a change never lands mid-task.
+  updatePolicy:
+    mode: whenIdle
+    idleFor: 10m
   startTimeout: 5m
   access:
     users:

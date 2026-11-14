@@ -33,6 +33,9 @@ spec:
     and movies; trigger searches and grab releases. Adding, editing and
     grabbing need approval.
   idleStop: 1h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
   startTimeout: 2m
   access:
     # People who can use Sonarr's or Radarr's own UI. Either group admits

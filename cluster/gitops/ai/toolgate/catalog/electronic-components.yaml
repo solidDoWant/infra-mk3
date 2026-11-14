@@ -28,6 +28,9 @@ spec:
     Price and stock by part number or keyword, the cheapest offer at a
     quantity, and full specifications for one part.
   idleStop: 2h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
   startTimeout: 2m
   access:
     users:
