@@ -61,47 +61,54 @@ spec:
     - name: gateway-crds
     - name: istio-csr
     - name: istio-base
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
-  name: &app_name istio-cni
-spec:
-  targetNamespace: istio-system
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/istio-system/istio/cni
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: istio-istiod
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
-  name: &app_name istio-ztunnel
-spec:
-  targetNamespace: istio-system
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/istio-system/istio/ztunnel
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: istio-cni
 
+# Ambient mesh data plane, disabled: no workloads are enrolled in the mesh.
+# Istio is only used for its Gateway API implementation, which needs istiod
+# (and istio-csr for the gateways' xDS certs) but not istio-cni or ztunnel.
+# Uninstalling istio-cni leaves its plugin chained in each node's
+# /etc/cni/net.d/00-multus.conflist, with a dead token, so no new pod can start.
+# After it is gone, restart the multus DaemonSet (it regenerates a clean
+# 00-multus.conf) and delete the stale 00-multus.conflist on every node.
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   namespace: flux-system
+#   name: &app_name istio-cni
+# spec:
+#   targetNamespace: istio-system
+#   commonMetadata:
+#     labels:
+#       app.kubernetes.io/name: *app_name
+#   interval: 5m
+#   path: /cluster/gitops/istio-system/istio/cni
+#   prune: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: infra-mk3
+#   wait: true
+#   dependsOn:
+#     - name: istio-istiod
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   namespace: flux-system
+#   name: &app_name istio-ztunnel
+# spec:
+#   targetNamespace: istio-system
+#   commonMetadata:
+#     labels:
+#       app.kubernetes.io/name: *app_name
+#   interval: 5m
+#   path: /cluster/gitops/istio-system/istio/ztunnel
+#   prune: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: infra-mk3
+#   wait: true
+#   dependsOn:
+#     - name: istio-cni
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
