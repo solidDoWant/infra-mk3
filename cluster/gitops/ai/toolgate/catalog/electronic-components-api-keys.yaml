@@ -1,0 +1,71 @@
+---
+# Copies the DigiKey and Mouser API keys (electronic-components-api-keys.sops.yaml) into each
+# namespace that toolgate creates for an instance of the `electronic-components`
+# template (electronic-components.yaml), where the instance's Pod reads them. toolgate deletes the
+# namespace, and with it the copy, when the instance stops.
+#
+# Only toolgate (and cluster admins) can create namespaces, and toolgate sets
+# these labels from the template, so no other namespace gets the keys.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: toolgate-electronic-components-api-keys
+spec:
+  rules:
+    - name: copy-electronic-components-api-keys
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  app.kubernetes.io/managed-by: toolgate
+                  toolgate.soliddowant.dev/template: electronic-components
+                  toolgate.soliddowant.dev/template-namespace: ai
+      # Unused since the rule clones the Secret, but Kyverno forbids removing
+      # anything outside `generate` from an existing generate rule.
+      context:
+        - name: keys
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/ai/secrets/electronic-components-api-keys
+            jmesPath: data
+      generate:
+        # A clone with synchronize follows the source: when the keys change,
+        # Kyverno updates every copy, and the copy's reload label (cloned from
+        # the source) makes the workload-reloader policy restart the instance.
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: electronic-components-api-keys
+        namespace: >-
+          {{ request.object.metadata.name }}
+        clone:
+          namespace: ai
+          name: electronic-components-api-keys
+    # The client certificate for the shared MCP cache (mcp-cache/hr.yaml),
+    # renewed hourly. synchronize keeps the copy current; the source has no
+    # reload label, because the server re-reads the certificate for every
+    # new connection instead of restarting.
+    - name: copy-electronic-components-cache-client-cert
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  app.kubernetes.io/managed-by: toolgate
+                  toolgate.soliddowant.dev/template: electronic-components
+                  toolgate.soliddowant.dev/template-namespace: ai
+      generate:
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: mcp-cache-client-cert
+        namespace: >-
+          {{ request.object.metadata.name }}
+        clone:
+          namespace: ai
+          name: mcp-cache-dragonfly-electronic-components-user
