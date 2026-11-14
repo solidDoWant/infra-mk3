@@ -218,6 +218,9 @@ stringData:
           client_secret: "${SECRET_TOOLGATE_TOKEN_EXCHANGE_CLIENT_SECRET}"
           grant_types:
             - urn:ietf:params:oauth:grant-type:token-exchange
+          # Required by authentik's serializer even though the token-exchange
+          # grant never redirects.
+          redirect_uris: []
           # Subject tokens are verified against these providers' keys.
           jwt_federation_providers:
             - !KeyOf toolgate-provider
