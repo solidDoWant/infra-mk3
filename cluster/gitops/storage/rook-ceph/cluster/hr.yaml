@@ -250,6 +250,7 @@ spec:
         # protocol they were mounted with until remounted. The ms_*_mode
         # settings are startup-only, so daemons enforce them after a restart.
         connections:
+          # TODO consider "offloading" this to istio
           encryption:
             enabled: true
           compression:
