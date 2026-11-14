@@ -1,0 +1,21 @@
+---
+# The `temporal` token exchange that temporal.yaml uses as $${exchange:temporal}:
+# the gateway swaps the calling user's toolgate access token for a Temporal
+# token for that user at authentik (RFC 8693; the toolgate-token-exchange
+# provider in ../app/authentik-toolgate-application-blueprint.yaml, federated
+# by the Temporal provider). The token's lifetime is the Temporal provider's
+# access_token_validity. The tokenURL must be on the chart's allow-list, which
+# defaults to the OIDC issuers' token endpoints (authentik's).
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: TokenExchange
+metadata:
+  name: temporal
+spec:
+  tokenURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/token/
+  clientID: toolgate-token-exchange
+  # In the template secrets namespace (ai): ../app/token-exchange-client-secret.yaml
+  clientSecretRef:
+    name: toolgate-token-exchange-client
+    key: client-secret
+  audience: "${SECRET_TEMPORAL_AUTHENTIK_OIDC_CLIENT_ID}"
+  scope: openid temporal-permissions

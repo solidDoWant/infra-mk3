@@ -15,8 +15,10 @@
 # - The server never deletes series, movies or files; it has no tool for it.
 # - Egress reaches only the Sonarr and Radarr pods.
 #
-# The API keys are copied into each instance namespace by the Kyverno policy
-# in servarr-api-keys.yaml.
+# The API keys are template secrets: toolgate copies them from the
+# sonarr-api-key and radarr-api-key Secrets in `ai` (SOPS copies of
+# media/{sonarr,radarr}/app/api-key.sops.yaml; rotate both) into the
+# instance's own Secret before its pod starts.
 #
 # `$${` is Flux's escape: it reaches toolgate as a literal `${`.
 #
@@ -137,6 +139,18 @@ spec:
     radarr_history_mark_failed:
       approval: required
   resources:
+    # The API keys (template secrets, see above). The reload label makes the
+    # cluster's reloader policy restart the Deployment when toolgate updates
+    # them, since the server reads them from environment variables.
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: servarr-api-keys
+        labels:
+          kyverno.home.arpa/reload: "true"
+      stringData:
+        sonarr: $${templateSecret:sonarr-api-key/API_KEY}
+        radarr: $${templateSecret:radarr-api-key/API_KEY}
     # A Deployment rather than a bare Pod: Kubernetes recreates a deleted or
     # evicted pod, and the cluster's reloader policy restarts it when a
     # mounted Secret changes.

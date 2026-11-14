@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.12
-    digest: sha256:ea62c9910cfcc1655584b52e8e77b0868ea87af028ca1205b6b8d2d82f7d16d4
+    tag: 0.4.13
+    digest: sha256:dc3905e8f6a95d63ff8ad623d8161790dbdee024515f80bd9d8ee6818393b93c
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -22,17 +22,21 @@ spec:
     name: toolgate
   values:
     config:
-      # Templates use $${exchange:temporal} to get a Temporal token for the
-      # calling user (authentik RFC 8693 token exchange; the
-      # toolgate-token-exchange provider in the blueprint). The token's
-      # lifetime is the Temporal provider's access_token_validity.
-      tokenExchanges:
-        - name: temporal
-          tokenURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/token/
-          clientID: toolgate-token-exchange
-          clientSecretFile: /etc/toolgate/exchanges/client-secret
-          audience: "${SECRET_TEMPORAL_AUTHENTIK_OIDC_CLIENT_ID}"
-          scope: openid temporal-permissions
+      # Admin-managed Secrets that templates read as $${templateSecret:NAME/KEY},
+      # and TokenExchange client secrets, live here in `ai` like every other
+      # app's Secrets. This lets anyone who can write a template read the
+      # gateway's own Secrets too; only admins write templates (catalog/,
+      # same namespace). Token exchanges themselves are TokenExchange
+      # resources next to the templates (catalog/temporal-token-exchange.yaml);
+      # the allowed token endpoints default to the OIDC issuers'.
+      templateSecretsNamespace: ai
+      templateSecrets:
+        allowGatewayNamespace: true
+      # Registered workspace keys (`toolgate workspace register`): machines
+      # outside the cluster, such as a devcontainer, get a verified
+      # workspace after the user approves the key in the web UI.
+      workspaceKeys:
+        enabled: true
       # Templates may keep volumes between instances (catalog/kubesearch.yaml).
       # Needs a Retain StorageClass: ssd-replicated-3x-retain (storage/rook-ceph).
       persistentVolumes:
@@ -40,7 +44,7 @@ spec:
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
-        tag: 0.4.12@sha256:df6a6e8e137b0e7c09fd527a8df35b8d9fe62f2eaed26ca02dd13bf52dcb5304
+        tag: 0.4.13@sha256:065d634810998d8680ad45c08a5efeae8094efa2b8e8d0be4f25ee6dcbeb41a4
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
@@ -188,15 +192,6 @@ spec:
                 - identifier: gateway
                   port: 80
       persistence:
-        token-exchange-client:
-          type: secret
-          name: toolgate-token-exchange-client # token-exchange-client-secret.yaml
-          defaultMode: 0440
-          advancedMounts:
-            gateway:
-              gateway:
-                - path: /etc/toolgate/exchanges
-                  readOnly: true
         secrets-keyset:
           type: secret
           name: toolgate-keyset # toolgate-keyset.sops.yaml
