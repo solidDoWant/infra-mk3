@@ -8,5 +8,5 @@ metadata:
   name: {{ .Values.name }}
   namespace: {{ include "ci-project.namespace" . }}
 spec:
-  url: https://github.com/{{ .Values.owner }}/{{ .Values.name }}
+  url: https://github.com/solidDoWant/{{ .Values.name }}
   concurrency_limit: {{ .Values.concurrencyLimit }}

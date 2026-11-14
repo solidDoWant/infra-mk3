@@ -1,8 +1,8 @@
 ---
-# Repository name (github.com/<owner>/<name>). Builds run in the ci-<name>
-# namespace.
+# Repository name. Only repositories under github.com/solidDoWant can be
+# onboarded, so a typo can't point CI at someone else's repository. Builds run
+# in the ci-<name> namespace.
 name: ""
-owner: solidDoWant
 # How many of this repository's PipelineRuns may run at once. The rest queue.
 concurrencyLimit: 2
 # Pod Security Admission level for build pods. Build steps often run as root;
@@ -18,10 +18,10 @@ quota:
   pods: 10
   memory: 16Gi
 egress:
-  # Any internet address, on any port, for pulling in dependencies. Private,
-  # carrier-grade NAT, link-local and loopback ranges stay blocked, so builds
-  # can't reach the home network; cluster pods and services are only
-  # reachable as allowed below.
+  # Any address outside the cluster, on any port, for pulling in
+  # dependencies, except the home network (the intranet and xgs-pon
+  # CiliumCIDRGroups). Cluster pods and services are only reachable as
+  # allowed below.
   internet: true
   # Harbor, via the internal gateway
   harbor: true
