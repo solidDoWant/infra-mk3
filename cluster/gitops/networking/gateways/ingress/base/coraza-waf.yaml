@@ -80,6 +80,10 @@ spec:
       # CRS removed, so PR, comment and commit text can't trip it; other events
       # stay detection-only. A missing field, or a body that isn't valid JSON (rule
       # 200002 from the recommended config), is rejected.
+      # The fields are matched as ARGS_POST, not ARGS: the plugin is built with
+      # multiphase evaluation, which runs a rule as soon as its variables are
+      # available. ARGS counts as available in phase 1 (it includes the query
+      # string), so the "missing" checks would run before the body arrives.
       SecRule REQUEST_HEADERS:Host "@streq pac-webhook.${SECRET_PUBLIC_DOMAIN_NAME}" \
         "id:1020,phase:1,pass,nolog,chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:pull_request|pull_request_review|pull_request_review_comment|issue_comment|commit_comment|check_run|check_suite|push)$" \
@@ -88,49 +92,49 @@ spec:
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1021,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment or review from another account (missing)',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:pull_request_review|pull_request_review_comment|issue_comment|commit_comment)$" "chain"
-          SecRule &ARGS:json.sender.id "@eq 0" "t:none"
+          SecRule &ARGS_POST:json.sender.id "@eq 0" "t:none"
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1022,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment or review from another account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:pull_request_review|pull_request_review_comment|issue_comment|commit_comment)$" "chain"
-          SecRule ARGS:json.sender.id "!@rx ^(?:16456946)$" "t:none"
+          SecRule ARGS_POST:json.sender.id "!@rx ^(?:16456946)$" "t:none"
       # Pull request events, reviews and review comments: the pull request
       # must be opened by me or the Renovate bot.
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1023,phase:2,deny,status:403,log,msg:'Pipelines-as-Code pull request not opened by an allowed account (missing)',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:pull_request|pull_request_review|pull_request_review_comment)$" "chain"
-          SecRule &ARGS:json.pull_request.user.id "@eq 0" "t:none"
+          SecRule &ARGS_POST:json.pull_request.user.id "@eq 0" "t:none"
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1024,phase:2,deny,status:403,log,msg:'Pipelines-as-Code pull request not opened by an allowed account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:pull_request|pull_request_review|pull_request_review_comment)$" "chain"
-          SecRule ARGS:json.pull_request.user.id "!@rx ^(?:16456946|338430720)$" "t:none"
+          SecRule ARGS_POST:json.pull_request.user.id "!@rx ^(?:16456946|338430720)$" "t:none"
       # Comments on pull requests (and issues): the pull request must be
       # opened by me or the Renovate bot.
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1025,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment on a pull request not opened by an allowed account (missing)',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@streq issue_comment" "chain"
-          SecRule &ARGS:json.issue.user.id "@eq 0" "t:none"
+          SecRule &ARGS_POST:json.issue.user.id "@eq 0" "t:none"
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1026,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment on a pull request not opened by an allowed account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@streq issue_comment" "chain"
-          SecRule ARGS:json.issue.user.id "!@rx ^(?:16456946|338430720)$" "t:none"
+          SecRule ARGS_POST:json.issue.user.id "!@rx ^(?:16456946|338430720)$" "t:none"
       # "Re-run" clicks in GitHub: the sender must be me.
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1027,phase:2,deny,status:403,log,msg:'Pipelines-as-Code check re-run (missing)',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:check_run|check_suite)$" "chain"
-          SecRule &ARGS:json.sender.id "@eq 0" "t:none"
+          SecRule &ARGS_POST:json.sender.id "@eq 0" "t:none"
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1028,phase:2,deny,status:403,log,msg:'Pipelines-as-Code check re-run from another account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:check_run|check_suite)$" "chain"
-          SecRule ARGS:json.action "@streq rerequested" "chain"
-            SecRule ARGS:json.sender.id "!@rx ^(?:16456946)$" "t:none"
+          SecRule ARGS_POST:json.action "@streq rerequested" "chain"
+            SecRule ARGS_POST:json.sender.id "!@rx ^(?:16456946)$" "t:none"
       # Pushes: the pusher must be me or the Renovate bot.
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1029,phase:2,deny,status:403,log,msg:'Pipelines-as-Code push (missing)',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@streq push" "chain"
-          SecRule &ARGS:json.sender.id "@eq 0" "t:none"
+          SecRule &ARGS_POST:json.sender.id "@eq 0" "t:none"
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1030,phase:2,deny,status:403,log,msg:'Pipelines-as-Code push from another account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@streq push" "chain"
-          SecRule ARGS:json.sender.id "!@rx ^(?:16456946|338430720)$" "t:none"
+          SecRule ARGS_POST:json.sender.id "!@rx ^(?:16456946|338430720)$" "t:none"
       Include @crs-setup-conf
       Include @owasp_crs/*.conf
