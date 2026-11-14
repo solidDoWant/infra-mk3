@@ -410,6 +410,20 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "Tekton Operator: the chart (which sets the webhook image tag), the digest-pinned operator image and the CRDs installed from the operator repo by commit",
+      groupName: "tekton-operator",
+      matchPackageNames: [
+        "ghcr.io/tektoncd/operator/charts/tekton-operator",
+        "ghcr.io/tektoncd/operator/operator-303303c315a48490ba6517859ef65b77",
+        "tektoncd/operator",
+      ],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+      // Image tags are published ahead of releases (v0.82.0 appeared with no
+      // git tag or chart), which would open a PR moving the image alone. Only
+      // approve the PR once it bumps all three.
+      dependencyDashboardApproval: true,
+    },
+    {
       groupName: "crd-schema-publisher",
       matchPackageNames: ["ghcr.io/sholdee/charts/crd-schema-publisher", "ghcr.io/sholdee/crd-schema-publisher"],
       group: { commitMessageTopic: "{{{groupName}}} group" },
