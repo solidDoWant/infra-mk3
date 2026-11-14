@@ -81,8 +81,6 @@ spec:
         k8tz.io/inject: "false"
       labels:
         endpoints.netpols.home.arpa/email-relay: "true"
-      #   TODO enable this when migrating workloads to istio
-      #   istio.io/dataplane-mode: ambient
     config:
       general:
         ALLOWED_SENDER_DOMAINS: ${SECRET_PUBLIC_DOMAIN_NAME}
