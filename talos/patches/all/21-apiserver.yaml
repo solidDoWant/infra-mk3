@@ -14,3 +14,11 @@ extraArgs:
   # Text output splits multi-line values (e.g. `err=<...>`) across log
   # records.
   logging-format: json
+  # Per-resource histograms nothing reads (vmagent's apiserver allowlist drops
+  # them). Their series accumulate per verb x resource until restart; with 300+
+  # CRDs, /metrics passed vmagent's 32MiB maxScrapeSize and scrapes failed.
+  # This removes ~114k of ~212k series. Disabling a family also removes its
+  # _sum/_count, so apiserver_request_duration_seconds stays (dashboards read
+  # them).
+  disabled-metrics: >-
+    etcd_request_duration_seconds,apiserver_request_body_size_bytes,apiserver_watch_events_dispatch_duration_seconds,apiserver_watch_list_duration_seconds,apiserver_storage_list_duration_seconds,apiserver_response_sizes,apiserver_watch_cache_read_wait_seconds,apiserver_watch_cache_initialization_duration_seconds,apiserver_watch_events_sizes
