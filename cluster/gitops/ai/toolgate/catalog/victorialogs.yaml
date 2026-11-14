@@ -15,6 +15,9 @@ spec:
     Search the cluster's logs in VictoriaLogs (LogsQL): queries, hit counts,
     stats, and log streams and fields. Read-only.
   idleStop: 2h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
   access:
     # The same people who can query everything through Grafana. Logs can hold
     # tokens and personal data, so not everyone.

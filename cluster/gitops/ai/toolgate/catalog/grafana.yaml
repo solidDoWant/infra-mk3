@@ -23,6 +23,9 @@ spec:
     Read Grafana: search and read dashboards, alert rules and which are
     firing, annotations, and queries through Grafana's datasources. Read-only.
   idleStop: 1h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
   access:
     # The same people who can use Grafana's own UI.
     groups:
