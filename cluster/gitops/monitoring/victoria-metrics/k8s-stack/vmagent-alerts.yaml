@@ -1,0 +1,41 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vmagent-scrape-size
+spec:
+  groups:
+    - name: vmagent-scrape-size
+      rules:
+        # 75% of promscrape.maxScrapeSize (32MiB, hr.yaml). A target over the limit
+        # fails every scrape and loses all of its series. Responses grow slowly (e.g.
+        # apiserver histograms gain series per resource type as CRDs are added), so
+        # this gives weeks of warning. Targets with a raised per-scrape
+        # max_scrape_size will false-positive; exclude them here.
+        - alert: ScrapeResponseNearSizeLimit
+          expr: max by (job, instance) (scrape_response_size_bytes) > 0.75 * 32 * 1024 * 1024
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} ({{ $labels.instance }}) /metrics is {{ $value | humanize1024 }}B, near vmagent's 32MiB limit"
+            description: |
+              Above 32MiB uncompressed, vmagent rejects the whole response and the
+              target goes down. Shrink it at the source (disable unused metric
+              families, as talos/patches/all/21-apiserver.yaml does for the
+              apiserver) or raise max_scrape_size on that scrape. metricRelabelConfigs
+              drops do not help: the limit applies before relabeling.
+
+        # The counter has no target label; TooManyScrapeErrors and TargetDown name
+        # the target, this names the cause.
+        - alert: ScrapeResponseOverSizeLimit
+          expr: sum by (namespace, pod) (increase(vm_promscrape_max_scrape_size_exceeded_errors_total[10m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "vmagent {{ $labels.pod }} is rejecting scrape responses over the size limit"
+            description: |
+              At least one target's /metrics exceeds vmagent's maxScrapeSize, so every
+              scrape of it fails and its series are missing. Find it with the
+              unhealthy targets on the vmagent /targets page (lastError mentions
+              maxScrapeSize), then shrink the response or raise max_scrape_size.
