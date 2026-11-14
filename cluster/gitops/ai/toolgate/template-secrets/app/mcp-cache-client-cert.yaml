@@ -1,0 +1,30 @@
+---
+# The electronic-components client certificate for the shared MCP cache
+# (mcp-cache/hr.yaml) is issued in `ai` by the dragonfly chart's namespaced
+# CA Issuer and renewed hourly, so it can't be issued here. Keep one synced
+# copy in the template secrets namespace; toolgate then copies it into each
+# instance with $${templateSecret:...} and patches the copies when it renews.
+# This replaces the old per-instance-namespace copy, which raced the pod start.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: toolgate-template-secrets-mcp-cache-cert
+spec:
+  rules:
+    - name: copy-electronic-components-cache-client-cert
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              names:
+                - toolgate-template-secrets
+      generate:
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: mcp-cache-electronic-components-client-cert
+        namespace: toolgate-template-secrets
+        clone:
+          namespace: ai
+          name: mcp-cache-dragonfly-electronic-components-user

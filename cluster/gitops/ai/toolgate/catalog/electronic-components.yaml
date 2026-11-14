@@ -3,8 +3,8 @@
 # components and compare offers. Read-only.
 # https://github.com/solidDoWant/mcp-servers/tree/master/servers/electronic-components
 #
-# One shared instance with one set of API keys (electronic-components-api-keys.sops.yaml,
-# copied into the instance namespace by electronic-components-api-keys.yaml), so nobody needs
+# One shared instance with one set of API keys (../template-secrets, copied into
+# the instance's own Secret by toolgate when it starts), so nobody needs
 # their own keys to search. A source whose keys are empty stays off; jlcsearch
 # needs none. The server reads the keys when it starts.
 #
@@ -41,6 +41,30 @@ spec:
     service: electronic-components
     port: 8080
   resources:
+    # The API keys and the MCP cache client certificate, copied by toolgate
+    # from the template secrets namespace (../template-secrets) when the
+    # instance starts, and patched in place when a source changes; `$${` is
+    # Flux's escape. The reload label makes the cluster's reloader policy
+    # restart the Deployment when the API keys change. The certificate needs
+    # no restart: the server re-reads it for every new connection.
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: electronic-components-api-keys
+        labels:
+          kyverno.home.arpa/reload: "true"
+      stringData:
+        digikey_client_id: $${templateSecret:electronic-components-api-keys/digikey_client_id}
+        digikey_client_secret: $${templateSecret:electronic-components-api-keys/digikey_client_secret}
+        mouser_api_key: $${templateSecret:electronic-components-api-keys/mouser_api_key}
+        cache_url: $${templateSecret:electronic-components-api-keys/cache_url}
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: mcp-cache-client-cert
+      stringData:
+        tls.crt: $${templateSecret:mcp-cache-electronic-components-client-cert/tls.crt}
+        tls.key: $${templateSecret:mcp-cache-electronic-components-client-cert/tls.key}
     # A Deployment rather than a bare Pod: Kubernetes recreates a deleted or
     # evicted pod, and the cluster's reloader policy restarts it when a
     # mounted Secret changes.
@@ -129,10 +153,7 @@ spec:
                 secret:
                   secretName: electronic-components-api-keys
                   defaultMode: 0440
-                  # Not optional: Kyverno makes the copy just after toolgate makes
-                  # the namespace, and the pod must wait for it rather than start
-                  # without its keys. Empty keys in the Secret are fine.
-              # The MCP cache's client certificate, copied in the same way.
+              # The MCP cache's client certificate (see the Secret above).
               - name: cache-client-cert
                 secret:
                   secretName: mcp-cache-client-cert
