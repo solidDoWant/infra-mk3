@@ -14,7 +14,9 @@ spec:
   description: >-
     Search kubesearch.dev: how public home-ops Kubernetes repos deploy Helm
     charts and images, real-world Helm values, and read those repos' manifests.
-  idleStop: 2h
+  # Short: the databases and clones live on a persistent volume, so a cold
+  # start no longer downloads them again.
+  idleStop: 30m
   # Stateless: replace running instances as soon as the template changes.
   updatePolicy:
     mode: immediate

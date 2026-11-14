@@ -12,12 +12,11 @@
 # calls it. The instance stops when its session ends or disables it, and the
 # browser profile is in an emptyDir, so nothing outlives it.
 #
-# Chromium runs as its own container, and the MCP server attaches to it over
-# CDP. Playwright MCP otherwise keeps a separate browser context, with its own
-# tabs, for each MCP connection, and each gateway replica opens its own
-# connection. So one session's calls through two replicas would see two
-# different sets of tabs. Over CDP, every connection uses the browser's one
-# default context and sees the same tabs.
+# Playwright MCP keeps a separate browser context, with its own tabs, for each
+# MCP session. Since toolgate 0.4.12 each toolgate session uses one upstream MCP
+# session for its instance on every gateway replica, so a session sees the same
+# tabs whichever replica serves a call. (Before that, Chromium ran as its own
+# container and the server attached over CDP to share one context.)
 #
 # `$${` is Flux's escape: it reaches toolgate as a literal `${`.
 apiVersion: toolgate.soliddowant.dev/v1alpha1
@@ -80,64 +79,11 @@ spec:
           seccompProfile:
             type: RuntimeDefault
         containers:
-          # The Chromium bundled in the MCP image, so the two always match.
-          - name: browser
-            image: &image mcr.microsoft.com/playwright/mcp:v0.0.85@sha256:91838ad4927e574dcf787dd677e63c924b80f4adba6fe8ce47b92fab4a7841d6
-            # The glob finds the bundled Chromium whatever its build number.
-            # tini reaps Chromium's exited child processes.
-            command:
-              - /usr/bin/tini
-              - -s
-              - --
-              - sh
-              - -c
-              - exec /ms-playwright/chromium-*/chrome-linux64/chrome "$@"
-              - chrome
-            args:
-              - --headless
-              # Chromium's sandbox needs privileges the pod doesn't have. The
-              # kata VM is the isolation boundary instead.
-              - --no-sandbox
-              - --disable-dev-shm-usage
-              - --no-first-run
-              # Only the server container, in the same pod, can reach it.
-              - --remote-debugging-address=127.0.0.1
-              - --remote-debugging-port=9222
-              - --user-data-dir=/tmp/chrome-profile
-              # Headless Chromium reports "HeadlessChrome" in its user agent,
-              # which many sites block outright (Anubis ships a DENY rule for
-              # it). Send desktop Chrome's string instead, with the major
-              # version matching the bundled Chromium; bump it with the image.
-              # The client hints (Sec-CH-UA) already say plain "Chromium".
-              - --user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36
-              - about:blank
-            # No probe: the debugging port listens only on localhost, which the
-            # kubelet can't reach. The server connects on each call and
-            # reconnects after a restart, so a crash loses only the open tabs.
-            # Peaked at ~1.1Gi passing an Anubis challenge (4 workers).
-            resources:
-              requests:
-                cpu: 100m
-                memory: 2Gi
-              limits:
-                memory: 2Gi
-            securityContext: &securityContext
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop:
-                  - ALL
-            volumeMounts:
-              # Chromium's config and crash reports.
-              - name: home
-                mountPath: /home/node
-              # The browser profile.
-              - name: tmp
-                mountPath: /tmp
           - name: server
-            image: *image
-            # The image's entrypoint passes --headless, --browser chromium and
-            # --no-sandbox, which don't apply over CDP.
+            image: mcr.microsoft.com/playwright/mcp:v0.0.85@sha256:91838ad4927e574dcf787dd677e63c924b80f4adba6fe8ce47b92fab4a7841d6
+            # The image's entrypoint adds --headless, --browser chromium and
+            # --no-sandbox: Chromium's sandbox needs privileges the pod doesn't
+            # have, and the kata VM is the isolation boundary instead.
             args:
               - --port=8931
               - --host=0.0.0.0
@@ -145,9 +91,15 @@ spec:
               # the server rejects any other Host header (the port is part of
               # the match).
               - --allowed-hosts=playwright.$${instance.namespace}.svc:8931
-              # No --isolated: with it, each connection gets its own context
-              # again.
-              - --cdp-endpoint=http://127.0.0.1:9222
+              # An in-memory profile for each MCP session; the instance is
+              # per-session, and toolgate gives that session one MCP session.
+              - --isolated
+              # Headless Chromium reports "HeadlessChrome" in its user agent,
+              # which many sites block outright (Anubis ships a DENY rule for
+              # it). Send desktop Chrome's string instead, with the major
+              # version matching the bundled Chromium; bump it with the image.
+              # The client hints (Sec-CH-UA) already say plain "Chromium".
+              - --user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36
               # Without this, every action writes a page snapshot to a file in
               # the pod and returns only its path, which the client can't
               # read. browser_snapshot still returns the snapshot inline.
@@ -162,22 +114,28 @@ spec:
               tcpSocket:
                 port: http
               periodSeconds: 10
-            # Peaked at ~150Mi.
+            # Browser and server together: Chromium peaked at ~1.1Gi passing
+            # an Anubis challenge (4 workers), the server at ~150Mi.
             resources:
               requests:
-                cpu: 50m
-                memory: 256Mi
+                cpu: 150m
+                memory: 2304Mi
               limits:
-                memory: 256Mi
-            securityContext: *securityContext
+                memory: 2304Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
             volumeMounts:
               - name: init-script
                 mountPath: /etc/playwright-mcp
                 readOnly: true
-              # The working directory.
+              # The working directory, Chromium's config and crash reports.
               - name: home
                 mountPath: /home/node
-              # Console logs and screenshots.
+              # Console logs, screenshots and Chromium's temporary files.
               - name: tmp
                 mountPath: /tmp
         volumes:
