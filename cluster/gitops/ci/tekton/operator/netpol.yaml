@@ -1,0 +1,64 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: tekton-operator
+specs:
+  - description: operator
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: tekton-operator
+        app.kubernetes.io/component: operator
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Kubernetes API: leader election, and installing and reconciling every
+      # Tekton component. The component manifests are baked into the image, so
+      # nothing is fetched from the internet.
+      - &to_kube_apiserver
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Metrics
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
+  - description: webhook
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: tekton-operator
+        app.kubernetes.io/component: webhook
+    egress:
+      - *dns_resolution
+      # Kubernetes API: its own serving certificate and the webhook configurations
+      - *to_kube_apiserver
+    ingress:
+      # Admission requests for operator CRs
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP

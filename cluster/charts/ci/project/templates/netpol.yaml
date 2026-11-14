@@ -1,0 +1,66 @@
+---
+# Every build pod in the namespace. Steps run code from the repository (and
+# from pull requests), so egress is limited to the internet (by default) and
+# what its builds need in the cluster.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: builds
+  namespace: {{ include "ci-project.namespace" . }}
+specs:
+  - description: builds
+    endpointSelector: {}
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      {{- if .Values.egress.harbor }}
+      # Harbor, via the internal gateway
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      {{- end }}
+      {{- if .Values.egress.internet }}
+      # The internet, for dependencies. Private ranges are excluded so the
+      # home network stays out of reach.
+      - toCIDRSet:
+          - cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      {{- end }}
+      # GitHub: cloning, and the GitHub API
+      - toFQDNs:
+          - matchName: github.com
+          - matchName: api.github.com
+          - matchName: codeload.github.com
+          - matchPattern: "**.githubusercontent.com"
+          {{- with .Values.egress.fqdns }}
+          # Project-specific hosts
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    # Nothing connects to builds.
+    ingress:
+      - {}

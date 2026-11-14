@@ -1,0 +1,12 @@
+---
+# Uninstalling the release deletes the namespace with everything in it: the
+# repository's runs and any secrets put there (which come back from git).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "ci-project.namespace" . }}
+  labels:
+    pod-security.kubernetes.io/enforce: {{ .Values.podSecurity }}
+  annotations:
+    # k8tz's timezone mounts break kata pods.
+    k8tz.io/inject: "false"

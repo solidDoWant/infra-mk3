@@ -1,0 +1,216 @@
+---
+# The operator installs every Tekton component from this, into ci-tekton.
+#
+# Fields under `options` that the operator doesn't support are ignored
+# silently, with no error, so check a change actually landed on the generated
+# object. Supported fields:
+# https://github.com/tektoncd/operator/blob/main/docs/TektonConfig.md#additional-fields-as-options
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  # The operator's webhook rejects any other name.
+  name: config
+  annotations:
+    # Deleting this uninstalls everything, including the Pipelines CRDs (and so
+    # every PipelineRun), and garbage-collects ci-tekton.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  # On operator v0.81.x Pipelines-as-Code is only installed with the `all`
+  # profile (fixed on the v0.82 branch), which also installs the Dashboard.
+  # Triggers, Chains and Results are disabled below.
+  profile: all
+  # Can't be changed once created. The namespace itself is namespace.yaml.
+  targetNamespace: ci-tekton
+  # The operator's default-deny NetworkPolicies. Cilium policies in
+  # netpol.yaml replace them.
+  networkPolicy:
+    disabled: true
+  trigger:
+    disabled: true
+  chain:
+    disabled: true
+  result:
+    disabled: true
+  # Pipelines-as-Code prunes the runs it creates (default-max-keep-runs), and
+  # it creates every run here. Logs are kept by VictoriaLogs.
+  pruner:
+    disabled: true
+  tektonpruner:
+    disabled: true
+  dashboard:
+    readonly: true
+    options:
+      deployments:
+        tekton-dashboard:
+          spec:
+            replicas: 2
+            template:
+              spec:
+                containers:
+                  - name: tekton-dashboard
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: &dashboard_memory 128Mi
+                      limits:
+                        memory: *dashboard_memory
+  pipeline:
+    set-security-context: true
+    default-timeout-minutes: 60
+    # Every build runs in a VM. The pod template also takes `env`, applied to
+    # every step container (a run's own podTemplate wins for the same name).
+    default-pod-template: |
+      runtimeClassName: kata
+    # No fetching Tasks or Pipelines from outside a repo's own .tekton/
+    # directory. The cluster resolver only reads objects already in the
+    # cluster. The http resolver has no field here; it's turned off in
+    # resolvers-feature-flags below.
+    enable-bundles-resolver: false
+    enable-hub-resolver: false
+    enable-git-resolver: false
+    enable-cluster-resolver: true
+    # The controller, leader-elected across buckets
+    performance:
+      disable-ha: false
+      replicas: 2
+      buckets: 2
+    options:
+      configMaps:
+        config-observability:
+          data:
+            metrics-protocol: prometheus
+        resolvers-feature-flags:
+          data:
+            enable-http-resolver: "false"
+      deployments:
+        tekton-pipelines-controller:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: tekton-pipelines-controller
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: &controller_memory 256Mi
+                      limits:
+                        memory: *controller_memory
+        tekton-events-controller:
+          spec:
+            replicas: 2
+            template:
+              spec:
+                containers:
+                  - name: tekton-events-controller
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: &events_memory 128Mi
+                      limits:
+                        memory: *events_memory
+        tekton-pipelines-remote-resolvers:
+          spec:
+            replicas: 2
+            template:
+              spec:
+                containers:
+                  - name: controller
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: &resolvers_memory 256Mi
+                      limits:
+                        memory: *resolvers_memory
+        tekton-pipelines-webhook:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: webhook
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: &webhook_memory 256Mi
+                      limits:
+                        memory: *webhook_memory
+      # The release ships an HPA for the webhook, which owns its replica count
+      # (the operator can't remove it). Pin it to two: its admission webhooks
+      # fail closed, and a homelab's load never needs more.
+      horizontalPodAutoscalers:
+        tekton-pipelines-webhook:
+          spec:
+            minReplicas: 2
+            maxReplicas: 2
+  platforms:
+    kubernetes:
+      pipelinesAsCode:
+        enable: true
+        settings:
+          application-name: Tekton CI
+          # Repositories are onboarded with a release of the ci-project chart
+          # (../projects).
+          auto-configure-new-github-repo: "false"
+          # An /ok-to-test comment must name the commit it approves, so a push
+          # made after the comment doesn't run unreviewed.
+          require-ok-to-test-sha: "true"
+          remember-ok-to-test: "false"
+          # Don't copy build log lines into GitHub checks: they may include
+          # secrets.
+          error-log-snippet: "false"
+          error-detection-from-container-logs: "false"
+          # The per-run git token only covers the repository being built.
+          secret-auto-create: "true"
+          secret-github-app-token-scoped: "true"
+          # No fetching tasks from Artifact Hub or URLs.
+          remote-tasks: "false"
+          default-max-keep-runs: "10"
+          max-keep-run-upper-limit: "50"
+          tekton-dashboard-url: https://tekton.${SECRET_PUBLIC_DOMAIN_NAME}
+        options:
+          deployments:
+            pipelines-as-code-controller:
+              spec:
+                replicas: 2
+                template:
+                  metadata:
+                    labels:
+                      # External gateway egress allow, for GitHub webhook
+                      # deliveries. The pod's own netpol limits this to the
+                      # listener port.
+                      endpoints.netpols.home.arpa/external-ingress-enabled: "true"
+                  spec:
+                    containers:
+                      - name: pac-controller
+                        resources:
+                          requests:
+                            cpu: 10m
+                            memory: &pac_controller_memory 256Mi
+                          limits:
+                            memory: *pac_controller_memory
+            # Leader-elected (pac-watcher-config-leader-election)
+            pipelines-as-code-watcher:
+              spec:
+                replicas: 2
+                template:
+                  spec:
+                    containers:
+                      - name: pac-watcher
+                        resources:
+                          requests:
+                            cpu: 10m
+                            memory: &pac_watcher_memory 256Mi
+                          limits:
+                            memory: *pac_watcher_memory
+            pipelines-as-code-webhook:
+              spec:
+                replicas: 2
+                template:
+                  spec:
+                    containers:
+                      - name: pac-webhook
+                        resources:
+                          requests:
+                            cpu: 10m
+                            memory: &pac_webhook_memory 128Mi
+                          limits:
+                            memory: *pac_webhook_memory

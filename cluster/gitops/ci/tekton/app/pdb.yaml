@@ -1,0 +1,92 @@
+---
+# Neither the Tekton nor the Pipelines-as-Code release ships PDBs. Replica
+# counts are set in ../config/tektonconfig.yaml.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: tekton-pipelines-controller
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: tekton-pipelines-controller
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: tekton-events-controller
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: tekton-events-controller
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: tekton-pipelines-remote-resolvers
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: tekton-pipelines-resolvers
+---
+# Fails closed: while it's down, no Tekton object can be created or changed.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: tekton-pipelines-webhook
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: tekton-pipelines-webhook
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: pipelines-as-code-controller
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pipelines-as-code-controller
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: pipelines-as-code-watcher
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pipelines-as-code-watcher
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: pipelines-as-code-webhook
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: pipelines-as-code
+      app.kubernetes.io/component: webhook
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: tekton-dashboard
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: tekton-dashboard

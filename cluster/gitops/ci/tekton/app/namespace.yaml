@@ -1,0 +1,12 @@
+---
+# Tekton Pipelines, Pipelines-as-Code and the Dashboard, installed by the
+# operator (tektonconfig.yaml). Created here rather than by the operator so the
+# rest of this directory can be applied alongside the TektonConfig. The
+# operator still adds an owner reference to the TektonConfig, so deleting the
+# TektonConfig garbage-collects this namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ci-tekton
+  labels:
+    pod-security.kubernetes.io/enforce: restricted

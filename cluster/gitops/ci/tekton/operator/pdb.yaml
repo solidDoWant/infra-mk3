@@ -1,0 +1,25 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: tekton-operator
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tekton-operator
+      app.kubernetes.io/instance: tekton-operator
+      app.kubernetes.io/component: operator
+---
+# The webhook fails closed: while it's down, no operator CR can be changed.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: tekton-operator-webhook
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tekton-operator
+      app.kubernetes.io/instance: tekton-operator
+      app.kubernetes.io/component: webhook

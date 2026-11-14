@@ -1,0 +1,80 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: tekton-operator
+spec:
+  interval: 1h
+  url: oci://ghcr.io/tektoncd/operator/charts/tekton-operator
+  # The chart isn't cosign-signed, so the digest is the only pin.
+  ref:
+    tag: 0.81.3
+    digest: sha256:f1558aa35e82c8fc045784cfbf7cb96e3719a3979a7130488c9abad039b5ab7f
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tekton-operator
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: tekton-operator
+  values:
+    # The CRDs are installed by the tekton-operator-crds Kustomization (../crds).
+    installCRDs: false
+    operator:
+      image:
+        # Spelled out (it's the chart default) so Renovate sees the image.
+        repository: ghcr.io/tektoncd/operator/operator-303303c315a48490ba6517859ef65b77
+        # The webhook tag is left at the chart default: the chart reuses it as
+        # the operator's VERSION env var, so it can't carry a digest.
+        tag: v0.81.3@sha256:bfa58839797d34476393a1bd3508e51863771e232d86ef0a591ef487246750b3
+      # Leader-elected
+      replicas: 2
+      # Flux owns the TektonConfig (../config). With auto-install on, the
+      # operator creates its own `config` at startup, and targetNamespace can't
+      # be changed after creation.
+      autoInstallComponents: false
+      defaultTargetNamespace: ci-tekton
+      # Applies to both operator containers.
+      resources:
+        requests:
+          cpu: 10m
+          memory: &operator_memory 256Mi
+        limits:
+          memory: *operator_memory
+    webhook:
+      replicas: 2
+      resources:
+        requests:
+          cpu: 10m
+          memory: &webhook_memory 128Mi
+        limits:
+          memory: *webhook_memory
+    podSecurityContext:
+      runAsNonRoot: true
+      # The image's nonroot user
+      runAsUser: 65532
+      runAsGroup: 65532
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    service:
+      createServiceMonitor: true
+  postRenderers:
+    - kustomize:
+        patches:
+          # The operator's own metrics are off by default since v0.80.
+          - target:
+              kind: ConfigMap
+              name: tekton-operator-observability
+            patch: |
+              - op: add
+                path: /data/metrics-protocol
+                value: prometheus

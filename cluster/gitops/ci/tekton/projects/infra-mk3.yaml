@@ -1,0 +1,20 @@
+---
+# This repository, onboarded for testing the Tekton install. It has no .tekton/
+# directory on its default branch, so Pipelines-as-Code does nothing for it
+# until a branch adds one.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ci-project-infra-mk3
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/ci/project
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    name: infra-mk3
