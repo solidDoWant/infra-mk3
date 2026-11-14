@@ -22,6 +22,10 @@ spec:
     name: toolgate
   values:
     config:
+      # Templates may keep volumes between instances (catalog/kubesearch.yaml).
+      # Needs a Retain StorageClass: ssd-replicated-3x-retain (storage/rook-ceph).
+      persistentVolumes:
+        enabled: true
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
