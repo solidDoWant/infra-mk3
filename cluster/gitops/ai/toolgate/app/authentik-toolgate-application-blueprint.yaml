@@ -198,3 +198,50 @@ stringData:
           order: 0
           group: !KeyOf toolgate-group
           target: !KeyOf coder-toolgate-application
+      # Token exchange (RFC 8693) for toolgate's $${exchange:NAME} template
+      # variable: the gateway swaps a user's toolgate or coder-toolgate access
+      # token for a token of another provider (e.g. Temporal) for that same
+      # user. Confidential, so only the gateway (which holds the secret) can
+      # exchange; agents holding user tokens can't. Target providers list this
+      # provider in their jwt_federation_providers (data/temporal/app).
+      - model: authentik_providers_oauth2.oauth2provider
+        id: toolgate-token-exchange-provider
+        identifiers:
+          name: toolgate-token-exchange
+        attrs:
+          name: toolgate-token-exchange
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, explicit-authorization-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          client_type: confidential
+          client_id: toolgate-token-exchange
+          client_secret: "${SECRET_TOOLGATE_TOKEN_EXCHANGE_CLIENT_SECRET}"
+          grant_types:
+            - urn:ietf:params:oauth:grant-type:token-exchange
+          # Subject tokens are verified against these providers' keys.
+          jwt_federation_providers:
+            - !KeyOf toolgate-provider
+            - !KeyOf coder-toolgate-provider
+          signing_key:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          access_token_validity: minutes=10
+          sub_mode: hashed_user_id
+          issuer_mode: per_provider
+      - model: authentik_core.application
+        id: toolgate-token-exchange-application
+        identifiers:
+          slug: toolgate-token-exchange
+        attrs:
+          name: toolgate token exchange
+          slug: toolgate-token-exchange
+          group: Development access
+          provider: !KeyOf toolgate-token-exchange-provider
+          policy_engine_mode: any
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf toolgate-group
+          target: !KeyOf toolgate-token-exchange-application
