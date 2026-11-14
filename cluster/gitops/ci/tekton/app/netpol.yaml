@@ -131,6 +131,22 @@ specs:
       - *probes
       - *metrics
 
+  # Mutating webhook (proxy.operator.tekton.dev) that the operator adds to the
+  # Pipelines install: it injects the operator's proxy and CA settings into
+  # TaskRun pods. It fails closed, so builds can't start while it's down.
+  - description: operator proxy webhook
+    endpointSelector:
+      matchLabels:
+        name: tekton-operator-proxy-webhook
+    egress:
+      - *dns_resolution
+      # Kubernetes API: its config, its serving certificate and the webhook
+      # configuration
+      - *to_kube_apiserver
+    ingress:
+      # Admission requests for TaskRun pods
+      - *admission
+
   - description: pipelines-as-code controller
     endpointSelector:
       matchLabels:
