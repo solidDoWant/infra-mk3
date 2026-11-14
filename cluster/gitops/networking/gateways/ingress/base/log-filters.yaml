@@ -27,8 +27,7 @@ metadata:
     config.fluentbit.fluent.io/enabled: "true"
     config.fluentbit.fluent.io/agent: node
 spec:
-  # Gateway pods are <gateway>-<gatewayclass>-<hash>-<suffix>. Anchored on the
-  # gateway pods because ztunnel's container is also named istio-proxy.
+  # Gateway pods are <gateway>-<gatewayclass>-<hash>-<suffix>.
   matchRegex: ^kube\.networking\.[^.]+-gateway-[^.]*\.istio-proxy\.
   filters:
     - lua:

@@ -31,7 +31,6 @@ spec:
           kind: ValidatingWebhookConfiguration
           name: istio-validator-istio-system
   values:
-    profile: ambient
     pilot:
       # A ref containing `/` bypasses hub/tag/variant.
       image: mirror.gcr.io/istio/pilot:1.32.0-distroless@sha256:219ab7efcf1fd1f883086ad4a4a649c0e70bee3200423d6eef9f435103a79423
