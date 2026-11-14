@@ -8,5 +8,5 @@ metadata:
   name: {{ .Values.name }}
   namespace: {{ include "ci-project.namespace" . }}
 spec:
-  url: {{ required "url is required" .Values.url }}
+  url: https://github.com/{{ .Values.owner }}/{{ .Values.name }}
   concurrency_limit: {{ .Values.concurrencyLimit }}

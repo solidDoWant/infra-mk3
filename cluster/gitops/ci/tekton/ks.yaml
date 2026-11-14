@@ -1,7 +1,6 @@
 ---
-# Operator CRDs and the deletion guard. Kept out of the Helm release so that
-# uninstalling the chart can't delete the CRDs (and with them every Tekton
-# object), and never pruned.
+# Operator CRDs. Kept out of the Helm release so that uninstalling the chart
+# can't delete them (and with them every Tekton object), and never pruned.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -41,18 +40,21 @@ spec:
     - name: prometheus-crds
 ---
 # The TektonConfig, from which the operator installs Tekton Pipelines,
-# Pipelines-as-Code and the Dashboard into ci-tekton.
+# Pipelines-as-Code and the Dashboard into ci-tekton, and everything in
+# ci-tekton that the operator doesn't create. The TektonConfig is
+# cluster-scoped, so the other objects set their namespace themselves rather
+# than through targetNamespace.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: &app_name tekton-config
+  name: &app_name tekton
 spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
   interval: 5m
-  path: /cluster/gitops/ci/tekton/config
+  path: /cluster/gitops/ci/tekton/app
   prune: true
   sourceRef:
     kind: GitRepository
@@ -61,28 +63,7 @@ spec:
   wait: true
   timeout: 15m
   dependsOn:
+    # The TektonConfig is validated by the operator's webhook.
     - name: tekton-operator
----
-# Everything in ci-tekton that the operator doesn't create: the GitHub App
-# secret, routes, network policies, PDBs and scrape configs.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
-  name: &app_name tekton-extras
-spec:
-  targetNamespace: ci-tekton
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/ci/tekton/extras
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: tekton-config
     - name: gateway-crds
     - name: prometheus-crds

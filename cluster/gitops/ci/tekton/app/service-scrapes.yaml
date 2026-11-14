@@ -5,6 +5,7 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:
+  namespace: ci-tekton
   name: tekton-pipelines
 spec:
   selector:
@@ -18,6 +19,7 @@ spec:
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:
+  namespace: ci-tekton
   name: pipelines-as-code
 spec:
   selector:

@@ -4,6 +4,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
+    namespace: ci-tekton
     name: pipelines-as-code-secret
 type: Opaque
 stringData:

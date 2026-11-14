@@ -4,6 +4,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
+  namespace: ci-tekton
   name: pipelines-as-code-webhook
   labels:
     external-dns.home.arpa/publish: "true"
@@ -24,6 +25,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
+  namespace: ci-tekton
   name: tekton-dashboard
 spec:
   hostnames:

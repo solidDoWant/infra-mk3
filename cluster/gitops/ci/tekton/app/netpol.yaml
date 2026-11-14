@@ -5,6 +5,7 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
+  namespace: ci-tekton
   name: tekton
 specs:
   - description: pipelines controller

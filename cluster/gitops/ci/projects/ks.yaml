@@ -1,0 +1,31 @@
+---
+# One HelmRelease of cluster/charts/ci/project per repository built by
+# Pipelines-as-Code (releases/<name>.yaml). The releases live in ci; each
+# creates its own ci-<name> namespace with the repository's Repository CR and
+# build isolation.
+#
+# Secrets a repository's pipelines use (e.g. a ghcr.io push credential) can't
+# go in the chart values (Flux doesn't decrypt them there). They belong in a
+# second Kustomization, ci-project-secrets, with dependsOn ci-projects (the
+# namespaces come from the releases) and each secret's namespace set in its
+# file.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name ci-projects
+spec:
+  targetNamespace: ci
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/projects/releases
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # The Repository CRD, installed by the operator
+    - name: tekton

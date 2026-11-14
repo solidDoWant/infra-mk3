@@ -1,6 +1,7 @@
 ---
-# The release is stored in ci; everything it creates is in ci-infra-mk3, which
-# the chart creates.
+# This repository, onboarded for testing the Tekton install. It has no .tekton/
+# directory on its default branch, so Pipelines-as-Code does nothing for it
+# until a branch adds one.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -15,8 +16,5 @@ spec:
         kind: GitRepository
         namespace: flux-system
         name: infra-mk3
-  targetNamespace: ci-infra-mk3
-  storageNamespace: ci
   values:
     name: infra-mk3
-    url: https://github.com/solidDoWant/infra-mk3

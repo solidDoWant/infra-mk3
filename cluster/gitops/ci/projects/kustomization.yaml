@@ -1,8 +1,5 @@
 ---
-# One directory per repository built by Pipelines-as-Code. Each gets its own
-# ci-<project> namespace, which holds its Repository CR, its builds and any
-# secrets they use.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ./infra-mk3/ks.yaml
+  - ./ks.yaml

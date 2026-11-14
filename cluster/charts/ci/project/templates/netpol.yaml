@@ -1,6 +1,7 @@
 ---
 # Every build pod in the namespace. Steps run code from the repository (and
-# from pull requests), so egress is limited to what its builds need.
+# from pull requests), so egress is limited to the internet (by default) and
+# what its builds need in the cluster.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -35,6 +36,24 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+      {{- end }}
+      {{- if .Values.egress.internet }}
+      # The internet, for dependencies. Private and local ranges are excluded
+      # so the home network stays out of reach.
+      - toCIDRSet:
+          - cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+          - cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+              - ::1/128
       {{- end }}
       # GitHub: cloning, and the GitHub API
       - toFQDNs:

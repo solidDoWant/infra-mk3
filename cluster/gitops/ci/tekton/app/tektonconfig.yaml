@@ -12,21 +12,17 @@ metadata:
   name: config
   annotations:
     # Deleting this uninstalls everything, including the Pipelines CRDs (and so
-    # every PipelineRun), and garbage-collects ci-tekton. The
-    # tekton-deletion-guard admission policy also refuses the deletion.
+    # every PipelineRun), and garbage-collects ci-tekton.
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   # On operator v0.81.x Pipelines-as-Code is only installed with the `all`
   # profile (fixed on the v0.82 branch), which also installs the Dashboard.
   # Triggers, Chains and Results are disabled below.
   profile: all
-  # Can't be changed once created.
+  # Can't be changed once created. The namespace itself is namespace.yaml.
   targetNamespace: ci-tekton
-  targetNamespaceMetadata:
-    labels:
-      pod-security.kubernetes.io/enforce: restricted
-  # The operator's default-deny NetworkPolicies. Cilium policies in ../extras
-  # replace them.
+  # The operator's default-deny NetworkPolicies. Cilium policies in
+  # netpol.yaml replace them.
   networkPolicy:
     disabled: true
   trigger:
@@ -137,20 +133,22 @@ spec:
                         memory: &webhook_memory 256Mi
                       limits:
                         memory: *webhook_memory
-      # The webhook's replicas are owned by its HPA. Its admission webhooks
-      # fail closed, so keep two.
+      # The release ships an HPA for the webhook, which owns its replica count
+      # (the operator can't remove it). Pin it to two: its admission webhooks
+      # fail closed, and a homelab's load never needs more.
       horizontalPodAutoscalers:
         tekton-pipelines-webhook:
           spec:
             minReplicas: 2
-            maxReplicas: 5
+            maxReplicas: 2
   platforms:
     kubernetes:
       pipelinesAsCode:
         enable: true
         settings:
           application-name: Tekton CI
-          # Repositories are onboarded with a Repository CR in ../../projects.
+          # Repositories are onboarded with a release of the ci-project chart
+          # (../../projects).
           auto-configure-new-github-repo: "false"
           # An /ok-to-test comment must name the commit it approves, so a push
           # made after the comment doesn't run unreviewed.
