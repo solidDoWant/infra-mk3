@@ -29,7 +29,7 @@ spec:
         repository: ghcr.io/tektoncd/operator/operator-303303c315a48490ba6517859ef65b77
         # The webhook tag is left at the chart default: the chart reuses it as
         # the operator's VERSION env var, so it can't carry a digest.
-        tag: v0.81.3@sha256:bfa58839797d34476393a1bd3508e51863771e232d86ef0a591ef487246750b3
+        tag: v0.82.0@sha256:22ded5603bf1cca965604ebf93e7700b2106764a7bb65a00687193446d2aaa31
       # Leader-elected
       replicas: 2
       # Flux owns the TektonConfig (../config). With auto-install on, the
