@@ -61,47 +61,50 @@ spec:
     - name: gateway-crds
     - name: istio-csr
     - name: istio-base
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
-  name: &app_name istio-cni
-spec:
-  targetNamespace: istio-system
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/istio-system/istio/cni
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: istio-istiod
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  namespace: flux-system
-  name: &app_name istio-ztunnel
-spec:
-  targetNamespace: istio-system
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app_name
-  interval: 5m
-  path: /cluster/gitops/istio-system/istio/ztunnel
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: infra-mk3
-  wait: true
-  dependsOn:
-    - name: istio-cni
 
+# Ambient mesh data plane, disabled: no workloads are enrolled in the mesh.
+# Istio is only used for its Gateway API implementation, which needs istiod
+# (and istio-csr for the gateways' xDS certs) but not istio-cni or ztunnel.
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   namespace: flux-system
+#   name: &app_name istio-cni
+# spec:
+#   targetNamespace: istio-system
+#   commonMetadata:
+#     labels:
+#       app.kubernetes.io/name: *app_name
+#   interval: 5m
+#   path: /cluster/gitops/istio-system/istio/cni
+#   prune: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: infra-mk3
+#   wait: true
+#   dependsOn:
+#     - name: istio-istiod
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   namespace: flux-system
+#   name: &app_name istio-ztunnel
+# spec:
+#   targetNamespace: istio-system
+#   commonMetadata:
+#     labels:
+#       app.kubernetes.io/name: *app_name
+#   interval: 5m
+#   path: /cluster/gitops/istio-system/istio/ztunnel
+#   prune: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: infra-mk3
+#   wait: true
+#   dependsOn:
+#     - name: istio-cni
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
