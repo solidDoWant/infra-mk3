@@ -26,6 +26,26 @@ spec:
     # Usable from any signed-in machine, attested or not.
     environments: any
   # MCP is served at the default path, /mcp.
+  # Gateway cache of read-only results (toolgate 0.4.12), shared by everyone.
+  # kubesearch.dev's index updates about daily. The repo_* tools read the
+  # instance's own clones, so they aren't cached.
+  tools:
+    kubesearch_search_releases:
+      cache:
+        ttl: 6h
+        normalize:
+          query: [trim, lowercase, collapseSpace]
+    kubesearch_search_images:
+      cache:
+        ttl: 6h
+        normalize:
+          query: [trim, lowercase, collapseSpace]
+    kubesearch_get_release:
+      cache:
+        ttl: 6h
+    kubesearch_grep_values:
+      cache:
+        ttl: 6h
   endpoint:
     service: kubesearch
     port: 3000
