@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: builds
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  hard:
+    pods: {{ .Values.quota.pods | quote }}
+    requests.memory: {{ .Values.quota.memory }}
+    limits.memory: {{ .Values.quota.memory }}

@@ -2,13 +2,17 @@
 # This repository, onboarded for testing the Tekton install. It has no .tekton/
 # directory on its default branch, so Pipelines-as-Code does nothing for it
 # until a branch adds one.
+#
+# Secrets the repository's pipelines use (e.g. a ghcr.io push credential) go in
+# a second Kustomization with targetNamespace ci-<name> and dependsOn this one,
+# since the namespace is created by the chart.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   namespace: flux-system
   name: &app_name ci-project-infra-mk3
 spec:
-  targetNamespace: ci-infra-mk3
+  targetNamespace: ci
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app_name
@@ -20,4 +24,5 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    # The Repository CRD, installed by the operator
     - name: tekton-config

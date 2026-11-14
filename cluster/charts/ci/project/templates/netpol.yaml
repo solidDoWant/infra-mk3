@@ -1,12 +1,11 @@
 ---
-# Every build pod in this namespace. Steps run code from the repository (and
-# from a pull request, once approved), so egress is limited to what builds
-# here need. A build that needs another host (a package registry, say) needs
-# an entry here.
+# Every build pod in the namespace. Steps run code from the repository (and
+# from pull requests), so egress is limited to what its builds need.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: builds
+  namespace: {{ include "ci-project.namespace" . }}
 specs:
   - description: builds
     endpointSelector: {}
@@ -25,6 +24,7 @@ specs:
             rules:
               dns:
                 - matchPattern: "*"
+      {{- if .Values.egress.harbor }}
       # Harbor, via the internal gateway
       - toEndpoints:
           - matchLabels:
@@ -35,12 +35,17 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
+      {{- end }}
       # GitHub: cloning, and the GitHub API
       - toFQDNs:
           - matchName: github.com
           - matchName: api.github.com
           - matchName: codeload.github.com
           - matchPattern: "**.githubusercontent.com"
+          {{- with .Values.egress.fqdns }}
+          # Project-specific hosts
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         toPorts:
           - ports:
               - port: "443"

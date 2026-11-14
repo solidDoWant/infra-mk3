@@ -1,0 +1,25 @@
+---
+# Repository name. Builds run in the ci-<name> namespace.
+name: ""
+# GitHub repository URL, e.g. https://github.com/solidDoWant/infra-mk3
+url: ""
+# How many of this repository's PipelineRuns may run at once. The rest queue.
+concurrencyLimit: 2
+# Pod Security Admission level for build pods. Build steps often run as root;
+# every build runs in a kata VM (default-pod-template in the TektonConfig).
+podSecurity: baseline
+# Defaults for build containers that set no resources of their own (Tekton
+# applies these to every step). The memory request equals the limit.
+defaultResources:
+  cpu: 100m
+  memory: 1Gi
+# Caps on what the repository's builds can use at once.
+quota:
+  pods: 10
+  memory: 16Gi
+egress:
+  # Harbor, via the internal gateway
+  harbor: true
+  # Extra hosts builds may reach on 443, as CiliumNetworkPolicy toFQDNs
+  # selectors (matchName or matchPattern). GitHub is always allowed.
+  fqdns: []

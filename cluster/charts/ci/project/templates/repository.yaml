@@ -1,0 +1,12 @@
+---
+# Pipelines run from the .tekton/ directory of the event's commit. Which pull
+# requests, pushes and comment commands get here at all is limited by the
+# external gateway's WAF (networking/gateways/ingress/base/coraza-waf.yaml).
+apiVersion: pipelinesascode.tekton.dev/v1alpha1
+kind: Repository
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  url: {{ required "url is required" .Values.url }}
+  concurrency_limit: {{ .Values.concurrencyLimit }}
