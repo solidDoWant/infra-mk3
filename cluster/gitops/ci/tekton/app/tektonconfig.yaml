@@ -156,6 +156,11 @@ spec:
           spec:
             minReplicas: 2
             maxReplicas: 2
+        # Same for the operator's proxy webhook, which ships an HPA too.
+        tekton-operator-proxy-webhook:
+          spec:
+            minReplicas: 2
+            maxReplicas: 2
   platforms:
     kubernetes:
       pipelinesAsCode:
