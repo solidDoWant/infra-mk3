@@ -28,11 +28,13 @@ spec:
         # Spelled out (it's the chart default) so Renovate sees the image.
         repository: ghcr.io/tektoncd/operator/operator-303303c315a48490ba6517859ef65b77
         # The webhook tag is left at the chart default: the chart reuses it as
-        # the operator's VERSION env var, so it can't carry a digest.
+        # the operator's VERSION env var, so it can't carry a digest. This tag
+        # must match the chart version; Renovate's tekton-operator group moves
+        # them together.
         tag: v0.81.3@sha256:bfa58839797d34476393a1bd3508e51863771e232d86ef0a591ef487246750b3
       # Leader-elected
       replicas: 2
-      # Flux owns the TektonConfig (../config). With auto-install on, the
+      # Flux owns the TektonConfig (../app). With auto-install on, the
       # operator creates its own `config` at startup, and targetNamespace can't
       # be changed after creation.
       autoInstallComponents: false
