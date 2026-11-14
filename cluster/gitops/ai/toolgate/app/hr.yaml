@@ -22,6 +22,17 @@ spec:
     name: toolgate
   values:
     config:
+      # Templates use $${exchange:temporal} to get a Temporal token for the
+      # calling user (authentik RFC 8693 token exchange; the
+      # toolgate-token-exchange provider in the blueprint). The token's
+      # lifetime is the Temporal provider's access_token_validity.
+      tokenExchanges:
+        - name: temporal
+          tokenURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/token/
+          clientID: toolgate-token-exchange
+          clientSecretFile: /etc/toolgate/exchanges/client-secret
+          audience: "${SECRET_TEMPORAL_AUTHENTIK_OIDC_CLIENT_ID}"
+          scope: openid temporal-permissions
       # Templates may keep volumes between instances (catalog/kubesearch.yaml).
       # Needs a Retain StorageClass: ssd-replicated-3x-retain (storage/rook-ceph).
       persistentVolumes:
@@ -177,6 +188,15 @@ spec:
                 - identifier: gateway
                   port: 80
       persistence:
+        token-exchange-client:
+          type: secret
+          name: toolgate-token-exchange-client # token-exchange-client-secret.yaml
+          defaultMode: 0440
+          advancedMounts:
+            gateway:
+              gateway:
+                - path: /etc/toolgate/exchanges
+                  readOnly: true
         secrets-keyset:
           type: secret
           name: toolgate-keyset # toolgate-keyset.sops.yaml

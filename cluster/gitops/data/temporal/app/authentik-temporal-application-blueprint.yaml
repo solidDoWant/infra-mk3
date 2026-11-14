@@ -38,6 +38,12 @@ stringData:
           identifiers:
             name: Blueprint library
           required: true
+      # Defines the toolgate-token-exchange provider found below.
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: toolgate application
+          required: true
       # Custom scope mapping. Issues a `permissions` claim (string array) read by
       # Temporal's default JWT claim mapper (server.config.authorization). Group
       # membership maps to permission strings:
@@ -80,6 +86,14 @@ stringData:
             - refresh_token
           client_id: "${SECRET_TEMPORAL_AUTHENTIK_OIDC_CLIENT_ID}"
           client_secret: "${SECRET_TEMPORAL_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          # toolgate exchanges a user's toolgate token for a Temporal token for
+          # that user (audience = this provider's client ID), so the Temporal MCP
+          # server acts with the user's own permissions claim.
+          jwt_federation_providers:
+            - !Find [
+                authentik_providers_oauth2.oauth2provider,
+                [name, toolgate-token-exchange],
+              ]
           redirect_uris:
             - url: https://temporal.${SECRET_PUBLIC_DOMAIN_NAME}/auth/sso/callback
               matching_mode: strict
