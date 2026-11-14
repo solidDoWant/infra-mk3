@@ -4,4 +4,5 @@ kind: Kustomization
 resources:
   - ./namespace.yaml
   - ./issuers/ks.yaml
+  - ./toolgate/template-secrets/namespace.yaml
   - ./toolgate/ks.yaml

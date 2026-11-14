@@ -98,7 +98,28 @@ spec:
   dependsOn:
     # The MCPServerTemplate CRD comes from the toolgate chart.
     - name: toolgate-app
-    # ClusterPolicies that copy API keys into instance namespaces.
+    # Templates read API keys from the template secrets namespace.
+    - name: toolgate-template-secrets
+---
+# Admin-managed Secrets that templates read as $${templateSecret:NAME/KEY}.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name toolgate-template-secrets
+spec:
+  targetNamespace: toolgate-template-secrets
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ai/toolgate/template-secrets/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # The ClusterPolicy that keeps a copy of the MCP cache client certificate.
     - name: kyverno-app
-    # The MCP cache's client certificates, copied into instance namespaces.
     - name: toolgate-mcp-cache

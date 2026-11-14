@@ -1,0 +1,9 @@
+---
+# Admin-managed Secrets that toolgate templates read as
+# $${templateSecret:NAME/KEY}. The chart (config.templateSecretsNamespace)
+# grants the gateway read access here only. No
+# toolgate.soliddowant.dev/writable label, so the gateway can never write here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: toolgate-template-secrets
