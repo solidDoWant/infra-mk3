@@ -1,0 +1,15 @@
+---
+# Defaults for build containers that set no resources of their own. Tekton
+# applies these to every step. Memory request equals the limit.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: builds
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 100m
+        memory: &memory 1Gi
+      default:
+        memory: *memory

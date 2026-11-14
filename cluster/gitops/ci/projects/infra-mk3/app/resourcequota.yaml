@@ -1,0 +1,11 @@
+---
+# Caps what this repository's builds can use at once.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: builds
+spec:
+  hard:
+    pods: "10"
+    requests.memory: 16Gi
+    limits.memory: 16Gi

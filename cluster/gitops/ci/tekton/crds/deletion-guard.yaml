@@ -1,0 +1,65 @@
+---
+# Deleting the TektonConfig (or its CRD, which deletes it) cascades: the
+# operator uninstalls every component, including the Pipelines CRDs and with
+# them every PipelineRun in every namespace, and Kubernetes garbage-collects
+# the ci-tekton namespace, which the operator marks as owned by the
+# TektonConfig. Refuse these deletions unless the object carries
+# ci.home.arpa/allow-delete: "true".
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: tekton-deletion-guard
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - operator.tekton.dev
+        apiVersions:
+          - "*"
+        resources:
+          - tektonconfigs
+        operations:
+          - DELETE
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - namespaces
+        resourceNames:
+          - ci-tekton
+        operations:
+          - DELETE
+      - apiGroups:
+          - apiextensions.k8s.io
+        apiVersions:
+          - v1
+        resources:
+          - customresourcedefinitions
+        operations:
+          - DELETE
+  matchConditions:
+    # Only the operator's own CRDs.
+    - name: tekton-object
+      expression: >-
+        oldObject.kind != 'CustomResourceDefinition' ||
+        oldObject.metadata.name.endsWith('.operator.tekton.dev')
+  validations:
+    - expression: >-
+        has(oldObject.metadata.annotations) &&
+        'ci.home.arpa/allow-delete' in oldObject.metadata.annotations &&
+        oldObject.metadata.annotations['ci.home.arpa/allow-delete'] == 'true'
+      messageExpression: >-
+        'deleting ' + oldObject.kind + ' ' + oldObject.metadata.name +
+        ' cascades to the whole Tekton install; annotate it with' +
+        ' ci.home.arpa/allow-delete=true first'
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: tekton-deletion-guard
+spec:
+  policyName: tekton-deletion-guard
+  validationActions:
+    - Deny

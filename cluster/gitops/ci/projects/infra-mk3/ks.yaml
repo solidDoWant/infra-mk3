@@ -1,0 +1,23 @@
+---
+# This repository, onboarded for testing the Tekton install. It has no .tekton/
+# directory on its default branch, so Pipelines-as-Code does nothing for it
+# until a branch adds one.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name ci-project-infra-mk3
+spec:
+  targetNamespace: ci-infra-mk3
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/projects/infra-mk3/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: tekton-config

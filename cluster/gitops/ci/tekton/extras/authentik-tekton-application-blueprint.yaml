@@ -1,0 +1,106 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-tekton-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Unfortunately this must be a secret (rather than secretGenerator) or Flux will not substitute
+  # values within it
+  authentik-tekton-application-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: Tekton Dashboard application
+      labels:
+        blueprints.goauthentik.io/description: Resources for Tekton Dashboard SSO
+    entries:
+      # Dependencies
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Implicit provider authentication
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Password authentication flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Invalidation flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Blueprint library
+          required: true
+      # Application
+      - model: authentik_providers_proxy.proxyprovider
+        id: tekton-provider
+        identifiers:
+          name: Tekton
+        attrs:
+          name: Tekton
+          mode: forward_single
+          external_host: https://tekton.${SECRET_PUBLIC_DOMAIN_NAME}
+          intercept_header_auth: true
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          # Long-lived to avoid mid-session proxy-cookie renewal, which breaks
+          # the Dashboard SPA's XHR traffic via CORS on stock authentik (no PR
+          # #17233). Renewal then happens on a normal page load instead.
+          access_token_validity: days=7
+          refresh_token_validity: days=30
+          property_mappings:
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: Application Entitlements"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'email'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+              ]
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: Proxy outpost reduced"],
+              ]
+      - model: authentik_core.application
+        id: tekton-application
+        identifiers:
+          slug: tekton
+        attrs:
+          name: Tekton
+          slug: tekton
+          group: Development access
+          provider: !KeyOf tekton-provider
+          policy_engine_mode: any
+          meta_launch_url: https://tekton.${SECRET_PUBLIC_DOMAIN_NAME}
+      # Groups
+      - model: authentik_core.group
+        id: tekton-group
+        identifiers:
+          name: Tekton access
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_TEKTON_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf tekton-group
+          target: !KeyOf tekton-application

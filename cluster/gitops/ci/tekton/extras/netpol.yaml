@@ -1,0 +1,217 @@
+---
+# Tekton components installed by the operator (the operator's own default-deny
+# NetworkPolicies are disabled in the TektonConfig). Builds run in the
+# ci-<project> namespaces, under their own policies.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: tekton
+specs:
+  - description: pipelines controller
+    endpointSelector:
+      matchLabels:
+        app: tekton-pipelines-controller
+    egress:
+      # DNS resolution
+      - &dns_resolution
+        toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Kubernetes API: leader election, and the runs and pods it reconciles
+      - &to_kube_apiserver
+        toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # When a step sets no `command`, the controller reads the image's config
+      # from its registry to find the entrypoint. Builds pulling from another
+      # registry need it added here.
+      # Harbor, via the internal gateway
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      - toFQDNs:
+          - matchName: ghcr.io
+          # GHCR's blob storage (config blobs redirect here)
+          - matchName: pkg-containers.githubusercontent.com
+          - matchName: quay.io
+          - matchPattern: "**.quay.io"
+          - matchName: public.ecr.aws
+          # ECR Public's blob CDN (blob requests redirect here)
+          # cspell:words d2glxqk2uabbnd
+          - matchName: d2glxqk2uabbnd.cloudfront.net
+          - matchName: mirror.gcr.io
+          - matchName: registry.k8s.io
+          - matchName: cdn.registry.k8s.io
+          - matchPattern: "**.pkg.dev"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # Kubelet health checks
+      - &probes
+        fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Metrics
+      - &metrics
+        fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "9090"
+                protocol: TCP
+
+  # Sends CloudEvents for runs, but no sink is configured.
+  - description: events controller
+    endpointSelector:
+      matchLabels:
+        app: tekton-events-controller
+    egress:
+      - *dns_resolution
+      - *to_kube_apiserver
+    ingress:
+      - *probes
+      - *metrics
+
+  # Only the cluster resolver is enabled (TektonConfig), which reads objects
+  # from the Kubernetes API.
+  - description: remote resolvers
+    endpointSelector:
+      matchLabels:
+        app: tekton-pipelines-resolvers
+    egress:
+      - *dns_resolution
+      - *to_kube_apiserver
+    ingress:
+      - *metrics
+
+  - description: pipelines webhook
+    endpointSelector:
+      matchLabels:
+        app: tekton-pipelines-webhook
+    egress:
+      - *dns_resolution
+      # Kubernetes API: its serving certificate and the webhook configurations
+      - *to_kube_apiserver
+    ingress:
+      # Admission requests for Tekton objects
+      - &admission
+        fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+      - *probes
+      - *metrics
+
+  - description: pipelines-as-code controller
+    endpointSelector:
+      matchLabels:
+        app: pipelines-as-code-controller
+    egress:
+      - *dns_resolution
+      # Kubernetes API: Repository CRs, and creating PipelineRuns and the
+      # per-run git token secrets
+      - *to_kube_apiserver
+      # GitHub API: App installation tokens, reading .tekton/ files, and
+      # creating check runs. Remote tasks are disabled, so nothing else.
+      - &to_github_api
+        toFQDNs:
+          - matchName: api.github.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # GitHub webhooks via the external gateway. The controller doubles as
+      # its own health check endpoint.
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: external-gateway
+        toPorts: &pac_listener
+          - ports:
+              - port: "8082"
+                protocol: TCP
+      - fromEntities:
+          - host
+        toPorts: *pac_listener
+      - *metrics
+
+  - description: pipelines-as-code watcher
+    endpointSelector:
+      matchLabels:
+        app: pipelines-as-code-watcher
+    egress:
+      - *dns_resolution
+      # Kubernetes API: leader election, watching runs and reading their logs
+      - *to_kube_apiserver
+      # GitHub API: updating check runs as builds progress
+      - *to_github_api
+    ingress:
+      - *probes
+      - *metrics
+
+  - description: pipelines-as-code webhook
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: pipelines-as-code
+        app.kubernetes.io/component: webhook
+    egress:
+      - *dns_resolution
+      - *to_kube_apiserver
+    ingress:
+      # Admission requests for Repository CRs
+      - *admission
+      - *metrics
+
+  - description: dashboard
+    endpointSelector:
+      matchLabels:
+        app: tekton-dashboard
+    egress:
+      - *dns_resolution
+      # Kubernetes API: runs, and the pod logs it displays
+      - *to_kube_apiserver
+    ingress:
+      # Web UI via the internal gateway (behind Authentik forward-auth)
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: &dashboard_port
+          - ports:
+              - port: "9097"
+                protocol: TCP
+      # Kubelet health checks
+      - fromEntities:
+          - host
+        toPorts: *dashboard_port

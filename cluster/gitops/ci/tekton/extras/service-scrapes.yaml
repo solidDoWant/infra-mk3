@@ -1,0 +1,28 @@
+---
+# Controller, events controller, remote resolvers and webhook. The public
+# Grafana dashboards predate the OpenTelemetry metric renames (Pipelines
+# v1.10), so there are none here.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: tekton-pipelines
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: tekton-pipelines
+  endpoints:
+    - port: http-metrics
+  jobLabel: app
+---
+# Controller, watcher and webhook
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: pipelines-as-code
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: pipelines-as-code
+  endpoints:
+    - port: http-metrics
+  jobLabel: app

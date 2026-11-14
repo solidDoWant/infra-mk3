@@ -1,0 +1,10 @@
+---
+# Tekton operator. The Tekton components themselves run in ci-tekton, which
+# the operator creates and owns (see tekton/config/tektonconfig.yaml), and
+# builds run in one ci-<project> namespace per repository (projects/).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ci
+  labels:
+    pod-security.kubernetes.io/enforce: restricted

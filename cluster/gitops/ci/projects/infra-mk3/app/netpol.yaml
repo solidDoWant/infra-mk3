@@ -1,0 +1,50 @@
+---
+# Every build pod in this namespace. Steps run code from the repository (and
+# from a pull request, once approved), so egress is limited to what builds
+# here need. A build that needs another host (a package registry, say) needs
+# an entry here.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: builds
+specs:
+  - description: builds
+    endpointSelector: {}
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Harbor, via the internal gateway
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+      # GitHub: cloning, and the GitHub API
+      - toFQDNs:
+          - matchName: github.com
+          - matchName: api.github.com
+          - matchName: codeload.github.com
+          - matchPattern: "**.githubusercontent.com"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    # Nothing connects to builds.
+    ingress:
+      - {}
