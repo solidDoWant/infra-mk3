@@ -62,5 +62,25 @@ spec:
       # so keep that header out of every rule (and so out of the WAF's logs).
       SecRule REQUEST_HEADERS:Host "@streq vault-sync.${SECRET_PUBLIC_DOMAIN_NAME}" \
         "id:1006,phase:1,pass,nolog,setvar:'tx.allowed_request_content_type=|application/proto| |application/connect+proto| |application/json|',ctl:requestBodyAccess=Off,ctl:ruleRemoveTargetById=1-999999;REQUEST_HEADERS:sec-websocket-protocol"
+      # Pipelines-as-Code (ci/tekton): only my GitHub account may drive CI
+      # from comments (/ok-to-test, /test, /retest, /cancel, comment-triggered
+      # pipelines), for every repository the GitHub App is installed on.
+      # Pipelines-as-Code alone also accepts collaborators, org members and
+      # OWNERS-file entries. Comment events are blocked unless the sender is
+      # account ID 16456946 (solidDoWant); the ID survives a rename, and a
+      # freed login can't be re-registered under it. These requests are
+      # enforced with the CRS removed, so comment text (code, markdown) can't
+      # trip it. Other webhook events stay detection-only. A body that isn't
+      # valid JSON is rejected by the recommended config's rule 200002.
+      SecRule REQUEST_HEADERS:Host "@streq pac-webhook.${SECRET_PUBLIC_DOMAIN_NAME}" \
+        "id:1020,phase:1,pass,nolog,chain"
+        SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:issue_comment|commit_comment|pull_request_review|pull_request_review_comment)$" \
+          "setvar:tx.pac_comment_event=1,ctl:ruleEngine=On,ctl:ruleRemoveByTag=OWASP_CRS,ctl:requestBodyAccess=On,ctl:requestBodyProcessor=JSON"
+      SecRule TX:pac_comment_event "@eq 1" \
+        "id:1021,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment event with no sender',chain"
+        SecRule &ARGS:json.sender.id "@eq 0" "t:none"
+      SecRule TX:pac_comment_event "@eq 1" \
+        "id:1022,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment event from another account',chain"
+        SecRule ARGS:json.sender.id "!@streq 16456946" "t:none"
       Include @crs-setup-conf
       Include @owasp_crs/*.conf
