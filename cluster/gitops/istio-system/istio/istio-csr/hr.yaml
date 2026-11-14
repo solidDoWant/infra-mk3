@@ -54,7 +54,6 @@ spec:
         serving:
           signatureAlgorithm: ECDSA
           certificateKeySize: 384
-        caTrustedNodeAccounts: istio-system/ztunnel # Needed for Istio ambient mode
     affinity:
       podAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:

@@ -25,11 +25,8 @@ specs:
           - ports:
               - port: http-debug
                 protocol: TCP
-      # Communication with the xDS API with components that integrate directly with Istio
+      # xDS API, used by the gateways
       - fromEndpoints:
-          - matchLabels:
-              app.kubernetes.io/part-of: istio
-              app.kubernetes.io/name: ztunnel
           - matchLabels:
               io.kubernetes.pod.namespace: networking
               gateway.istio.io/managed: istio.io-gateway-controller
@@ -45,9 +42,6 @@ specs:
           - matchLabels:
               io.kubernetes.pod.namespace: monitoring
               endpoints.netpols.home.arpa/metrics-scraper: "true"
-          - matchLabels:
-              app.kubernetes.io/part-of: kiali
-              app.kubernetes.io/name: kiali
         toPorts:
           - ports:
               - port: http-monitoring
