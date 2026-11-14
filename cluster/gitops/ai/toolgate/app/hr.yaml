@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/toolgate
   ref:
-    tag: 0.4.13
-    digest: sha256:dc3905e8f6a95d63ff8ad623d8161790dbdee024515f80bd9d8ee6818393b93c
+    tag: 0.4.14
+    digest: sha256:d4b2ee7e283777a5959fc8f7d94b2fbb46fb61d5e1f0113ed427160a6c602f84
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -44,7 +44,7 @@ spec:
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate
-        tag: 0.4.13@sha256:065d634810998d8680ad45c08a5efeae8094efa2b8e8d0be4f25ee6dcbeb41a4
+        tag: 0.4.14@sha256:0b2168db5835a5a1b2c31f824ceab41c677fe8447e14c7d945d85dd5ad4b5657
       database:
         # Split roles: the gateway connects as toolgate_app (rows only), and the
         # chart's pre-install/pre-upgrade hook Job runs the migrations as
@@ -101,6 +101,9 @@ spec:
         clientID: toolgate
         # Authentik's built-in superuser group.
         adminGroup: authentik Admins
+        # One step-up sign-in covers approvals and grants for 30 minutes (default
+        # 5m), so approving a batch doesn't ask for a password each time.
+        stepUpMaxAge: 30m
       # Tool search is on for sessions that don't ask for it either way. The
       # chart points it at its own embeddings server (embeddings.server below).
       toolSearch: true
