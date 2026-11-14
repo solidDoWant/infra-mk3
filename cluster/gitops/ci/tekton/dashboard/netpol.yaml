@@ -1,0 +1,48 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ci-dashboard
+specs:
+  - description: dashboard
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: ci-dashboard
+        app.kubernetes.io/controller: dashboard
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # Kubernetes API: runs, and the pod logs it displays
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+    ingress:
+      # Web UI via the internal gateway (behind Authentik forward-auth)
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              app.kubernetes.io/name: ingress-gateways
+              gateway.networking.k8s.io/gateway-name: internal-gateway
+        toPorts: &port
+          - ports:
+              - port: "9097"
+                protocol: TCP
+      # Kubelet health checks
+      - fromEntities:
+          - host
+        toPorts: *port

@@ -1,0 +1,136 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ci-dashboard
+spec:
+  interval: 1h
+  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+  ref:
+    tag: 5.3.0
+    digest: sha256:0e13b145656490310ada364d8eb708e5f4f6384c7deb60d3f5f0fa56950ff63a
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/bjw-s-labs/helm-charts/\.github/workflows/chart-release-steps\.yaml@refs/.+$
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/refs/tags/app-template-5.3.0/charts/other/app-template/values.schema.json
+# Tekton Dashboard in "tenant" mode: it can only read the project namespaces
+# (RoleBindings created by the ci-project chart; see rbac.yaml). The operator's
+# own Dashboard is scaled to 0 (TektonConfig) because its RBAC can't be
+# narrowed: it binds its ServiceAccount cluster-wide to read every pod and pod
+# log.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ci-dashboard
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: ci-dashboard
+  values:
+    controllers:
+      dashboard:
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
+        serviceAccount:
+          name: ci-dashboard
+        containers:
+          dashboard:
+            image:
+              # The image the operator's Dashboard runs (operator v0.81.3)
+              repository: ghcr.io/tektoncd/dashboard/dashboard-9623576a202fe86c8b7d1bc489905f86
+              tag: v0.71.0@sha256:e8d29a97f0e0d0bc525692ab0a872f0c04cd8065806ae05c62757c441f4fcb82
+            args:
+              - --port=9097
+              - --read-only=true
+              - --log-format=json
+              - --log-level=info
+              - --stream-logs=true
+              - --pipelines-namespace=ci-tekton
+              - --triggers-namespace=ci-tekton
+              # The namespaces it shows, one per ci-project release
+              # (../projects). Add a project's namespace here when onboarding
+              # it; the RoleBinding that grants access comes from the chart.
+              - --namespaces=ci-infra-mk3
+            env:
+              INSTALLED_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            ports:
+              - name: http
+                containerPort: &port 9097
+            probes:
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /readiness
+                    port: *port
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  failureThreshold: 3
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 10m
+                memory: &memory 128Mi
+              limits:
+                memory: *memory
+        pod:
+          # It reads the Kubernetes API as ci-dashboard (rbac.yaml).
+          automountServiceAccountToken: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "1"
+    service:
+      dashboard:
+        controller: dashboard
+        ports:
+          http:
+            port: *port
+    route:
+      # It has no authentication of its own (and no OIDC support), so it's
+      # behind Authentik forward-auth: the host is also listed in
+      # networking/gateways/ingress/policies/authorization-policy.yaml.
+      dashboard:
+        hostnames:
+          - tekton.${SECRET_PUBLIC_DOMAIN_NAME}
+        parentRefs:
+          - name: internal-gateway
+            namespace: networking
+        rules:
+          - backendRefs:
+              - identifier: dashboard
+                port: *port
+          # Send auth requests to the authentik outpost
+          - backendRefs:
+              - name: authentik-server
+                namespace: security
+                port: 80
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /outpost.goauthentik.io
