@@ -22,9 +22,6 @@ spec:
     name: toolgate
   values:
     config:
-      # Admin-managed Secrets that templates read as $${templateSecret:NAME/KEY}
-      # (../template-secrets). The chart grants Secret reads in this namespace only.
-      templateSecretsNamespace: toolgate-template-secrets
       image:
         # Repeated from the chart default so Renovate sees repository + tag.
         repository: ghcr.io/soliddowant/toolgate

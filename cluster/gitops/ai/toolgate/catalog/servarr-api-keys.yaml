@@ -1,0 +1,50 @@
+---
+# Copies Sonarr's and Radarr's API keys into each namespace that toolgate
+# creates for an instance of the `servarr` template (servarr.yaml), where the
+# instance's Pod reads them. toolgate deletes the namespace, and with it the
+# copy, when the instance stops.
+#
+# Only toolgate (and cluster admins) can create namespaces, and toolgate sets
+# these labels from the template, so no other namespace gets the keys.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: toolgate-servarr-api-keys
+spec:
+  rules:
+    - name: copy-servarr-api-keys
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  app.kubernetes.io/managed-by: toolgate
+                  toolgate.soliddowant.dev/template: servarr
+                  toolgate.soliddowant.dev/template-namespace: ai
+      context:
+        - name: sonarrAPIKey
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/media/secrets/sonarr-api-key
+            jmesPath: data.API_KEY
+        - name: radarrAPIKey
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/media/secrets/radarr-api-key
+            jmesPath: data.API_KEY
+      generate:
+        synchronize: true
+        apiVersion: v1
+        kind: Secret
+        name: servarr-api-keys
+        namespace: >-
+          {{ request.object.metadata.name }}
+        data:
+          type: Opaque
+          data:
+            sonarr: >-
+              {{ sonarrAPIKey }}
+            radarr: >-
+              {{ radarrAPIKey }}
