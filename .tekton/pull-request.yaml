@@ -1,0 +1,30 @@
+---
+# Throwaway end-to-end test of Pipelines-as-Code. Not for merging.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: smoke-pull-request
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[pull_request]"
+    pipelinesascode.tekton.dev/on-target-branch: "[master]"
+spec:
+  pipelineSpec:
+    tasks:
+      - name: clone
+        taskSpec:
+          steps:
+            - name: clone
+              image: public.ecr.aws/docker/library/alpine:3.22
+              env:
+                - name: TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: "{{ git_auth_secret }}"
+                      key: git-provider-token
+              script: |
+                #!/bin/sh
+                set -e
+                apk add -q git
+                git clone -q --depth 1 --branch "{{ source_branch }}" "https://x-access-token:${TOKEN}@github.com/{{ repo_owner }}/{{ repo_name }}" src
+                echo "cloned {{ repo_owner }}/{{ repo_name }}@$(git -C src rev-parse --short HEAD) for event {{ event_type }}"
+                ls src/.tekton
