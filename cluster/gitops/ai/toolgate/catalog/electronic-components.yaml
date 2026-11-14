@@ -37,6 +37,21 @@ spec:
       - "*"
     environments: any
   # MCP is served at the default path, /mcp.
+  # Gateway cache of read-only results (toolgate 0.4.12), shared by everyone
+  # like the instance itself: repeated searches don't spend the DigiKey and
+  # Mouser daily quotas, and the cache survives instance restarts. 1h matches
+  # the server's own in-memory cache, since prices and stock change.
+  tools:
+    search_parts:
+      cache:
+        ttl: 1h
+        normalize:
+          query: [trim, lowercase, collapseSpace]
+    get_part:
+      cache:
+        ttl: 1h
+        normalize:
+          part_number: [trim]
   endpoint:
     service: electronic-components
     port: 8080

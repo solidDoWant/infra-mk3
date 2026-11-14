@@ -25,6 +25,17 @@ spec:
       - "*"
     environments: any
   # MCP is served at the default path, /mcp.
+  # Gateway cache of read-only results (toolgate 0.4.12), shared by everyone.
+  # get_download_links isn't cached: its links expire after 24 hours.
+  tools:
+    search_models:
+      cache:
+        ttl: 1h
+        normalize:
+          query: [trim, lowercase, collapseSpace]
+    get_model:
+      cache:
+        ttl: 1h
   endpoint:
     service: printables
     port: 8080
