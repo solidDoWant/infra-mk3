@@ -1,0 +1,37 @@
+# GitHub App credentials for Pipelines-as-Code. The App's webhook URL is
+# https://pac-webhook.<public domain>/, and webhook.secret must match the
+# secret set on it.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pipelines-as-code-secret
+type: Opaque
+stringData:
+  github-application-id: ENC[AES256_GCM,data:7b92s8NPWgNcGQ==,iv:rn8HTTuBe+hTNJa0sovF3DQes4SFvdqFE6ff86P2gvA=,tag:LPx+auL8JgMNDYT/eKmOUA==,type:str]
+  github-private-key: ENC[AES256_GCM,data:LyQqI8ImqADMXNY=,iv:XXxWR3+hmS2PwfJXBmQ+EbqFOTB2cDGponB6COM/+3A=,tag:bM3UU1XnMJJmziBQnPBWGg==,type:str]
+  webhook.secret: ENC[AES256_GCM,data:I3U8HWqn6u/3sg==,iv:iaNYgsE5trZ+SsHNS0N1kfJ4NSiXnNvJMenOgPJEHfM=,tag:l4tiniYAnDtobA2XbTM7vg==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBiWTlGWWZieVBOTEtOTW5w
+        NVlOLzIrS2YzQUJtcFYvZmtTSnlZek1ndFVNCng4T1BxMklVdEQ3VFdQa0NiaEhC
+        RnAxOVBmajZpTlVBRHlwdjRrbFRCY2sKLS0tIFcxUDFyYTI2d0hnUjJtYlY5czNh
+        eVp1VVhqd3pDeHZjQ0Ivc3FDY0RxTmcKTtmYPzV0y69sexyryYCfplFv6wywXwK3
+        iDFDFuGp3P3lHE6cdZTpLObAmpPmKadEWRC8yqPuzhlTMFRGaoeluA==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBMN01UU1FPa1B5VmFuV05F
+        UnQrWEhXQWFqN0R2UU9rekVEbjVrSjZ5cHo4CnpORDFmK0x1V01sZ1lJNGVGalJt
+        MjJwaDZ4M2tSSmVlRlNraU81WVpvY2MKLS0tIFhqZGZ5Nk9POEVKRjZBUUJCM2Iw
+        YVI3dUdaRVU4amdUc0ZzSExlQ3p0clkKvfEEpkj0r3R8jL6gOo4pQk5JQG8rapHu
+        XKgP++FA8icJz2LqLCA+GVUs+IVgqbLMnoxZqJqlCX2pNiBE+pXUXg==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1cy90dzmcmw09wluc6ghvfltf8x2kxcd2pc0uxk6w55m62uwntunsc89jmk
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-14T21:52:20Z"
+  mac: ENC[AES256_GCM,data:Qc2WQvnsEd8zQmOaR4zcVrCgHP8Xpn65R7bsb7U12yBk2jzVbcI1dOLL7PcoeESmNtfIuFmLMblgLzkuQ3JZBMv3Zck3EK2VStXM8fsTm5icdEayAWPT2iIeBXce3P57FF5Quwl2GGVz0MTtwLLNJsbx2hWUNK4Ie5W+pRbwoXE=,iv:w4xnajx0C0jIo59SypHB9mHZ0KnPu4FiS3Fc3s27cLk=,tag:XUaEixOzosR45gHKwbDywQ==,type:str]
+  mac_only_encrypted: true
+  version: 3.13.3
