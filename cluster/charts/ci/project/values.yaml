@@ -18,10 +18,9 @@ quota:
   pods: 10
   memory: 16Gi
 egress:
-  # Any address outside the cluster, on any port, for pulling in
-  # dependencies, except the home network (the intranet and xgs-pon
-  # CiliumCIDRGroups). Cluster pods and services are only reachable as
-  # allowed below.
+  # Any IPv4 address outside the private ranges, on any port, for pulling in
+  # dependencies. Cluster pods and services are only reachable as allowed
+  # below.
   internet: true
   # Harbor, via the internal gateway
   harbor: true

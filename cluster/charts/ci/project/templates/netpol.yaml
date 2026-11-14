@@ -38,10 +38,14 @@ specs:
                 protocol: TCP
       {{- end }}
       {{- if .Values.egress.internet }}
-      # The internet, for dependencies. The home network is excluded by the
-      # egressDeny below.
-      - toEntities:
-          - world
+      # The internet, for dependencies. Private ranges are excluded so the
+      # home network stays out of reach.
+      - toCIDRSet:
+          - cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
       {{- end }}
       # GitHub: cloning, and the GitHub API
       - toFQDNs:
@@ -57,15 +61,6 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
-    {{- if .Values.egress.internet }}
-    # Keeps the home network out of reach of the `world` allow above. Deny
-    # rules win over allows, so this also overrides any other policy.
-    egressDeny:
-      - toCIDRSet:
-          - cidrGroupRef: intranet
-          # The ONT's management address, outside 10.0.0.0/8
-          - cidrGroupRef: xgs-pon
-    {{- end }}
     # Nothing connects to builds.
     ingress:
       - {}
