@@ -1,0 +1,30 @@
+---
+# ssd-replicated-3x with reclaimPolicy Retain: deleting the claim keeps the
+# volume. For toolgate's persistent volumes (ai/toolgate), which bind the same
+# PV again on the next instance start; toolgate deletes the PV itself when its
+# template is deleted or the volume goes unused. The chart's cephBlockPools
+# entry only makes one class per pool, so this one is defined here. Keep the
+# parameters in step with the ssd-replicated-3x class in hr.yaml.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ssd-replicated-3x-retain
+provisioner: storage.rbd.csi.ceph.com
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+parameters:
+  clusterID: storage
+  pool: ssd-replicated-3x
+  compression_mode: aggressive
+  compression_algorithm: zstd
+  mapOptions: abort_on_full,ms_mode=secure
+  imageFormat: "2"
+  imageFeatures: layering,exclusive-lock,object-map,fast-diff,deep-flatten
+  csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/provisioner-secret-namespace: storage
+  csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/controller-expand-secret-namespace: storage
+  csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+  csi.storage.k8s.io/node-stage-secret-namespace: storage
+  csi.storage.k8s.io/fstype: ext4
