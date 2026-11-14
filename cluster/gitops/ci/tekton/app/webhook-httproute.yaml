@@ -1,0 +1,20 @@
+---
+# GitHub App webhook deliveries. Every request must carry a valid HMAC
+# signature (webhook.secret in pipelines-as-code-secret).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  namespace: ci-tekton
+  name: pipelines-as-code-webhook
+  labels:
+    external-dns.home.arpa/publish: "true"
+spec:
+  hostnames:
+    - pac-webhook.${SECRET_PUBLIC_DOMAIN_NAME}
+  parentRefs:
+    - name: external-gateway
+      namespace: networking
+  rules:
+    - backendRefs:
+        - name: pipelines-as-code-controller
+          port: 8080

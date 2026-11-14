@@ -37,23 +37,16 @@ spec:
     disabled: true
   tektonpruner:
     disabled: true
+  # The `all` profile always installs a Dashboard, whose ServiceAccount the
+  # operator binds cluster-wide to read every pod and pod log. It's scaled to
+  # 0; ../dashboard runs one limited to the project namespaces.
   dashboard:
     readonly: true
     options:
       deployments:
         tekton-dashboard:
           spec:
-            replicas: 2
-            template:
-              spec:
-                containers:
-                  - name: tekton-dashboard
-                    resources:
-                      requests:
-                        cpu: 10m
-                        memory: &dashboard_memory 128Mi
-                      limits:
-                        memory: *dashboard_memory
+            replicas: 0
   pipeline:
     set-security-context: true
     default-timeout-minutes: 60

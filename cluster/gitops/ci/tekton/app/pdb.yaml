@@ -80,17 +80,6 @@ spec:
       app.kubernetes.io/part-of: pipelines-as-code
       app.kubernetes.io/component: webhook
 ---
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  namespace: ci-tekton
-  name: tekton-dashboard
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: tekton-dashboard
----
 # Operator-added mutating webhook for TaskRun pods. Fails closed: while it's
 # down, no build can start.
 apiVersion: policy/v1
