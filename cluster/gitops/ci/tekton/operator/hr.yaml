@@ -65,8 +65,11 @@ spec:
       capabilities:
         drop:
           - ALL
+    # The chart's ServiceMonitor selects on app.kubernetes.io/component, which
+    # its Service doesn't carry, so it matches nothing; service-scrape.yaml
+    # replaces it.
     service:
-      createServiceMonitor: true
+      createServiceMonitor: false
   postRenderers:
     - kustomize:
         patches:
