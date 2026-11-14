@@ -90,3 +90,16 @@ spec:
   selector:
     matchLabels:
       app: tekton-dashboard
+---
+# Operator-added mutating webhook for TaskRun pods. Fails closed: while it's
+# down, no build can start.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: ci-tekton
+  name: tekton-operator-proxy-webhook
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      name: tekton-operator-proxy-webhook
