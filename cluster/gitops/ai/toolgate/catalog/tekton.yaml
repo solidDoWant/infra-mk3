@@ -101,7 +101,7 @@ spec:
                 type: RuntimeDefault
             containers:
               - name: server
-                image: ghcr.io/soliddowant/tekton-mcp-server:0.0.0-69b3ccf-r1@sha256:8c6fa5e57bc50f6095ad7ea6a9363a56deb11bb4743803aff540f4b5d3844abf
+                image: ghcr.io/soliddowant/mcp-tekton:0.1.0@sha256:36556dbc53eb11abbbdf7394340ad65c33e63648051a6ecc83ecaeded3249422
                 env:
                   - name: KUBECONFIG
                     value: /etc/tekton-mcp/kubeconfig
