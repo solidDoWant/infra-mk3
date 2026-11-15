@@ -1,25 +1,21 @@
 ---
-# Tekton's own MCP server: lists and reads the CI projects' PipelineRuns,
-# TaskRuns, Pipelines and Tasks, and reads TaskRun logs.
-# https://github.com/tektoncd/mcp-server, packaged as an image in
-# solidDoWant/mcp-servers (servers/tekton).
+# tekton: reads the CI projects' Tekton PipelineRuns and TaskRuns, which steps
+# failed, and the end of a step's log. Read-only.
+# https://github.com/solidDoWant/mcp-servers/tree/master/servers/tekton
 #
 # Per-user: each user's instance calls the Kubernetes API as that user, with a
 # token toolgate gets by exchanging the user's toolgate token at authentik
 # ($${exchange:kubernetes}; kubernetes-token-exchange.yaml). The API server
 # authenticates it as authentik:<username> in the user's authentik:<group>
-# groups, so the server can do exactly what RBAC grants the user: read access
-# for "Tekton access" (ci/tekton/app/user-rbac.yaml and the ci/project chart).
-# toolgate refreshes the token in the instance's Secret at half its lifetime
-# while the user calls the server, and client-go re-reads the token file, so
-# nothing restarts.
+# groups, so the server can do exactly what RBAC grants the user: "Tekton
+# access" reads runs, pods and logs in each project namespace (the ci/project
+# chart's user-rolebinding.yaml). toolgate refreshes the token in the
+# instance's Secret at half its lifetime while the user calls the server, and
+# client-go re-reads the token file, so nothing restarts.
 #
-# Read-only on purpose: starting or re-running a build here would bypass
-# Pipelines-as-Code's rules on who may trigger CI, and builds hold the
-# projects' secrets. The write tools are blocked below, and RBAC grants no
-# writes either. Re-runs stay `/retest` on GitHub. The Artifact Hub tools are
-# blocked too: they install or run catalog Tasks, and the instance can't reach
-# the internet.
+# The server has no tools that change anything: starting or re-running builds
+# stays with Pipelines-as-Code (`/retest` on GitHub), which decides who may
+# trigger CI.
 #
 # `$${` is Flux's escape: it reaches toolgate as a literal `${`.
 apiVersion: toolgate.soliddowant.dev/v1alpha1
@@ -28,10 +24,10 @@ metadata:
   name: tekton
 spec:
   description: >-
-    Tekton CI builds in the ci-<project> namespaces: list and read
-    PipelineRuns, TaskRuns, Pipelines, Tasks and StepActions, and read a
-    TaskRun's logs. Read-only; calls run with your own Kubernetes
-    permissions.
+    Tekton CI builds in the ci-<project> namespaces (ci-<repository name>):
+    list PipelineRuns with the Git event behind them, see which tasks and
+    steps failed, and read the end of a step's log. Read-only; calls run with
+    your own Kubernetes permissions.
   scope: per-user
   idleStop: 1h
   # Stateless: replace running instances as soon as the template changes.
@@ -47,30 +43,6 @@ spec:
   endpoint:
     service: tekton
     port: 8080
-  tools:
-    create_pipeline: &blocked
-      blocked: true
-    create_pipelinerun: *blocked
-    create_task: *blocked
-    create_taskrun: *blocked
-    delete_all_pipelineruns: *blocked
-    delete_pipeline: *blocked
-    delete_pipelinerun: *blocked
-    delete_task: *blocked
-    delete_taskrun: *blocked
-    patch_pipeline: *blocked
-    restart_pipelinerun: *blocked
-    restart_taskrun: *blocked
-    start_pipeline: *blocked
-    start_task: *blocked
-    update_pipeline: *blocked
-    update_task: *blocked
-    install_artifacthub_pipeline: *blocked
-    install_artifacthub_task: *blocked
-    list_artifacthub_pipelines: *blocked
-    list_artifacthub_tasks: *blocked
-    trigger_artifacthub_pipeline: *blocked
-    trigger_artifacthub_task: *blocked
   resources:
     # The exchanged Kubernetes API token for the user who owns the instance.
     - apiVersion: v1
@@ -130,9 +102,6 @@ spec:
             containers:
               - name: server
                 image: ghcr.io/soliddowant/tekton-mcp-server:0.0.0-69b3ccf-r1@sha256:8c6fa5e57bc50f6095ad7ea6a9363a56deb11bb4743803aff540f4b5d3844abf
-                args:
-                  - -transport=http
-                  - -address=:8080
                 env:
                   - name: KUBECONFIG
                     value: /etc/tekton-mcp/kubeconfig
@@ -140,7 +109,8 @@ spec:
                   - name: http
                     containerPort: 8080
                 readinessProbe:
-                  tcpSocket:
+                  httpGet:
+                    path: /healthz
                     port: http
                   periodSeconds: 10
                 resources:
