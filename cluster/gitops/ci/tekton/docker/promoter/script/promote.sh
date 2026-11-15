@@ -103,17 +103,21 @@ promote_all() {
 
 # Event-driven: react to push PipelineRuns finishing successfully. Each pass
 # starts with a full scan, which catches anything missed while restarting or
-# reconnecting; the watch ends at its request timeout and the loop repeats, so
-# that scan also runs as a periodic resync.
+# reconnecting; the watch is restarted every 30 minutes, so that scan also runs
+# as a periodic resync. The watch is bounded with `timeout` rather than
+# kubectl's --request-timeout: any such override flag makes kubectl skip its
+# in-cluster config and fall back to localhost:8080.
 while :; do
   promote_all
-  kubectl get pipelineruns --all-namespaces \
+  timeout 1800 kubectl get pipelineruns --all-namespaces \
     -l pipelinesascode.tekton.dev/event-type=push \
-    --watch-only --request-timeout=30m \
+    --watch-only \
     -o jsonpath='{.metadata.namespace}{" "}{.status.conditions[?(@.type=="Succeeded")].status}{"\n"}' \
     | while read -r ns succeeded; do
         if [ "$succeeded" = True ]; then
           promote_namespace "$ns" || log "${ns}: promotion failed"
         fi
       done || true
+  # Don't spin against the API if the watch keeps failing.
+  sleep 10
 done
