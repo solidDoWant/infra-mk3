@@ -63,9 +63,12 @@ stringData:
           # with it directly.
           client_type: public
           client_id: kubernetes-api
-          # Only reached through token exchange, which the requesting
-          # provider's grant types govern.
-          grant_types: []
+          # Tokens come only through token exchange, which the requesting
+          # provider's grant types govern. authentik rejects an empty list, so
+          # this names authorization_code, which can't complete here: there
+          # are no redirect URIs.
+          grant_types:
+            - authorization_code
           redirect_uris: []
           jwt_federation_providers:
             - !Find [
