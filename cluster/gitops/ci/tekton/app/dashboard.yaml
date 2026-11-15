@@ -1,0 +1,20 @@
+---
+# Builds per project namespace, Pipelines-as-Code's GitHub API use and
+# controller health. Written for the metric names of Pipelines v1.x; the
+# grafana.com Tekton dashboards query the pre-OpenTelemetry names.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  namespace: ci-tekton
+  name: tekton
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.home.arpa/instance: grafana
+  configMapRef:
+    key: dashboard.json
+    name: tekton-dashboard
+  datasources:
+    - datasourceName: VictoriaMetrics
+      inputName: DS_PROMETHEUS
