@@ -182,6 +182,18 @@ spec:
                 - serviceaccounts
               verbs: *read_only_verbs
             - apiGroups:
+                # ci-docker-cache-golden (ci/tekton/docker) matches PVCs and
+                # looks up VolumeSnapshots.
+                - ""
+              resources:
+                - persistentvolumeclaims
+              verbs: *read_only_verbs
+            - apiGroups:
+                - snapshot.storage.k8s.io
+              resources:
+                - volumesnapshots
+              verbs: *read_only_verbs
+            - apiGroups:
                 # release-terminal-virt-launcher-endpoints triggers on the
                 # migration status subresource.
                 - kubevirt.io

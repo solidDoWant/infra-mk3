@@ -1,0 +1,17 @@
+---
+# Lets the docker cache promoter (ci/ci-docker-cache-promoter) find this
+# project's successful default-branch push builds and snapshot their Docker
+# cache volumes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-docker-cache-promoter
+  namespace: {{ include "ci-project.namespace" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ci-docker-cache-promoter
+subjects:
+  - kind: ServiceAccount
+    name: ci-docker-cache-promoter
+    namespace: ci

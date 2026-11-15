@@ -6,7 +6,10 @@ kind: Namespace
 metadata:
   name: {{ include "ci-project.namespace" . }}
   labels:
-    pod-security.kubernetes.io/enforce: {{ .Values.podSecurity }}
+    pod-security.kubernetes.io/enforce: {{ ternary "privileged" .Values.podSecurity .Values.docker }}
+    # Selects project namespaces for the docker cache policy and promoter.
+    ci.home.arpa/project: "true"
   annotations:
     # k8tz's timezone mounts break kata pods.
     k8tz.io/inject: "false"
+    ci.home.arpa/default-branch: {{ .Values.defaultBranch | quote }}
