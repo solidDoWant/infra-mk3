@@ -1,0 +1,200 @@
+---
+# tekton: reads the CI projects' Tekton PipelineRuns and TaskRuns, which steps
+# failed, and the end of a step's log. Read-only.
+# https://github.com/solidDoWant/mcp-servers/tree/master/servers/tekton
+#
+# Per-user: each user's instance calls the Kubernetes API as that user, with a
+# token toolgate gets by exchanging the user's toolgate token at authentik
+# ($${exchange:kubernetes}; kubernetes-token-exchange.yaml). The API server
+# authenticates it as authentik:<username> in the user's authentik:<group>
+# groups, so the server can do exactly what RBAC grants the user: "Tekton
+# access" reads runs, pods and logs in each project namespace (the ci/project
+# chart's user-rolebinding.yaml). toolgate refreshes the token in the
+# instance's Secret at half its lifetime while the user calls the server, and
+# client-go re-reads the token file, so nothing restarts.
+#
+# The server has no tools that change anything: starting or re-running builds
+# stays with Pipelines-as-Code (`/retest` on GitHub), which decides who may
+# trigger CI.
+#
+# `$${` is Flux's escape: it reaches toolgate as a literal `${`.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: tekton
+spec:
+  description: >-
+    Tekton CI builds in the ci-<project> namespaces (ci-<repository name>):
+    list PipelineRuns with the Git event behind them, see which tasks and
+    steps failed, and read the end of a step's log. Read-only; calls run with
+    your own Kubernetes permissions.
+  scope: per-user
+  idleStop: 1h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
+  startTimeout: 3m
+  access:
+    # The group RBAC grants read access to the CI namespaces; the API server
+    # decides what each user can see.
+    groups:
+      - Tekton access
+    environments: any
+  endpoint:
+    service: tekton
+    port: 8080
+  resources:
+    # The exchanged Kubernetes API token for the user who owns the instance.
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: kubernetes-token
+      stringData:
+        token: $${exchange:kubernetes}
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: tekton-mcp
+      data:
+        kubeconfig: |
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: cluster
+              cluster:
+                server: https://kubernetes.default.svc.cluster.local
+                certificate-authority: /var/run/kubernetes-ca/ca.crt
+          users:
+            - name: user
+              user:
+                # Re-read by client-go, so toolgate's refreshes apply.
+                tokenFile: /var/run/secrets/kubernetes/token
+          contexts:
+            - name: user
+              context:
+                cluster: cluster
+                user: user
+          current-context: user
+    - apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: tekton-mcp
+      spec:
+        replicas: 1
+        revisionHistoryLimit: 1
+        selector:
+          matchLabels:
+            app: tekton-mcp
+        template:
+          metadata:
+            labels:
+              app: tekton-mcp
+          spec:
+            # No ServiceAccount identity: every call uses the user's token.
+            automountServiceAccountToken: false
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65532
+              runAsGroup: 65532
+              fsGroup: 65532
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: server
+                image: ghcr.io/soliddowant/mcp-tekton:0.1.0@sha256:36556dbc53eb11abbbdf7394340ad65c33e63648051a6ecc83ecaeded3249422
+                env:
+                  - name: KUBECONFIG
+                    value: /etc/tekton-mcp/kubeconfig
+                ports:
+                  - name: http
+                    containerPort: 8080
+                readinessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: http
+                  periodSeconds: 10
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 128Mi
+                  limits:
+                    memory: 128Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop:
+                      - ALL
+                volumeMounts:
+                  - name: config
+                    mountPath: /etc/tekton-mcp/kubeconfig
+                    subPath: kubeconfig
+                    readOnly: true
+                  # Not subPath: the kubelet must update the file when
+                  # toolgate refreshes the token.
+                  - name: token
+                    mountPath: /var/run/secrets/kubernetes
+                    readOnly: true
+                  - name: kubernetes-ca
+                    mountPath: /var/run/kubernetes-ca
+                    readOnly: true
+            volumes:
+              - name: config
+                configMap:
+                  name: tekton-mcp
+              - name: token
+                secret:
+                  secretName: kubernetes-token
+                  defaultMode: 0440
+              # The API server's CA, published in every namespace.
+              - name: kubernetes-ca
+                configMap:
+                  name: kube-root-ca.crt
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: tekton
+      spec:
+        selector:
+          app: tekton-mcp
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: tekton-mcp
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: tekton-mcp
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          # Everything the server does goes through the Kubernetes API.
+          - toEntities:
+              - kube-apiserver
+            toPorts:
+              - ports:
+                  - port: "6443"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP

@@ -1,0 +1,19 @@
+---
+# Lets members of the authentik "Tekton access" group read this namespace's
+# runs, pods and logs with their own identity: the API server trusts authentik
+# tokens and prefixes their groups with `authentik:` (talos/patches/control-plane/).
+# Used by the per-user tekton MCP server in toolgate. Read-only, like the
+# Dashboard: CI runs are only triggered through Pipelines-as-Code.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tekton-access
+  namespace: {{ include "ci-project.namespace" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ci-dashboard-view
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: authentik:Tekton access

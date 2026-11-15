@@ -7,6 +7,14 @@ creation_rules:
     key_groups: &personal_only_key_groups
       - age:
           - &personal_key age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+  # Talos patches whose only non-public values are URLs (e.g. the domain in an
+  # issuer URL), opted in by the .urls.sops.yaml suffix: encrypt just the
+  # `url` keys, so the rest stays reviewable. Any other talos .sops file is
+  # encrypted whole by the next rule. Must come before it: the first match
+  # wins.
+  - <<: *local_apply_files_config
+    path_regex: ^talos/patches/.*\.urls\.sops\.ya?ml$
+    encrypted_regex: ^url$
   - <<: *local_apply_files_config
     path_regex: ^talos/.*\.sops\.[^/]*$
   - &flux_apply_files_config

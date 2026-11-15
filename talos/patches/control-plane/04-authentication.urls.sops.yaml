@@ -1,0 +1,52 @@
+# kube-apiserver authentication, replacing Talos's default
+# KubeAuthenticationConfig (deleted in 03-authentication-default.yaml), so its
+# anonymous health-check access is repeated here.
+#
+# Only the issuer URL is SOPS-encrypted (the .urls.sops.yaml rule in
+# .sops.yaml), to keep the domain out of the repo; topf decrypts it.
+apiVersion: v1alpha1
+kind: KubeAuthenticationConfig
+configuration:
+  anonymous:
+    enabled: true
+    conditions:
+      - path: /livez
+      - path: /readyz
+      - path: /healthz
+  # authentik's Kubernetes API provider
+  # (cluster/gitops/security/authentik/configuration/kubernetes-api). Its
+  # tokens come from toolgate's `kubernetes` token exchange, so MCP servers
+  # act as the calling user. Identities are prefixed with "authentik:" so they
+  # can't collide with built-in users and groups (system:*). Being
+  # authenticated grants nothing on its own: RBAC binds the groups.
+  #
+  # The API server fetches the discovery document and keys through the
+  # internal gateway (public Let's Encrypt certificate, so no CA is set). If
+  # authentik is down, only these tokens stop working.
+  jwt:
+    - issuer:
+        url: ENC[AES256_GCM,data:a3Mc4McrYi7SljB9gFjX3HFuWGuWoarfPsFX2IOKtTS1Qsa1FO/IU4Mk7gbN5DkjuSbA4bbYTwlpnlG2vWY=,iv:c6GcNzIcE9CIht7l4FUba30aCk82T73Z6d5D2+eVPw0=,tag:TpE7P6iVb7WI917A9YTP6A==,type:str]
+        audiences:
+          - kubernetes-api
+      claimMappings:
+        username:
+          claim: preferred_username
+          prefix: 'authentik:'
+        groups:
+          claim: groups
+          prefix: 'authentik:'
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBOUHdueHE4VDcxaVVhWkpY
+        ZzV2Y1AyUmMrRUU2aDRLemhRV2QyNXltTlJZCkF4NzV3blhreEUwN1gxeHdjK0xS
+        YnpQQ092S21MMkdqelk2YmprRVBqbk0KLS0tIGZuTWdSTE0vaHUybUJPNCtwMURi
+        U0w2TGpneFIxSmJGcHg1bHQxaWJBM0UK/CBsHWl7WJwrhZHTEG6XQaw8ufmgY108
+        mtAs8iSuF1h2uxGWIVC50XWuZdM4JmYW/6l6rTh6jjQ/aAA98Ru7XQ==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1ul782d9yhczht238qh9unx5swcjjdy8va7gdhcmgd3duvt5dxfgsa35mjh
+  encrypted_regex: ^url$
+  lastmodified: "2026-11-15T06:39:47Z"
+  mac: ENC[AES256_GCM,data:T+yYkd26ScV0y2UGwla7QBGKagh3zP/j+DKxsFStWMWHdJsNUXziIzPwCcvOavksD0Ui1wRREyJT5h1Tz/loDgc8xgAGpNQDcSYsLV05ZAyN1dv34vopPxD/qrN/JgJehFp8rpOcaqiynaQ8LHbETOmCJuqP6rGkpCHB9QUdoFs=,iv:GDIkjBsFkAar8reQE1qFWyyqIRLVwDRzGDHt9lAfRc0=,tag:VceWqNWWejLYdNMR7QVbHw==,type:str]
+  version: 3.13.3
