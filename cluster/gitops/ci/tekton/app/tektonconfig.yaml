@@ -80,6 +80,16 @@ spec:
         resolvers-feature-flags:
           data:
             enable-http-resolver: "false"
+        feature-flags:
+          data:
+            # Run Task sidecars as native Kubernetes sidecars, which kubelet
+            # stops with the pod. Tekton's own way of stopping them swaps in
+            # a no-op image, so kubelet restarts the container while the kata
+            # VM is being torn down. That race leaves an orphaned kata shim
+            # holding the dead container, and kubelet's garbage collector
+            # fails to remove it every minute. TektonConfig has no field for
+            # this flag.
+            enable-kubernetes-sidecar: "true"
       deployments:
         tekton-pipelines-controller:
           spec:

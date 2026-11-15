@@ -98,9 +98,13 @@ spec:
           memory: &dind_memory 3Gi
         limits:
           memory: *dind_memory
-      # Steps start once dockerd answers. An exec probe, because dockerd only
-      # listens on localhost and the kubelet's TCP probes target the pod IP.
-      readinessProbe:
+      # Steps start once dockerd answers. A startup probe, because the sidecar
+      # is a native Kubernetes sidecar (enable-kubernetes-sidecar in
+      # ../../app/tektonconfig.yaml): kubelet holds the steps until it
+      # passes, and Tekton doesn't wait for sidecar readiness in that mode.
+      # An exec probe, because dockerd only listens on localhost and the
+      # kubelet's TCP probes target the pod IP.
+      startupProbe:
         exec:
           command:
             - docker
