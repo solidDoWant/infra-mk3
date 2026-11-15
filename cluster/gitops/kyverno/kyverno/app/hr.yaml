@@ -155,6 +155,15 @@ spec:
                 - patch
                 - update
                 - watch
+            # ci-docker-cache-golden (ci/tekton/docker) skips the cache pools of
+            # cordoned nodes.
+            - apiGroups:
+                - ""
+              resources:
+                - nodes
+              verbs:
+                - get
+                - list
             # Read-only, and only the reports controller actually needs these:
             # its resource-report controller opens a watch on every kind
             # matched by any policy, and a missing grant leaves that kind with
