@@ -7,7 +7,13 @@ metadata:
 handler: kata
 overhead:
   podFixed:
-    memory: 160Mi
+    # A kata VM boots with kata's default_memory (256MiB, set in
+    # talos/patches/all/27-kata.yaml) plus the pod's container limits, and
+    # pages the guest touches stay charged to the pod's cgroup on the host.
+    # So this covers the whole base VM plus the hypervisor (about 10MiB
+    # measured), or the host OOM-kills the hypervisor once the guest's page
+    # cache fills.
+    memory: 288Mi
     cpu: 250m
 scheduling:
   nodeSelector:
