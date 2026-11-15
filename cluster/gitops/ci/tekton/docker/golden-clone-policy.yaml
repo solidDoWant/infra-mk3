@@ -5,6 +5,12 @@
 # (created by the cache promoter, promoter/). With no golden snapshot yet
 # the volume is created blank and the build starts cold, which is also what
 # happens if Kyverno is unavailable.
+#
+# Also sizes the volume from the project namespace's
+# ci.home.arpa/docker-cache-size annotation (the project chart's
+# dockerCacheSize), or the Task's default without one. A clone can't be
+# smaller than its snapshot, so after the size is lowered builds keep the
+# golden snapshot's size until a snapshot of the new size replaces it.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -14,13 +20,13 @@ spec:
   failurePolicy: Ignore
   background: false
   rules:
-    - name: clone-latest-golden
-      match:
+    - name: size
+      match: &match
         any:
           - resources:
               kinds:
                 - PersistentVolumeClaim
-              # A PVC's data source can only be set at creation.
+              # A PVC's size and data source can only be set at creation.
               operations:
                 - CREATE
               selector:
@@ -30,14 +36,37 @@ spec:
                 matchLabels:
                   ci.home.arpa/project: "true"
       context:
-        - name: golden
+        - name: namespaceSize
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/{{ request.namespace }}
+            jmesPath: "metadata.annotations.\"ci.home.arpa/docker-cache-size\" || ''"
+        - &golden
+          name: golden
           apiCall:
             method: GET
             urlPath: /apis/snapshot.storage.k8s.io/v1/namespaces/{{ request.namespace }}/volumesnapshots?labelSelector=ci.home.arpa%2Fdocker-cache-golden%3Dtrue
-            jmesPath: "items[?status.readyToUse] | sort_by(@, &metadata.creationTimestamp) | [-1].metadata.name || ''"
+            jmesPath: "items[?status.readyToUse] | sort_by(@, &metadata.creationTimestamp) | [-1] || `{}`"
+        - name: wanted
+          variable:
+            jmesPath: "namespaceSize || request.object.spec.resources.requests.storage"
+        # The larger of the wanted size and the golden snapshot's.
+        - name: size
+          variable:
+            jmesPath: "golden.status.restoreSize && divide(golden.status.restoreSize, wanted) > `1` && golden.status.restoreSize || wanted"
+      mutate:
+        patchStrategicMerge:
+          spec:
+            resources:
+              requests:
+                storage: "{{ size }}"
+    - name: clone-latest-golden
+      match: *match
+      context:
+        - *golden
       preconditions:
         all:
-          - key: "{{ golden }}"
+          - key: "{{ golden.metadata.name || '' }}"
             operator: NotEquals
             value: ""
           - key: "{{ request.object.spec.dataSource.name || '' }}"
@@ -49,4 +78,4 @@ spec:
             dataSource:
               apiGroup: snapshot.storage.k8s.io
               kind: VolumeSnapshot
-              name: "{{ golden }}"
+              name: "{{ golden.metadata.name }}"

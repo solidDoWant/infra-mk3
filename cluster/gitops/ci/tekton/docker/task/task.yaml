@@ -66,7 +66,9 @@ spec:
             storageClassName: ssd-replicated-3x
             resources:
               requests:
-                # Fixed: clones of the golden snapshot need at least its size.
+                # Default. The ci-docker-cache-golden Kyverno policy sets the
+                # project's size (its namespace's
+                # ci.home.arpa/docker-cache-size annotation).
                 storage: 20Gi
   sidecars:
     - name: dind
