@@ -2,7 +2,7 @@
 # Starts each docker Task build (task.yaml) from the project's latest golden
 # cache: sets the build's ephemeral cache volume to clone the newest ready
 # VolumeSnapshot labelled ci.home.arpa/docker-cache-golden in its namespace
-# (created by the cache promoter, promoter.yaml). With no golden snapshot yet
+# (created by the cache promoter, promoter/). With no golden snapshot yet
 # the volume is created blank and the build starts cold, which is also what
 # happens if Kyverno is unavailable.
 apiVersion: kyverno.io/v1

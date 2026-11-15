@@ -91,9 +91,10 @@ spec:
     - name: tekton
     - name: gateway-crds
 ---
-# Docker for builds: the shared `docker` Task, the Kyverno policy that starts
-# each build from its project's golden cache, and the cache promoter. The
-# objects set their own namespaces (ci, ci-tekton, cluster-scoped).
+# Docker for builds: the shared `docker` Task (task/), the Kyverno policy that
+# starts each build from its project's golden cache, and the cache promoter
+# (promoter/). The objects set their own namespaces (ci, ci-tekton,
+# cluster-scoped).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

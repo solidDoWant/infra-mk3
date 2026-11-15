@@ -1,0 +1,13 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: ci-docker-cache-promoter-script
+    namespace: ci
+    files:
+      - promote.sh=./promote.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        # The script uses shell ${...} syntax.
+        kustomize.toolkit.fluxcd.io/substitute: disabled

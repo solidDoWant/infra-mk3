@@ -1,0 +1,61 @@
+---
+# Keeps build pods in project namespaces (ci.home.arpa/project) inside a kata
+# VM and off the host. A repository's .tekton/ files control its build pods'
+# spec (volumes, pod template, runtime class), and Pod Security doesn't cover
+# this: `baseline` allows runc, and `privileged` (needed by the docker Task)
+# also allows host namespaces, hostPath volumes and host ports, all of which
+# reach the host even from inside kata.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: ci-build-pods
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        ci.home.arpa/project: "true"
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - pods
+        operations:
+          - CREATE
+  matchConditions:
+    # Tekton's affinity assistants, created by the StatefulSet controller from
+    # Tekton's own template (a nop container), not from anything in a
+    # repository. They don't get the default pod template, so no kata.
+    - name: not-affinity-assistant
+      expression: >-
+        !has(object.metadata.ownerReferences) ||
+        !object.metadata.ownerReferences.exists(r,
+          r.kind == 'StatefulSet' && r.name.startsWith('affinity-assistant-'))
+  validations:
+    - expression: >-
+        has(object.spec.runtimeClassName) && object.spec.runtimeClassName == 'kata'
+      message: build pods must run in kata (runtimeClassName kata)
+    - expression: >-
+        !(has(object.spec.hostNetwork) && object.spec.hostNetwork) &&
+        !(has(object.spec.hostPID) && object.spec.hostPID) &&
+        !(has(object.spec.hostIPC) && object.spec.hostIPC)
+      message: build pods can't use the host's network, PID or IPC namespaces
+    - expression: >-
+        !has(object.spec.volumes) || object.spec.volumes.all(v, !has(v.hostPath))
+      message: build pods can't mount hostPath volumes
+    - expression: >-
+        object.spec.containers.all(c, !has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0)) &&
+        (!has(object.spec.initContainers) ||
+          object.spec.initContainers.all(c, !has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0)))
+      message: build pods can't use host ports
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: ci-build-pods
+spec:
+  policyName: ci-build-pods
+  validationActions:
+    - Deny

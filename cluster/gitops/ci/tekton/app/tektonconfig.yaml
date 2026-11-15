@@ -62,7 +62,7 @@ spec:
     enable-hub-resolver: false
     enable-git-resolver: false
     enable-cluster-resolver: true
-    # Shared Tasks (e.g. ../docker/task.yaml) live in ci-tekton; nothing else
+    # Shared Tasks (e.g. ../docker/task/task.yaml) live in ci-tekton; nothing else
     # can be resolved from the cluster.
     cluster-resolver-config:
       default-namespace: ci-tekton

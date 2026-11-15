@@ -1,0 +1,29 @@
+---
+# The Task's pod runs in each project's namespace, so it can't mount a
+# ConfigMap from here. Instead the sidecar script is kept in scripts/ and
+# copied into the Task at build time. The generated ConfigMap is marked
+# local-config, so kustomize drops it from the output.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./task.yaml
+configMapGenerator:
+  - name: docker-task-scripts
+    namespace: ci-tekton
+    files:
+      - dind.sh=./scripts/dind.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        config.kubernetes.io/local-config: "true"
+replacements:
+  - source:
+      kind: ConfigMap
+      name: docker-task-scripts
+      fieldPath: data.dind\.sh
+    targets:
+      - select:
+          kind: Task
+          name: docker
+        fieldPaths:
+          - spec.sidecars.[name=dind].script

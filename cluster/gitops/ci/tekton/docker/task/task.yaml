@@ -24,13 +24,16 @@
 # overlay2), cloned by the ci-docker-cache-golden Kyverno policy from the
 # project's latest golden cache snapshot, so builds start with the layers and
 # images of the last successful default-branch push build. Nothing a build
-# writes is kept, except that the cache promoter (promoter.yaml) snapshots the
+# writes is kept, except that the cache promoter (../promoter) snapshots the
 # volume of successful default-branch push builds as the next golden cache.
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   namespace: ci-tekton
   name: docker
+  annotations:
+    # The scripts use shell ${...} syntax.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   params:
     - name: script
@@ -88,32 +91,8 @@ spec:
           port: 2375
         periodSeconds: 1
         failureThreshold: 120
-      script: |
-        #!/bin/sh
-        set -eu
-        # BusyBox blkid exits 0 even with no filesystem, so check its output.
-        if [ -z "$(blkid /dev/docker-disk)" ]; then
-          echo "docker cache: blank volume, formatting"
-          mkfs.ext4 -q /dev/docker-disk
-        else
-          echo "docker cache: warm volume"
-        fi
-        mkdir -p /var/lib/docker
-        mount -t ext4 /dev/docker-disk /var/lib/docker
-        # Keep the build cache well under the volume size.
-        mkdir -p /etc/docker
-        cat > /etc/docker/daemon.json <<'JSON'
-        {
-          "builder": {
-            "gc": {
-              "enabled": true,
-              "defaultKeepStorage": "12GB"
-            }
-          }
-        }
-        JSON
-        # Only reachable from inside the pod.
-        exec dockerd --host=tcp://127.0.0.1:2375 --host=unix:///var/run/docker.sock
+      # scripts/dind.sh, copied in by kustomization.yaml
+      script: ""
   steps:
     - name: run
       image: $(params.image)

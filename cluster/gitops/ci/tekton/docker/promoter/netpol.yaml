@@ -9,6 +9,7 @@ specs:
     endpointSelector:
       matchLabels:
         app.kubernetes.io/name: ci-docker-cache-promoter
+        app.kubernetes.io/controller: promoter
     egress:
       # DNS resolution
       - toEndpoints:
@@ -24,7 +25,8 @@ specs:
             rules:
               dns:
                 - matchPattern: "*"
-      # Kubernetes API: runs, pods, PVCs and snapshots in project namespaces
+      # Kubernetes API: the PipelineRun watch, and runs, pods, PVCs and
+      # snapshots in project namespaces
       - toEntities:
           - kube-apiserver
         toPorts:
