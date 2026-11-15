@@ -4,15 +4,14 @@
 set -eu
 
 DISK=/dev/docker-disk
+# mkfs.ext4 and resize2fs, from the e2fsprogs image volume.
+PATH="/opt/e2fsprogs/sbin:$PATH"
 
 # The volume is a raw block device. A blank one (no golden cache snapshot to
 # clone yet) gets a filesystem; a clone already has one. BusyBox blkid exits 0
 # even when it finds no filesystem, so check its output instead.
 if [ -z "$(blkid "$DISK")" ]; then
   echo "docker cache: blank volume, formatting"
-  # The docker:dind image doesn't ship e2fsprogs. Only a project's first
-  # builds (before a golden cache exists) get here.
-  command -v mkfs.ext4 >/dev/null || apk add --no-cache --quiet e2fsprogs
   mkfs.ext4 -q "$DISK"
 else
   echo "docker cache: warm volume"
@@ -21,18 +20,17 @@ mkdir -p /var/lib/docker
 mount -t ext4 "$DISK" /var/lib/docker
 
 # A clone can be bigger than the snapshot it came from (the project's cache
-# size was raised). Grow the filesystem to fill it. The filesystem's size comes
-# from the ext4 superblock (at byte 1024: the block count at +4, the block size
-# as log2(size) - 10 at +24), as the image has no e2fsprogs to ask.
-disk_bytes=$(blockdev --getsize64 "$DISK")
-fs_blocks=$(od -An -tu4 -j1028 -N4 "$DISK" | tr -d ' ')
-block_size=$((1024 << $(od -An -tu4 -j1048 -N4 "$DISK" | tr -d ' ')))
-if [ $((disk_bytes / block_size)) -gt "$fs_blocks" ]; then
-  echo "docker cache: growing the filesystem to $((disk_bytes >> 30))GiB"
-  command -v resize2fs >/dev/null || apk add --no-cache --quiet e2fsprogs-extra
-  # Online: ext4 grows while mounted.
-  resize2fs "$DISK" >/dev/null
+# size was raised), so grow the filesystem to fill the volume. Online, and a
+# no-op when it already does.
+if ! resized=$(resize2fs "$DISK" 2>&1); then
+  echo "$resized" >&2
+  exit 1
 fi
+case "$resized" in
+  *"Nothing to do"*) ;;
+  *) echo "docker cache: grew the filesystem to $(($(blockdev --getsize64 "$DISK") >> 30))GiB" ;;
+esac
+disk_bytes=$(blockdev --getsize64 "$DISK")
 
 # Keep the build cache to 60% of the volume, leaving the rest for images and
 # containers.
