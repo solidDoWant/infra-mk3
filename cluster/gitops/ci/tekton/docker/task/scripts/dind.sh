@@ -8,6 +8,9 @@ set -eu
 # even when it finds no filesystem, so check its output instead.
 if [ -z "$(blkid /dev/docker-disk)" ]; then
   echo "docker cache: blank volume, formatting"
+  # The docker:dind image doesn't ship e2fsprogs. Only a project's first
+  # builds (before a golden cache exists) get here.
+  command -v mkfs.ext4 >/dev/null || apk add --no-cache --quiet e2fsprogs
   mkfs.ext4 -q /dev/docker-disk
 else
   echo "docker cache: warm volume"
