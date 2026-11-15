@@ -1,0 +1,109 @@
+---
+# Shared Task for running Docker (`docker build`, `docker run`, ...) in a build.
+# Pipelines reference it through the cluster resolver:
+#
+#   taskRef:
+#     resolver: cluster
+#     params:
+#       - name: kind
+#         value: task
+#       - name: name
+#         value: docker
+#       - name: namespace
+#         value: ci-tekton
+#   params:
+#     - name: script
+#       value: docker build -t example . && docker run --rm example
+#   workspaces:
+#     - name: source
+#       workspace: source
+#
+# dockerd runs in a privileged sidecar inside the build's kata VM, so its
+# privilege is the VM's (project namespaces allow privileged pods; the
+# ci-build-pods admission policy keeps them in kata and off the host). Its storage is a per-pod ephemeral block volume (ext4,
+# overlay2), cloned by the ci-docker-cache-golden Kyverno policy from the
+# project's latest golden cache snapshot, so builds start with the layers and
+# images of the last successful default-branch push build. Nothing a build
+# writes is kept, except that the cache promoter (../promoter) snapshots the
+# volume of successful default-branch push builds as the next golden cache.
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  namespace: ci-tekton
+  name: docker
+  annotations:
+    # The scripts use shell ${...} syntax.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  params:
+    - name: script
+      description: Shell script to run, with `docker` pointed at the build's daemon.
+      type: string
+    - name: image
+      description: Image for the script. It must contain the docker CLI.
+      type: string
+      default: mirror.gcr.io/library/docker:29.9.3-cli@sha256:5a7af0dcb0e46c803efe9b45371dd21cb500e5b4453250394ac6f06d49b6e6f1
+  workspaces:
+    - name: source
+      description: Working directory for the script; also available to the daemon at the same path, so `docker run -v` works.
+      mountPath: /workspace/source
+      optional: true
+  volumes:
+    - name: docker-disk
+      ephemeral:
+        volumeClaimTemplate:
+          metadata:
+            labels:
+              # Selected by the ci-docker-cache-golden Kyverno policy (clone
+              # source) and the cache promoter.
+              ci.home.arpa/docker-cache: "true"
+          spec:
+            accessModes:
+              - ReadWriteOncePod
+            # A block device, formatted inside the VM: a filesystem volume
+            # would be shared into kata over virtiofs, which overlay2 can't use.
+            volumeMode: Block
+            storageClassName: ssd-replicated-3x
+            resources:
+              requests:
+                # Fixed: clones of the golden snapshot need at least its size.
+                storage: 20Gi
+  sidecars:
+    - name: dind
+      image: mirror.gcr.io/library/docker:29.9.3-dind@sha256:7bf70dcb85c822e3fa6f2d332143e474b99147b9d7b39102b0cfe8b04a7dd61b
+      securityContext:
+        privileged: true
+      workspaces:
+        - name: source
+          mountPath: /workspace/source
+      volumeDevices:
+        - name: docker-disk
+          devicePath: /dev/docker-disk
+      computeResources:
+        requests:
+          cpu: 500m
+          memory: &dind_memory 3Gi
+        limits:
+          memory: *dind_memory
+      # Steps start once dockerd answers.
+      readinessProbe:
+        tcpSocket:
+          port: 2375
+        periodSeconds: 1
+        failureThreshold: 120
+      # scripts/dind.sh, copied in by kustomization.yaml
+      script: ""
+  steps:
+    - name: run
+      image: $(params.image)
+      workspaces:
+        - name: source
+          mountPath: /workspace/source
+      workingDir: /workspace/source
+      env:
+        - name: DOCKER_HOST
+          value: tcp://127.0.0.1:2375
+      script: |
+        #!/bin/sh
+        set -e
+        $(params.script)

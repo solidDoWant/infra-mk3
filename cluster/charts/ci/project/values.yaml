@@ -5,9 +5,9 @@
 name: ""
 # How many of this repository's PipelineRuns may run at once. The rest queue.
 concurrencyLimit: 2
-# Pod Security Admission level for build pods. Build steps often run as root;
-# every build runs in a kata VM (default-pod-template in the TektonConfig).
-podSecurity: baseline
+# The repository's default branch. Successful push builds on it refresh the
+# golden Docker cache (ci/tekton/docker/promoter).
+defaultBranch: master
 # Defaults for build containers that set no resources of their own (Tekton
 # applies these to every step). The memory request equals the limit.
 defaultResources:

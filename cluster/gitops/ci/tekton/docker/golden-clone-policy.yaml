@@ -1,0 +1,52 @@
+---
+# Starts each docker Task build (task.yaml) from the project's latest golden
+# cache: sets the build's ephemeral cache volume to clone the newest ready
+# VolumeSnapshot labelled ci.home.arpa/docker-cache-golden in its namespace
+# (created by the cache promoter, promoter/). With no golden snapshot yet
+# the volume is created blank and the build starts cold, which is also what
+# happens if Kyverno is unavailable.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: ci-docker-cache-golden
+spec:
+  # A cold cache beats a build that can't start.
+  failurePolicy: Ignore
+  background: false
+  rules:
+    - name: clone-latest-golden
+      match:
+        any:
+          - resources:
+              kinds:
+                - PersistentVolumeClaim
+              # A PVC's data source can only be set at creation.
+              operations:
+                - CREATE
+              selector:
+                matchLabels:
+                  ci.home.arpa/docker-cache: "true"
+              namespaceSelector:
+                matchLabels:
+                  ci.home.arpa/project: "true"
+      context:
+        - name: golden
+          apiCall:
+            method: GET
+            urlPath: /apis/snapshot.storage.k8s.io/v1/namespaces/{{ request.namespace }}/volumesnapshots?labelSelector=ci.home.arpa%2Fdocker-cache-golden%3Dtrue
+            jmesPath: "items[?status.readyToUse] | sort_by(@, &metadata.creationTimestamp) | [-1].metadata.name || ''"
+      preconditions:
+        all:
+          - key: "{{ golden }}"
+            operator: NotEquals
+            value: ""
+          - key: "{{ request.object.spec.dataSource.name || '' }}"
+            operator: Equals
+            value: ""
+      mutate:
+        patchStrategicMerge:
+          spec:
+            dataSource:
+              apiGroup: snapshot.storage.k8s.io
+              kind: VolumeSnapshot
+              name: "{{ golden }}"

@@ -91,6 +91,31 @@ spec:
     - name: tekton
     - name: gateway-crds
 ---
+# Docker for builds: the shared `docker` Task (task/), the Kyverno policy that
+# starts each build from its project's golden cache, and the cache promoter
+# (promoter/). The objects set their own namespaces (ci, ci-tekton,
+# cluster-scoped).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name tekton-docker
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/tekton/docker
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # The Task CRD and the ci-tekton namespace
+    - name: tekton
+    - name: kyverno-app
+---
 # One HelmRelease of cluster/charts/ci/project per repository built by
 # Pipelines-as-Code (projects/<name>.yaml). The releases live in ci; each
 # creates its own ci-<name> namespace with the repository's Repository CR,
