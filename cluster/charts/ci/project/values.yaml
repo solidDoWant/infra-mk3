@@ -8,14 +8,6 @@ concurrencyLimit: 2
 # The repository's default branch. Successful push builds on it refresh the
 # golden Docker cache (ci/tekton/docker/promoter).
 defaultBranch: master
-# Builds use the shared `docker` Task (ci/tekton/docker/task/task.yaml), whose
-# dockerd sidecar is privileged inside the build's kata VM. Sets the namespace's
-# Pod Security level to privileged; the ci-build-pods admission policy
-# (ci/tekton/app/build-pod-policy.yaml) still keeps build pods off the host.
-docker: false
-# Pod Security Admission level for build pods, when docker is off. Build steps often run as root;
-# every build runs in a kata VM (default-pod-template in the TektonConfig).
-podSecurity: baseline
 # Defaults for build containers that set no resources of their own (Tekton
 # applies these to every step). The memory request equals the limit.
 defaultResources:

@@ -1,9 +1,10 @@
 ---
 # Keeps build pods in project namespaces (ci.home.arpa/project) inside a kata
 # VM and off the host. A repository's .tekton/ files control its build pods'
-# spec (volumes, pod template, runtime class), and Pod Security doesn't cover
-# this: `baseline` allows runc, and `privileged` (needed by the docker Task)
-# also allows host namespaces, hostPath volumes and host ports, all of which
+# spec (volumes, pod template, runtime class). Project namespaces are
+# `privileged` for Pod Security, because a privileged container (e.g. the docker
+# Task's dockerd) is contained by its VM; this policy covers what isn't: running
+# outside kata, and host namespaces, hostPath volumes and host ports, which
 # reach the host even from inside kata.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy

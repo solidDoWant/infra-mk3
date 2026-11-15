@@ -18,9 +18,9 @@
 #     - name: source
 #       workspace: source
 #
-# The project needs `docker: true` in its ci-project release (privileged Pod
-# Security). dockerd runs in a sidecar inside the build's kata VM, so its
-# privilege is the VM's. Its storage is a per-pod ephemeral block volume (ext4,
+# dockerd runs in a privileged sidecar inside the build's kata VM, so its
+# privilege is the VM's (project namespaces allow privileged pods; the
+# ci-build-pods admission policy keeps them in kata and off the host). Its storage is a per-pod ephemeral block volume (ext4,
 # overlay2), cloned by the ci-docker-cache-golden Kyverno policy from the
 # project's latest golden cache snapshot, so builds start with the layers and
 # images of the last successful default-branch push build. Nothing a build
