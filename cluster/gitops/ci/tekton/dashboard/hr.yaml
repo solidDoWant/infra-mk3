@@ -17,7 +17,7 @@ spec:
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/refs/tags/app-template-5.3.0/charts/other/app-template/values.schema.json
 # Tekton Dashboard in "tenant" mode: it can only read the project namespaces
-# (RoleBindings created by the ci-project chart; see rbac.yaml). The operator's
+# (RoleBindings created by the ci-project chart; see `rbac` below). The operator's
 # own Dashboard is scaled to 0 (TektonConfig) because its RBAC can't be
 # narrowed: it binds its ServiceAccount cluster-wide to read every pod and pod
 # log.
@@ -93,7 +93,7 @@ spec:
               limits:
                 memory: *memory
         pod:
-          # It reads the Kubernetes API as ci-dashboard (rbac.yaml).
+          # It reads the Kubernetes API as ci-dashboard (see `rbac` below).
           automountServiceAccountToken: true
           securityContext:
             runAsNonRoot: true
@@ -105,6 +105,63 @@ spec:
             options:
               - name: ndots
                 value: "1"
+    # The ServiceAccount is app-template's default one, named after the
+    # release (ci-dashboard).
+    rbac:
+      roles:
+        # Granted in each project namespace by the ci-project chart's
+        # RoleBinding (it references this name), so the Dashboard can only
+        # read those namespaces.
+        view:
+          type: ClusterRole
+          forceRename: ci-dashboard-view
+          rules:
+            - apiGroups:
+                - tekton.dev
+              resources:
+                - tasks
+                - taskruns
+                - pipelines
+                - pipelineruns
+                - runs
+                - customruns
+                - stepactions
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - ""
+              resources:
+                - events
+                - pods
+                - pods/log
+              verbs:
+                - get
+                - list
+                - watch
+        # Cluster-wide, it only reads CRDs, to detect which Tekton components
+        # are installed.
+        backend:
+          type: ClusterRole
+          forceRename: ci-dashboard-backend
+          rules:
+            - apiGroups:
+                - apiextensions.k8s.io
+              resources:
+                - customresourcedefinitions
+              verbs:
+                - get
+                - list
+      bindings:
+        backend:
+          type: ClusterRoleBinding
+          forceRename: ci-dashboard-backend
+          roleRef:
+            identifier: backend
+          subjects:
+            - identifier: ci-dashboard
+              kind: ServiceAccount
     service:
       dashboard:
         controller: dashboard
