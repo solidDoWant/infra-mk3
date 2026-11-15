@@ -97,6 +97,10 @@ spec:
             policy: mute
           AUTH_INSECURE_KEYS_CREATABLE:
             policy: mute
+          # The ci-cache-* pools below keep one copy by design. This also
+          # hides the warning for any other pool set to one copy.
+          POOL_NO_REDUNDANCY:
+            policy: mute
       cephConfig:
         # Allow the pool to operate when one node is offline
         global:
@@ -376,6 +380,71 @@ spec:
             csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
             csi.storage.k8s.io/node-stage-secret-namespace: *secret_namespace
             csi.storage.k8s.io/fstype: ext4
+      # CI Docker cache pools, one per node, each holding a single copy on that
+      # node's OSD. Losing the OSD makes the pool unavailable, which is fine
+      # for a cache: the ci-docker-cache-golden Kyverno policy
+      # (ci/tekton/docker) only puts builds on pools whose OSD is up, and falls
+      # back to a blank ssd-replicated-3x volume. Spread over three pools to
+      # spread the load and the failure domain. No compression: it costs OSD
+      # CPU that other pools share. Keep the names in step with that policy.
+      - name: ci-cache-mixed-01
+        spec:
+          # Every object on the one OSD under this node's chassis.
+          crushRoot: chassis-talos-k8s-mixed-01
+          failureDomain: osd
+          replicated:
+            size: 1
+            requireSafeReplicaSize: false
+        storageClass:
+          enabled: true
+          name: ci-cache-mixed-01
+          isDefault: false
+          reclaimPolicy: Delete
+          allowVolumeExpansion: true
+          mountOptions: []
+          parameters: &ci_cache_sc_parameters
+            mapOptions: abort_on_full,ms_mode=secure
+            imageFormat: "2"
+            imageFeatures: layering,exclusive-lock,object-map,fast-diff,deep-flatten
+            csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/provisioner-secret-namespace: *secret_namespace
+            csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/controller-expand-secret-namespace: *secret_namespace
+            csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+            csi.storage.k8s.io/node-stage-secret-namespace: *secret_namespace
+            csi.storage.k8s.io/fstype: ext4
+      - name: ci-cache-mixed-02
+        spec:
+          # Every object on the one OSD under this node's chassis.
+          crushRoot: chassis-talos-k8s-mixed-02
+          failureDomain: osd
+          replicated:
+            size: 1
+            requireSafeReplicaSize: false
+        storageClass:
+          enabled: true
+          name: ci-cache-mixed-02
+          isDefault: false
+          reclaimPolicy: Delete
+          allowVolumeExpansion: true
+          mountOptions: []
+          parameters: *ci_cache_sc_parameters
+      - name: ci-cache-mixed-03
+        spec:
+          # Every object on the one OSD under this node's chassis.
+          crushRoot: chassis-talos-k8s-mixed-03
+          failureDomain: osd
+          replicated:
+            size: 1
+            requireSafeReplicaSize: false
+        storageClass:
+          enabled: true
+          name: ci-cache-mixed-03
+          isDefault: false
+          reclaimPolicy: Delete
+          allowVolumeExpansion: true
+          mountOptions: []
+          parameters: *ci_cache_sc_parameters
     cephBlockPoolsVolumeSnapshotClass:
       enabled: true
       name: ssd-replicated-3x-block
