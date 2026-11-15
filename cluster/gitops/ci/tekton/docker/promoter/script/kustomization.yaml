@@ -8,6 +8,10 @@ configMapGenerator:
       - promote.sh=./promote.sh
     options:
       disableNameSuffixHash: true
+      labels:
+        # Restarts the promoter when the script changes
+        # (kyverno/policies/workload-reloader).
+        kyverno.home.arpa/reload: "true"
       annotations:
         # The script uses shell ${...} syntax.
         kustomize.toolkit.fluxcd.io/substitute: disabled
