@@ -1,7 +1,8 @@
 ---
 # Tekton's own MCP server: lists and reads the CI projects' PipelineRuns,
 # TaskRuns, Pipelines and Tasks, and reads TaskRun logs.
-# https://github.com/tektoncd/mcp-server (image: container images/tekton-mcp-server)
+# https://github.com/tektoncd/mcp-server, packaged as an image in
+# solidDoWant/mcp-servers (servers/tekton).
 #
 # Per-user: each user's instance calls the Kubernetes API as that user, with a
 # token toolgate gets by exchanging the user's toolgate token at authentik
