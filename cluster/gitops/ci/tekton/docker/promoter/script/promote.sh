@@ -22,9 +22,9 @@ log() { echo "$(date -u +%FT%TZ) $*"; }
 # The cache volume of a run's docker Task pod that finished last, once every
 # such pod has finished (and so released its volume, making the snapshot
 # consistent). Empty if the run has no docker Task pods. "Finished" means all
-# containers terminated, not phase Succeeded: Tekton stops the dind sidecar
-# once the steps are done, and its non-zero exit leaves the pod Failed even
-# when the TaskRun succeeded.
+# containers terminated, including the dind sidecar, which is a native
+# sidecar and so reports under initContainerStatuses. Not phase Succeeded:
+# the sidecar's exit status on shutdown isn't the build's.
 run_cache_pvc() {
   local ns="$1" run="$2" waited=0 pods
   while :; do
@@ -34,8 +34,9 @@ run_cache_pvc() {
         | .spec.volumes[]?
         | select(.ephemeral.volumeClaimTemplate.metadata.labels["ci.home.arpa/docker-cache"] == "true")
         | {pvc: ($pod.metadata.name + "-" + .name),
-           done: (($pod.status.containerStatuses // []) | length > 0 and all(.state.terminated != null)),
-           finished: ([$pod.status.containerStatuses[]?.state.terminated.finishedAt] | max)}]')"
+           statuses: (($pod.status.containerStatuses // []) + ($pod.status.initContainerStatuses // []))}
+        | {pvc, done: (.statuses | length > 0 and all(.state.terminated != null)),
+           finished: ([.statuses[].state.terminated.finishedAt] | max)}]')"
     if [ "$(jq 'all(.done)' <<<"$pods")" = true ]; then
       jq -r 'sort_by(.finished) | last | .pvc // empty' <<<"$pods"
       return
