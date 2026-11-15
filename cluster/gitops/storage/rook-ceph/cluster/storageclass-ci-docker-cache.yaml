@@ -1,0 +1,29 @@
+---
+# CI Docker build cache volumes (ci/tekton/docker task.yaml): image metadata in
+# ssd-replicated-3x, data in the erasure-coded ci-cache-ec pool (hr.yaml).
+# RBD images can't keep their metadata in an erasure-coded pool. Snapshots use
+# the ssd-replicated-3x-block class like any RBD volume. Keep the parameters in
+# step with the ssd-replicated-3x class in hr.yaml, except compression: it
+# would cost OSD CPU for a disposable cache.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ci-docker-cache
+provisioner: storage.rbd.csi.ceph.com
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+parameters:
+  clusterID: storage
+  pool: ssd-replicated-3x
+  dataPool: ci-cache-ec
+  mapOptions: abort_on_full,ms_mode=secure
+  imageFormat: "2"
+  imageFeatures: layering,exclusive-lock,object-map,fast-diff,deep-flatten
+  csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/provisioner-secret-namespace: storage
+  csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/controller-expand-secret-namespace: storage
+  csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+  csi.storage.k8s.io/node-stage-secret-namespace: storage
+  csi.storage.k8s.io/fstype: ext4
