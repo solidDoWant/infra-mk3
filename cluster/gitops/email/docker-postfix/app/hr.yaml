@@ -28,6 +28,21 @@ spec:
         tag: latest@sha256:46b1dc712e9390dbaf07afc09b95c851430caf7268db26f3e654acfb69323a43
       serviceMonitor:
         enabled: true
+      resources:
+        requests:
+          cpu: 10m
+          memory: &exporter_memory 64Mi
+        limits:
+          memory: *exporter_memory
+    # Under kata, memory limits are what the VM gets on top of its 256MiB
+    # base (talos/patches/all/27-kata.yaml): with none, both containers share
+    # that base. About 2x the mail container's measured peak (74MB).
+    resources:
+      requests:
+        cpu: 50m
+        memory: &mail_memory 160Mi
+      limits:
+        memory: *mail_memory
     extraVolumes:
       - name: &secret_name upstream-relay-credentials
         secret:
