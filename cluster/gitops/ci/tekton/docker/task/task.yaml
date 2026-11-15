@@ -20,14 +20,12 @@
 #
 # dockerd runs in a privileged sidecar inside the build's kata VM, so its
 # privilege is the VM's (project namespaces allow privileged pods; the
-# ci-build-pods admission policy keeps them in kata and off the host). Its
-# storage is a per-pod ephemeral block volume (ext4, overlay2), which the
-# ci-docker-cache-golden Kyverno policy puts in one of the single-copy
-# ci-cache-* Ceph pools and clones from the project's latest golden cache
-# snapshot, so builds start with the layers and images of the last successful
-# default-branch push build. Nothing a build writes is kept, except that the
-# cache promoter (../promoter) copies the volume of successful default-branch
-# push builds into the next golden cache.
+# ci-build-pods admission policy keeps them in kata and off the host). Its storage is a per-pod ephemeral block volume (ext4,
+# overlay2), cloned by the ci-docker-cache-golden Kyverno policy from the
+# project's latest golden cache snapshot, so builds start with the layers and
+# images of the last successful default-branch push build. Nothing a build
+# writes is kept, except that the cache promoter (../promoter) snapshots the
+# volume of successful default-branch push builds as the next golden cache.
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -65,9 +63,6 @@ spec:
             # A block device, formatted inside the VM: a filesystem volume
             # would be shared into kata over virtiofs, which overlay2 can't use.
             volumeMode: Block
-            # The fallback, kept when no cache pool is available (or without
-            # Kyverno): replicated, starting blank. The ci-docker-cache-golden
-            # policy normally replaces it with a ci-cache-* pool.
             storageClassName: ssd-replicated-3x
             resources:
               requests:

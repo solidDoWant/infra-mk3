@@ -1,167 +1,52 @@
 ---
-# Places each docker Task build's ephemeral cache volume (task.yaml) and
-# starts it from the project's golden cache.
-#
-# Pools: the cache lives in the ci-cache-mixed-0N Ceph pools (rook-ceph
-# cluster hr.yaml), one per node, each holding a single copy on that node's
-# OSD. When a build pod is created, it gets the pool with the fewest docker
-# cache volumes (ties broken at random) among those whose OSD is up and whose
-# node isn't cordoned, recorded in its ci.home.arpa/docker-cache-pool
-# annotation, and a preference (not a requirement) for that pool's node. Its
-# volume is then created in that pool. With no such pool, or without Kyverno,
-# the volume keeps the Task's ssd-replicated-3x class and starts blank.
-#
-# Golden cache: the volume clones the newest ready VolumeSnapshot labelled
-# ci.home.arpa/docker-cache-golden in its namespace (created by the cache
-# promoter, promoter/) whose pool's OSD is up. Each golden snapshot is a
-# standalone copy in one pool, so a build depends only on its own pool and
-# the golden snapshot's. With no usable golden snapshot the build starts
-# cold.
+# Starts each docker Task build (task.yaml) from the project's latest golden
+# cache: sets the build's ephemeral cache volume to clone the newest ready
+# VolumeSnapshot labelled ci.home.arpa/docker-cache-golden in its namespace
+# (created by the cache promoter, promoter/). With no golden snapshot yet
+# the volume is created blank and the build starts cold, which is also what
+# happens if Kyverno is unavailable.
 #
 # Also sizes the volume from the project namespace's
 # ci.home.arpa/docker-cache-size annotation (the project chart's
 # dockerCacheSize), or the Task's default without one. A clone can't be
 # smaller than its snapshot, so after the size is lowered builds keep the
 # golden snapshot's size until a snapshot of the new size replaces it.
-#
-# Pool and node names are listed here, not discovered: keep them in step with
-# the pools.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
   name: ci-docker-cache-golden
 spec:
-  # A blank cache on replicated storage beats a build that can't start.
+  # A cold cache beats a build that can't start.
   failurePolicy: Ignore
   background: false
   rules:
-    - name: choose-pool
-      match:
-        any:
-          - resources:
-              kinds:
-                - Pod
-              operations:
-                - CREATE
-              namespaceSelector:
-                matchLabels: &project_namespace
-                  ci.home.arpa/project: "true"
-      context:
-        - &up_osd_hosts
-          name: upOsdHosts
-          apiCall:
-            method: GET
-            urlPath: /apis/apps/v1/namespaces/storage/deployments?labelSelector=app%3Drook-ceph-osd
-            jmesPath: "items[?status.availableReplicas > `0`].metadata.labels.\"topology-location-host\""
-        - name: schedulableNodes
-          apiCall:
-            method: GET
-            urlPath: /api/v1/nodes
-            jmesPath: "items[?spec.unschedulable != `true`].metadata.name"
-        # The pool of every docker cache volume, as a load measure. Counted
-        # when the pod is created, before its own volume exists.
-        - name: cachePools
-          apiCall:
-            method: GET
-            urlPath: /api/v1/persistentvolumeclaims?labelSelector=ci.home.arpa%2Fdocker-cache%3Dtrue
-            jmesPath: "items[].spec.storageClassName"
-        # JMESPath filters can't see other variables, so these are
-        # substituted in as literals.
-        - name: healthyNodes
-          variable:
-            jmesPath: "upOsdHosts[?contains(`{{ schedulableNodes }}`, @)]"
-        # Sort key: volumes in the pool, then a random tie-breaker.
-        - name: pool
-          variable:
-            jmesPath: >-
-              [
-                {name: 'ci-cache-mixed-01', node: 'talos-k8s-mixed-01', key: add(multiply(length(cachePools[?@ == 'ci-cache-mixed-01']), `1000000`), to_number(random('[0-9]{6}')))},
-                {name: 'ci-cache-mixed-02', node: 'talos-k8s-mixed-02', key: add(multiply(length(cachePools[?@ == 'ci-cache-mixed-02']), `1000000`), to_number(random('[0-9]{6}')))},
-                {name: 'ci-cache-mixed-03', node: 'talos-k8s-mixed-03', key: add(multiply(length(cachePools[?@ == 'ci-cache-mixed-03']), `1000000`), to_number(random('[0-9]{6}')))}
-              ][?contains(`{{ healthyNodes }}`, node)] | sort_by(@, &key) | [0].name || ''
-      preconditions:
-        all:
-          # Pods with a docker cache volume
-          - key: >-
-              {{ length(request.object.spec.volumes[?ephemeral.volumeClaimTemplate.metadata.labels."ci.home.arpa/docker-cache" == 'true'] || `[]`) }}
-            operator: GreaterThan
-            value: 0
-          # Choose once: Kyverno runs again when a later webhook (k8tz)
-          # changes the pod, and a new random pick would no longer match
-          # the node preference.
-          - key: "{{ request.object.metadata.annotations.\"ci.home.arpa/docker-cache-pool\" || '' }}"
-            operator: Equals
-            value: ""
-          - key: "{{ pool }}"
-            operator: NotEquals
-            value: ""
-      mutate:
-        patchStrategicMerge:
-          metadata:
-            annotations:
-              ci.home.arpa/docker-cache-pool: "{{ pool }}"
-    - name: prefer-pool-node
-      match:
-        any:
-          - resources:
-              kinds:
-                - Pod
-              operations:
-                - CREATE
-              namespaceSelector:
-                matchLabels: *project_namespace
-      # Set by choose-pool, whose changes later rules see.
-      preconditions:
-        all:
-          - key: "{{ request.object.metadata.annotations.\"ci.home.arpa/docker-cache-pool\" || '' }}"
-            operator: AnyIn
-            value:
-              - ci-cache-*
-      mutate:
-        patchStrategicMerge:
-          spec:
-            affinity:
-              nodeAffinity:
-                # Only if the pod has no preferences of its own
-                +(preferredDuringSchedulingIgnoredDuringExecution):
-                  - weight: 100
-                    preference:
-                      matchExpressions:
-                        - key: kubernetes.io/hostname
-                          operator: In
-                          values:
-                            - "{{ replace_all(request.object.metadata.annotations.\"ci.home.arpa/docker-cache-pool\", 'ci-cache-', 'talos-k8s-') }}"
     - name: size
-      match: &pvc_match
+      match: &match
         any:
           - resources:
               kinds:
                 - PersistentVolumeClaim
-              # A PVC's class, size and data source can only be set at
-              # creation.
+              # A PVC's size and data source can only be set at creation.
               operations:
                 - CREATE
               selector:
                 matchLabels:
                   ci.home.arpa/docker-cache: "true"
               namespaceSelector:
-                matchLabels: *project_namespace
+                matchLabels:
+                  ci.home.arpa/project: "true"
       context:
         - name: namespaceSize
           apiCall:
             method: GET
             urlPath: /api/v1/namespaces/{{ request.namespace }}
             jmesPath: "metadata.annotations.\"ci.home.arpa/docker-cache-size\" || ''"
-        - *up_osd_hosts
-        # The newest ready golden snapshot whose pool's OSD is up.
         - &golden
           name: golden
           apiCall:
             method: GET
             urlPath: /apis/snapshot.storage.k8s.io/v1/namespaces/{{ request.namespace }}/volumesnapshots?labelSelector=ci.home.arpa%2Fdocker-cache-golden%3Dtrue
-            jmesPath: >-
-              items[?status.readyToUse && contains(`{{ upOsdHosts }}`, replace_all(metadata.labels."ci.home.arpa/docker-cache-pool" || '', 'ci-cache-', 'talos-k8s-'))]
-              | sort_by(@, &metadata.creationTimestamp) | [-1] || `{}`
+            jmesPath: "items[?status.readyToUse] | sort_by(@, &metadata.creationTimestamp) | [-1] || `{}`"
         - name: wanted
           variable:
             jmesPath: "namespaceSize || request.object.spec.resources.requests.storage"
@@ -175,39 +60,12 @@ spec:
             resources:
               requests:
                 storage: "{{ size }}"
-    - name: pool
-      match: *pvc_match
-      context:
-        # The build pod's choice (choose-pool). The pod exists before its
-        # ephemeral volume's claim is created.
-        - &pod_pool
-          name: podPool
-          apiCall:
-            method: GET
-            urlPath: /api/v1/namespaces/{{ request.namespace }}/pods/{{ request.object.metadata.ownerReferences[?kind == 'Pod'].name | [0] || 'none' }}
-            jmesPath: "metadata.annotations.\"ci.home.arpa/docker-cache-pool\" || ''"
-      preconditions:
-        all:
-          - &pool_chosen
-            key: "{{ podPool }}"
-            operator: AnyIn
-            value:
-              - ci-cache-*
-      mutate:
-        patchStrategicMerge:
-          spec:
-            storageClassName: "{{ podPool }}"
     - name: clone-latest-golden
-      match: *pvc_match
+      match: *match
       context:
-        - *pod_pool
-        - *up_osd_hosts
         - *golden
       preconditions:
         all:
-          # Only into a cache pool: a blank fallback volume on replicated
-          # storage shouldn't depend on a single-copy pool.
-          - *pool_chosen
           - key: "{{ golden.metadata.name || '' }}"
             operator: NotEquals
             value: ""
