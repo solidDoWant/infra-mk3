@@ -1,0 +1,24 @@
+---
+# The `kubernetes` token exchange that tekton.yaml uses as $${exchange:kubernetes}:
+# the gateway swaps the calling user's toolgate access token for a Kubernetes
+# API token for that user at authentik (RFC 8693; the toolgate-token-exchange
+# provider, federated by the Kubernetes API provider in
+# security/authentik/configuration/kubernetes-api). The kube-apiserver trusts
+# that provider (talos/patches/control-plane/), so a server holding the token
+# acts as authentik:<username> with the user's authentik:<group> groups, and
+# can do only what RBAC grants those.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: TokenExchange
+metadata:
+  name: kubernetes
+spec:
+  tokenURL: https://authentik.${SECRET_PUBLIC_DOMAIN_NAME}/application/o/token/
+  clientID: toolgate-token-exchange
+  # In the template secrets namespace (ai): ../app/token-exchange-client-secret.yaml
+  clientSecretRef:
+    name: toolgate-token-exchange-client
+    key: client-secret
+  audience: kubernetes-api
+  # profile carries preferred_username and groups, the claims the API server
+  # maps to the user's name and groups.
+  scope: openid profile

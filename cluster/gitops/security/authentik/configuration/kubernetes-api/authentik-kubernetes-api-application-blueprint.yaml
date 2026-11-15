@@ -1,0 +1,105 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-kubernetes-api-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Must be a Secret (not secretGenerator) so Flux substitution applies inside.
+  authentik-kubernetes-api-application-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: Kubernetes API application
+      labels:
+        blueprints.goauthentik.io/description: >-
+          Token issuer the Kubernetes API server trusts for user identities
+    entries:
+      # Dependencies
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Explicit provider authentication
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Invalidation flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Blueprint library
+          required: true
+      # Defines the toolgate-token-exchange provider found below.
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: toolgate application
+          required: true
+      # The kube-apiserver trusts this provider's tokens (the Talos
+      # KubeAuthenticationConfig in talos/patches/control-plane/): issuer
+      # https://authentik.<domain>/application/o/kubernetes-api/, audience
+      # kubernetes-api, username authentik:<preferred_username> and groups
+      # authentik:<group>. Being authenticated grants nothing by itself; RBAC
+      # bindings to those groups do.
+      #
+      # Tokens come from toolgate exchanging a user's toolgate token here
+      # (RFC 8693, the `kubernetes` TokenExchange in the toolgate catalog), so
+      # MCP servers that call the Kubernetes API act as that user.
+      - model: authentik_providers_oauth2.oauth2provider
+        id: kubernetes-api-provider
+        identifiers:
+          name: Kubernetes API
+        attrs:
+          name: Kubernetes API
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, explicit-authorization-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          # The audience the API server checks. Not secret: nothing logs in
+          # with it directly.
+          client_type: public
+          client_id: kubernetes-api
+          # Only reached through token exchange, which the requesting
+          # provider's grant types govern.
+          grant_types: []
+          redirect_uris: []
+          jwt_federation_providers:
+            - !Find [
+                authentik_providers_oauth2.oauth2provider,
+                [name, toolgate-token-exchange],
+              ]
+          signing_key:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          # toolgate refreshes the token at half its lifetime while it's used.
+          access_token_validity: minutes=10
+          property_mappings:
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+              ]
+            # preferred_username and groups
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+              ]
+          sub_mode: hashed_user_id
+          issuer_mode: per_provider
+      - model: authentik_core.application
+        id: kubernetes-api-application
+        identifiers:
+          slug: kubernetes-api
+        attrs:
+          name: Kubernetes API
+          slug: kubernetes-api
+          group: Development access
+          provider: !KeyOf kubernetes-api-provider
+          policy_engine_mode: any
+          # Not a browser app.
+          meta_launch_url: blank://blank

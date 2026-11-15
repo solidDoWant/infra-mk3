@@ -1,0 +1,38 @@
+---
+# Cluster-wide read of Tekton objects for members of the authentik "Tekton
+# access" group, acting with their own identity (the API server trusts
+# authentik tokens; talos/patches/control-plane/). The tekton MCP server in
+# toolgate reads through cluster-wide informers, so namespaced grants alone
+# aren't enough. Tekton objects only exist in ci-tekton (the shared Tasks)
+# and the ci-<project> namespaces. Pods and logs are granted per project
+# namespace by the ci/project chart.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tekton-reader
+rules:
+  - apiGroups:
+      - tekton.dev
+    resources:
+      - tasks
+      - taskruns
+      - pipelines
+      - pipelineruns
+      - stepactions
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: authentik:Tekton access
