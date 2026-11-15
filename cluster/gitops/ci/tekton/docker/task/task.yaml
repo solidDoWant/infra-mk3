@@ -85,12 +85,17 @@ spec:
           memory: &dind_memory 3Gi
         limits:
           memory: *dind_memory
-      # Steps start once dockerd answers.
+      # Steps start once dockerd answers. An exec probe, because dockerd only
+      # listens on localhost and the kubelet's TCP probes target the pod IP.
       readinessProbe:
-        tcpSocket:
-          port: 2375
-        periodSeconds: 1
-        failureThreshold: 120
+        exec:
+          command:
+            - docker
+            - --host=unix:///var/run/docker.sock
+            - info
+        periodSeconds: 2
+        timeoutSeconds: 5
+        failureThreshold: 60
       # scripts/dind.sh, copied in by kustomization.yaml
       script: ""
   steps:
