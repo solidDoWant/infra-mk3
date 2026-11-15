@@ -376,6 +376,24 @@ spec:
             csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
             csi.storage.k8s.io/node-stage-secret-namespace: *secret_namespace
             csi.storage.k8s.io/fstype: ext4
+      # Data pool for CI Docker build caches (storageclass-ci-docker-cache.yaml),
+      # whose image metadata stays in ssd-replicated-3x. Erasure coded 2+1:
+      # 1.5x the data instead of 3x, and still serving with one node down
+      # (min_size 2). Builds ran as fast as on ssd-replicated-3x in testing.
+      # Not one copy: a size-1 pool makes no OSD ok-to-stop, so Rook can never
+      # update OSDs. Eight PGs: every PG spans all three OSDs, which sit just
+      # under mon_max_pg_per_osd. Only pg_num, as Rook applies pg_num_min in
+      # random order with it (rook/rook#18529).
+      - name: ci-cache-ec
+        spec:
+          failureDomain: chassis
+          erasureCoded:
+            dataChunks: 2
+            codingChunks: 1
+          parameters:
+            pg_num: "8"
+        storageClass:
+          enabled: false
     cephBlockPoolsVolumeSnapshotClass:
       enabled: true
       name: ssd-replicated-3x-block

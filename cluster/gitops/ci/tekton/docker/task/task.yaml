@@ -63,7 +63,8 @@ spec:
             # A block device, formatted inside the VM: a filesystem volume
             # would be shared into kata over virtiofs, which overlay2 can't use.
             volumeMode: Block
-            storageClassName: ssd-replicated-3x
+            # Erasure coded: a disposable cache doesn't need three copies.
+            storageClassName: ci-docker-cache
             resources:
               requests:
                 # Default. The ci-docker-cache-golden Kyverno policy sets the
