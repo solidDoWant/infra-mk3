@@ -34,11 +34,11 @@ spec:
   values:
     controllers:
       promoter:
-        # One: a promotion takes several steps that resume after a restart,
-        # and a second replica would work on the same run. A promotion missed
-        # while it restarts is caught by the scan it starts with.
-        replicas: 1
-        strategy: Recreate
+        # Promotion is idempotent (snapshots are named after the PipelineRun),
+        # so both replicas can act on the same events.
+        replicas: 2
+        podDisruptionBudget:
+          minAvailable: 1
         serviceAccount:
           identifier: promoter
         containers:
@@ -106,9 +106,6 @@ spec:
               verbs:
                 - get
                 - list
-            # Reading builds' pods and volumes, and the snapshots, volumes
-            # and copy pod a promotion goes through (script/promote.sh). The
-            # copy pod runs in kata like any build pod (ci-build-pods).
             - apiGroups:
                 - ""
               resources:
@@ -117,14 +114,6 @@ spec:
               verbs:
                 - get
                 - list
-                - create
-                - delete
-            - apiGroups:
-                - ""
-              resources:
-                - pods/log
-              verbs:
-                - get
             - apiGroups:
                 - snapshot.storage.k8s.io
               resources:
@@ -132,9 +121,7 @@ spec:
               verbs:
                 - get
                 - list
-                - watch
                 - create
-                - patch
                 - delete
         # Cluster-wide: finding the project namespaces, and the PipelineRun
         # watch it triggers on. PipelineRuns only exist in project namespaces.
@@ -156,15 +143,6 @@ spec:
               verbs:
                 - list
                 - watch
-            # Choosing a cache pool: cordoned nodes, and docker cache volumes
-            # per pool as the load. OSD state is read through rbac.yaml.
-            - apiGroups:
-                - ""
-              resources:
-                - nodes
-                - persistentvolumeclaims
-              verbs:
-                - list
       bindings:
         cluster:
           type: ClusterRoleBinding
