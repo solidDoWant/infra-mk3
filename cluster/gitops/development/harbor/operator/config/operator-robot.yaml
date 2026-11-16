@@ -50,6 +50,12 @@ spec:
           action: delete
         # Every permission the CI robots get: Harbor only lets a robot create
         # robots with permissions it holds itself.
+        # DeleteWithContents (connection default): list and delete a
+        # project's repositories before deleting the project.
+        - resource: repository
+          action: list
+        - resource: repository
+          action: delete
         - resource: repository
           action: push
         - resource: repository
