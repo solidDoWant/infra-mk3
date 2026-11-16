@@ -23,9 +23,10 @@ spec:
   # Allowed so existing projects can be taken over later. Nothing sets
   # `adopt: true` yet.
   allowAdoption: true
+  # Offboarding a repository (removing its ci/project release) deletes its
+  # Harbor project together with every image in it. Note: with adoption also
+  # allowed, an admitted namespace that adopts an existing project can delete
+  # its images too.
+  allowContentDeletion: true
   defaults:
-    # Harbor refuses to delete a project that still holds images, which would
-    # leave the resource (and a ci-<repo> namespace) waiting forever. Keep
-    # Harbor objects when resources are deleted until the operator can empty
-    # projects itself.
-    deletionPolicy: Orphan
+    deletionPolicy: DeleteWithContents

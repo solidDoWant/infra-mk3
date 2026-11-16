@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed yet, so no verify block.
   url: oci://ghcr.io/soliddowant/charts/harbor-operator
   ref:
-    tag: 0.3.0
-    digest: sha256:3606084b840f9d31761666c08de839f05289ada19f33e97245bf6a83ace96f32
+    tag: 0.4.0
+    digest: sha256:56715f38ed7dd1a1f373f079a2dde87e01ecaa40b8ff0aa04d6ea2398c244f3f
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -22,7 +22,7 @@ spec:
     name: harbor-operator
   values:
     image:
-      tag: 0.3.0@sha256:2c8b54708ef33b6a7b62b7047e08ab27b031e66b44be43f29b234c8b3d3f78a6
+      tag: 0.4.0@sha256:9b43b95007e154ef03c32bb6d820ad478fac60dcd8c2b2ad3145a86836c96ac5
     # Leader election keeps one active replica; the second takes over at once.
     replicaCount: 2
     podDisruptionBudget:

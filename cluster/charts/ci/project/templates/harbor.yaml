@@ -1,8 +1,9 @@
 {{- if .Values.harbor.enabled }}
 {{- $project := .Values.harbor.projectName | default .Values.name }}
 ---
-# The repository's Harbor project. Deleting it keeps the Harbor project (the
-# connection's deletionPolicy default is Orphan).
+# The repository's Harbor project. Deleting it (uninstalling the release)
+# deletes the Harbor project and its images: the connection's default
+# deletionPolicy is DeleteWithContents.
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborProject
 metadata:
