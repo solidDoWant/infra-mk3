@@ -82,6 +82,9 @@ specs:
           - matchName: charts.releases.teleport.dev
           - matchName: go.temporal.io
           - matchName: kiali.org
+          # Harbor's own chart repository (harbor-operator's 2.14 test Harbor;
+          # the ghcr.io charts mirror doesn't carry chart line 1.18)
+          - matchName: helm.goharbor.io
 
           # Go: toolchain install, module proxy/checksum DB, and common vanity
           # import hosts (resolved via ?go-get=1 for source URLs)
