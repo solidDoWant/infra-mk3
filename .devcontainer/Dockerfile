@@ -72,7 +72,7 @@ COPY --from=ghcr.io/terraform-linters/tflint:v0.66.0@sha256:65b9944a9274c4989492
 
 # Helm
 ENV HELM_DATA_HOME=/usr/local/share/helm
-COPY --from=alpine/helm:4.3.1@sha256:e3f8d5c462d75470fbb1fce79ad5c20063657096d1f98c0fcea869e2600e2e5e /usr/bin/helm /usr/local/bin/helm
+COPY --from=alpine/helm:4.3.2@sha256:a3b9d617c0c30a6c488cebb429c4ba83995a26dc2184599af5fd408a361b2e67 /usr/bin/helm /usr/local/bin/helm
 ## Plugins
 ### helm-diff: required by `helmfile apply`
 ### Helm 4 verifies plugins by default; git-sourced installs carry no provenance
