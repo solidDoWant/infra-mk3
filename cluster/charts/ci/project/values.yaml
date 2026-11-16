@@ -33,3 +33,29 @@ egress:
   # CiliumNetworkPolicy toFQDNs selectors (matchName or matchPattern). GitHub
   # is always allowed.
   fqdns: []
+# A Harbor project for the repository's images, and a robot account that CI
+# pushes with (harbor-operator).
+harbor:
+  enabled: true
+  # The HarborConnection to use (namespace/name).
+  connection:
+    namespace: development
+    name: harbor
+  # Harbor project name. Defaults to the repository name.
+  projectName: ""
+  public: false
+  storageQuota: 20Gi
+  vulnerability:
+    preventVulnerableImages: true
+    severity: high
+    scanOnPush: true
+  # Secret in ci-<name> holding the robot's credentials as a
+  # kubernetes.io/dockerconfigjson for the registry host. Pipelines mount it
+  # to push.
+  pushSecretName: harbor-push
+  # Keep the 10 most recently pushed tags of each repository, and anything
+  # pulled in the last 30 days. Harbor cron (with seconds).
+  retention:
+    keepLatestPushed: 10
+    keepPulledWithinDays: 30
+    schedule: "0 0 3 * * *"

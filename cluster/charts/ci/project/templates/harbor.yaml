@@ -1,0 +1,68 @@
+{{- if .Values.harbor.enabled }}
+{{- $project := .Values.harbor.projectName | default .Values.name }}
+---
+# The repository's Harbor project. Deleting it (uninstalling the release)
+# deletes the Harbor project and its images: the connection's default
+# deletionPolicy is DeleteWithContents.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborProject
+metadata:
+  name: {{ $project }}
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  connectionRef:
+    namespace: {{ .Values.harbor.connection.namespace }}
+    name: {{ .Values.harbor.connection.name }}
+  public: {{ .Values.harbor.public }}
+  storageQuota: {{ .Values.harbor.storageQuota }}
+  vulnerability:
+    preventVulnerableImages: {{ .Values.harbor.vulnerability.preventVulnerableImages }}
+    severity: {{ .Values.harbor.vulnerability.severity }}
+    scanOnPush: {{ .Values.harbor.vulnerability.scanOnPush }}
+---
+# The robot CI pushes with. Its credentials land in the pushSecretName Secret.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborProjectRobot
+metadata:
+  name: ci
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  projectRef:
+    name: {{ $project }}
+  description: Pushes images from the {{ .Values.name }} CI pipelines
+  permissions:
+    - resource: repository
+      action: push
+    - resource: repository
+      action: pull
+  secret:
+    dockerConfigJSON:
+      name: {{ .Values.harbor.pushSecretName }}
+---
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborRetentionPolicy
+metadata:
+  name: {{ $project }}
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  projectRef:
+    name: {{ $project }}
+  schedule: {{ .Values.harbor.retention.schedule | quote }}
+  rules:
+    - template: latestPushedK
+      count: {{ .Values.harbor.retention.keepLatestPushed }}
+      repositories:
+        decoration: repoMatches
+        pattern: "**"
+      tags:
+        decoration: matches
+        pattern: "**"
+    - template: nDaysSinceLastPull
+      count: {{ .Values.harbor.retention.keepPulledWithinDays }}
+      repositories:
+        decoration: repoMatches
+        pattern: "**"
+      tags:
+        decoration: matches
+        pattern: "**"
+{{- end }}

@@ -15,6 +15,11 @@ metadata:
     # Selects project namespaces for the build pod admission policy and the
     # docker cache policy and promoter.
     ci.home.arpa/project: "true"
+    {{- if .Values.harbor.enabled }}
+    # Admits this namespace to the harbor-operator connection
+    # (development/harbor/operator/config/connection.yaml).
+    harbor.soliddowant.dev/ci-project: "true"
+    {{- end }}
   annotations:
     # k8tz's timezone mounts break kata pods.
     k8tz.io/inject: "false"

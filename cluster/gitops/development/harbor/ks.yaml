@@ -45,3 +45,51 @@ spec:
     - name: prometheus-crds
     - name: harbor-backend
     - name: fluent-crds
+---
+# The operator that configures Harbor (projects, robots, policies) from custom
+# resources: https://github.com/solidDoWant/harbor-operator
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name harbor-operator-app
+spec:
+  targetNamespace: development
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/development/harbor/operator/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # VMServiceScrape
+    - name: prometheus-crds
+    # GrafanaDashboard
+    - name: grafana-crds
+---
+# The connection to this cluster's Harbor. Separate so the CRDs from the chart
+# exist first.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name harbor-operator-config
+spec:
+  targetNamespace: development
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/development/harbor/operator/config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: harbor-operator-app
+    - name: harbor-app

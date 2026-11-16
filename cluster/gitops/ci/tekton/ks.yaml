@@ -152,3 +152,6 @@ spec:
     # TektonConfig to be Ready, so this is what guarantees the CRD exists;
     # tekton-operator-crds only has the operator's own CRDs.
     - name: tekton
+    # The chart's HarborProject/HarborProjectRobot/HarborRetentionPolicy need
+    # the harbor-operator CRDs and the connection that admits ci-* namespaces.
+    - name: harbor-operator-config

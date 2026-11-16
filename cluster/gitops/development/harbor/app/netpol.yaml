@@ -156,6 +156,9 @@ specs:
               app.kubernetes.io/instance: harbor
           - *job_service_selector
           - *trivy_service_selector
+          # In-cluster Harbor API clients (harbor-operator)
+          - matchLabels:
+              endpoints.netpols.home.arpa/harbor-api-client: "true"
         toPorts:
           - ports:
               - port: "8080"

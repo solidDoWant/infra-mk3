@@ -1,0 +1,58 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: harbor-operator
+spec:
+  interval: 1h
+  # Not cosign-signed yet, so no verify block.
+  url: oci://ghcr.io/soliddowant/charts/harbor-operator
+  ref:
+    tag: 0.4.0
+    digest: sha256:56715f38ed7dd1a1f373f079a2dde87e01ecaa40b8ff0aa04d6ea2398c244f3f
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-operator
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: harbor-operator
+  values:
+    image:
+      tag: 0.4.0@sha256:9b43b95007e154ef03c32bb6d820ad478fac60dcd8c2b2ad3145a86836c96ac5
+    # Leader election keeps one active replica; the second takes over at once.
+    replicaCount: 2
+    podDisruptionBudget:
+      enabled: true
+      maxUnavailable: 1
+    # Empty: every namespace, because ci-<repo> namespaces come and go with the
+    # ci/project chart.
+    watchNamespaces: []
+    metrics:
+      secure: true
+      reader:
+        enabled: true
+        subjects:
+          - namespace: monitoring
+            name: vmagent-victoria-metrics-k8s-stack
+      vmServiceScrape:
+        enabled: true
+    grafanaDashboard:
+      grafanaOperator:
+        enabled: true
+        instanceSelector:
+          matchLabels:
+            grafana.home.arpa/instance: grafana
+        # Grafana runs in monitoring; this dashboard is in development.
+        allowCrossNamespaceImport: true
+    # The chart's NetworkPolicy is plain Kubernetes; netpol.yaml is the
+    # CiliumNetworkPolicy used instead.
+    networkPolicy:
+      enabled: false
+    # Harbor core admits API clients by this label
+    # (development/harbor/app/netpol.yaml).
+    podLabels:
+      endpoints.netpols.home.arpa/harbor-api-client: "true"

@@ -1,0 +1,32 @@
+---
+# The connection every other resource uses. Signs in as the operator's own
+# system robot, whose credentials the operator writes into
+# harbor-operator-credentials (operator-robot.yaml, managed through
+# admin-connection.yaml). Until that Secret exists it reports
+# CredentialsInvalid, then turns Ready by itself.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborConnection
+metadata:
+  name: harbor
+spec:
+  # The core service directly, not the gateway. Harbor's external_url (from
+  # /systeminfo) still decides ownership identity and the registry host written
+  # into robot Secrets, so CI pushes to harbor.${SECRET_PUBLIC_DOMAIN_NAME}.
+  url: http://harbor-core.development.svc.cluster.local
+  credentialsSecretRef:
+    name: harbor-operator-credentials
+  # Projects from the ci/project chart's namespaces (ci-<repo>).
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        harbor.soliddowant.dev/ci-project: "true"
+  # Allowed so existing projects can be taken over later. Nothing sets
+  # `adopt: true` yet.
+  allowAdoption: true
+  # Offboarding a repository (removing its ci/project release) deletes its
+  # Harbor project together with every image in it. Note: with adoption also
+  # allowed, an admitted namespace that adopts an existing project can delete
+  # its images too.
+  allowContentDeletion: true
+  defaults:
+    deletionPolicy: DeleteWithContents
