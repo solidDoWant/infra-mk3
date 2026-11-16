@@ -46,21 +46,13 @@ spec:
         instanceSelector:
           matchLabels:
             grafana.home.arpa/instance: grafana
+        # Grafana runs in monitoring; this dashboard is in development.
+        allowCrossNamespaceImport: true
     # The chart's NetworkPolicy is plain Kubernetes; netpol.yaml is the
     # CiliumNetworkPolicy used instead.
     networkPolicy:
       enabled: false
-  postRenderers:
-    - kustomize:
-        patches:
-          # The chart has no pod label value. Harbor core admits API clients by
-          # this label (development/harbor/app/netpol.yaml).
-          - target:
-              group: apps
-              version: v1
-              kind: Deployment
-              name: harbor-operator
-            patch: |
-              - op: add
-                path: /spec/template/metadata/labels/endpoints.netpols.home.arpa~1harbor-api-client
-                value: "true"
+    # Harbor core admits API clients by this label
+    # (development/harbor/app/netpol.yaml).
+    podLabels:
+      endpoints.netpols.home.arpa/harbor-api-client: "true"
