@@ -1,0 +1,68 @@
+---
+# The operator's own Harbor system robot, managed through the admin connection.
+# It writes the credentials the main connection (connection.yaml) signs in with.
+# Permissions: what the operator needs for projects, CI robots and retention
+# policies; the main connection's PermissionsSufficient condition reports gaps.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborSystemRobot
+metadata:
+  name: harbor-operator
+spec:
+  connectionRef:
+    name: harbor-admin
+  description: harbor-operator's own credentials (infra-mk3 development/harbor/operator)
+  systemPermissions:
+    - resource: project
+      action: create
+    - resource: project
+      action: list
+    - resource: quota
+      action: read
+    - resource: quota
+      action: update
+    - resource: robot
+      action: create
+    - resource: robot
+      action: read
+    - resource: robot
+      action: list
+    - resource: robot
+      action: delete
+  projectPermissions:
+    - projects:
+        - "*"
+      access:
+        - resource: project
+          action: read
+        - resource: project
+          action: update
+        - resource: project
+          action: delete
+        - resource: robot
+          action: create
+        - resource: robot
+          action: read
+        - resource: robot
+          action: list
+        - resource: robot
+          action: delete
+        # Every permission the CI robots get: Harbor only lets a robot create
+        # robots with permissions it holds itself.
+        - resource: repository
+          action: push
+        - resource: repository
+          action: pull
+        - resource: tag-retention
+          action: create
+        - resource: tag-retention
+          action: read
+        - resource: tag-retention
+          action: update
+        - resource: tag-retention
+          action: delete
+  secret:
+    dockerConfigJSON:
+      enabled: false
+    opaque:
+      enabled: true
+      name: harbor-operator-credentials

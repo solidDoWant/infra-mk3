@@ -1,0 +1,15 @@
+---
+# Signs in as Harbor's built-in admin with the Secret Harbor's own chart uses.
+# Only manages the operator's robot (operator-robot.yaml). Both admission lists
+# are left empty, so only resources in this namespace can use it; keep it that
+# way, it can do anything in Harbor.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborConnection
+metadata:
+  name: harbor-admin
+spec:
+  url: http://harbor-core.development.svc.cluster.local
+  credentialsSecretRef:
+    name: harbor-admin-credentials
+    username: admin
+    passwordKey: HARBOR_ADMIN_PASSWORD

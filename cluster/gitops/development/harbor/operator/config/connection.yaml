@@ -1,8 +1,9 @@
 ---
-# The connection to this cluster's Harbor. Signs in with a Harbor system robot
-# (harbor-operator-credentials, created by hand in Harbor's UI; see
-# https://github.com/solidDoWant/harbor-operator/blob/master/docs/admin/credentials.md
-# for the permissions it needs).
+# The connection every other resource uses. Signs in as the operator's own
+# system robot, whose credentials the operator writes into
+# harbor-operator-credentials (operator-robot.yaml, managed through
+# admin-connection.yaml). Until that Secret exists it reports
+# CredentialsInvalid, then turns Ready by itself.
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborConnection
 metadata:
