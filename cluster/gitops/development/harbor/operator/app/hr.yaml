@@ -46,6 +46,9 @@ spec:
         instanceSelector:
           matchLabels:
             grafana.home.arpa/instance: grafana
+            # Helm merges this into the chart's default selector label;
+            # null removes that one.
+            dashboards: null
         # Grafana runs in monitoring; this dashboard is in development.
         allowCrossNamespaceImport: true
     # The chart's NetworkPolicy is plain Kubernetes; netpol.yaml is the
