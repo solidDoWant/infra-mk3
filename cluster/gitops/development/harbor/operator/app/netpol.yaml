@@ -1,0 +1,63 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: harbor-operator
+specs:
+  - description: operator
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: harbor-operator
+        app.kubernetes.io/instance: harbor-operator
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # kube-apiserver: the custom resources, robot Secrets, events, leader
+      # election, and the token and access reviews for the metrics endpoint
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # Harbor's API, on the core service directly (plain HTTP inside the
+      # cluster; Harbor core admits clients with the harbor-api-client label)
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: development
+              app.kubernetes.io/name: harbor
+              app.kubernetes.io/component: core
+              app.kubernetes.io/instance: harbor
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+    ingress:
+      # Metrics, scraped by vmagent with its service-account token
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+      # Kubelet health and readiness probes
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP

@@ -1,0 +1,30 @@
+---
+# The connection to this cluster's Harbor. Signs in with a Harbor system robot
+# (harbor-operator-credentials, created by hand in Harbor's UI; see
+# https://github.com/solidDoWant/harbor-operator/blob/master/docs/admin/credentials.md
+# for the permissions it needs).
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborConnection
+metadata:
+  name: harbor
+spec:
+  # The core service directly, not the gateway. Harbor's external_url (from
+  # /systeminfo) still decides ownership identity and the registry host written
+  # into robot Secrets, so CI pushes to harbor.${SECRET_PUBLIC_DOMAIN_NAME}.
+  url: http://harbor-core.development.svc.cluster.local
+  credentialsSecretRef:
+    name: harbor-operator-credentials
+  # Projects from the ci/project chart's namespaces (ci-<repo>).
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        harbor.soliddowant.dev/ci-project: "true"
+  # Allowed so existing projects can be taken over later. Nothing sets
+  # `adopt: true` yet.
+  allowAdoption: true
+  defaults:
+    # Harbor refuses to delete a project that still holds images, which would
+    # leave the resource (and a ci-<repo> namespace) waiting forever. Keep
+    # Harbor objects when resources are deleted until the operator can empty
+    # projects itself.
+    deletionPolicy: Orphan
