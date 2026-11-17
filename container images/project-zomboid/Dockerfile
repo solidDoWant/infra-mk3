@@ -77,6 +77,16 @@ RUN \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 /opt/depotdownloader/DepotDownloader \
         -app 380870 -os linux -osarch 64 ${branch_args} -dir /opt/pz-server -validate \
         -max-downloads 64 && \
+    # DepotDownloader writes every file 0644, so the launcher, its scripts and the bundled JRE's
+    # programs get their executable bits here. Without them the entrypoint fails with
+    # "./ProjectZomboid64: Permission denied".
+    chmod 0755 \
+        /opt/pz-server/ProjectZomboid64 \
+        /opt/pz-server/*.sh \
+        /opt/pz-server/jre64/bin/* \
+        /opt/pz-server/jre64/lib/jspawnhelper \
+        /opt/pz-server/jre64/lib/jexec \
+        && \
     # Steam stages and installs workshop mods under steamapps/, so that subtree belongs to the
     # server. The rest of the install stays root-owned and read-only to it. Without this the mod
     # download fails with the Steam IO error `onItemNotDownloaded result=37`.
