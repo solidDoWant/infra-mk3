@@ -163,9 +163,6 @@ spec:
       env:
         - name: DOCKER_HOST
           value: tcp://127.0.0.1:2375
-        # registrygate's pinned ClusterIP (ci/registrygate/app/hr.yaml)
-        - name: REGISTRYGATE_IP
-          value: 10.33.0.11
       volumeMounts:
         - name: registrygate-helper
           mountPath: /opt/registrygate
@@ -176,10 +173,12 @@ spec:
       script: |
         #!/bin/sh
         set -e
-        # The hosts /etc/hosts sends to registrygate, if any. The helper hands
+        # The hosts /etc/hosts sends to registrygate, if any: the other names on
+        # the line with the proxy's own Service name (the
+        # ci-registrygate-intercept Kyverno policy adds it). The helper hands
         # the pod's token only to these, and configure registers it for them
         # in the (writable) Docker config.
-        REGISTRYGATE_HOSTS=$(awk -v ip="$REGISTRYGATE_IP" '$1 == ip { for (i = 2; i <= NF; i++) { printf "%s%s", sep, $i; sep = "," } }' /etc/hosts)
+        REGISTRYGATE_HOSTS=$(awk -v marker=registrygate.ci.svc.cluster.local '{ m = 0; for (i = 2; i <= NF; i++) if ($i == marker) m = 1 } m { for (i = 2; i <= NF; i++) if ($i != marker) { printf "%s%s", sep, $i; sep = "," } }' /etc/hosts)
         if [ -n "$REGISTRYGATE_HOSTS" ]; then
           export REGISTRYGATE_HOSTS
           export PATH="/opt/registrygate:$PATH"
