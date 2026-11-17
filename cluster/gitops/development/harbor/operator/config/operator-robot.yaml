@@ -30,6 +30,18 @@ spec:
       action: list
     - resource: robot
       action: delete
+    # Registry endpoints (registries.yaml), the upstreams of the CI
+    # projects' proxy-cache projects
+    - resource: registry
+      action: create
+    - resource: registry
+      action: read
+    - resource: registry
+      action: list
+    - resource: registry
+      action: update
+    - resource: registry
+      action: delete
   projectPermissions:
     - projects:
         - "*"
