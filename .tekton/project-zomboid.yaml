@@ -12,7 +12,8 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: project-zomboid
+  # A fixed name collides with the previous run, which Pipelines-as-Code keeps.
+  generateName: project-zomboid-
   annotations:
     pipelinesascode.tekton.dev/on-cel-expression: >-
       (event == "pull_request" || event == "push") &&
