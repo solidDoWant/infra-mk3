@@ -9,8 +9,8 @@ spec:
   # Switch to the official chart once https://github.com/FairwindsOps/charts/issues/1817 lands.
   url: oci://ghcr.io/home-operations/charts-mirror/goldilocks
   ref:
-    tag: 11.2.1
-    digest: sha256:78c902c9dd6e9dccdf40ba692a094f29ebf169ecb96e267b39352ca646f4c0f8
+    tag: 11.3.0
+    digest: sha256:6eb080e81bce35d1799464b7617de3330cf503905450ec7687931c94e3baabd1
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -29,7 +29,7 @@ spec:
   values:
     image:
       repository: us-docker.pkg.dev/fairwinds-ops/oss/goldilocks
-      tag: v4.16.3@sha256:b5eb0b938d6c53ebb3eb5aa007d331f5eaf726770c443d19c765cbe56e24b9d2
+      tag: v4.16.4@sha256:ff73581db746ef005df77fc2c28c49635a39d36bb32f0a3ede717bc7904e6e2d
     controller:
       flags:
         on-by-default: true
