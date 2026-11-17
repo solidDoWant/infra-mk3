@@ -100,6 +100,101 @@ contents: |
     kubelet_root_dir = "/var/lib/kubelet"
     pod_resource_api_sock = ""
 ---
+# The same config for the kata-ci runtime (CI build pods), with one change:
+# block devices use the host page cache. Keep it identical to the file above
+# otherwise; carry upstream changes over to both.
+apiVersion: v1alpha1
+kind: EtcFileConfig
+name: kata-containers/configuration-ci.toml
+mode: 0o644
+contents: |
+    [hypervisor.clh]
+    path = "/usr/local/bin/cloud-hypervisor"
+    kernel = "/usr/local/share/kata-containers/vmlinux.container"
+    image = "/usr/local/share/kata-containers/kata-containers.img"
+    rootfs_type = "ext4"
+    rootless = false
+    disable_selinux = false
+    disable_guest_selinux = true
+    enable_annotations = ["enable_iommu", "kernel_params", "kernel_verity_params"]
+    valid_hypervisor_paths = ["/usr/local/bin/cloud-hypervisor"]
+    kernel_params = "cgroup_no_v1=all systemd.unified_cgroup_hierarchy=1"
+    default_vcpus = 1
+    default_maxvcpus = 0
+    # Changed from 2048. The VM boots with this plus the pod's container
+    # limits, and the RuntimeClass overhead must cover it (the host OOM-kills
+    # the hypervisor otherwise). 256 is kata's minimum: smaller values fall
+    # back to 2048 silently (MinHypervisorMemory).
+    default_memory = 256
+    memory_slots = 10
+    default_maxmemory = 0
+    disable_block_device_use = true
+    shared_fs = "virtio-fs"
+    virtio_fs_daemon = "/usr/local/libexec/virtiofsd"
+    valid_virtio_fs_daemon_paths = ["/usr/local/libexec/virtiofsd"]
+    virtio_fs_cache_size = 0
+    virtio_fs_queue_size = 1024
+    virtio_fs_extra_args = ["--thread-pool-size=1", "--announce-submounts"]
+    virtio_fs_cache = "auto"
+    block_device_driver = "virtio-blk"
+    # Changed for CI: block PVCs go through the host page cache (no direct
+    # I/O), so a write completes once it's in host memory instead of after a
+    # Ceph round trip. With the dind sidecar's nobarrier mount sending no
+    # flushes, Docker's per-file fsyncs stop costing a round trip each
+    # (benchmarked 2026-11-17: ~6 MB/s for an image export on erasure-coded
+    # RBD with direct I/O). The page cache counts against the pod's memory
+    # limit, which the kata-ci RuntimeClass overhead allows for. Safe only
+    # because CI block volumes are disposable: a node crash can lose writes
+    # that haven't reached Ceph.
+    block_device_cache_set = true
+    block_device_cache_direct = false
+    reclaim_guest_freed_memory = false
+    enable_hugepages = false
+    disable_seccomp = false
+    enable_iommu = false
+    enable_debug = false
+    hypervisor_loglevel = 1
+    disable_image_nvdimm = true
+    hot_plug_vfio = "no-port"
+    cold_plug_vfio = "no-port"
+    guest_hook_path = ""
+    net_rate_limiter_bw_max_rate = 0
+    net_rate_limiter_bw_one_time_burst = 0
+    net_rate_limiter_ops_max_rate = 0
+    net_rate_limiter_ops_one_time_burst = 0
+    disk_rate_limiter_bw_max_rate = 0
+    disk_rate_limiter_bw_one_time_burst = 0
+    disk_rate_limiter_ops_max_rate = 0
+    disk_rate_limiter_ops_one_time_burst = 0
+    [agent.kata]
+    enable_debug = false
+    enable_tracing = false
+    debug_console_enabled = false
+    dial_timeout = 45
+    cdh_api_timeout = 50
+    [runtime]
+    enable_debug = false
+    internetworking_model = "tcfilter"
+    disable_guest_seccomp = true
+    guest_selinux_label = ""
+    enable_tracing = false
+    jaeger_endpoint = ""
+    jaeger_user = ""
+    jaeger_password = ""
+    disable_new_netns = false
+    sandbox_cgroup_only = false
+    static_sandbox_resource_mgmt = false
+    sandbox_bind_mounts = []
+    vfio_mode = "guest-kernel"
+    disable_guest_empty_dir = false
+    emptydir_mode = "shared-fs"
+    experimental = []
+    enable_pprof = false
+    create_container_timeout = 60
+    dan_conf = "/run/kata-containers/dans"
+    kubelet_root_dir = "/var/lib/kubelet"
+    pod_resource_api_sock = ""
+---
 # Points containerd's kata runtime at the config above instead of the
 # extension's. Talos restarts CRI when this changes; running kata VMs keep their
 # shims and config, and new ones pick up the change.
@@ -109,3 +204,11 @@ name: 20-kata-config
 content: |-
   [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata.options]
     ConfigPath = "/etc/kata-containers/configuration.toml"
+  # kata-ci: the kata extension's runtime definition (10-kata-containers.part),
+  # with the CI config.
+  [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata-ci]
+    runtime_type = "io.containerd.kata.v2"
+    privileged_without_host_devices = true
+    pod_annotations = ["io.katacontainers.*"]
+  [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata-ci.options]
+    ConfigPath = "/etc/kata-containers/configuration-ci.toml"

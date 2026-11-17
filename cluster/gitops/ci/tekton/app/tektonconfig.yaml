@@ -54,10 +54,14 @@ spec:
     # ci/project chart), which has no API access and is what registrygate's
     # policies name. A run can still pick another.
     default-service-account: ci-build
-    # Every build runs in a VM. The pod template also takes `env`, applied to
-    # every step container (a run's own podTemplate wins for the same name).
+    # Every build runs in a VM, with the CI kata runtime: block volumes (the
+    # docker Task's cache) go through the host page cache, so Docker's synced
+    # writes don't each wait for Ceph
+    # (system-controllers/runtimes/kata-containers/ci-runtime.yaml). The pod
+    # template also takes `env`, applied to every step container (a run's own
+    # podTemplate wins for the same name).
     default-pod-template: |
-      runtimeClassName: kata
+      runtimeClassName: kata-ci
     # No fetching Tasks or Pipelines from outside a repo's own .tekton/
     # directory. The cluster resolver only reads objects already in the
     # cluster. The http resolver has no field here; it's turned off in

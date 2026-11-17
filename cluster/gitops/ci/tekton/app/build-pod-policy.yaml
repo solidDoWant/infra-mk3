@@ -36,8 +36,8 @@ spec:
           r.kind == 'StatefulSet' && r.name.startsWith('affinity-assistant-'))
   validations:
     - expression: >-
-        has(object.spec.runtimeClassName) && object.spec.runtimeClassName == 'kata'
-      message: build pods must run in kata (runtimeClassName kata)
+        has(object.spec.runtimeClassName) && object.spec.runtimeClassName in ['kata', 'kata-ci']
+      message: build pods must run in kata (runtimeClassName kata or kata-ci)
     - expression: >-
         !(has(object.spec.hostNetwork) && object.spec.hostNetwork) &&
         !(has(object.spec.hostPID) && object.spec.hostPID) &&

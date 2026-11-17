@@ -17,7 +17,11 @@ else
   echo "docker cache: warm volume"
 fi
 mkdir -p /var/lib/docker
-mount -t ext4 "$DISK" /var/lib/docker
+# nobarrier: Docker's fsyncs send no flushes to the device. With the kata-ci
+# runtime's page-cached block devices, a synced write then completes in host
+# memory instead of waiting for Ceph. The volume is disposable (a failed build
+# is thrown away), so durability is not needed.
+mount -t ext4 -o nobarrier "$DISK" /var/lib/docker
 
 # registrygate: trust its CA for exactly the registry hosts /etc/hosts sends
 # to it, the other names on the line with its Service name (added by the

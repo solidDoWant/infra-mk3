@@ -1,0 +1,22 @@
+---
+# kata with the CI config (talos/patches/all/27-kata.yaml,
+# configuration-ci.toml): block PVCs go through the host page cache, so CI
+# builds' synced writes don't each wait for Ceph. Tekton's default pod template
+# (ci/tekton/app/tektonconfig.yaml) runs every CI build pod with it.
+kind: RuntimeClass
+apiVersion: node.k8s.io/v1
+metadata:
+  name: kata-ci
+handler: kata-ci
+overhead:
+  podFixed:
+    # The kata RuntimeClass's 288Mi (base VM plus hypervisor; see
+    # default-runtime.yaml), plus 1Gi for the host page cache that block-volume
+    # writes now go through, which is charged to the pod's cgroup on the host.
+    # Dirty pages are throttled against the pod's limit rather than OOM-killed,
+    # so this sets how much a build can write ahead of Ceph.
+    memory: 1312Mi
+    cpu: 250m
+scheduling:
+  nodeSelector:
+    katacontainers.io/kata-runtime: "true"
