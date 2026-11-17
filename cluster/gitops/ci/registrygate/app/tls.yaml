@@ -6,9 +6,14 @@
 # permit internal names.
 #
 # Adding an intercepted host means adding it to permitted.dnsDomains here and
-# to the serving certificate below: cert-manager then reissues both, and the
-# registrygate-ca Kyverno policy (config/kyverno.yaml) copies the new CA to
-# the client namespaces.
+# to the serving certificate below. cert-manager reissues the serving
+# certificate for its new name, but not the CA: a nameConstraints change
+# doesn't trigger a reissue. So after the change is applied:
+#   1. kubectl -n ci delete secret registrygate-ca (a new CA, new key)
+#   2. kubectl -n ci delete secret registrygate-tls (re-signed by it)
+#   3. Touch each client namespace (e.g. add and remove an annotation) so the
+#      registrygate-ca Kyverno policy (config/kyverno.yaml) copies the new CA
+#      now rather than at its next sync.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
