@@ -325,6 +325,11 @@
       changelogUrl: "https://github.com/envoyproxy/envoy/releases",
     },
     {
+      description: "docker-library/docker has no releases; -cli/-dind tags don't match moby's docker-vX.Y.Z releases",
+      matchPackageNames: ["mirror.gcr.io/library/docker"],
+      changelogUrl: "https://github.com/moby/moby/releases",
+    },
+    {
       matchPackageNames: ["public.ecr.aws/docker/library/python"],
       changelogUrl: "https://docs.python.org/3/whatsnew/changelog.html",
     },
