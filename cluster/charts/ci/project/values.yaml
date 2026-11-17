@@ -10,11 +10,11 @@ concurrencyLimit: 2
 defaultBranch: master
 # The shared docker Task (ci/tekton/docker).
 docker:
-  # Size of each build's Docker cache volume, 60% of which Docker keeps for
-  # the build cache. Raising it applies to the next build. Lowering it applies
-  # once the golden cache has been replaced by a build at the new size (a clone
-  # can't be smaller than its snapshot).
-  cacheSize: 20Gi
+  # Size of each build's local Docker cache volume (the golden cache clone),
+  # 60% of which Docker keeps for the build cache. Raising it applies to the
+  # next build. Lowering it applies once the golden cache has been replaced by
+  # a build at the new size (a clone can't be smaller than its snapshot).
+  cacheVolumeSize: 20Gi
   registrygate:
     # Send builds' pulls (and pushes) of the registries registrygate stands
     # in for (ghcr.io, Harbor, ...) through the proxy, authenticated with the
@@ -34,10 +34,13 @@ docker:
     # A Harbor proxy-cache project per upstream for this project's pulls,
     # each its own quota: upstream is the UpstreamRegistry (in ci),
     # harborRegistry the HarborRegistry (development/harbor/operator/config).
+    # These are Harbor projects of their own, separate from (and not needing)
+    # the harbor section below. An empty list makes none.
     mirrors:
       - upstream: ghcr
         harborRegistry: ghcr
-    cache:
+    # The mirror caches' Harbor projects (each mirror gets this quota).
+    mirrorCache:
       storageQuota: 20Gi
       retention:
         # Drop cached images not pulled for this many days. Harbor cron
