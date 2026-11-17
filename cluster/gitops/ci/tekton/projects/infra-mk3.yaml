@@ -21,3 +21,10 @@ spec:
     docker:
       registrygate:
         harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+        # This repository's pipelines publish images for the whole account,
+        # so it may push any of them. Other projects keep the default (their
+        # own packages only).
+        ghcrPush:
+          enabled: true
+          repositories:
+            - soliddowant/**

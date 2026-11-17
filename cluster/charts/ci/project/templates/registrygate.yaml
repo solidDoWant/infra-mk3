@@ -166,6 +166,20 @@ spec:
       actions:
         - pull
     {{- end }}
+    {{- if $rg.ghcrPush.enabled }}
+    # Pushes to ghcr.io with the account's PAT (ci/ghcr-push)
+    - name: ghcr-push
+      credentialRef:
+        namespace: {{ $admin }}
+        name: ghcr-push
+      repositories:
+        {{- range ($rg.ghcrPush.repositories | default (list (printf "soliddowant/%s" (lower $.Values.name)) (printf "soliddowant/%s/**" (lower $.Values.name)))) }}
+        - {{ . | quote }}
+        {{- end }}
+      actions:
+        - pull
+        - push
+    {{- end }}
     {{- if .Values.harbor.enabled }}
     {{- $project := .Values.harbor.projectName | default .Values.name }}
     # The project's own Harbor project
