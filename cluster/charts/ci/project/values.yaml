@@ -8,11 +8,18 @@ concurrencyLimit: 2
 # The repository's default branch. Successful push builds on it refresh the
 # golden Docker cache (ci/tekton/docker/promoter).
 defaultBranch: master
-# Size of each docker Task build's Docker cache volume, 60% of which Docker
-# keeps for the build cache. Raising it applies to the next build. Lowering it
-# applies once the golden cache has been replaced by a build at the new size (a
-# clone can't be smaller than its snapshot).
-dockerCacheSize: 20Gi
+# The shared docker Task (ci/tekton/docker).
+docker:
+  # Size of each build's Docker cache volume, 60% of which Docker keeps for
+  # the build cache. Raising it applies to the next build. Lowering it applies
+  # once the golden cache has been replaced by a build at the new size (a clone
+  # can't be smaller than its snapshot).
+  cacheSize: 20Gi
+  registrygate:
+    # Send builds' pulls of the registries registrygate stands in for
+    # (ghcr.io, ...) through the proxy, authenticated with the build's
+    # ServiceAccount token (ci/registrygate).
+    intercept: false
 # Defaults for build containers that set no resources of their own (Tekton
 # applies these to every step). The memory request equals the limit.
 defaultResources:
@@ -33,11 +40,6 @@ egress:
   # CiliumNetworkPolicy toFQDNs selectors (matchName or matchPattern). GitHub
   # is always allowed.
   fqdns: []
-registrygate:
-  # Send docker Task builds' pulls of the registries registrygate stands in
-  # for (ghcr.io, ...) through the proxy, authenticated with the build's
-  # ServiceAccount token (ci/registrygate).
-  intercept: false
 # A Harbor project for the repository's images, and a robot account that CI
 # pushes with (harbor-operator).
 harbor:

@@ -43,7 +43,7 @@ spec:
 # Sends the registry hosts registrygate stands in for to the proxy, in docker
 # Task build pods (labelled by the Task) of project namespaces that opt in with
 # registrygate.home.arpa/intercept=true (the ci/project chart's
-# registrygate.intercept value). The Task's step turns on the credential helper
+# docker.registrygate.intercept value). The Task's step turns on the credential helper
 # only when these entries are in /etc/hosts, so without this policy (or with
 # Kyverno down) builds go straight to the registries, as before.
 apiVersion: kyverno.io/v1

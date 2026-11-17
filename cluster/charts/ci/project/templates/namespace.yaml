@@ -15,7 +15,7 @@ metadata:
     # Selects project namespaces for the build pod admission policy and the
     # docker cache policy and promoter.
     ci.home.arpa/project: "true"
-    {{- if .Values.registrygate.intercept }}
+    {{- if .Values.docker.registrygate.intercept }}
     # docker Task builds go through registrygate for the registries it stands
     # in for (ci/registrygate/config/kyverno.yaml).
     registrygate.home.arpa/intercept: "true"
@@ -30,4 +30,4 @@ metadata:
     k8tz.io/inject: "false"
     ci.home.arpa/default-branch: {{ .Values.defaultBranch | quote }}
     # Read by the ci-docker-cache-golden Kyverno policy.
-    ci.home.arpa/docker-cache-size: {{ .Values.dockerCacheSize | quote }}
+    ci.home.arpa/docker-cache-size: {{ .Values.docker.cacheSize | quote }}
