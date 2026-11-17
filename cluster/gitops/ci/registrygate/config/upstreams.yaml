@@ -32,7 +32,7 @@ spec:
 ---
 # The cluster's Harbor, under the name builds use for it. Builds push to (and
 # pull from) their own Harbor project through the proxy with their
-# ServiceAccount token, with the project's CI robot behind an
+# ServiceAccount token, with the project's push robot behind an
 # UpstreamCredential in the project namespace (cluster/charts/ci/project,
 # registrygate.yaml). The proxy reaches Harbor over
 # core's Service. Harbor names itself by its externalURL, which is this same

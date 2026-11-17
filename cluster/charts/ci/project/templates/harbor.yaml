@@ -27,7 +27,7 @@ spec:
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborProjectRobot
 metadata:
-  name: ci
+  name: push
   namespace: {{ include "ci-project.namespace" . }}
 spec:
   projectRef:

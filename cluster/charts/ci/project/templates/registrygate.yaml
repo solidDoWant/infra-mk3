@@ -87,7 +87,7 @@ spec:
 {{- $project := .Values.harbor.projectName | default .Values.name }}
 ---
 # Pushes to (and pulls from) the project's Harbor project, with the project's
-# CI robot (harbor.yaml).
+# push robot (harbor.yaml).
 apiVersion: registrygate.soliddowant.dev/v1alpha1
 kind: UpstreamCredential
 metadata:
