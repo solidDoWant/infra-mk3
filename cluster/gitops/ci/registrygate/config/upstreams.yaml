@@ -19,6 +19,40 @@ spec:
   # without credentials first, retry with the pod's token and the proxy knows
   # which project is pulling.
   anonymousPulls: Challenge
+  # The CI projects' Harbor proxy-cache projects, reached over Harbor core's
+  # Service (plain HTTP inside the cluster, so the mirror robots' credentials
+  # aren't encrypted in transit; harbor-operator already talks to Harbor the
+  # same way).
+  allowedMirrorURLs:
+    - http://harbor-core.development.svc.cluster.local
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        registrygate.home.arpa/client: "true"
+---
+# The cluster's Harbor, under the name builds use for it. Builds push to (and
+# pull from) their own Harbor project through the proxy with their
+# ServiceAccount token; the robot lives in ci (cluster/charts/ci/project,
+# registrygate.yaml), so build pods never see it. The proxy reaches Harbor over
+# core's Service. Harbor names itself by its externalURL, which is this same
+# host, in token realms and upload Locations; registrygate treats its own hosts
+# as aliases, so those go to the Service too.
+#
+# Intercepting this host means builds can't use Harbor's own API
+# (/api/v2.0/...): the proxy serves only the registry API.
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: UpstreamRegistry
+metadata:
+  namespace: ci
+  name: harbor
+spec:
+  hosts:
+    - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+  url: http://harbor-core.development.svc.cluster.local
+  tls:
+    secretRef:
+      name: registrygate-tls
+  anonymousPulls: Challenge
   allowedNamespaces:
     selector:
       matchLabels:

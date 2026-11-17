@@ -1,0 +1,179 @@
+{{- $rg := .Values.docker.registrygate }}
+{{- if $rg.intercept }}
+{{- $ns := include "ci-project.namespace" . }}
+{{- $admin := .Release.Namespace }}
+{{- $harborHost := required "docker.registrygate.harborHost is required (set for every project by the ci-projects Kustomization)" $rg.harborHost }}
+{{- range $rg.mirrors }}
+{{- $cache := printf "%s-%s-cache" $.Values.name .upstream }}
+---
+# The project's own pull-through cache of {{ .upstream }} in Harbor, so its
+# cached images count against its own quota and retention. Public content
+# only: the HarborRegistry has no upstream credential.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborProject
+metadata:
+  name: {{ $cache }}
+  namespace: {{ $ns }}
+spec:
+  connectionRef:
+    namespace: {{ $.Values.harbor.connection.namespace }}
+    name: {{ $.Values.harbor.connection.name }}
+  public: false
+  storageQuota: {{ $rg.cache.storageQuota }}
+  proxyCache:
+    registryRef:
+      namespace: {{ $.Values.harbor.connection.namespace }}
+      name: {{ .harborRegistry }}
+  # The pull robot lives in the admin namespace, out of the builds' reach.
+  allowedNamespaces:
+    names:
+      - {{ $admin }}
+---
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborRetentionPolicy
+metadata:
+  name: {{ $cache }}
+  namespace: {{ $ns }}
+spec:
+  projectRef:
+    name: {{ $cache }}
+  schedule: {{ $rg.cache.retention.schedule | quote }}
+  rules:
+    - template: nDaysSinceLastPull
+      count: {{ $rg.cache.retention.keepPulledWithinDays }}
+      repositories:
+        decoration: repoMatches
+        pattern: "**"
+      tags:
+        decoration: matches
+        pattern: "**"
+---
+# registrygate's credential for the cache. In the admin namespace, so build
+# pods can't mount it.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborProjectRobot
+metadata:
+  name: {{ $cache }}
+  namespace: {{ $admin }}
+spec:
+  projectRef:
+    namespace: {{ $ns }}
+    name: {{ $cache }}
+  description: registrygate pulls through the {{ $.Values.name }} {{ .upstream }} cache
+  permissions:
+    - resource: repository
+      action: pull
+  secret:
+    dockerConfigJSON:
+      enabled: false
+    opaque:
+      enabled: true
+---
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: RegistryMirror
+metadata:
+  name: {{ $.Values.name }}-{{ .upstream }}
+  namespace: {{ $admin }}
+spec:
+  upstreamRef:
+    name: {{ .upstream }}
+  url: {{ $rg.harborURL }}
+  pathPrefix: {{ $cache }}
+  secretRef:
+    name: {{ $cache }}-credentials
+  # Harbor names itself by its externalURL in token realms and Locations.
+  aliasHosts:
+    - {{ $harborHost }}
+  fallbackToUpstream: true
+  allowedNamespaces:
+    names:
+      - {{ $ns }}
+{{- end }}
+{{- if .Values.harbor.enabled }}
+{{- $project := .Values.harbor.projectName | default .Values.name }}
+---
+# The robot builds push to the project's Harbor project with, through
+# registrygate. In the admin namespace, so build pods never see it.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborProjectRobot
+metadata:
+  name: {{ .Values.name }}-harbor
+  namespace: {{ $admin }}
+spec:
+  projectRef:
+    namespace: {{ $ns }}
+    name: {{ $project }}
+  description: registrygate pushes and pulls for the {{ .Values.name }} CI pipelines
+  permissions:
+    - resource: repository
+      action: push
+    - resource: repository
+      action: pull
+    - resource: repository
+      action: delete
+  secret:
+    dockerConfigJSON:
+      enabled: false
+    opaque:
+      enabled: true
+---
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: UpstreamCredential
+metadata:
+  name: {{ .Values.name }}-harbor
+  namespace: {{ $admin }}
+spec:
+  upstreamRef:
+    name: harbor
+  secretRef:
+    name: {{ .Values.name }}-harbor-credentials
+  ceiling:
+    - repositories:
+        - {{ $project }}
+        - {{ $project }}/**
+      actions:
+        - pull
+        - push
+        - delete
+  allowedNamespaces:
+    names:
+      - {{ $ns }}
+{{- end }}
+---
+# What the project's builds (the ci-build ServiceAccount) get from registrygate.
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: RegistryAccessPolicy
+metadata:
+  name: builds
+  namespace: {{ $ns }}
+spec:
+  serviceAccounts:
+    - ci-build
+  rules:
+    {{- range $rg.mirrors }}
+    # Pulls of public {{ .upstream }} images, through the project's cache
+    - name: {{ .upstream }}-mirror
+      mirrorRef:
+        namespace: {{ $admin }}
+        name: {{ $.Values.name }}-{{ .upstream }}
+      repositories:
+        - "**"
+      actions:
+        - pull
+    {{- end }}
+    {{- if .Values.harbor.enabled }}
+    {{- $project := .Values.harbor.projectName | default .Values.name }}
+    # The project's own Harbor project
+    - name: harbor-project
+      credentialRef:
+        namespace: {{ $admin }}
+        name: {{ .Values.name }}-harbor
+      repositories:
+        - {{ $project }}
+        - {{ $project }}/**
+      actions:
+        - pull
+        - push
+        - delete
+    {{- end }}
+{{- end }}

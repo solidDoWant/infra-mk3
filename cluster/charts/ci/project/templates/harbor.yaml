@@ -19,8 +19,17 @@ spec:
     preventVulnerableImages: {{ .Values.harbor.vulnerability.preventVulnerableImages }}
     severity: {{ .Values.harbor.vulnerability.severity }}
     scanOnPush: {{ .Values.harbor.vulnerability.scanOnPush }}
+  {{- if .Values.docker.registrygate.intercept }}
+  # registrygate's push robot lives in the admin namespace (registrygate.yaml).
+  allowedNamespaces:
+    names:
+      - {{ .Release.Namespace }}
+  {{- end }}
+{{- if not .Values.docker.registrygate.intercept }}
 ---
 # The robot CI pushes with. Its credentials land in the pushSecretName Secret.
+# With registrygate, builds push through the proxy instead, and this robot
+# (whose Secret build pods could read) isn't made (registrygate.yaml).
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborProjectRobot
 metadata:
@@ -38,6 +47,7 @@ spec:
   secret:
     dockerConfigJSON:
       name: {{ .Values.harbor.pushSecretName }}
+{{- end }}
 ---
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborRetentionPolicy

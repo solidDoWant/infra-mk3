@@ -103,15 +103,13 @@ spec:
               audience: registrygate
               expirationSeconds: 3600
               path: token
-    # registrygate's CA, copied into each project namespace by the
-    # registrygate-ca Kyverno policy. One directory per intercepted host.
+    # registrygate's CA, copied into each client namespace by the
+    # registrygate-ca Kyverno policy. The dind script installs it for each
+    # intercepted host.
     - name: registrygate-ca
       configMap:
         name: registrygate-ca
         optional: true
-        items:
-          - key: ca.crt
-            path: ghcr.io/ca.crt
   sidecars:
     - name: dind
       image: mirror.gcr.io/library/docker:29.9.3-dind@sha256:7bf70dcb85c822e3fa6f2d332143e474b99147b9d7b39102b0cfe8b04a7dd61b
@@ -128,7 +126,7 @@ spec:
           mountPath: /opt/e2fsprogs
           readOnly: true
         - name: registrygate-ca
-          mountPath: /etc/docker/certs.d
+          mountPath: /etc/registrygate
           readOnly: true
       computeResources:
         requests:
