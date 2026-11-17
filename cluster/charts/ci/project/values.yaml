@@ -21,8 +21,8 @@ docker:
     # build's ci-build ServiceAccount token (ci/registrygate). Turns on the
     # caches, mirrors and Harbor push credential below.
     intercept: false
-    # Harbor's host name as builds use it. Set for every project by the
-    # ci-projects Kustomization (ci/tekton/ks.yaml), from cluster variables.
+    # Harbor's host name as builds use it. Required with intercept; set it in
+    # the project's HelmRelease: harbor.${SECRET_PUBLIC_DOMAIN_NAME}.
     harborHost: ""
     # Harbor core's Service, which registrygate reaches Harbor through.
     harborURL: http://harbor-core.development.svc.cluster.local

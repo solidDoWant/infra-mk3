@@ -3,7 +3,7 @@
 {{- $ns := include "ci-project.namespace" . }}
 {{- $admin := .Release.Namespace }}
 {{- $secrets := list }}
-{{- $harborHost := required "docker.registrygate.harborHost is required (set for every project by the ci-projects Kustomization)" $rg.harborHost }}
+{{- $harborHost := required "docker.registrygate.harborHost is required with intercept: set it in the project's HelmRelease to harbor.${SECRET_PUBLIC_DOMAIN_NAME}" $rg.harborHost }}
 {{- range $rg.mirrors }}
 {{- $cache := printf "%s-%s-cache" $.Values.name .upstream }}
 ---
