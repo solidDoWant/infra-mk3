@@ -53,7 +53,7 @@ releases:
     atomic: true
     namespace: networking
     chart: coredns/coredns
-    version: 1.50.7
+    version: 1.50.8
     values:
       - ../gitops/networking/coredns/kube-dns/helm-bootstrap-values.yaml
     needs:
