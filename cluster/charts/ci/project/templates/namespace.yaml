@@ -20,9 +20,10 @@ metadata:
     # in for (ci/registrygate/config/kyverno.yaml).
     registrygate.home.arpa/client: "true"
     {{- end }}
-    {{- if .Values.harbor.enabled }}
+    {{- if or .Values.harbor.enabled (and .Values.docker.registrygate.intercept .Values.docker.registrygate.mirrors) }}
     # Admits this namespace to the harbor-operator connection
-    # (development/harbor/operator/config/connection.yaml).
+    # (development/harbor/operator/config/connection.yaml), for the project's
+    # Harbor project or its registrygate mirror caches.
     harbor.soliddowant.dev/ci-project: "true"
     {{- end }}
   annotations:
@@ -30,4 +31,4 @@ metadata:
     k8tz.io/inject: "false"
     ci.home.arpa/default-branch: {{ .Values.defaultBranch | quote }}
     # Read by the ci-docker-cache-golden Kyverno policy.
-    ci.home.arpa/docker-cache-size: {{ .Values.docker.cacheSize | quote }}
+    ci.home.arpa/docker-cache-size: {{ .Values.docker.cacheVolumeSize | quote }}

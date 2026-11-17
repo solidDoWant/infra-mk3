@@ -8,7 +8,7 @@
 #
 # Also sizes the volume from the project namespace's
 # ci.home.arpa/docker-cache-size annotation (the project chart's
-# docker.cacheSize), or the Task's default without one. A clone can't be
+# docker.cacheVolumeSize), or the Task's default without one. A clone can't be
 # smaller than its snapshot, so after the size is lowered builds keep the
 # golden snapshot's size until a snapshot of the new size replaces it.
 apiVersion: kyverno.io/v1

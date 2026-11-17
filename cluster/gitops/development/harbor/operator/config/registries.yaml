@@ -17,6 +17,9 @@ spec:
   type: github-ghcr
   url: https://ghcr.io
   description: ghcr.io, anonymous (for registrygate's mirrors)
+  # The first create's status write conflicted, so the operator lost its
+  # ownership marker and saw its own endpoint as someone else's.
+  adopt: true
   allowedNamespaces:
     selector:
       matchLabels:

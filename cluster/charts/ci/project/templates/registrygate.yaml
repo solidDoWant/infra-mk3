@@ -20,7 +20,7 @@ spec:
     namespace: {{ $.Values.harbor.connection.namespace }}
     name: {{ $.Values.harbor.connection.name }}
   public: false
-  storageQuota: {{ $rg.cache.storageQuota }}
+  storageQuota: {{ $rg.mirrorCache.storageQuota }}
   proxyCache:
     registryRef:
       namespace: {{ $.Values.harbor.connection.namespace }}
@@ -34,10 +34,10 @@ metadata:
 spec:
   projectRef:
     name: {{ $cache }}
-  schedule: {{ $rg.cache.retention.schedule | quote }}
+  schedule: {{ $rg.mirrorCache.retention.schedule | quote }}
   rules:
     - template: nDaysSinceLastPull
-      count: {{ $rg.cache.retention.keepPulledWithinDays }}
+      count: {{ $rg.mirrorCache.retention.keepPulledWithinDays }}
       repositories:
         decoration: repoMatches
         pattern: "**"
