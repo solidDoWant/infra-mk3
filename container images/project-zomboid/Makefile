@@ -24,7 +24,11 @@ CONTAINER_REPOSITORY = $(CONTAINER_REGISTRY)/project-zomboid
 IMAGE = $(CONTAINER_REPOSITORY):$(VERSION)
 
 PUSH ?= false
-PUSH_ARG = $(if $(findstring t,$(PUSH)),--push,--load)
+# zstd rather than BuildKit's default gzip, which compresses on a single core: in CI that took
+# ~3 minutes for the ~7 GB game layer, and zstd under one. Pulling zstd layers needs containerd
+# 1.5+ or Docker 23+. force-compression recompresses layers that are cached as gzip.
+LAYER_COMPRESSION ?= zstd
+OUTPUT_ARG = --output type=image,name=$(IMAGE),push=$(if $(findstring t,$(PUSH)),true,false),compression=$(LAYER_COMPRESSION),force-compression=true
 
 comma := ,
 DOCKER_ARGS = --build-arg PZ_BRANCH="$(PZ_BRANCH)" \
@@ -43,7 +47,7 @@ all: image
 
 .PHONY: image
 image: Dockerfile entrypoint.sh	## Build the server image.
-	docker buildx build -t "$(IMAGE)" $(PUSH_ARG) $(DOCKER_ARGS) $(EXTRA_DOCKER_ARGS) "$(PROJECT_DIR)"
+	docker buildx build $(OUTPUT_ARG) $(DOCKER_ARGS) $(EXTRA_DOCKER_ARGS) "$(PROJECT_DIR)"
 
 .PHONY: push
 push:	## Build and push the server image. Only ever to a private registry.
