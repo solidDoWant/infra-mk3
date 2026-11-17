@@ -1,0 +1,99 @@
+---
+# The CA that signs the proxy's certificate for the registry hosts it stands in
+# for. Only dockerd in docker Task builds trusts it, through
+# /etc/docker/certs.d/<host>/ca.crt, and its name constraints limit it to
+# exactly those hosts. It can't come from root-ca, whose constraints only
+# permit internal names.
+#
+# Adding an intercepted host means adding it to permitted.dnsDomains here and
+# to the serving certificate below: cert-manager then reissues both, and the
+# registrygate-ca Kyverno policy (config/kyverno.yaml) copies the new CA to
+# the client namespaces.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: registrygate-ca
+spec:
+  isCA: true
+  commonName: infra-mk3 registrygate Certificate Authority
+  subject:
+    organizations:
+      - infra-mk3
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    permitted:
+      dnsDomains:
+        - ghcr.io
+  duration: 87660h # 10 years
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: registrygate-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: registrygate-ca
+spec:
+  ca:
+    secretName: registrygate-ca
+---
+# The proxy's serving certificate, referenced by every UpstreamRegistry
+# (config/upstreams.yaml). Its names must cover every intercepted host.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: registrygate-serving
+spec:
+  commonName: ghcr.io
+  dnsNames:
+    - ghcr.io
+  usages:
+    - server auth
+  duration: 2160h # 90 days
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: registrygate-ca
+    kind: Issuer
+    group: cert-manager.io
+  secretName: registrygate-tls
+---
+# Approve only that certificate from the registrygate CA.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: registrygate-ca-serving-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: registrygate-ca
+    namespace:
+      matchNames:
+        - ci
+  allowed:
+    commonName:
+      required: true
+      value: ghcr.io
+    dnsNames:
+      required: true
+      values:
+        - ghcr.io
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 2160h

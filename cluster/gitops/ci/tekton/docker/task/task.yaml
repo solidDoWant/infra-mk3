@@ -26,11 +26,22 @@
 # images of the last successful default-branch push build. Nothing a build
 # writes is kept, except that the cache promoter (../promoter) snapshots the
 # volume of successful default-branch push builds as the next golden cache.
+#
+# registrygate (ci/registrygate): in projects that intercept registries, the
+# ci-registrygate-intercept Kyverno policy maps the registry hosts (ghcr.io,
+# ...) to the proxy in /etc/hosts. dockerd trusts the proxy's CA for exactly
+# those hosts (registrygate-ca, in certs.d), and the step's Docker CLI gets the
+# pod's ServiceAccount token for them from the credential helper. Elsewhere
+# the step finds no such entries and leaves Docker as it is.
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   namespace: ci-tekton
   name: docker
+  labels:
+    # Tekton copies a Task's labels to its pods. Selects them for the
+    # ci-registrygate-intercept Kyverno policy.
+    ci.home.arpa/docker-task: "true"
   annotations:
     # The scripts use shell ${...} syntax.
     kustomize.toolkit.fluxcd.io/substitute: disabled
@@ -78,6 +89,29 @@ spec:
         # renovate: image
         reference: ghcr.io/soliddowant/e2fsprogs:1.47.4-r1@sha256:56f7ee778a5f30f93dde692e813352e00d650974e035a756bbebc0afd94644fc
         pullPolicy: IfNotPresent
+    # registrygate's Docker credential helper, a static binary.
+    - name: registrygate-helper
+      image:
+        # renovate: image
+        reference: ghcr.io/soliddowant/registrygate-credential-helper:0.3.0@sha256:b309f2c0ba86c468cb419f7b6eeaf78e71f2624a8b945c76f74c0ae6e21a52d0
+        pullPolicy: IfNotPresent
+    # The token the helper hands to Docker, for registrygate only.
+    - name: registrygate-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: registrygate
+              expirationSeconds: 3600
+              path: token
+    # registrygate's CA, copied into each project namespace by the
+    # registrygate-ca Kyverno policy. One directory per intercepted host.
+    - name: registrygate-ca
+      configMap:
+        name: registrygate-ca
+        optional: true
+        items:
+          - key: ca.crt
+            path: ghcr.io/ca.crt
   sidecars:
     - name: dind
       image: mirror.gcr.io/library/docker:29.9.3-dind@sha256:7bf70dcb85c822e3fa6f2d332143e474b99147b9d7b39102b0cfe8b04a7dd61b
@@ -92,6 +126,9 @@ spec:
       volumeMounts:
         - name: e2fsprogs
           mountPath: /opt/e2fsprogs
+          readOnly: true
+        - name: registrygate-ca
+          mountPath: /etc/docker/certs.d
           readOnly: true
       computeResources:
         requests:
@@ -126,7 +163,26 @@ spec:
       env:
         - name: DOCKER_HOST
           value: tcp://127.0.0.1:2375
+      volumeMounts:
+        - name: registrygate-helper
+          mountPath: /opt/registrygate
+          readOnly: true
+        - name: registrygate-token
+          mountPath: /var/run/secrets/registrygate
+          readOnly: true
       script: |
         #!/bin/sh
         set -e
+        # The hosts /etc/hosts sends to registrygate, if any: the other names on
+        # the line with the proxy's own Service name (the
+        # ci-registrygate-intercept Kyverno policy adds it). The helper hands
+        # the pod's token only to these, and configure registers it for them
+        # in the (writable) Docker config.
+        REGISTRYGATE_HOSTS=$(awk -v marker=registrygate.ci.svc.cluster.local '{ m = 0; for (i = 2; i <= NF; i++) if ($i == marker) m = 1 } m { for (i = 2; i <= NF; i++) if ($i != marker) { printf "%s%s", sep, $i; sep = "," } }' /etc/hosts)
+        if [ -n "$REGISTRYGATE_HOSTS" ]; then
+          export REGISTRYGATE_HOSTS
+          export PATH="/opt/registrygate:$PATH"
+          docker-credential-registrygate configure
+          echo "registrygate: $REGISTRYGATE_HOSTS through the proxy"
+        fi
         $(params.script)

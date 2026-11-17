@@ -1,0 +1,56 @@
+---
+# registrygate: the proxy that stands in for container registries (ghcr.io, ...)
+# inside docker Task build pods, so builds pull and push with their
+# ServiceAccount token instead of registry credentials:
+# https://github.com/solidDoWant/registrygate
+#
+# ci is its admin namespace: the UpstreamRegistry objects that decide which
+# hosts are intercepted, the serving CA and certificate, and shared credentials
+# live here, and nothing else writes to ci.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name registrygate-app
+spec:
+  targetNamespace: ci
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/registrygate/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # The self-signed ClusterIssuer behind the serving CA
+    - name: cluster-issuers
+    # Approves the serving certificate's request
+    - name: approver-policy
+    # ServiceMonitor
+    - name: prometheus-crds
+---
+# The UpstreamRegistry objects (they need the chart's CRDs) and the Kyverno
+# policies that send docker Task builds to the proxy. The objects set their own
+# namespaces (ci, or cluster-scoped).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name registrygate-config
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/registrygate/config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: registrygate-app
+    - name: kyverno-app

@@ -1,0 +1,48 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: registrygate
+spec:
+  interval: 1h
+  # Not cosign-signed yet, so no verify block.
+  url: oci://ghcr.io/soliddowant/charts/registrygate
+  ref:
+    tag: 0.3.0
+    digest: sha256:d69d9233e970cdb03eb4c371a2d4ce599caafddbda82ca58673effca82ddd1c4
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: registrygate
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: registrygate
+  values:
+    image:
+      tag: 0.3.0@sha256:3f2200378d305a95b8ce882adb3fdfd06a3e3baa230071c4ed24fe1562052b66
+    # Every replica serves; the status controller is leader-elected.
+    replicas: 2
+    podDisruptionBudget:
+      enabled: true
+      maxUnavailable: 1
+    # Only ci holds UpstreamRegistry objects and the Secrets they use.
+    adminNamespaces:
+      - ci
+    service:
+      # Build pods map the intercepted registry hosts to this address with
+      # hostAliases (config/kyverno.yaml), so it must never change. In the
+      # static band of the service range (docs/network.yaml).
+      clusterIP: ${REGISTRYGATE_CLUSTER_IP}
+    # Off for now: ci has no namespace issuer for the webhook's certificate,
+    # and the proxy enforces the same rules itself.
+    webhook:
+      enabled: false
+    serviceMonitor:
+      enabled: true
+    # The chart's NetworkPolicy is plain Kubernetes; netpol.yaml is the
+    # CiliumNetworkPolicy used instead.
+    networkPolicy:
+      enabled: false

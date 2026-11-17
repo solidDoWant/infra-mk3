@@ -37,6 +37,16 @@ specs:
               - port: "443"
                 protocol: TCP
       {{- end }}
+      # registrygate, for the registries it stands in for (ci/registrygate)
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: ci
+              app.kubernetes.io/name: registrygate
+              app.kubernetes.io/instance: registrygate
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
       {{- if .Values.egress.internet }}
       # The internet, for dependencies. Private ranges are excluded so the
       # home network stays out of reach.

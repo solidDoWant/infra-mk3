@@ -1,0 +1,86 @@
+---
+# Copies the registrygate CA certificate (app/tls.yaml) as the ConfigMap
+# registrygate-ca into every namespace that uses registrygate, i.e. labelled
+# registrygate.home.arpa/client=true (CI projects set it with the ci/project
+# chart's docker.registrygate.intercept value). The docker Task mounts it into
+# dockerd's /etc/docker/certs.d. Same pattern as the root CA's trust
+# distribution (certificates/issuers/trust-distribution). The CA lasts 10
+# years; a reissue reaches a namespace on its next sync.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: registrygate-ca
+spec:
+  rules:
+    - name: copy-ca-certificate
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  registrygate.home.arpa/client: "true"
+      skipBackgroundRequests: true
+      context:
+        - name: caCert
+          apiCall:
+            method: GET
+            urlPath: /api/v1/namespaces/ci/secrets/registrygate-ca
+            # Secret data is base64-encoded; ConfigMap data is plain PEM.
+            jmesPath: base64_decode(data."tls.crt")
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: registrygate-ca
+        namespace: >-
+          {{ request.object.metadata.name }}
+        data:
+          data:
+            ca.crt: >-
+              {{ caCert }}
+---
+# Sends the registry hosts registrygate stands in for to the proxy, in docker
+# Task build pods (labelled by the Task) in namespaces that use registrygate,
+# labelled registrygate.home.arpa/client=true (the ci/project chart's
+# docker.registrygate.intercept value). The Task's step turns on the credential helper
+# only when these entries are in /etc/hosts, so without this policy (or with
+# Kyverno down) builds go straight to the registries, as before.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: ci-registrygate-intercept
+spec:
+  failurePolicy: Ignore
+  background: false
+  rules:
+    - name: host-aliases
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              # hostAliases can only be set at creation.
+              operations:
+                - CREATE
+              selector:
+                matchLabels:
+                  ci.home.arpa/docker-task: "true"
+              namespaceSelector:
+                matchLabels:
+                  registrygate.home.arpa/client: "true"
+      mutate:
+        patchStrategicMerge:
+          spec:
+            hostAliases:
+              # The proxy's pinned ClusterIP (app/hr.yaml). Keep the registry
+              # hosts equal to the UpstreamRegistry hosts (upstreams.yaml) and
+              # the CA's name constraints (app/tls.yaml).
+              - ip: ${REGISTRYGATE_CLUSTER_IP}
+                hostnames:
+                  # Marks this entry for the docker Task's step, which sends
+                  # the entry's other names to the proxy.
+                  - registrygate.ci.svc.cluster.local
+                  - ghcr.io
