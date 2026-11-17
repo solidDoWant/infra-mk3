@@ -33,6 +33,10 @@ spec:
       dnsDomains:
         - ghcr.io
         - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+        - quay.io
+        - mirror.gcr.io
+        # Also covers registry-1.docker.io and index.docker.io.
+        - docker.io
   duration: 87660h # 10 years
   privateKey:
     algorithm: ECDSA
@@ -64,6 +68,11 @@ spec:
   dnsNames:
     - ghcr.io
     - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+    - quay.io
+    - mirror.gcr.io
+    - registry-1.docker.io
+    - docker.io
+    - index.docker.io
   usages:
     - server auth
   duration: 2160h # 90 days
@@ -101,6 +110,11 @@ spec:
       values:
         - ghcr.io
         - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+        - quay.io
+        - mirror.gcr.io
+        - registry-1.docker.io
+        - docker.io
+        - index.docker.io
     usages:
       - server auth
   constraints:
