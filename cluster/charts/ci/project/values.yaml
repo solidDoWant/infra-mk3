@@ -47,6 +47,16 @@ docker:
         harborRegistry: mirror-gcr
       - upstream: dockerhub
         harborRegistry: dockerhub
+    # Pushes to ghcr.io through registrygate, with the account's PAT behind
+    # the ci/ghcr-push UpstreamCredential (ci/registrygate/config), so builds
+    # never hold it. Needs intercept.
+    ghcrPush:
+      enabled: false
+      # Repositories (globs, under the account) the builds may push and pull
+      # with it. Empty means the project's own: soliddowant/<name> and
+      # soliddowant/<name>/**. Pulls of these skip the ghcr.io mirror cache,
+      # which can't hold private images.
+      repositories: []
     # The mirror caches' Harbor projects (each mirror gets this quota).
     mirrorCache:
       storageQuota: 20Gi

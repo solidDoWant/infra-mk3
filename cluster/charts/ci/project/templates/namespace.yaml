@@ -19,6 +19,10 @@ metadata:
     # docker Task builds go through registrygate for the registries it stands
     # in for (ci/registrygate/config/kyverno.yaml).
     registrygate.home.arpa/client: "true"
+    {{- if .Values.docker.registrygate.ghcrPush.enabled }}
+    # Admits the namespace to the ci/ghcr-push UpstreamCredential.
+    registrygate.home.arpa/ghcr-push: "true"
+    {{- end }}
     {{- end }}
     {{- if or .Values.harbor.enabled (and .Values.docker.registrygate.intercept .Values.docker.registrygate.mirrors) }}
     # Admits this namespace to the harbor-operator connection
