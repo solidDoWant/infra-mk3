@@ -1,0 +1,25 @@
+---
+# ghcr.io. Builds that intercept it (config/kyverno.yaml) pull through the
+# proxy with their ServiceAccount token. Until a project's policy adds a mirror
+# or a credential, its pulls go to ghcr.io anonymously, as they would without
+# the proxy.
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: UpstreamRegistry
+metadata:
+  namespace: ci
+  name: ghcr
+spec:
+  hosts:
+    - ghcr.io
+  url: https://ghcr.io
+  tls:
+    secretRef:
+      name: registrygate-tls
+  # Anonymous requests get a 401, so BuildKit and containerd, which try
+  # without credentials first, retry with the pod's token and the proxy knows
+  # which project is pulling.
+  anonymousPulls: Challenge
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        ci.home.arpa/project: "true"

@@ -15,6 +15,11 @@ metadata:
     # Selects project namespaces for the build pod admission policy and the
     # docker cache policy and promoter.
     ci.home.arpa/project: "true"
+    {{- if .Values.registrygate.intercept }}
+    # docker Task builds go through registrygate for the registries it stands
+    # in for (ci/registrygate/config/kyverno.yaml).
+    registrygate.home.arpa/intercept: "true"
+    {{- end }}
     {{- if .Values.harbor.enabled }}
     # Admits this namespace to the harbor-operator connection
     # (development/harbor/operator/config/connection.yaml).

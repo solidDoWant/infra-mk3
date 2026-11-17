@@ -33,6 +33,11 @@ egress:
   # CiliumNetworkPolicy toFQDNs selectors (matchName or matchPattern). GitHub
   # is always allowed.
   fqdns: []
+registrygate:
+  # Send docker Task builds' pulls of the registries registrygate stands in
+  # for (ghcr.io, ...) through the proxy, authenticated with the build's
+  # ServiceAccount token (ci/registrygate).
+  intercept: false
 # A Harbor project for the repository's images, and a robot account that CI
 # pushes with (harbor-operator).
 harbor:

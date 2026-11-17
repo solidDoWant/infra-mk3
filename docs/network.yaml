@@ -510,6 +510,12 @@ ip-space:
       10.33.0.0/16:
         description: Cluster IPs
         vlan: 300
+        # Pinned ClusterIPs, in the static band (the first 256 addresses),
+        # which Kubernetes doesn't hand out to other Services.
+        10.33.0.10/32:
+          description: CoreDNS (kube-dns)
+        10.33.0.11/32:
+          description: registrygate (build pods map registry hosts to it)
       10.34.0.0/16:
         description: External/load balanced IPs
         vlan: 300
