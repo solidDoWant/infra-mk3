@@ -7,8 +7,8 @@
 #
 # Adding an intercepted host means adding it to permitted.dnsDomains here and
 # to the serving certificate below: cert-manager then reissues both, and the
-# ci-registrygate-ca Kyverno policy (config/kyverno.yaml) copies the new CA to
-# the project namespaces.
+# registrygate-ca Kyverno policy (config/kyverno.yaml) copies the new CA to
+# the client namespaces.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

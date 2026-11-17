@@ -41,10 +41,11 @@ specs:
               - port: "443"
                 protocol: TCP
     ingress:
-      # Docker in CI project build pods
+      # Docker in the client namespaces (labelled
+      # registrygate.home.arpa/client=true, e.g. by the ci/project chart)
       - fromEndpoints:
           - matchLabels:
-              io.cilium.k8s.namespace.labels.ci.home.arpa/project: "true"
+              io.cilium.k8s.namespace.labels.registrygate.home.arpa/client: "true"
         toPorts:
           - ports:
               - port: "8443"

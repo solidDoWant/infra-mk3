@@ -104,7 +104,7 @@ spec:
               expirationSeconds: 3600
               path: token
     # registrygate's CA, copied into each project namespace by the
-    # ci-registrygate-ca Kyverno policy. One directory per intercepted host.
+    # registrygate-ca Kyverno policy. One directory per intercepted host.
     - name: registrygate-ca
       configMap:
         name: registrygate-ca

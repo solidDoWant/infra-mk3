@@ -18,7 +18,7 @@ metadata:
     {{- if .Values.docker.registrygate.intercept }}
     # docker Task builds go through registrygate for the registries it stands
     # in for (ci/registrygate/config/kyverno.yaml).
-    registrygate.home.arpa/intercept: "true"
+    registrygate.home.arpa/client: "true"
     {{- end }}
     {{- if .Values.harbor.enabled }}
     # Admits this namespace to the harbor-operator connection
