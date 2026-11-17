@@ -23,6 +23,10 @@ spec:
         # Images here are ~2 GB; a few tags of each are plenty.
         keepLatestPushed: 3
     docker:
+      # The project-zomboid image build holds the ~7 GB game install twice
+      # (builder and runtime stages) plus the exported image, unpacked again
+      # to load it.
+      cacheVolumeSize: 50Gi
       registrygate:
         harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
         # This repository's pipelines publish images for the whole account,
