@@ -123,6 +123,11 @@ specs:
           - matchName: auth.docker.io
           - matchName: production.cloudfront.docker.com
           - matchName: production.cloudflare.docker.com
+          # ECR Public: the registry and token endpoint, and the CloudFront
+          # distribution its blobs redirect to (the same for every
+          # repository; a wildcard would allow all of CloudFront)
+          - matchName: public.ecr.aws
+          - matchName: d2glxqk2uabbnd.cloudfront.net
         toPorts:
           - ports:
               - port: "443"

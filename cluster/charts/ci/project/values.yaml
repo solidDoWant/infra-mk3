@@ -47,6 +47,8 @@ docker:
         harborRegistry: mirror-gcr
       - upstream: dockerhub
         harborRegistry: dockerhub
+      - upstream: ecr-public
+        harborRegistry: ecr-public
     # Pushes to ghcr.io through registrygate, with the account's PAT behind
     # the ci/ghcr-push UpstreamCredential (ci/registrygate/config), so builds
     # never hold it. Needs intercept.
