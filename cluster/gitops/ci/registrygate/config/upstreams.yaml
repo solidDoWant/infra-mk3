@@ -50,6 +50,11 @@ spec:
   hosts:
     - harbor.${SECRET_PUBLIC_DOMAIN_NAME}
   url: http://harbor-core.development.svc.cluster.local
+  # Harbor's token realm and Locations name the host it was reached by, with
+  # https; send those to url too. (Its externalURL is in hosts, which count
+  # as aliases already.)
+  aliasHosts:
+    - harbor-core.development.svc.cluster.local
   tls:
     secretRef:
       name: registrygate-tls

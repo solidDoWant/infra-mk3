@@ -77,9 +77,12 @@ spec:
   pathPrefix: {{ $cache }}
   secretRef:
     name: {{ .upstream }}-cache-credentials
-  # Harbor names itself by its externalURL in token realms and Locations.
+  # Harbor names itself in token realms and Locations by the host it was
+  # reached by (its Service, with https) or by its externalURL; both are sent
+  # to url.
   aliasHosts:
     - {{ $harborHost }}
+    - {{ (urlParse $rg.harborURL).host }}
   fallbackToUpstream: true
 {{- $secrets = append $secrets (printf "%s-cache-credentials" .upstream) }}
 {{- end }}
