@@ -32,7 +32,9 @@ metadata:
 spec:
   connectionRef:
     name: harbor
-  type: quay
+  # Harbor's quay adapter can't back a proxy-cache project ("unsupported
+  # registry type quay"); quay.io serves the standard registry API.
+  type: docker-registry
   url: https://quay.io
   description: quay.io, anonymous (for registrygate's mirrors)
   allowedNamespaces:
