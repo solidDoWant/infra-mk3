@@ -1,0 +1,23 @@
+---
+# Upstream registries for the CI projects' proxy-cache projects
+# (cluster/charts/ci/project, docker.registrygate.mirrors), which registrygate
+# uses as per-project pull-through mirrors.
+#
+# No credentials, on purpose: a proxy-cache project fetches with its endpoint's
+# credential, and anyone holding the project's robot could then read whatever
+# that credential can. These caches hold public content only; private images
+# are pulled with an UpstreamCredential, never through a mirror.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborRegistry
+metadata:
+  name: ghcr
+spec:
+  connectionRef:
+    name: harbor
+  type: github-ghcr
+  url: https://ghcr.io
+  description: ghcr.io, anonymous (for registrygate's mirrors)
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        harbor.soliddowant.dev/ci-project: "true"

@@ -46,3 +46,16 @@ spec:
     # CiliumNetworkPolicy used instead.
     networkPolicy:
       enabled: false
+  # The chart has no pod labels value.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: registrygate
+            patch: |
+              - op: add
+                path: /spec/template/metadata/labels/endpoints.netpols.home.arpa~1harbor-api-client
+                value: "true"

@@ -50,6 +50,10 @@ spec:
   pipeline:
     set-security-context: true
     default-timeout-minutes: 60
+    # Builds run as each project's ci-build ServiceAccount (made by the
+    # ci/project chart), which has no API access and is what registrygate's
+    # policies name. A run can still pick another.
+    default-service-account: ci-build
     # Every build runs in a VM. The pod template also takes `env`, applied to
     # every step container (a run's own podTemplate wins for the same name).
     default-pod-template: |

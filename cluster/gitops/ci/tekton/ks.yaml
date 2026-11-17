@@ -155,3 +155,21 @@ spec:
     # The chart's HarborProject/HarborProjectRobot/HarborRetentionPolicy need
     # the harbor-operator CRDs and the connection that admits ci-* namespaces.
     - name: harbor-operator-config
+    # The chart's RegistryMirror/UpstreamCredential/RegistryAccessPolicy
+    # need registrygate's CRDs and UpstreamRegistry objects.
+    - name: registrygate-config
+  # Values every project shares that come from cluster variables.
+  patches:
+    - target:
+        group: helm.toolkit.fluxcd.io
+        kind: HelmRelease
+      patch: |
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: all
+        spec:
+          values:
+            docker:
+              registrygate:
+                harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}

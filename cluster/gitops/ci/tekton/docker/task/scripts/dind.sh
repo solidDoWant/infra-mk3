@@ -19,6 +19,19 @@ fi
 mkdir -p /var/lib/docker
 mount -t ext4 "$DISK" /var/lib/docker
 
+# registrygate: trust its CA for exactly the registry hosts /etc/hosts sends
+# to it, the other names on the line with its Service name (added by the
+# ci-registrygate-intercept Kyverno policy). The CA's name constraints limit it
+# to those hosts anyway.
+marker=registrygate.ci.svc.cluster.local
+if [ -f /etc/registrygate/ca.crt ]; then
+  for host in $(awk -v marker="$marker" '{ m = 0; for (i = 2; i <= NF; i++) if ($i == marker) m = 1 } m { for (i = 2; i <= NF; i++) if ($i != marker) print $i }' /etc/hosts); do
+    mkdir -p "/etc/docker/certs.d/$host"
+    cp /etc/registrygate/ca.crt "/etc/docker/certs.d/$host/ca.crt"
+    echo "registrygate: trusting its CA for $host"
+  done
+fi
+
 # A clone can be bigger than the snapshot it came from (the project's cache
 # size was raised), so grow the filesystem to fill the volume. Online, and a
 # no-op when it already does.

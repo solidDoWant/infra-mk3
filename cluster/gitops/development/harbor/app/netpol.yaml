@@ -156,9 +156,13 @@ specs:
               app.kubernetes.io/instance: harbor
           - *job_service_selector
           - *trivy_service_selector
-          # In-cluster Harbor API clients (harbor-operator)
+          # In-cluster Harbor API and registry clients, in any namespace
+          # (harbor-operator, and registrygate in ci for mirrors and pushes)
           - matchLabels:
               endpoints.netpols.home.arpa/harbor-api-client: "true"
+            matchExpressions:
+              - key: io.kubernetes.pod.namespace
+                operator: Exists
         toPorts:
           - ports:
               - port: "8080"
