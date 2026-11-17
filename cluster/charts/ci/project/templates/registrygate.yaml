@@ -98,7 +98,7 @@ spec:
     namespace: {{ $admin }}
     name: harbor
   secretRef:
-    name: ci-credentials
+    name: {{ .Values.harbor.pushCredentialsSecretName }}
   ceiling:
     - repositories:
         - {{ $project }}
@@ -106,7 +106,7 @@ spec:
       actions:
         - pull
         - push
-{{- $secrets = append $secrets "ci-credentials" }}
+{{- $secrets = append $secrets .Values.harbor.pushCredentialsSecretName }}
 {{- end }}
 ---
 # registrygate reads only these Secrets in the namespace.

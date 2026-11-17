@@ -84,6 +84,10 @@ harbor:
   # kubernetes.io/dockerconfigjson for the registry host. Pipelines mount it
   # to push.
   pushSecretName: harbor-push
+  # The same robot's credentials as a Secret with username and password keys,
+  # which registrygate pushes and pulls with. Only made when
+  # docker.registrygate.intercept is on.
+  pushCredentialsSecretName: harbor-push-credentials
   # Keep the 10 most recently pushed tags of each repository, and anything
   # pulled in the last 30 days. Harbor cron (with seconds).
   retention:

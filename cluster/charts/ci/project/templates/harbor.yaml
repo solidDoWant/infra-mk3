@@ -21,8 +21,9 @@ spec:
     scanOnPush: {{ .Values.harbor.vulnerability.scanOnPush }}
 ---
 # The robot CI pushes with. Its credentials land in the pushSecretName Secret
-# (Docker config), and with registrygate also in ci-credentials (username and
-# password), which registrygate pushes and pulls with (registrygate.yaml).
+# (Docker config), and with registrygate also in pushCredentialsSecretName
+# (username and password), which registrygate pushes and pulls with
+# (registrygate.yaml).
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborProjectRobot
 metadata:
@@ -43,7 +44,7 @@ spec:
     {{- if .Values.docker.registrygate.intercept }}
     opaque:
       enabled: true
-      name: ci-credentials
+      name: {{ .Values.harbor.pushCredentialsSecretName }}
     {{- end }}
 ---
 apiVersion: harbor.soliddowant.dev/v1alpha1
