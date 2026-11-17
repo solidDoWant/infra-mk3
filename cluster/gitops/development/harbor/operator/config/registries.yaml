@@ -3,10 +3,13 @@
 # (cluster/charts/ci/project, docker.registrygate.mirrors), which registrygate
 # uses as per-project pull-through mirrors.
 #
-# No credentials, on purpose: a proxy-cache project fetches with its endpoint's
-# credential, and anyone holding the project's robot could then read whatever
-# that credential can. These caches hold public content only; private images
-# are pulled with an UpstreamCredential, never through a mirror.
+# No credentials that can read private content, on purpose: a proxy-cache
+# project fetches with its endpoint's credential, and anyone holding the
+# project's robot could then read whatever that credential can. These caches
+# hold public content only; private images are pulled with an
+# UpstreamCredential, never through a mirror. The one credential here, Docker
+# Hub's, is a "Public Repo Read-only" token, for the account's higher rate
+# limit.
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborRegistry
 metadata:
@@ -61,7 +64,10 @@ spec:
     name: harbor
   type: docker-hub
   url: https://hub.docker.com
-  description: Docker Hub, anonymous (for registrygate's mirrors)
+  description: Docker Hub, with a public-read-only token (for registrygate's mirrors)
+  # accessKey and accessSecret (dockerhub-credentials.sops.yaml)
+  credentialsSecretRef:
+    name: dockerhub-credentials
   allowedNamespaces:
     selector:
       matchLabels:
