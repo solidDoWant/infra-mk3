@@ -72,9 +72,11 @@ RUN \
     fi && \
     # The Linux 64-bit depots: the game, its Linux files, and the Steamworks redistributable
     # (steamclient.so). No login means the anonymous dedicated-server account. It needs no ICU for
-    # what it does here.
+    # what it does here. Each Steam CDN connection is slow on its own, so the download time is set
+    # by how many run at once: the default of 8 took ~210s here, 32 took ~90s and 64 took ~60s.
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 /opt/depotdownloader/DepotDownloader \
-        -app 380870 -os linux -osarch 64 ${branch_args} -dir /opt/pz-server -validate && \
+        -app 380870 -os linux -osarch 64 ${branch_args} -dir /opt/pz-server -validate \
+        -max-downloads 64 && \
     # Steam stages and installs workshop mods under steamapps/, so that subtree belongs to the
     # server. The rest of the install stays root-owned and read-only to it. Without this the mod
     # download fails with the Steam IO error `onItemNotDownloaded result=37`.
