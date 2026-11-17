@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg
   ref:
-    tag: 0.29.1
-    digest: sha256:3245fa051bb21d0dd9246272f57a2760b4234817a164a3167d2a1e7fb9f63fd9
+    tag: 0.29.2
+    digest: sha256:3bfb3670ccb80c7f2e6bef3189c1599ad4b6d6f0a52fb745f986ac5b511d2fc0
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -32,7 +32,7 @@ spec:
     # Also the instance-manager image in every Cluster pod (OPERATOR_IMAGE_NAME)
     image:
       repository: ghcr.io/cloudnative-pg/cloudnative-pg
-      tag: 1.30.1@sha256:923c267ec29636db3bee20f993d0ec4973fa22998e1adad37da79e4d32b5bc07
+      tag: 1.30.2@sha256:f96f6be3d81ec93819b443c665c575c609342fca840df90d4d87dae314a5b913
     config:
       data:
         INHERITED_LABELS: app.kubernetes.io/instance
