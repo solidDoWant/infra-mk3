@@ -26,6 +26,11 @@ docker:
     harborHost: ""
     # Harbor core's Service, which registrygate reaches Harbor through.
     harborURL: http://harbor-core.development.svc.cluster.local
+    # registrygate's ServiceAccount, which may read the robot Secrets it uses
+    # in the project namespace (and nothing else there).
+    serviceAccount:
+      namespace: ci
+      name: registrygate
     # A Harbor proxy-cache project per upstream for this project's pulls,
     # each its own quota: upstream is the UpstreamRegistry (in ci),
     # harborRegistry the HarborRegistry (development/harbor/operator/config).
