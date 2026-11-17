@@ -1,0 +1,39 @@
+---
+# Builds the Project Zomboid image and pushes it to Harbor when a push to
+# master changes it.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: project-zomboid-push
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "push" && target_branch == "master" &&
+      "container images/project-zomboid/***".pathChanged()
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  pipelineRef:
+    name: project-zomboid
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: push
+      value: "true"
+    # harbor_host comes from the Repository (the ci/project chart), so the
+    # cluster's domain stays out of this public repository.
+    - name: registry
+      value: "{{ harbor_host }}/infra-mk3"
+  # A cold build downloads ~7 GB from Steam.
+  timeouts:
+    pipeline: 2h
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: ssd-replicated-3x
+          resources:
+            requests:
+              storage: 1Gi
