@@ -122,7 +122,9 @@ spec:
 # Pipelines-as-Code (projects/<name>.yaml). The releases live in ci; each
 # creates its own ci-<name> namespace with the repository's Repository CR,
 # build isolation and the Dashboard's read access. Also add the namespace to
-# the Dashboard's --namespaces (dashboard/hr.yaml).
+# the Dashboard's --namespaces (dashboard/hr.yaml). Each project's values set
+# docker.registrygate.harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME} (the
+# chart's registrygate interception is on by default and needs it).
 #
 # Secrets a repository's pipelines use (e.g. a ghcr.io push credential) can't
 # go in the chart values (Flux doesn't decrypt them there). They belong in a

@@ -19,8 +19,10 @@ docker:
     # Send builds' pulls (and pushes) of the registries registrygate stands
     # in for (ghcr.io, Harbor, ...) through the proxy, authenticated with the
     # build's ci-build ServiceAccount token (ci/registrygate). Turns on the
-    # caches, mirrors and Harbor push credential below.
-    intercept: false
+    # caches, mirrors and Harbor push credential below. On by default; turn it
+    # off for a project whose builds need Harbor's own API (/api/v2.0), which
+    # the proxy doesn't serve.
+    intercept: true
     # Harbor's host name as builds use it. Required with intercept; set it in
     # the project's HelmRelease: harbor.${SECRET_PUBLIC_DOMAIN_NAME}.
     harborHost: ""
