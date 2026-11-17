@@ -37,6 +37,7 @@ spec:
         - mirror.gcr.io
         # Also covers registry-1.docker.io and index.docker.io.
         - docker.io
+        - public.ecr.aws
   duration: 87660h # 10 years
   privateKey:
     algorithm: ECDSA
@@ -73,6 +74,7 @@ spec:
     - registry-1.docker.io
     - docker.io
     - index.docker.io
+    - public.ecr.aws
   usages:
     - server auth
   duration: 2160h # 90 days
@@ -115,6 +117,7 @@ spec:
         - registry-1.docker.io
         - docker.io
         - index.docker.io
+        - public.ecr.aws
     usages:
       - server auth
   constraints:

@@ -133,3 +133,25 @@ spec:
     selector:
       matchLabels:
         registrygate.home.arpa/client: "true"
+---
+# public.ecr.aws (Amazon ECR Public). Anonymous; its token endpoint is on the
+# same host.
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: UpstreamRegistry
+metadata:
+  namespace: ci
+  name: ecr-public
+spec:
+  hosts:
+    - public.ecr.aws
+  url: https://public.ecr.aws
+  tls:
+    secretRef:
+      name: registrygate-tls
+  anonymousPulls: Challenge
+  allowedMirrorURLs:
+    - http://harbor-core.development.svc.cluster.local
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        registrygate.home.arpa/client: "true"

@@ -74,3 +74,20 @@ spec:
     selector:
       matchLabels:
         harbor.soliddowant.dev/ci-project: "true"
+---
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborRegistry
+metadata:
+  name: ecr-public
+spec:
+  connectionRef:
+    name: harbor
+  # Harbor's aws-ecr adapter is for private ECR (it needs AWS credentials);
+  # public.ecr.aws serves the standard registry API anonymously.
+  type: docker-registry
+  url: https://public.ecr.aws
+  description: public.ecr.aws, anonymous (for registrygate's mirrors)
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        harbor.soliddowant.dev/ci-project: "true"
