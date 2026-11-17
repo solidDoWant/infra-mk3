@@ -105,6 +105,18 @@ specs:
           - ports:
               - port: "8080"
                 protocol: TCP
+      # Upstream registries of the proxy-cache projects (the CI projects'
+      # registrygate mirrors, harbor/operator/config/registries.yaml): the
+      # endpoint health check, manifests and tokens on the registry host, and
+      # blobs on the storage host it redirects to (Harbor follows redirects
+      # itself).
+      - toFQDNs:
+          - matchName: ghcr.io
+          - matchName: pkg-containers.githubusercontent.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
       # Access to Authentik for auth
       # This needs to be the gateway because Harbor doesn't support separate internal/external URLs
       - &to_internal_gateway
