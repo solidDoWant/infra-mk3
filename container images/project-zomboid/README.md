@@ -22,12 +22,13 @@ make print-image-name
 | `IMAGE_REVISION`     | `4`                               | Bump for packaging changes that aren't a game build change.                     |
 | `VERSION`            | `$(PZ_BRANCH)-r$(IMAGE_REVISION)` | Image tag.                                                                      |
 
-Branches are whatever `steamcmd +login anonymous +app_info_print 380870 +quit` lists under
-`branches`, so check there before pinning one.
+Branches are the app's Steam branches (SteamDB lists them), so check there before pinning one.
 
-The build downloads the whole app through steamcmd, which takes a while. The depot cache and
-in-progress chunks are kept in BuildKit cache mounts, so an interrupted build resumes instead of
-starting over.
+The build downloads the whole app with [DepotDownloader](https://github.com/SteamRE/DepotDownloader),
+which takes a while. It is used instead of steamcmd because steamcmd is a 32-bit program, and the
+CI builds run in kata VMs whose kernel can't run 32-bit binaries. DepotDownloader's staging
+directory is kept in a BuildKit cache mount, so an interrupted build resumes instead of starting
+over.
 
 ## Running
 
@@ -83,7 +84,8 @@ A mod list of any size makes the first start much longer, and mods only work wit
 
 The server never updates itself. There is no steamcmd in the runtime image at all - the install is
 baked in at build time - so the version is whatever the image was built with, and changing it means
-rebuilding and redeploying. `make print-build-id` prints the Steam build ID inside the image.
+rebuilding and redeploying. `make print-depot-manifests` prints the Steam depot manifest IDs inside
+the image, which pin the exact game build.
 
 Note that `PZ_BRANCH=public` is a moving target: a rebuild installs whatever `public` is that day,
 while the default tag (`public-r1`) stays the same. For a tag that means something, pin a point
