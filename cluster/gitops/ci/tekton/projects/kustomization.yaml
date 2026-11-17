@@ -1,0 +1,23 @@
+---
+# Values every project shares that come from cluster variables, patched into
+# each project's HelmRelease (Flux substitutes the variables after the build).
+# Here rather than in the ci-projects Kustomization's patches, which the
+# cluster-wide Kustomization patch (flux-system/flux/cluster/ks.yaml) replaces.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./infra-mk3.yaml
+patches:
+  - target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+    patch: |
+      apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: all
+      spec:
+        values:
+          docker:
+            registrygate:
+              harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}

@@ -119,7 +119,8 @@ spec:
     - name: rook-ceph-cluster
 ---
 # One HelmRelease of cluster/charts/ci/project per repository built by
-# Pipelines-as-Code (projects/<name>.yaml). The releases live in ci; each
+# Pipelines-as-Code (projects/<name>.yaml, listed in
+# projects/kustomization.yaml). The releases live in ci; each
 # creates its own ci-<name> namespace with the repository's Repository CR,
 # build isolation and the Dashboard's read access. Also add the namespace to
 # the Dashboard's --namespaces (dashboard/hr.yaml).
@@ -158,18 +159,3 @@ spec:
     # The chart's RegistryMirror/UpstreamCredential/RegistryAccessPolicy
     # need registrygate's CRDs and UpstreamRegistry objects.
     - name: registrygate-config
-  # Values every project shares that come from cluster variables.
-  patches:
-    - target:
-        group: helm.toolkit.fluxcd.io
-        kind: HelmRelease
-      patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: all
-        spec:
-          values:
-            docker:
-              registrygate:
-                harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
