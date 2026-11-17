@@ -14,7 +14,9 @@ ARG RUNTIME_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04@sha256:6a06111c3b0a
 ARG DEPOTDOWNLOADER_VERSION=3.4.0
 ARG DEPOTDOWNLOADER_SHA256=a999dec66b4850fc961bd50366696d23c2d0fad7b18790e6a5647b2f19097a53
 
-FROM ${RUNTIME_IMAGE} AS server-builder
+# Only fetches DepotDownloader; the game itself is downloaded straight into the runtime stage, so
+# the ~7 GB install isn't copied from one stage to another (~50s in CI).
+FROM ${RUNTIME_IMAGE} AS depotdownloader
 
 ARG DEPOTDOWNLOADER_VERSION
 ARG DEPOTDOWNLOADER_SHA256
@@ -31,14 +33,33 @@ RUN \
     echo "${DEPOTDOWNLOADER_SHA256}  /tmp/depotdownloader.zip" | sha256sum -c - && \
     unzip -q /tmp/depotdownloader.zip -d /opt/depotdownloader && \
     rm /tmp/depotdownloader.zip
-# It needs no ICU for what it does here.
-ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+
+# Same trick the insurgency image uses: copying this empty directory with `--chown` into the
+# runtime stage sets the owner of a directory there without making the files copied into it
+# afterwards writable by the server.
+RUN mkdir /empty-directory
+
+FROM ${RUNTIME_IMAGE} AS gameserver
+
+# The server brings its own JRE (jre64/) and its own native libraries (linux64/), so all the base
+# image has to provide is what those link against. ca-certificates (which brings OpenSSL) is also
+# what DepotDownloader needs below.
+RUN \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+        ca-certificates \
+        libstdc++6 \
+        zlib1g \
+        && \
+    rm -rf /var/lib/apt/lists/*
 
 # Branch names are the app's Steam branches: `public` is the current build, `legacy41` is the
 # build 41 line, and a point release like `42.19` pins one build.
 ARG PZ_BRANCH=public
 
 RUN \
+    # DepotDownloader is mounted for this step only, so it doesn't end up in the image.
+    --mount=type=bind,from=depotdownloader,source=/opt/depotdownloader,target=/opt/depotdownloader \
     # The app is ~7 GB. Keeping DepotDownloader's staging directory lets an interrupted download
     # resume on the next build instead of starting from zero.
     --mount=type=cache,id=depotdownloader-staging,target=/opt/pz-server/.DepotDownloader/staging,sharing=locked \
@@ -50,39 +71,17 @@ RUN \
         branch_args="${branch_args} -branchpassword $(cat /run/secrets/pz_branch_password)"; \
     fi && \
     # The Linux 64-bit depots: the game, its Linux files, and the Steamworks redistributable
-    # (steamclient.so). No login means the anonymous dedicated-server account.
-    /opt/depotdownloader/DepotDownloader -app 380870 -os linux -osarch 64 ${branch_args} \
-        -dir /opt/pz-server -validate && \
-    # The server stages and installs workshop mods here (see the runtime stage).
-    mkdir -p /opt/pz-server/steamapps
+    # (steamclient.so). No login means the anonymous dedicated-server account. It needs no ICU for
+    # what it does here.
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 /opt/depotdownloader/DepotDownloader \
+        -app 380870 -os linux -osarch 64 ${branch_args} -dir /opt/pz-server -validate && \
+    # Steam stages and installs workshop mods under steamapps/, so that subtree belongs to the
+    # server. The rest of the install stays root-owned and read-only to it. Without this the mod
+    # download fails with the Steam IO error `onItemNotDownloaded result=37`.
+    mkdir -p /opt/pz-server/steamapps && \
+    chown -R 1000:1000 /opt/pz-server/steamapps
 
-# Same trick the insurgency image uses: copying this empty directory with `--chown` into the
-# runtime stage sets the owner of a directory there without making the files copied into it
-# afterwards writable by the server.
-RUN mkdir /empty-directory
-
-FROM ${RUNTIME_IMAGE} AS gameserver
-
-# The server brings its own JRE (jre64/) and its own native libraries (linux64/), so all the base
-# image has to provide is what those link against.
-RUN \
-    apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-        ca-certificates \
-        libstdc++6 \
-        zlib1g \
-        && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY --from=server-builder /opt/pz-server/ /opt/pz-server/
-
-# Steam stages and installs workshop mods under steamapps/, so that subtree belongs to the server.
-# The rest of the install stays root-owned and read-only to it. A --chown on an empty directory is
-# not enough here - the copy above brings steamapps/ and its contents with it - and without the
-# chown the download fails with the Steam IO error `onItemNotDownloaded result=37`.
-RUN chown -R 1000:1000 /opt/pz-server/steamapps
-
-COPY --from=server-builder --chown=1000:1000 /empty-directory /var/lib/zomboid
+COPY --from=depotdownloader --chown=1000:1000 /empty-directory /var/lib/zomboid
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Steamworks loads the Steam client library from the home directory rather than from the server
