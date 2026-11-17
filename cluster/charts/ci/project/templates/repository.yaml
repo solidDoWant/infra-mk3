@@ -10,3 +10,10 @@ metadata:
 spec:
   url: https://github.com/solidDoWant/{{ .Values.name }}
   concurrency_limit: {{ .Values.concurrencyLimit }}
+  {{- with .Values.docker.registrygate.harborHost }}
+  # Values pipelines can't hold in the (public) repository, as
+  # Pipelines-as-Code parameters: "{{`{{ harbor_host }}`}}" in a PipelineRun.
+  params:
+    - name: harbor_host
+      value: {{ . }}
+  {{- end }}

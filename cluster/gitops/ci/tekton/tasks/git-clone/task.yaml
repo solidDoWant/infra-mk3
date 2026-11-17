@@ -1,0 +1,74 @@
+---
+# Shared Task that checks a commit out into a workspace, for the other Tasks of
+# a pipeline to use. Pipelines reference it through the cluster resolver:
+#
+#   taskRef:
+#     resolver: cluster
+#     params:
+#       - name: kind
+#         value: task
+#       - name: name
+#         value: git-clone
+#       - name: namespace
+#         value: ci-tekton
+#   params:
+#     - name: url
+#       value: "{{ repo_url }}"
+#     - name: revision
+#       value: "{{ revision }}"
+#   workspaces:
+#     - name: output
+#       workspace: source
+#
+# Only public repositories: it uses no credentials.
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  namespace: ci-tekton
+  name: git-clone
+  annotations:
+    # The script uses shell ${...} syntax.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  params:
+    - name: url
+      description: Repository URL to clone.
+      type: string
+    - name: revision
+      description: Commit SHA (or branch or tag) to check out.
+      type: string
+    - name: depth
+      description: How many commits of history to fetch.
+      type: string
+      default: "1"
+  workspaces:
+    - name: output
+      description: The checkout goes in the root of this workspace.
+  results:
+    - name: commit
+      description: The full SHA of the checked-out commit.
+  steps:
+    - name: clone
+      # The docker Task's CLI image (Alpine with git), so builds pull one image
+      # fewer.
+      # renovate: image
+      image: mirror.gcr.io/library/docker:29.9.3-cli@sha256:5a7af0dcb0e46c803efe9b45371dd21cb500e5b4453250394ac6f06d49b6e6f1
+      workingDir: $(workspaces.output.path)
+      env:
+        - name: URL
+          value: $(params.url)
+        - name: REVISION
+          value: $(params.revision)
+        - name: DEPTH
+          value: $(params.depth)
+      script: |
+        #!/bin/sh
+        set -eu
+        # The workspace may be owned by another user (the PVC's first writer).
+        git config --global --add safe.directory "$PWD"
+        git init -q .
+        git remote add origin "$URL"
+        git fetch -q --depth "$DEPTH" origin "$REVISION"
+        git checkout -q FETCH_HEAD
+        git rev-parse HEAD | tr -d '\n' > "$(results.commit.path)"
+        echo "checked out $(git rev-parse HEAD) from $URL"
