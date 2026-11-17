@@ -113,6 +113,16 @@ specs:
       - toFQDNs:
           - matchName: ghcr.io
           - matchName: pkg-containers.githubusercontent.com
+          - matchName: quay.io
+          - matchPattern: cdn*.quay.io
+          - matchName: mirror.gcr.io
+          # Docker Hub: the adapter's API, the registry, its token endpoint
+          # and blob storage
+          - matchName: hub.docker.com
+          - matchName: registry-1.docker.io
+          - matchName: auth.docker.io
+          - matchName: production.cloudfront.docker.com
+          - matchName: production.cloudflare.docker.com
         toPorts:
           - ports:
               - port: "443"

@@ -39,6 +39,12 @@ docker:
     mirrors:
       - upstream: ghcr
         harborRegistry: ghcr
+      - upstream: quay
+        harborRegistry: quay
+      - upstream: mirror-gcr
+        harborRegistry: mirror-gcr
+      - upstream: dockerhub
+        harborRegistry: dockerhub
     # The mirror caches' Harbor projects (each mirror gets this quota).
     mirrorCache:
       storageQuota: 20Gi

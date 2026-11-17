@@ -49,6 +49,11 @@ specs:
       # Blob redirects to storage go to the client, never through the proxy.
       - toFQDNs:
           - matchName: ghcr.io
+          - matchName: quay.io
+          - matchName: mirror.gcr.io
+          - matchName: registry-1.docker.io
+          # Docker Hub's token endpoint
+          - matchName: auth.docker.io
         toPorts:
           - ports:
               - port: "443"

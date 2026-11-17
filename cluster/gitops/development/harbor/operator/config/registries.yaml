@@ -21,3 +21,48 @@ spec:
     selector:
       matchLabels:
         harbor.soliddowant.dev/ci-project: "true"
+---
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborRegistry
+metadata:
+  name: quay
+spec:
+  connectionRef:
+    name: harbor
+  type: quay
+  url: https://quay.io
+  description: quay.io, anonymous (for registrygate's mirrors)
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        harbor.soliddowant.dev/ci-project: "true"
+---
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborRegistry
+metadata:
+  name: mirror-gcr
+spec:
+  connectionRef:
+    name: harbor
+  type: docker-registry
+  url: https://mirror.gcr.io
+  description: mirror.gcr.io, anonymous (for registrygate's mirrors)
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        harbor.soliddowant.dev/ci-project: "true"
+---
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborRegistry
+metadata:
+  name: dockerhub
+spec:
+  connectionRef:
+    name: harbor
+  type: docker-hub
+  url: https://hub.docker.com
+  description: Docker Hub, anonymous (for registrygate's mirrors)
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        harbor.soliddowant.dev/ci-project: "true"

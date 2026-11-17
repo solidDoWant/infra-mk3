@@ -63,3 +63,73 @@ spec:
     selector:
       matchLabels:
         registrygate.home.arpa/client: "true"
+---
+# quay.io. Its token endpoint is on the same host.
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: UpstreamRegistry
+metadata:
+  namespace: ci
+  name: quay
+spec:
+  hosts:
+    - quay.io
+  url: https://quay.io
+  tls:
+    secretRef:
+      name: registrygate-tls
+  anonymousPulls: Challenge
+  allowedMirrorURLs:
+    - http://harbor-core.development.svc.cluster.local
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        registrygate.home.arpa/client: "true"
+---
+# mirror.gcr.io (Google's Docker Hub mirror). Anonymous, token endpoint on the same
+# host.
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: UpstreamRegistry
+metadata:
+  namespace: ci
+  name: mirror-gcr
+spec:
+  hosts:
+    - mirror.gcr.io
+  url: https://mirror.gcr.io
+  tls:
+    secretRef:
+      name: registrygate-tls
+  anonymousPulls: Challenge
+  allowedMirrorURLs:
+    - http://harbor-core.development.svc.cluster.local
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        registrygate.home.arpa/client: "true"
+---
+# Docker Hub, under every name Docker's clients use for it: dockerd pulls
+# from registry-1.docker.io, and the CLI and BuildKit look up credentials as
+# index.docker.io (https://index.docker.io/v1/).
+apiVersion: registrygate.soliddowant.dev/v1alpha1
+kind: UpstreamRegistry
+metadata:
+  namespace: ci
+  name: dockerhub
+spec:
+  hosts:
+    - registry-1.docker.io
+    - docker.io
+    - index.docker.io
+  url: https://registry-1.docker.io
+  tokenRealmHosts:
+    - auth.docker.io
+  tls:
+    secretRef:
+      name: registrygate-tls
+  anonymousPulls: Challenge
+  allowedMirrorURLs:
+    - http://harbor-core.development.svc.cluster.local
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        registrygate.home.arpa/client: "true"
