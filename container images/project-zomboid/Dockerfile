@@ -3,35 +3,36 @@
 # copyrighted game files, so - like the tug2 insurgency images - it must only ever be pushed to a
 # private registry.
 
-ARG STEAMCMD_IMAGE=ghcr.io/gameservermanagers/steamcmd:ubuntu-26.04@sha256:cc8c5a4a21130b276903ac8950b67cdfa85bde046e849f534deca0a68d92698c
 ARG RUNTIME_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
 
-FROM ${STEAMCMD_IMAGE} AS server-builder
+# The game is downloaded with DepotDownloader (https://github.com/SteamRE/DepotDownloader), not
+# steamcmd: steamcmd is a 32-bit program, and the CI builds run in kata VMs whose kernel has no
+# 32-bit support ("cannot execute binary file: Exec format error"). DepotDownloader is a 64-bit,
+# self-contained .NET program that downloads the same depots with the same anonymous login.
+# The checksum is of the release's linux-x64 zip; update both together.
+# renovate: datasource=github-releases depName=SteamRE/DepotDownloader extractVersion=^DepotDownloader_(?<version>.+)$
+ARG DEPOTDOWNLOADER_VERSION=3.4.0
+ARG DEPOTDOWNLOADER_SHA256=a999dec66b4850fc961bd50366696d23c2d0fad7b18790e6a5647b2f19097a53
 
-# Branch names come from `steamcmd +login anonymous +app_info_print 380870 +quit`. `public` is the
-# current build, `legacy41` is the build 41 line, and a point release like `42.19` pins one build.
-ARG PZ_BRANCH=public
+# Only fetches DepotDownloader; the game itself is downloaded straight into the runtime stage, so
+# the ~7 GB install isn't copied from one stage to another (~50s in CI).
+FROM ${RUNTIME_IMAGE} AS depotdownloader
 
+ARG DEPOTDOWNLOADER_VERSION
+ARG DEPOTDOWNLOADER_SHA256
 RUN \
-    # The app is ~7 GB. Persisting the depot manifest cache and the in-progress chunks lets an
-    # interrupted or failed app_update resume on the next build instead of starting from zero. A
-    # clean install still clears `downloading`, so this speeds up resumes, not cache-miss builds.
-    --mount=type=cache,id=steam-depotcache,target=/root/.local/share/Steam/depotcache,sharing=locked \
-    --mount=type=cache,id=steam-downloading,target=/opt/pz-server/steamapps/downloading,sharing=locked \
-    # Only needed for a password-protected beta branch. A build secret rather than a build arg so
-    # that it stays out of the image history.
-    --mount=type=secret,id=pz_branch_password \
-    mkdir -p /opt/pz-server && \
-    # steamcmd needs a run of its own to initialize before it will take an app_update, otherwise
-    # that fails with "Missing configuration".
-    steamcmd +login anonymous +quit && \
-    branch_args="-beta ${PZ_BRANCH}" && \
-    if [ -s /run/secrets/pz_branch_password ]; then \
-        branch_args="${branch_args} -betapassword $(cat /run/secrets/pz_branch_password)"; \
-    fi && \
-    # "Error! App '380870' state is 0x202 after update job" means the builder ran out of disk.
-    steamcmd +force_install_dir /opt/pz-server +login anonymous \
-        +app_update 380870 ${branch_args} validate +quit
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+        ca-certificates \
+        curl \
+        unzip \
+        && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -fsSL -o /tmp/depotdownloader.zip \
+        "https://github.com/SteamRE/DepotDownloader/releases/download/DepotDownloader_${DEPOTDOWNLOADER_VERSION}/DepotDownloader-linux-x64.zip" && \
+    echo "${DEPOTDOWNLOADER_SHA256}  /tmp/depotdownloader.zip" | sha256sum -c - && \
+    unzip -q /tmp/depotdownloader.zip -d /opt/depotdownloader && \
+    rm /tmp/depotdownloader.zip
 
 # Same trick the insurgency image uses: copying this empty directory with `--chown` into the
 # runtime stage sets the owner of a directory there without making the files copied into it
@@ -41,7 +42,8 @@ RUN mkdir /empty-directory
 FROM ${RUNTIME_IMAGE} AS gameserver
 
 # The server brings its own JRE (jre64/) and its own native libraries (linux64/), so all the base
-# image has to provide is what those link against.
+# image has to provide is what those link against. ca-certificates (which brings OpenSSL) is also
+# what DepotDownloader needs below.
 RUN \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
@@ -51,15 +53,47 @@ RUN \
         && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=server-builder /opt/pz-server/ /opt/pz-server/
+# Branch names are the app's Steam branches: `public` is the current build, `legacy41` is the
+# build 41 line, and a point release like `42.19` pins one build.
+ARG PZ_BRANCH=public
 
-# Steam stages and installs workshop mods under steamapps/, so that subtree belongs to the server.
-# The rest of the install stays root-owned and read-only to it. A --chown on an empty directory is
-# not enough here - the copy above brings steamapps/ and its contents with it - and without the
-# chown the download fails with the Steam IO error `onItemNotDownloaded result=37`.
-RUN chown -R 1000:1000 /opt/pz-server/steamapps
+RUN \
+    # DepotDownloader is mounted for this step only, so it doesn't end up in the image.
+    --mount=type=bind,from=depotdownloader,source=/opt/depotdownloader,target=/opt/depotdownloader \
+    # The app is ~7 GB. Keeping DepotDownloader's staging directory lets an interrupted download
+    # resume on the next build instead of starting from zero.
+    --mount=type=cache,id=depotdownloader-staging,target=/opt/pz-server/.DepotDownloader/staging,sharing=locked \
+    # Only needed for a password-protected beta branch. A build secret rather than a build arg so
+    # that it stays out of the image history.
+    --mount=type=secret,id=pz_branch_password \
+    branch_args="-branch ${PZ_BRANCH}" && \
+    if [ -s /run/secrets/pz_branch_password ]; then \
+        branch_args="${branch_args} -branchpassword $(cat /run/secrets/pz_branch_password)"; \
+    fi && \
+    # The Linux 64-bit depots: the game, its Linux files, and the Steamworks redistributable
+    # (steamclient.so). No login means the anonymous dedicated-server account. It needs no ICU for
+    # what it does here. Each Steam CDN connection is slow on its own, so the download time is set
+    # by how many run at once: the default of 8 took ~210s here, 32 took ~90s and 64 took ~60s.
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 /opt/depotdownloader/DepotDownloader \
+        -app 380870 -os linux -osarch 64 ${branch_args} -dir /opt/pz-server -validate \
+        -max-downloads 64 && \
+    # DepotDownloader writes every file 0644, so the launcher, its scripts and the bundled JRE's
+    # programs get their executable bits here. Without them the entrypoint fails with
+    # "./ProjectZomboid64: Permission denied".
+    chmod 0755 \
+        /opt/pz-server/ProjectZomboid64 \
+        /opt/pz-server/*.sh \
+        /opt/pz-server/jre64/bin/* \
+        /opt/pz-server/jre64/lib/jspawnhelper \
+        /opt/pz-server/jre64/lib/jexec \
+        && \
+    # Steam stages and installs workshop mods under steamapps/, so that subtree belongs to the
+    # server. The rest of the install stays root-owned and read-only to it. Without this the mod
+    # download fails with the Steam IO error `onItemNotDownloaded result=37`.
+    mkdir -p /opt/pz-server/steamapps && \
+    chown -R 1000:1000 /opt/pz-server/steamapps
 
-COPY --from=server-builder --chown=1000:1000 /empty-directory /var/lib/zomboid
+COPY --from=depotdownloader --chown=1000:1000 /empty-directory /var/lib/zomboid
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Steamworks loads the Steam client library from the home directory rather than from the server

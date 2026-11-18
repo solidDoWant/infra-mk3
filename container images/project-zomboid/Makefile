@@ -4,8 +4,8 @@ MAKEFLAGS += --no-print-directory
 PROJECT_DIR := $(CURDIR)
 
 # Steam branch to install from. `public` is whatever the current build is (B42 today), `legacy41`
-# is the old B41 line, and a point release like `42.19` pins one exact build. Branch names come
-# from `steamcmd +login anonymous +app_info_print 380870 +quit`.
+# is the old B41 line, and a point release like `42.19` pins one exact build. Branch names are
+# the app's Steam branches (listed on SteamDB, or by any Steam client's app info).
 PZ_BRANCH ?= public
 # Only for a password-protected beta. Handed to the build as a secret so it stays out of the
 # image history.
@@ -13,7 +13,7 @@ PZ_BRANCH_PASSWORD ?=
 export PZ_BRANCH_PASSWORD
 # Bump when the packaging changes (entrypoint, runtime deps, image layout) without the game build
 # changing, so consumers can pick up image fixes without a branch change.
-IMAGE_REVISION ?= 1
+IMAGE_REVISION ?= 4
 VERSION ?= $(PZ_BRANCH)-r$(IMAGE_REVISION)
 
 # The image contains a complete Steam install of the game, so it must not be pushed anywhere
@@ -24,7 +24,11 @@ CONTAINER_REPOSITORY = $(CONTAINER_REGISTRY)/project-zomboid
 IMAGE = $(CONTAINER_REPOSITORY):$(VERSION)
 
 PUSH ?= false
-PUSH_ARG = $(if $(findstring t,$(PUSH)),--push,--load)
+# zstd rather than BuildKit's default gzip, which compresses on a single core: in CI that took
+# ~3 minutes for the ~7 GB game layer, and zstd under one. Pulling zstd layers needs containerd
+# 1.5+ or Docker 23+. force-compression recompresses layers that are cached as gzip.
+LAYER_COMPRESSION ?= zstd
+OUTPUT_ARG = --output type=image,name=$(IMAGE),push=$(if $(findstring t,$(PUSH)),true,false),compression=$(LAYER_COMPRESSION),force-compression=true
 
 comma := ,
 DOCKER_ARGS = --build-arg PZ_BRANCH="$(PZ_BRANCH)" \
@@ -43,7 +47,7 @@ all: image
 
 .PHONY: image
 image: Dockerfile entrypoint.sh	## Build the server image.
-	docker buildx build -t "$(IMAGE)" $(PUSH_ARG) $(DOCKER_ARGS) $(EXTRA_DOCKER_ARGS) "$(PROJECT_DIR)"
+	docker buildx build $(OUTPUT_ARG) $(DOCKER_ARGS) $(EXTRA_DOCKER_ARGS) "$(PROJECT_DIR)"
 
 .PHONY: push
 push:	## Build and push the server image. Only ever to a private registry.
@@ -53,10 +57,10 @@ push:	## Build and push the server image. Only ever to a private registry.
 print-image-name:	## Print the full name of the image.
 	@echo "$(IMAGE)"
 
-.PHONY: print-build-id
-print-build-id:	## Print the Steam build ID installed in the built image.
-	@docker run --rm --entrypoint /bin/bash "$(IMAGE)" -c \
-		'grep -oP "\"buildid\"\s+\"\K[0-9]+" /opt/pz-server/steamapps/appmanifest_380870.acf'
+.PHONY: print-depot-manifests
+print-depot-manifests:	## Print the Steam depot manifest IDs installed in the built image (pins the exact game build).
+	@docker run --rm --entrypoint /bin/sh "$(IMAGE)" -c \
+		'ls /opt/pz-server/.DepotDownloader | sed -n "s/\\.manifest$$//p"'
 
 ##@ Local testing
 
