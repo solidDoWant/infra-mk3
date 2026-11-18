@@ -59,5 +59,21 @@ cat > /etc/docker/daemon.json <<JSON
 }
 JSON
 
+# Kata boots the pod's VM with little memory and adds the pod's share after
+# boot, but the kernel sizes its TCP memory limit (tcp_mem) once, at boot. That
+# left builds with ~13 MB of socket buffers for the whole VM: a download over
+# many connections went over it, and the kernel then shrank every connection's
+# receive window to four segments (the Project Zomboid game download took
+# ~180-330s instead of ~60s). Set it the way the kernel would have for the
+# memory the VM has now. It only ever raises the limit, so where the kernel
+# sized it from the real memory this is a no-op.
+pages=$(($(awk '/^MemTotal:/ { print $2 }' /proc/meminfo) / 4))
+limit=$((pages / 16))
+pressure=$(awk '{ print $2 }' /proc/sys/net/ipv4/tcp_mem)
+if [ "$pressure" -lt "$limit" ]; then
+  echo "$((limit / 4 * 3)) $limit $((limit / 4 * 3 * 2))" > /proc/sys/net/ipv4/tcp_mem
+  echo "tcp_mem: raised from $pressure to $limit pages before memory pressure"
+fi
+
 # Only reachable from inside the pod.
 exec dockerd --host=tcp://127.0.0.1:2375 --host=unix:///var/run/docker.sock
