@@ -18,6 +18,9 @@
 #     - name: source
 #       workspace: source
 #
+# A script can hand later tasks up to 4096 bytes through the `output` result,
+# by writing to "$DOCKER_TASK_OUTPUT".
+#
 # dockerd runs in a privileged sidecar inside the build's kata VM, so its
 # privilege is the VM's (project namespaces allow privileged pods; the
 # ci-build-pods admission policy keeps them in kata and off the host). Its storage is a per-pod ephemeral block volume (ext4,
@@ -54,6 +57,12 @@ spec:
       description: Image for the script. It must contain the docker CLI.
       type: string
       default: mirror.gcr.io/library/docker:29.9.3-cli@sha256:5a7af0dcb0e46c803efe9b45371dd21cb500e5b4453250394ac6f06d49b6e6f1
+  results:
+    - name: output
+      description: >-
+        Free-form output for later tasks (a `finally` task reporting on the
+        build, say). The script writes it to the file named by
+        $DOCKER_TASK_OUTPUT. Tekton caps it at 4096 bytes.
   workspaces:
     - name: source
       description: Working directory for the script; also available to the daemon at the same path, so `docker run -v` works.
@@ -134,21 +143,12 @@ spec:
           memory: &dind_memory 3Gi
         limits:
           memory: *dind_memory
-      # Steps start once dockerd answers. A startup probe, because the sidecar
-      # is a native Kubernetes sidecar (enable-kubernetes-sidecar in
-      # ../../app/tektonconfig.yaml): kubelet holds the steps until it
-      # passes, and Tekton doesn't wait for sidecar readiness in that mode.
-      # An exec probe, because dockerd only listens on localhost and the
-      # kubelet's TCP probes target the pod IP.
-      startupProbe:
-        exec:
-          command:
-            - docker
-            - --host=unix:///var/run/docker.sock
-            - info
-        periodSeconds: 2
-        timeoutSeconds: 5
-        failureThreshold: 60
+      # No startup probe: the step waits for dockerd itself (below). The only
+      # probe that can reach dockerd is an exec probe (it listens on
+      # localhost only, and the kubelet's TCP and HTTP probes target the pod
+      # IP), and kata can't run an exec here: dind.sh delegates the cgroup
+      # controllers for nested containers, and cgroup v2 then refuses to put
+      # the exec's process in the container's cgroup ("Resource busy").
       # scripts/dind.sh, copied in by kustomization.yaml
       script: ""
   steps:
@@ -161,6 +161,11 @@ spec:
       env:
         - name: DOCKER_HOST
           value: tcp://127.0.0.1:2375
+        # The `output` result's file. An env var rather than
+        # $(results.output.path) in the script param, which Tekton doesn't
+        # substitute a second time.
+        - name: DOCKER_TASK_OUTPUT
+          value: $(results.output.path)
       volumeMounts:
         - name: registrygate-helper
           mountPath: /opt/registrygate
@@ -171,6 +176,17 @@ spec:
       script: |
         #!/bin/sh
         set -e
+        # The dind sidecar is a native sidecar without a startup probe (see
+        # there), so the step can start before dockerd answers.
+        waited=0
+        until docker version >/dev/null 2>&1; do
+          if [ "$waited" -ge 180 ]; then
+            echo "dockerd didn't answer within 180s; see the sidecar-dind container's log" >&2
+            exit 1
+          fi
+          sleep 1
+          waited=$((waited + 1))
+        done
         # The hosts /etc/hosts sends to registrygate, if any: the other names on
         # the line with the proxy's own Service name (the
         # ci-registrygate-intercept Kyverno policy adds it). The helper hands
