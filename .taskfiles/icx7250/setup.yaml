@@ -35,7 +35,7 @@ tasks:
       task: firmware-service
       vars:
         SERVICE_TYPE: http
-        CONTAINER_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.8-alpine@sha256:16de44aff58d6a3906f4eb1499d930378b7f0fa96fdebc7d10962d2b2a4e794b
+        CONTAINER_IMAGE: public.ecr.aws/nginx/nginx-unprivileged:1.31.9-alpine@sha256:60214a103e6f38e953ff957f34b1f2e97a9db801ab2df3821da955d0fe6cadd6
         CONTAINER_MOUNT_PATH: /usr/share/nginx/html
         CONTAINER_PORT: 8080
         LOCAL_PORT: 4443
