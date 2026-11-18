@@ -59,5 +59,15 @@ cat > /etc/docker/daemon.json <<JSON
 }
 JSON
 
+# Kata gives privileged containers none of the VM's devices, so there's no
+# /dev/kmsg, and a kind node's kubelet won't start without it (it gets the
+# devices of this container). Same device numbers as the kernel's.
+[ -e /dev/kmsg ] || mknod -m 600 /dev/kmsg c 1 11
+
+# Started through the image's own dind wrapper, which sets up cgroup v2
+# nesting first: it moves this process out of the root cgroup and delegates
+# every controller to the children. Without that, systemd in a container
+# can't start, so kind (and anything else that runs systemd) fails. It also
+# mounts securityfs, and a tmpfs on /tmp if nothing is mounted there.
 # Only reachable from inside the pod.
-exec dockerd --host=tcp://127.0.0.1:2375 --host=unix:///var/run/docker.sock
+exec dind dockerd --host=tcp://127.0.0.1:2375 --host=unix:///var/run/docker.sock
