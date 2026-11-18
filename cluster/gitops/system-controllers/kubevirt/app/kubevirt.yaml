@@ -19,19 +19,18 @@ spec:
         - NodeRestriction
         - RebootPolicy
         - Snapshot
-        - VmiMemoryOverheadReport
       # v1.9 enables every Beta gate by default; opt out of the unused ones, per
       # upstream's production guidance. Opt in by moving a gate to featureGates.
       disabledFeatureGates:
-        - ExternalNetResourceInjection
         - GPUsWithDRA
         - HostDevicesWithDRA
-        - KubevirtSeccompProfile
-        - LibvirtHooksServerAndClient
+        - IncrementalBackup
+        - NetworkDevicesWithDRA
         - OptOutRoleAggregation
         - PasstBinding
-        - PodSecondaryInterfaceNamingUpgrade
         - Template
+        - UtilityVolumes
+        - VSOCK
         - WorkloadEncryptionSEV
     evictionStrategy: LiveMigrate
     migrations:
