@@ -25,6 +25,10 @@ spec:
     # Provides the `kata` RuntimeClass the pod is pinned to.
     - name: kata-containers-runtime
     - name: fluent-crds
+    # The HarborProjectRobot CRD, and the infra-mk3 Harbor project (made by the
+    # ci-project chart) that the pull robot belongs to.
+    - name: harbor-operator-config
+    - name: ci-projects
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
