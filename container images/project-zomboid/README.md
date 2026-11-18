@@ -19,7 +19,7 @@ make print-image-name
 | -------------------- | --------------------------------- | ------------------------------------------------------------------------------- |
 | `PZ_BRANCH`          | `public`                          | Steam branch. `legacy41` is the build 41 line, `42.19` and friends pin a build. |
 | `PZ_BRANCH_PASSWORD` | empty                             | Only needed for password-protected betas.                                       |
-| `IMAGE_REVISION`     | `4`                               | Bump for packaging changes that aren't a game build change.                     |
+| `IMAGE_REVISION`     | `5`                               | Bump for packaging changes that aren't a game build change.                     |
 | `VERSION`            | `$(PZ_BRANCH)-r$(IMAGE_REVISION)` | Image tag.                                                                      |
 
 Branches are the app's Steam branches (SteamDB lists them), so check there before pinning one.

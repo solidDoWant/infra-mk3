@@ -13,7 +13,7 @@ PZ_BRANCH_PASSWORD ?=
 export PZ_BRANCH_PASSWORD
 # Bump when the packaging changes (entrypoint, runtime deps, image layout) without the game build
 # changing, so consumers can pick up image fixes without a branch change.
-IMAGE_REVISION ?= 4
+IMAGE_REVISION ?= 5
 VERSION ?= $(PZ_BRANCH)-r$(IMAGE_REVISION)
 
 # The image contains a complete Steam install of the game, so it must not be pushed anywhere

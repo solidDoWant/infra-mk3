@@ -19,6 +19,11 @@ spec:
     preventVulnerableImages: {{ .Values.harbor.vulnerability.preventVulnerableImages }}
     severity: {{ .Values.harbor.vulnerability.severity }}
     scanOnPush: {{ .Values.harbor.vulnerability.scanOnPush }}
+  {{- with .Values.harbor.allowedNamespaces }}
+  allowedNamespaces:
+    names:
+      {{- toYaml . | nindent 6 }}
+  {{- end }}
 ---
 # The robot CI pushes with. Its credentials land in the pushSecretName Secret
 # (Docker config), and with registrygate also in pushCredentialsSecretName

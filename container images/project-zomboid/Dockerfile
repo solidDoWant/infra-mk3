@@ -44,8 +44,12 @@ FROM ${RUNTIME_IMAGE} AS gameserver
 # The server brings its own JRE (jre64/) and its own native libraries (linux64/), so all the base
 # image has to provide is what those link against. ca-certificates (which brings OpenSSL) is also
 # what DepotDownloader needs below.
+#
+# The upgrade picks up Ubuntu security fixes released after the base image digest was pinned, so
+# Harbor's scan only reports findings in the game's own files.
 RUN \
     apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
         ca-certificates \
         libstdc++6 \

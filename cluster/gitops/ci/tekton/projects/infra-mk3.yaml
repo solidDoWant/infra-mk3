@@ -19,6 +19,15 @@ spec:
   values:
     name: infra-mk3
     harbor:
+      vulnerability:
+        # Scans still run on push, but don't block pulls. The project-zomboid
+        # image ships the game's own Java libraries (Jackson, Guava), whose
+        # CVEs can't be fixed here; with the block on, a newly published CVE
+        # would stop the game server from starting after its next restart.
+        preventVulnerableImages: false
+      # The game server's pull robot (games/project-zomboid).
+      allowedNamespaces:
+        - games
       retention:
         # Images here are ~2 GB; a few tags of each are plenty.
         keepLatestPushed: 3
