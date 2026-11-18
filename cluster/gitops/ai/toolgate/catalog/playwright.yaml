@@ -80,7 +80,7 @@ spec:
             type: RuntimeDefault
         containers:
           - name: server
-            image: mcr.microsoft.com/playwright/mcp:v0.0.85@sha256:91838ad4927e574dcf787dd677e63c924b80f4adba6fe8ce47b92fab4a7841d6
+            image: mcr.microsoft.com/playwright/mcp:v0.0.86@sha256:2dfc17e08e8db54678ec965ce9ffb4100be0aa68135774d761bac9035ceb6668
             # The image's entrypoint adds --headless, --browser chromium and
             # --no-sandbox: Chromium's sandbox needs privileges the pod doesn't
             # have, and the kata VM is the isolation boundary instead.
