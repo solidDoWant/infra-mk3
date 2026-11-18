@@ -1,0 +1,27 @@
+---
+# solidDoWant/registrygate, moving its CI from GitHub Actions to Tekton
+# (registrygate issue #175). Chart defaults for now: the project's design
+# (registrygate #177) measures what it needs and requests any quota, cache
+# or concurrency changes separately.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ci-project-registrygate
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/ci/project
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    name: registrygate
+    harbor:
+      # CI pushes no images: releases go to ghcr.io.
+      enabled: false
+    docker:
+      registrygate:
+        harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
