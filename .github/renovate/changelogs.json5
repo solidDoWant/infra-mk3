@@ -330,7 +330,8 @@
     },
     {
       description: "docker-library/docker has no releases; -cli/-dind tags don't match moby's docker-vX.Y.Z releases",
-      matchPackageNames: ["mirror.gcr.io/library/docker"],
+      // safety.json5 rewrites mirror.gcr.io/ to docker.io/ before this rule runs
+      matchPackageNames: ["docker.io/library/docker"],
       changelogUrl: "https://github.com/moby/moby/releases",
     },
     {
