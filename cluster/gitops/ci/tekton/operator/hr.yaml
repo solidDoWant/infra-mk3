@@ -8,8 +8,8 @@ spec:
   url: oci://ghcr.io/tektoncd/operator/charts/tekton-operator
   # The chart isn't cosign-signed, so the digest is the only pin.
   ref:
-    tag: 0.81.3
-    digest: sha256:f1558aa35e82c8fc045784cfbf7cb96e3719a3979a7130488c9abad039b5ab7f
+    tag: 0.82.0
+    digest: sha256:7747b8c870990df5ebadbd0b2b3a38439858e3a6b6b62abfe69bce84578f1e71
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -31,7 +31,7 @@ spec:
         # the operator's VERSION env var, so it can't carry a digest. This tag
         # must match the chart version; Renovate's tekton-operator group moves
         # them together.
-        tag: v0.81.3@sha256:bfa58839797d34476393a1bd3508e51863771e232d86ef0a591ef487246750b3
+        tag: v0.82.0@sha256:22ded5603bf1cca965604ebf93e7700b2106764a7bb65a00687193446d2aaa31
       # Leader-elected
       replicas: 2
       # Flux owns the TektonConfig (../app). With auto-install on, the
