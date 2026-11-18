@@ -1,8 +1,7 @@
 ---
 # solidDoWant/registrygate, moving its CI from GitHub Actions to Tekton
-# (registrygate issue #175). Chart defaults for now: the project's design
-# (registrygate #177) measures what it needs and requests any quota, cache
-# or concurrency changes separately.
+# (registrygate issue #175). Sized for its phase 4 design (registrygate
+# #182): every stage runs in parallel inside one dind sidecar per run.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -19,9 +18,21 @@ spec:
         name: infra-mk3
   values:
     name: registrygate
+    # Agents open many PRs, and PRs share the queue with master pushes: at 2,
+    # a PR can wait behind two master runs for longer than the CI takes.
+    concurrencyLimit: 3
+    quota:
+      # One run is ~14.5 GiB (a 14 GiB dind sidecar, sized from the stages'
+      # cold-cache peaks, plus small pods and kata overhead), so this fits 3
+      # at once. A ceiling, not a reservation.
+      memory: 48Gi
     harbor:
       # CI pushes no images: releases go to ghcr.io.
       enabled: false
     docker:
+      # The CI image built from flake.nix (~3.4 GB), the Go build and module
+      # caches (~4 GB and growing), the kind node image and the e2e images:
+      # ~10 GB today, with Docker keeping its build cache to 60% of this.
+      cacheVolumeSize: 30Gi
       registrygate:
         harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
