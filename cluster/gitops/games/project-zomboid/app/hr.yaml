@@ -68,10 +68,11 @@ spec:
           # it for the container below, and it carries the shell and awk the script needs.
           init-config:
             image: &image
-              # Built from "container images/project-zomboid". The image carries a
-              # complete Steam install of the game, so it only exists in Harbor.
-              repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/project-zomboid/project-zomboid
-              tag: public-r4
+              # Built from "container images/project-zomboid" by this repository's CI
+              # pipeline. The image carries a complete Steam install of the game, so it
+              # only exists in Harbor.
+              repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/infra-mk3/project-zomboid
+              tag: public-r5
             command:
               - sh
               - /etc/project-zomboid/init/merge-server-ini.sh
@@ -231,9 +232,9 @@ spec:
             # family (this is what kept docker-postfix down for 8 days). The server
             # logs in UTC and takes no local timezone, so nothing replaces it.
             k8tz.io/inject: "false"
-          # The Harbor project is private.
+          # The Harbor project is private. ./harbor-pull-robot.yaml makes this Secret.
           imagePullSecrets:
-            - name: project-zomboid-pull-credentials
+            - name: harbor-pull
     defaultPodOptions:
       # VM-level isolation: the server downloads and executes arbitrary Steam Workshop
       # mod code, and it is reachable from the internet.

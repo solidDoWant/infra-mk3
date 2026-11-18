@@ -1,0 +1,19 @@
+---
+# Pulls the game image from the infra-mk3 Harbor project, which the repository's
+# CI pipeline pushes it to (.tekton/project-zomboid.yaml). harbor-operator
+# creates the robot and writes its credentials to the harbor-pull Secret.
+apiVersion: harbor.soliddowant.dev/v1alpha1
+kind: HarborProjectRobot
+metadata:
+  name: project-zomboid-pull
+spec:
+  projectRef:
+    namespace: ci-infra-mk3
+    name: infra-mk3
+  description: Pulls the project-zomboid image for the game server (games namespace)
+  permissions:
+    - resource: repository
+      action: pull
+  secret:
+    dockerConfigJSON:
+      name: harbor-pull
