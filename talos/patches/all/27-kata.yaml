@@ -28,7 +28,33 @@ contents: |
     disable_guest_selinux = true
     enable_annotations = ["enable_iommu", "kernel_params", "kernel_verity_params"]
     valid_hypervisor_paths = ["/usr/local/bin/cloud-hypervisor"]
-    kernel_params = "cgroup_no_v1=all systemd.unified_cgroup_hierarchy=1"
+    # Changed: everything after the first two parameters. The guest kernel
+    # sizes several limits from the memory it boots with, which is
+    # default_memory (256MiB) - the pod's memory is only added after boot. Left
+    # alone, every kata VM keeps limits sized for 256MiB whatever its size:
+    #   tcp_mem/udp_mem: socket buffers for the whole VM. Memory pressure began
+    #     at 13MB of TCP buffers, and under pressure every connection's receive
+    #     window is cut to four segments: a 64-connection download in CI ran at
+    #     ~100Mbit/s instead of line rate.
+    #   tcp_rmem/tcp_wmem: one connection's buffers, 1.7MB instead of 6MB/4MB.
+    #   threads-max: threads in the whole VM, 1728 (~250 are the guest's own
+    #     kernel threads). The per-user process limit is the other half of this;
+    #     see base-runtime-spec.json below.
+    #   inotify watches: 8192, too few for editors and file watchers.
+    #   nf_conntrack: 2048 connections through NAT (docker in CI builds).
+    #   thash_entries: the TCP connection hash table; the SYN backlog, TIME_WAIT
+    #     and orphan limits are derived from its size in every network
+    #     namespace, so this sets them for pods' namespaces too.
+    # The values are what the kernel picks for a ~4GB machine. They're
+    # ceilings, not reservations: the VM can't use more memory than it has, and
+    # the pod's memory limit still applies inside it.
+    #
+    # ⚠ Kata splits this string on spaces and drops any word it has already
+    # seen, so the bare numbers inside the quoted values (all but the first of
+    # each) must not repeat anywhere in it. With a repeat, the quotes stop
+    # pairing up and the kernel ignores the rest of the line. Check the guest's
+    # /proc/sys values after changing any of them.
+    kernel_params = 'cgroup_no_v1=all systemd.unified_cgroup_hierarchy=1 sysctl.net.ipv4.tcp_mem="49152 65536 98304" sysctl.net.ipv4.udp_mem="36864 49152 73728" sysctl.net.ipv4.tcp_rmem="4096 131072 6291456" sysctl.net.ipv4.tcp_wmem="4096 16384 4194304" sysctl.kernel.threads-max=65536 sysctl.fs.inotify.max_user_watches=524288 sysctl.net.netfilter.nf_conntrack_max=65536 nf_conntrack.hashsize=16384 thash_entries=65536'
     default_vcpus = 1
     default_maxvcpus = 0
     # Changed from 2048. The VM boots with this plus the pod's container
@@ -100,12 +126,235 @@ contents: |
     kubelet_root_dir = "/var/lib/kubelet"
     pod_resource_api_sock = ""
 ---
-# Points containerd's kata runtime at the config above instead of the
-# extension's. Talos restarts CRI when this changes; running kata VMs keep their
+# containerd's base spec for kata containers. CRI normally builds each
+# container's spec from containerd's defaults and removes their rlimits; with a
+# base spec it starts from this file instead and keeps the rlimits in it. This
+# is those defaults (`ctr oci spec` from containerd 2.3.7) with one change: the
+# rlimits.
+#
+# RLIMIT_NPROC (processes and threads per user, for users other than root) is
+# copied from the guest kernel's boot-time threads-max/2, before the sysctls in
+# kernel_params apply, so it stays at 864 however large the VM is. 65536
+# matches threads-max above. The default's RLIMIT_NOFILE 1024 is left out on
+# purpose: without it containers keep the guest's 1048576, as they did before
+# this file existed.
+#
+# ⚠ On a containerd update, regenerate with `ctr oci spec` from the new version
+# and reapply the rlimits change.
+apiVersion: v1alpha1
+kind: EtcFileConfig
+name: kata-containers/base-runtime-spec.json
+mode: 0o644
+contents: |
+    {
+      "ociVersion": "1.3.0",
+      "process": {
+        "user": {
+          "uid": 0,
+          "gid": 0
+        },
+        "cwd": "/",
+        "capabilities": {
+          "bounding": [
+            "CAP_CHOWN",
+            "CAP_DAC_OVERRIDE",
+            "CAP_FSETID",
+            "CAP_FOWNER",
+            "CAP_MKNOD",
+            "CAP_NET_RAW",
+            "CAP_SETGID",
+            "CAP_SETUID",
+            "CAP_SETFCAP",
+            "CAP_SETPCAP",
+            "CAP_NET_BIND_SERVICE",
+            "CAP_SYS_CHROOT",
+            "CAP_KILL",
+            "CAP_AUDIT_WRITE"
+          ],
+          "effective": [
+            "CAP_CHOWN",
+            "CAP_DAC_OVERRIDE",
+            "CAP_FSETID",
+            "CAP_FOWNER",
+            "CAP_MKNOD",
+            "CAP_NET_RAW",
+            "CAP_SETGID",
+            "CAP_SETUID",
+            "CAP_SETFCAP",
+            "CAP_SETPCAP",
+            "CAP_NET_BIND_SERVICE",
+            "CAP_SYS_CHROOT",
+            "CAP_KILL",
+            "CAP_AUDIT_WRITE"
+          ],
+          "permitted": [
+            "CAP_CHOWN",
+            "CAP_DAC_OVERRIDE",
+            "CAP_FSETID",
+            "CAP_FOWNER",
+            "CAP_MKNOD",
+            "CAP_NET_RAW",
+            "CAP_SETGID",
+            "CAP_SETUID",
+            "CAP_SETFCAP",
+            "CAP_SETPCAP",
+            "CAP_NET_BIND_SERVICE",
+            "CAP_SYS_CHROOT",
+            "CAP_KILL",
+            "CAP_AUDIT_WRITE"
+          ]
+        },
+        "rlimits": [
+          {
+            "type": "RLIMIT_NPROC",
+            "hard": 65536,
+            "soft": 65536
+          }
+        ],
+        "noNewPrivileges": true
+      },
+      "root": {
+        "path": "rootfs"
+      },
+      "mounts": [
+        {
+          "destination": "/proc",
+          "type": "proc",
+          "source": "proc",
+          "options": [
+            "nosuid",
+            "noexec",
+            "nodev"
+          ]
+        },
+        {
+          "destination": "/dev",
+          "type": "tmpfs",
+          "source": "tmpfs",
+          "options": [
+            "nosuid",
+            "strictatime",
+            "mode=755",
+            "size=65536k"
+          ]
+        },
+        {
+          "destination": "/dev/pts",
+          "type": "devpts",
+          "source": "devpts",
+          "options": [
+            "nosuid",
+            "noexec",
+            "newinstance",
+            "ptmxmode=0666",
+            "mode=0620",
+            "gid=5"
+          ]
+        },
+        {
+          "destination": "/dev/shm",
+          "type": "tmpfs",
+          "source": "shm",
+          "options": [
+            "nosuid",
+            "noexec",
+            "nodev",
+            "mode=1777",
+            "size=65536k"
+          ]
+        },
+        {
+          "destination": "/dev/mqueue",
+          "type": "mqueue",
+          "source": "mqueue",
+          "options": [
+            "nosuid",
+            "noexec",
+            "nodev"
+          ]
+        },
+        {
+          "destination": "/sys",
+          "type": "sysfs",
+          "source": "sysfs",
+          "options": [
+            "nosuid",
+            "noexec",
+            "nodev",
+            "ro"
+          ]
+        },
+        {
+          "destination": "/run",
+          "type": "tmpfs",
+          "source": "tmpfs",
+          "options": [
+            "nosuid",
+            "strictatime",
+            "mode=755",
+            "size=65536k"
+          ]
+        }
+      ],
+      "linux": {
+        "resources": {
+          "devices": [
+            {
+              "allow": false,
+              "access": "rwm"
+            }
+          ]
+        },
+        "cgroupsPath": "/default",
+        "namespaces": [
+          {
+            "type": "pid"
+          },
+          {
+            "type": "ipc"
+          },
+          {
+            "type": "uts"
+          },
+          {
+            "type": "mount"
+          },
+          {
+            "type": "network"
+          }
+        ],
+        "maskedPaths": [
+          "/proc/acpi",
+          "/proc/asound",
+          "/proc/interrupts",
+          "/proc/kcore",
+          "/proc/keys",
+          "/proc/latency_stats",
+          "/proc/timer_list",
+          "/proc/timer_stats",
+          "/proc/sched_debug",
+          "/sys/firmware",
+          "/sys/devices/virtual/powercap",
+          "/proc/scsi"
+        ],
+        "readonlyPaths": [
+          "/proc/bus",
+          "/proc/fs",
+          "/proc/irq",
+          "/proc/sys",
+          "/proc/sysrq-trigger"
+        ]
+      }
+    }
+---
+# Points containerd's kata runtime at the config and base spec above instead of
+# the extension's config and containerd's defaults. Talos restarts CRI when this changes; running kata VMs keep their
 # shims and config, and new ones pick up the change.
 apiVersion: v1alpha1
 kind: CRICustomizationConfig
 name: 20-kata-config
 content: |-
+  [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata]
+    base_runtime_spec = "/etc/kata-containers/base-runtime-spec.json"
   [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata.options]
     ConfigPath = "/etc/kata-containers/configuration.toml"
