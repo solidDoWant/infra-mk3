@@ -129,7 +129,8 @@ contents: |
 # containerd's base spec for kata containers. CRI normally builds each
 # container's spec from containerd's defaults and removes their rlimits; with a
 # base spec it starts from this file instead and keeps the rlimits in it. This
-# is those defaults (`ctr oci spec` from containerd 2.3.7) with one change: the
+# is those defaults (`ctr oci spec` from containerd 2.3.7), matching the base
+# spec Talos gives runc (/etc/cri/conf.d/base-spec.json), with one change: the
 # rlimits.
 #
 # RLIMIT_NPROC (processes and threads per user, for users other than root) is
@@ -305,7 +306,7 @@ contents: |
             }
           ]
         },
-        "cgroupsPath": "/default",
+        "cgroupsPath": "/k8s.io",
         "namespaces": [
           {
             "type": "pid"
