@@ -103,6 +103,9 @@ harbor:
     preventVulnerableImages: true
     severity: high
     scanOnPush: true
+  # Namespaces outside ci-<name> that may create robots for the project, such
+  # as one for a workload that pulls its images.
+  allowedNamespaces: []
   # Secret in ci-<name> holding the robot's credentials as a
   # kubernetes.io/dockerconfigjson for the registry host. Pipelines mount it
   # to push.
