@@ -4,16 +4,16 @@ kind: Kustomization
 resources:
   # The chart's templates/kubernetes-crds.yaml is generated from these files
   # (hack/sync-helm-crds.sh). tektonaddons is OpenShift-only.
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_manualapprovalgates.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_openshiftpipelinesascodes.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_syncerservices.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektonchains.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektonconfigs.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektondashboards.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektoninstallersets.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektonmulticlusterproxyaaes.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektonpipelines.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektonpruners.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektonresults.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektonschedulers.yaml # v0.81.3
-  - https://raw.githubusercontent.com/tektoncd/operator/e231a3b9e4722c0104d143078e0cb8587b6a8bb7/config/base/generated-crds/operator.tekton.dev_tektontriggers.yaml # v0.81.3
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_manualapprovalgates.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_openshiftpipelinesascodes.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_syncerservices.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektonchains.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektonconfigs.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektondashboards.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektoninstallersets.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektonmulticlusterproxyaaes.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektonpipelines.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektonpruners.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektonresults.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektonschedulers.yaml # v0.82.0
+  - https://raw.githubusercontent.com/tektoncd/operator/977bcc10708c9d92353ae497a5c7d532b3ef9b4f/config/base/generated-crds/operator.tekton.dev_tektontriggers.yaml # v0.82.0
