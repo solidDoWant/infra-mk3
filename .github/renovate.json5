@@ -103,6 +103,12 @@
       ],
       minimumReleaseAge: "0 days",
     },
+    {
+      description: "The operator manifest must ship with its quay images, which have no timestamps and never wait; holding only the manifest splits the upgrade and breaks it",
+      matchDatasources: ["github-releases"],
+      matchPackageNames: ["kubevirt/kubevirt", "kubevirt/containerized-data-importer"],
+      minimumReleaseAge: "0 days",
+    },
     // Last so it overrides any preset rule: no CI, and merging deploys.
     {
       description: "Automerge disabled for everything",
