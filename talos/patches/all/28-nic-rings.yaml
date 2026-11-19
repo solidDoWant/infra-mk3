@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://docs.siderolabs.com/talos/v1.14/schemas/config.schema.json
+# Bigger receive rings on the X710 (i40e) ports of the LACP bond. At the
+# default 512 descriptors (of 8160), bursts of incoming traffic, such as CI
+# pulling images at hundreds of MB/s, fill the ring and the NIC drops whatever
+# arrives next (rx_missed_errors). That cost about 0.1-1% of cross-node DNS
+# lookups a 5-10s stall (the resolver's retry) while CI ran, and none on the
+# same node: Cilium never sees these packets, so its drop metrics stay at 0.
+#
+# Changing the ring size resets the port, so the bond loses that link for a
+# few seconds. Apply one node at a time, and check the bond has both links
+# again before the next (`talosctl -n <ip> get links bond0`).
+apiVersion: v1alpha1
+kind: EthernetConfig
+name: enp5s0f0np0
+rings:
+  rx: 4096
+---
+apiVersion: v1alpha1
+kind: EthernetConfig
+name: enp5s0f1np1
+rings:
+  rx: 4096
