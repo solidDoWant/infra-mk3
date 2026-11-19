@@ -134,38 +134,119 @@ YAML
   echo "kind: node config for registrygate in $KIND_DIR/kind-patch.yaml"
 fi
 
+# kind nodes' image caches: each node's whole /var/lib/containerd (images,
+# unpacked layers and containerd's own state) is kept on this volume, so the
+# next build's cluster of the same name starts with every image already
+# there. Docker names a kind node's container after the node, so two nodes
+# can never run on one cache at once: kind can't create the second.
+
 # ci-kind-config, on the step's PATH: prints a kind config with
-# kind-patch.yaml merged in, or unchanged where there's no patch.
+# kind-patch.yaml merged in and the nodes' image caches mounted.
 mkdir -p "$KIND_DIR/bin"
 cat > "$KIND_DIR/bin/ci-kind-config" <<'SH'
 #!/bin/sh
-# Usage: ci-kind-config [FILE] | kind create cluster --config=-
+# Usage:
+#   ci-kind-config [--name NAME --image IMAGE] [FILE] | kind create cluster --config=-
+#
 # Prints the kind config in FILE ("-" for stdin; none for kind's default
-# cluster) with what this build's kind nodes need merged in, so that their
-# image pulls go through registrygate like Docker's do: mounts for every node
-# and the kubelet's flags. Without registrygate, prints the config unchanged.
+# cluster) with what this build's kind nodes need:
+# - with registrygate, mounts for every node and the kubelet's flags, so that
+#   their image pulls go through it like Docker's do;
+# - with --name and --image, the cluster's name and node image, and an image
+#   cache for every node: its containerd store is kept on the build's Docker
+#   volume, so a cluster of the same name in a later build starts with the
+#   images it pulled. Pass these here instead of to kind. The first use of a
+#   cache, or a new node image, seeds it from the node image (a few seconds).
 set -eu
 patch=/run/ci-kind/kind-patch.yaml
 yq=/opt/ci-kind/yq/usr/bin/yq
-default='kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4'
+# On dockerd's side: kind's mounts and docker run -v name paths there.
+caches=/var/lib/docker/ci-kind
+# Reseed a node's cache above this size (KiB), so it can't grow without end.
+max_kib=$((12 * 1024 * 1024))
+name=
+image=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --name) name=$2; shift 2 ;;
+    --name=*) name=${1#*=}; shift ;;
+    --image) image=$2; shift 2 ;;
+    --image=*) image=${1#*=}; shift ;;
+    --) shift; break ;;
+    -?*) echo "ci-kind-config: unknown option $1" >&2; exit 2 ;;
+    *) break ;;
+  esac
+done
 if [ $# -eq 0 ]; then
-  config=$(printf '%s\n' "$default")
+  config='kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4'
 else
   config=$(cat -- "$1")
 fi
-if [ ! -f "$patch" ]; then
+# kind's default when a config lists no nodes is one control-plane node.
+config=$(printf '%s\n' "$config" | "$yq" '.nodes = (.nodes // [{"role": "control-plane"}])')
+if [ -n "$name" ]; then
+  config=$(printf '%s\n' "$config" | NAME=$name "$yq" '.name = strenv(NAME)')
+fi
+if [ -n "$image" ]; then
+  config=$(printf '%s\n' "$config" | IMAGE=$image "$yq" '.nodes[] |= (.image = (.image // strenv(IMAGE)))')
+fi
+if [ -f "$patch" ]; then
+  config=$(printf '%s\n' "$config" | "$yq" eval-all '
+    select(fileIndex == 1) as $patch
+    | select(fileIndex == 0)
+    | .nodes[] |= (.extraMounts = (.extraMounts // []) + $patch.extraMounts)
+    | .kubeadmConfigPatches = (.kubeadmConfigPatches // []) + $patch.kubeadmConfigPatches
+  ' - "$patch")
+fi
+if [ -z "$name" ] || [ -z "$image" ]; then
   printf '%s\n' "$config"
   exit 0
 fi
-# kind's default when a config lists no nodes is one control-plane node.
-printf '%s\n' "$config" | "$yq" eval-all '
-  select(fileIndex == 1) as $patch
-  | select(fileIndex == 0)
-  | .nodes = (.nodes // [{"role": "control-plane"}])
-  | .nodes[] |= (.extraMounts = (.extraMounts // []) + $patch.extraMounts)
-  | .kubeadmConfigPatches = (.kubeadmConfigPatches // []) + $patch.kubeadmConfigPatches
-' - "$patch"
+
+# The nodes' container names, as kind names them: <name>-control-plane,
+# <name>-control-plane2, ..., <name>-worker, <name>-worker2, ...
+keys=
+cp=0
+wk=0
+for role in $(printf '%s\n' "$config" | "$yq" '.nodes[].role'); do
+  if [ "$role" = control-plane ]; then cp=$((cp + 1)); n=$cp; else wk=$((wk + 1)); n=$wk; fi
+  if [ "$n" -gt 1 ]; then keys="$keys $name-$role$n"; else keys="$keys $name-$role"; fi
+done
+
+# Seed each node's cache in a container of the node image itself,
+# which has the store to seed from. kind would pull the image anyway.
+docker pull -q "$image" >/dev/null
+id=$(docker image inspect -f '{{.Id}}' "$image")
+# shellcheck disable=SC2016,SC2086 # expanded in the container; keys split
+claimed=$(docker run --rm -v "$caches:/c" --entrypoint sh "$image" -c '
+  id=$1; max=$2; shift 2
+  mkdir -p /c/cache
+  for key in "$@"; do
+    dir=/c/cache/$key
+    size=$(du -sk "$dir" 2>/dev/null | cut -f1)
+    if [ "$(cat "$dir.image" 2>/dev/null)" != "$id" ] || [ "${size:-0}" -gt "$max" ]; then
+      rm -rf "$dir" "$dir.image"
+      mkdir -p "$dir"
+      cp -a /var/lib/containerd/. "$dir/"
+      echo "$id" > "$dir.image"
+      echo "ci-kind-config: $key: seeded its image cache from the node image" >&2
+    else
+      echo "ci-kind-config: $key: using its image cache ($((size / 1024)) MiB)" >&2
+    fi
+    echo "$key"
+  done
+' sh "$id" "$max_kib" $keys)
+
+i=0
+for key in $keys; do
+  if printf '%s\n' "$claimed" | grep -qx "$key"; then
+    config=$(printf '%s\n' "$config" | I=$i DIR="$caches/cache/$key" "$yq" \
+      '.nodes[env(I)].extraMounts = ((.nodes[env(I)].extraMounts // []) + [{"hostPath": strenv(DIR), "containerPath": "/var/lib/containerd"}])')
+  fi
+  i=$((i + 1))
+done
+printf '%s\n' "$config"
 SH
 chmod 755 "$KIND_DIR/bin/ci-kind-config"
 
