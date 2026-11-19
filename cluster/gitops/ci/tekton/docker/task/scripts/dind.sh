@@ -134,6 +134,41 @@ YAML
   echo "kind: node config for registrygate in $KIND_DIR/kind-patch.yaml"
 fi
 
+# ci-kind-config, on the step's PATH: prints a kind config with
+# kind-patch.yaml merged in, or unchanged where there's no patch.
+mkdir -p "$KIND_DIR/bin"
+cat > "$KIND_DIR/bin/ci-kind-config" <<'SH'
+#!/bin/sh
+# Usage: ci-kind-config [FILE] | kind create cluster --config=-
+# Prints the kind config in FILE ("-" for stdin; none for kind's default
+# cluster) with what this build's kind nodes need merged in, so that their
+# image pulls go through registrygate like Docker's do: mounts for every node
+# and the kubelet's flags. Without registrygate, prints the config unchanged.
+set -eu
+patch=/run/ci-kind/kind-patch.yaml
+yq=/opt/ci-kind/yq/usr/bin/yq
+default='kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4'
+if [ $# -eq 0 ]; then
+  config=$(printf '%s\n' "$default")
+else
+  config=$(cat -- "$1")
+fi
+if [ ! -f "$patch" ]; then
+  printf '%s\n' "$config"
+  exit 0
+fi
+# kind's default when a config lists no nodes is one control-plane node.
+printf '%s\n' "$config" | "$yq" eval-all '
+  select(fileIndex == 1) as $patch
+  | select(fileIndex == 0)
+  | .nodes = (.nodes // [{"role": "control-plane"}])
+  | .nodes[] |= (.extraMounts = (.extraMounts // []) + $patch.extraMounts)
+  | .kubeadmConfigPatches = (.kubeadmConfigPatches // []) + $patch.kubeadmConfigPatches
+' - "$patch"
+SH
+chmod 755 "$KIND_DIR/bin/ci-kind-config"
+
 # A clone can be bigger than the snapshot it came from (the project's cache
 # size was raised), so grow the filesystem to fill the volume. Online, and a
 # no-op when it already does.

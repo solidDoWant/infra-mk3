@@ -37,21 +37,20 @@
 # pod's ServiceAccount token for them from the credential helper. Elsewhere
 # the step finds no such entries and leaves Docker as it is.
 #
-# kind: in those projects, dind.sh also writes /run/ci-kind/kind-patch.yaml.
-# With it, a kind cluster's nodes pull the same hosts through registrygate
-# (with the pod's token, into the project's Harbor caches) instead of from the
-# internet. It has extraMounts for every node, which give the nodes their own
-# /etc/hosts and /etc/containerd/certs.d, and kubeadmConfigPatches for the
-# kubelet's credential provider (kubeadm v1beta4: Kubernetes 1.31 and later).
-# Merge it into the project's kind config, which must list its nodes, when the
-# file exists:
+# kind: a kind cluster's nodes run their own containerd, which uses none of
+# the above. To make their pulls go through registrygate too (with the pod's
+# token, into the project's Harbor caches), create the cluster with:
 #
-#   if [ -f /run/ci-kind/kind-patch.yaml ]; then
-#     yq eval-all 'select(fileIndex == 1) as $p | select(fileIndex == 0)
-#       | .nodes[] |= (.extraMounts = (.extraMounts // []) + $p.extraMounts)
-#       | .kubeadmConfigPatches = (.kubeadmConfigPatches // []) + $p.kubeadmConfigPatches' \
-#       kind.yaml /run/ci-kind/kind-patch.yaml > kind-ci.yaml
-#   fi
+#   ci-kind-config kind.yaml | kind create cluster --config=-
+#
+# (or `ci-kind-config | ...` for kind's default cluster). ci-kind-config is on
+# the step's PATH in every project; without registrygate it prints the config
+# unchanged, so the same command works everywhere in CI. It merges in
+# /run/ci-kind/kind-patch.yaml, written by dind.sh: mounts for every node (the
+# proxy's /etc/hosts entries, its CA in containerd's certs.d, a kubelet
+# credential provider and the token) and the kubelet's flags
+# (kubeadmConfigPatches, kubeadm v1beta4: Kubernetes 1.31 and later). A node's
+# own /etc/containerd/certs.d is replaced.
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -135,11 +134,17 @@ spec:
       configMap:
         name: registrygate-ca
         optional: true
-    # What dind.sh writes for kind nodes to mount (see above). The step reads
-    # kind-patch.yaml from it.
+    # What dind.sh writes for kind nodes to mount, and ci-kind-config (see
+    # above).
     - name: ci-kind
       emptyDir:
         sizeLimit: 1Mi
+    # yq for ci-kind-config, a static binary at usr/bin/yq.
+    - name: yq
+      image:
+        # renovate: image
+        reference: ghcr.io/mikefarah/yq:4.54.3@sha256:7834187596ad56fd5a81436114e0b0b9dd54c91bb43946d1f7145b2be5f9c3d2
+        pullPolicy: IfNotPresent
   sidecars:
     - name: dind
       image: mirror.gcr.io/library/docker:29.10.0-dind@sha256:4bbc7223f81db790097c6dea42fb93e05b8fead4f0431fbe6ccaba6e8473201c
@@ -203,6 +208,9 @@ spec:
         - name: ci-kind
           mountPath: /run/ci-kind
           readOnly: true
+        - name: yq
+          mountPath: /opt/ci-kind/yq
+          readOnly: true
       script: |
         #!/bin/sh
         set -e
@@ -229,4 +237,6 @@ spec:
           docker-credential-registrygate configure
           echo "registrygate: $REGISTRYGATE_HOSTS through the proxy"
         fi
+        # ci-kind-config (see the top of this file), written by the sidecar.
+        export PATH="/run/ci-kind/bin:$PATH"
         $(params.script)
