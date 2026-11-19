@@ -31,8 +31,12 @@ spec:
       enabled: false
     docker:
       # The CI image built from flake.nix (~3.4 GB), the Go build and module
-      # caches (~4 GB and growing), the kind node image and the e2e images:
-      # ~10 GB today, with Docker keeping its build cache to 60% of this.
-      cacheVolumeSize: 30Gi
+      # caches (~4 GB and growing), the kind node image and the e2e images,
+      # plus two kind clusters at once during e2e, each with its own copy of
+      # the ~14 preloaded images: past 20 GB mid-run, with Docker keeping its
+      # build cache to 60% of this. At 30Gi, runs hit write-back errors on
+      # this disk, which then block the kind nodes' overlay mounts
+      # (registrygate#191).
+      cacheVolumeSize: 50Gi
       registrygate:
         harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
