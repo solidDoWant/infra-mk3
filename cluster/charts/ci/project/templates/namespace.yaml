@@ -34,5 +34,13 @@ metadata:
     # k8tz's timezone mounts break kata pods.
     k8tz.io/inject: "false"
     ci.home.arpa/default-branch: {{ .Values.defaultBranch | quote }}
+    {{- if .Values.harbor.enabled }}
+    # Read by the ci-release-pods admission policy: the Secrets holding push
+    # credentials (harbor.yaml), which only ci-release pods may mount.
+    ci.home.arpa/release-secrets: {{ printf "%s,%s" .Values.harbor.pushSecretName .Values.harbor.pushCredentialsSecretName | quote }}
+    {{- end }}
+    # Read by the ci-release-runs admission policy: the refs runs may publish
+    # from as ci-release.
+    ci.home.arpa/release-refs: {{ .Values.release.refs | quote }}
     # Read by the ci-docker-cache-golden Kyverno policy.
     ci.home.arpa/docker-cache-size: {{ .Values.docker.cacheVolumeSize | quote }}

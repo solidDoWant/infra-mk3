@@ -1,0 +1,177 @@
+---
+# Only publishing runs may run as a project's ci-release ServiceAccount, the
+# one registrygate lets push (ci/project chart: serviceaccount.yaml,
+# registrygate.yaml). A PipelineRun picks its ServiceAccount in its own spec,
+# which a pull request's .tekton/ files control, so the check is on what they
+# can't control: the event-type label and the branch annotation that
+# Pipelines-as-Code sets on the PipelineRun itself. It overwrites whatever a
+# template declares for those keys; a run's TaskRuns and pods don't get that
+# protection (a task's own metadata can set them there), so only the
+# PipelineRun is trusted. Tested 2026-11-19 with a pull request whose
+# template, task metadata and taskRunSpecs all claimed a tag push.
+#
+# The refs a project may publish from are its namespace's
+# ci.home.arpa/release-refs annotation (the chart's release.refs): a regular
+# expression matched against the branch annotation, which Pipelines-as-Code
+# sets to the branch name for a branch push ("master") and to
+# "refs/tags/<tag>" for a tag. Comment re-runs (/retest) are their own event
+# types and never qualify: re-run a release by pushing its tag again.
+#
+# Requests through tekton.dev/v1beta1 are converted to v1 and checked the
+# same way (the default matchPolicy, Equivalent; tested).
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: ci-release-pipelineruns
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        ci.home.arpa/project: "true"
+    resourceRules:
+      - apiGroups:
+          - tekton.dev
+        apiVersions:
+          - v1
+        resources:
+          - pipelineruns
+        operations:
+          - CREATE
+          - UPDATE
+  variables:
+    - name: accounts
+      expression: >-
+        (has(object.spec.taskRunTemplate) && has(object.spec.taskRunTemplate.serviceAccountName)
+          ? [object.spec.taskRunTemplate.serviceAccountName] : []) +
+        (has(object.spec.taskRunSpecs)
+          ? object.spec.taskRunSpecs.filter(s, has(s.serviceAccountName)).map(s, s.serviceAccountName) : [])
+    - name: eventType
+      expression: >-
+        has(object.metadata.labels) ? object.metadata.labels[?"pipelinesascode.tekton.dev/event-type"].orValue("") : ""
+    - name: ref
+      expression: >-
+        has(object.metadata.annotations) ? object.metadata.annotations[?"pipelinesascode.tekton.dev/branch"].orValue("") : ""
+    - name: releaseRefs
+      expression: >-
+        has(namespaceObject.metadata.annotations)
+          ? namespaceObject.metadata.annotations[?"ci.home.arpa/release-refs"].orValue("")
+          : ""
+  validations:
+    - expression: >-
+        !variables.accounts.exists(a, a == "ci-release") ||
+        (variables.eventType == "push" && variables.releaseRefs != "" && variables.ref.matches(variables.releaseRefs))
+      messageExpression: >-
+        "only a push to a ref matching this project's release refs (" + variables.releaseRefs +
+        ") may run as ci-release; this run is event " + variables.eventType + " on ref " + variables.ref
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: ci-release-pipelineruns
+spec:
+  policyName: ci-release-pipelineruns
+  validationActions:
+    - Deny
+---
+# Defence in depth: a TaskRun or pod can run as ci-release only as part of a
+# PipelineRun, which the policy above checked. Tekton's controller sets these
+# owner references; nothing a template declares can.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: ci-release-taskruns
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        ci.home.arpa/project: "true"
+    resourceRules:
+      - apiGroups:
+          - tekton.dev
+        apiVersions:
+          - v1
+        resources:
+          - taskruns
+        operations:
+          - CREATE
+          - UPDATE
+  validations:
+    - expression: >-
+        !has(object.spec.serviceAccountName) || object.spec.serviceAccountName != "ci-release" ||
+        (has(object.metadata.ownerReferences) &&
+          object.metadata.ownerReferences.exists(r, r.kind == "PipelineRun" && r.apiVersion.startsWith("tekton.dev/")))
+      message: a TaskRun may run as ci-release only as part of a PipelineRun
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: ci-release-taskruns
+spec:
+  policyName: ci-release-taskruns
+  validationActions:
+    - Deny
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: ci-release-pods
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        ci.home.arpa/project: "true"
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - pods
+        operations:
+          - CREATE
+  variables:
+    - name: releaseSecrets
+      expression: >-
+        has(namespaceObject.metadata.annotations) &&
+        namespaceObject.metadata.annotations[?"ci.home.arpa/release-secrets"].orValue("") != ""
+          ? namespaceObject.metadata.annotations["ci.home.arpa/release-secrets"].split(",")
+          : []
+    - name: containers
+      expression: >-
+        object.spec.containers + (has(object.spec.initContainers) ? object.spec.initContainers : [])
+  validations:
+    - expression: >-
+        !has(object.spec.serviceAccountName) || object.spec.serviceAccountName != "ci-release" ||
+        (has(object.metadata.ownerReferences) &&
+          object.metadata.ownerReferences.exists(r, r.kind == "TaskRun" && r.apiVersion.startsWith("tekton.dev/")))
+      message: a pod may run as ci-release only as a TaskRun's pod
+    # The push robot's credentials sit in the project namespace as Secrets
+    # (harbor-operator writes them there; registrygate reads its copy through
+    # the API). A pod could mount them and push without registrygate, so only
+    # a ci-release pod may reference them (the chart lists their names in the
+    # namespace's ci.home.arpa/release-secrets annotation).
+    - expression: >-
+        (has(object.spec.serviceAccountName) && object.spec.serviceAccountName == "ci-release") ||
+        !(
+          (has(object.spec.volumes) && object.spec.volumes.exists(v,
+            (has(v.secret) && has(v.secret.secretName) && v.secret.secretName in variables.releaseSecrets) ||
+            (has(v.projected) && has(v.projected.sources) && v.projected.sources.exists(s,
+              has(s.secret) && has(s.secret.name) && s.secret.name in variables.releaseSecrets)))) ||
+          variables.containers.exists(c,
+            (has(c.env) && c.env.exists(e, has(e.valueFrom) && has(e.valueFrom.secretKeyRef) &&
+              e.valueFrom.secretKeyRef.name in variables.releaseSecrets)) ||
+            (has(c.envFrom) && c.envFrom.exists(f, has(f.secretRef) && f.secretRef.name in variables.releaseSecrets)))
+        )
+      message: only a pod running as ci-release may use this project's push credentials
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: ci-release-pods
+spec:
+  policyName: ci-release-pods
+  validationActions:
+    - Deny

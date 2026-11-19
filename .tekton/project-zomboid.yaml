@@ -1,7 +1,8 @@
 ---
 # Builds "container images/project-zomboid" with its Makefile for pull requests
-# to master that change it, and also pushes it to Harbor
-# (infra-mk3/project-zomboid) for pushes to master that change it. The image
+# to master that change it. It can't push: it runs as ci-build, which
+# registrygate gives no push rights. Pushes to master build and push the image
+# with project-zomboid-push.yaml, as ci-release. The image
 # holds a full Steam install of the game, so it only ever goes to the private
 # Harbor. registrygate supplies the Harbor credential; the build only has its
 # ServiceAccount token.
@@ -16,7 +17,7 @@ metadata:
   generateName: project-zomboid-
   annotations:
     pipelinesascode.tekton.dev/on-cel-expression: >-
-      (event == "pull_request" || event == "push") &&
+      event == "pull_request" &&
       target_branch == "master" &&
       "container images/project-zomboid/***".pathChanged()
     pipelinesascode.tekton.dev/max-keep-runs: "5"
@@ -26,9 +27,6 @@ spec:
       value: "{{ repo_url }}"
     - name: revision
       value: "{{ revision }}"
-    # pull_request or push, from the event itself; only push pushes.
-    - name: event_type
-      value: "{{ event_type }}"
     # harbor_host comes from the Repository (the ci/project chart), so the
     # cluster's domain stays out of this public repository.
     - name: registry
@@ -51,8 +49,6 @@ spec:
       - name: repo_url
         type: string
       - name: revision
-        type: string
-      - name: event_type
         type: string
       - name: registry
         type: string
@@ -96,11 +92,7 @@ spec:
               # has no make.
               apk add --no-cache make >/dev/null
               cd "container images/project-zomboid"
-              if [ "$(params.event_type)" = push ]; then
-                make push CONTAINER_REGISTRY="$(params.registry)"
-              else
-                make image CONTAINER_REGISTRY="$(params.registry)"
-              fi
+              make image CONTAINER_REGISTRY="$(params.registry)"
               echo "image: $(make print-image-name CONTAINER_REGISTRY="$(params.registry)")"
         workspaces:
           - name: source

@@ -67,6 +67,17 @@ docker:
         # (with seconds).
         keepPulledWithinDays: 30
         schedule: "0 0 3 * * *"
+# Publishing runs: only the ci-release ServiceAccount may push through
+# registrygate (images to ghcr.io with ghcrPush, and to the project's Harbor
+# project), and the ci-release-runs admission policy
+# (ci/tekton/app/release-run-policy.yaml) lets a PipelineRun run as it only for
+# a push event whose ref matches refs. The ref is what Pipelines-as-Code records
+# on the PipelineRun, which a repository's .tekton/ can't override: the branch
+# name for a branch push ("master"), "refs/tags/<tag>" for a tag. Pull requests,
+# comment re-runs (/retest) and other branches never qualify.
+release:
+  # A regular expression (RE2, as CEL's matches()). The default is version tags.
+  refs: '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'
 # Defaults for build containers that set no resources of their own (Tekton
 # applies these to every step). The memory request equals the limit.
 defaultResources:

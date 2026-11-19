@@ -145,16 +145,25 @@ subjects:
   - kind: ServiceAccount
     namespace: {{ $rg.serviceAccount.namespace }}
     name: {{ $rg.serviceAccount.name }}
+{{- range $policy := list (dict "name" "builds" "account" "ci-build" "actions" (list "pull")) (dict "name" "releases" "account" "ci-release" "actions" (list "pull" "push")) }}
 ---
-# What the project's builds (the ci-build ServiceAccount) get from registrygate.
+{{- if eq $policy.name "builds" }}
+# What the project's builds (the ci-build ServiceAccount) get from registrygate:
+# public pulls through the caches, and pulls of the project's own images. No
+# pushes: those are the releases policy's, below.
+{{- else }}
+# What the project's publishing runs (the ci-release ServiceAccount, allowed
+# only for push events on release.refs by the ci-release-runs admission
+# policy) get: the same, plus pushes.
+{{- end }}
 apiVersion: registrygate.soliddowant.dev/v1alpha1
 kind: RegistryAccessPolicy
 metadata:
-  name: builds
+  name: {{ $policy.name }}
   namespace: {{ $ns }}
 spec:
   serviceAccounts:
-    - ci-build
+    - {{ $policy.account }}
   rules:
     {{- range $rg.mirrors }}
     # Pulls of public {{ .upstream }} images, through the project's cache
@@ -167,7 +176,8 @@ spec:
         - pull
     {{- end }}
     {{- if $rg.ghcrPush.enabled }}
-    # Pushes to ghcr.io with the account's PAT (ci/ghcr-push)
+    # The project's own ghcr.io repositories, with the account's PAT
+    # (ci/ghcr-push)
     - name: ghcr-push
       credentialRef:
         namespace: {{ $admin }}
@@ -177,11 +187,12 @@ spec:
         - {{ . | quote }}
         {{- end }}
       actions:
-        - pull
-        - push
+        {{- range $policy.actions }}
+        - {{ . }}
+        {{- end }}
     {{- end }}
-    {{- if .Values.harbor.enabled }}
-    {{- $project := .Values.harbor.projectName | default .Values.name }}
+    {{- if $.Values.harbor.enabled }}
+    {{- $project := $.Values.harbor.projectName | default $.Values.name }}
     # The project's own Harbor project
     - name: harbor-project
       credentialRef:
@@ -190,7 +201,9 @@ spec:
         - {{ $project }}
         - {{ $project }}/**
       actions:
-        - pull
-        - push
+        {{- range $policy.actions }}
+        - {{ . }}
+        {{- end }}
     {{- end }}
+{{- end }}
 {{- end }}
