@@ -1,0 +1,38 @@
+---
+# Talos' syslogd (what /dev/log writers such as kata-runtime log to) sends the
+# message text in `content` with an empty `msg`. The talos-service chain renames
+# that empty `msg` to `log`, and VictoriaLogs stores an empty message field as
+# "missing _msg field". Overwrite `log` with `content` (hardRename, since `log`
+# already exists) and drop the trailing newline.
+#
+# Runs on the post-rewrite_tag tag like the talos-drop-* filters. ClusterFilter
+# (NOT namespaced) for the fluent/fluent-operator#1211 reason.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: talos-syslogd
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: talos.service.syslogd
+  filters:
+    - modify:
+        rules:
+          - hardRename:
+              content: log
+    - lua:
+        call: trim_trailing_newline
+        code: |
+          function trim_trailing_newline(tag, timestamp, record)
+            local log = record["log"]
+            if type(log) ~= "string" then
+              return 0, timestamp, record
+            end
+            local trimmed = log:gsub("[\r\n]+$", "")
+            if trimmed == log then
+              return 0, timestamp, record
+            end
+            record["log"] = trimmed
+            return 2, timestamp, record
+          end
