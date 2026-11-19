@@ -84,10 +84,12 @@ spec:
         # At info, the webhook logs a full Go dump of every HTTP request it
         # serves (~1.5KB each). The API server sends one per CRD conversion,
         # for every TaskRun/PipelineRun write: it keeps a watch cache for each
-        # served version, and v1beta1 is still served. ~150k lines/day.
+        # served version, and v1beta1 is still served. ~150k lines/day. The
+        # key is `loglevel.<component>`, and the webhook's component is its
+        # service name; the shipped `loglevel.webhook` key matches nothing.
         config-logging:
           data:
-            loglevel.webhook: warn
+            loglevel.tekton-pipelines-webhook: warn
         resolvers-feature-flags:
           data:
             enable-http-resolver: "false"
