@@ -51,6 +51,13 @@
 # credential provider and the token) and the kubelet's flags
 # (kubeadmConfigPatches, kubeadm v1beta4: Kubernetes 1.31 and later). A node's
 # own /etc/containerd/certs.d is replaced.
+#
+# To run kind from a container started on the build's dockerd instead (a CI
+# image, say), mount both directories at the same paths, which dockerd also
+# has, and call the script by its path:
+#
+#   docker run -v /run/ci-kind:/run/ci-kind:ro -v /opt/ci-kind:/opt/ci-kind:ro ...
+#   /run/ci-kind/bin/ci-kind-config kind.yaml | kind create cluster --config=-
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -168,6 +175,11 @@ spec:
         # Mounted into kind nodes from here, for their credential provider.
         - name: registrygate-token
           mountPath: /var/run/secrets/registrygate
+          readOnly: true
+        # Not used by dockerd: here so that containers on it can mount yq for
+        # ci-kind-config (see the top of this file).
+        - name: yq
+          mountPath: /opt/ci-kind/yq
           readOnly: true
       computeResources:
         requests:
