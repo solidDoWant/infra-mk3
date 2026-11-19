@@ -56,8 +56,18 @@ spec:
     default-service-account: ci-build
     # Every build runs in a VM. The pod template also takes `env`, applied to
     # every step container (a run's own podTemplate wins for the same name).
+    #
+    # ndots 1: a name with a dot (ghcr.io, a service's full name) is looked up
+    # as it is, instead of first through the three search domains, both A and
+    # AAAA: one query instead of up to eight. Bare service names still use the
+    # search domains. kind nodes and other containers on the build's dockerd
+    # inherit it from the pod's resolv.conf.
     default-pod-template: |
       runtimeClassName: kata
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
     # No fetching Tasks or Pipelines from outside a repo's own .tekton/
     # directory. The cluster resolver only reads objects already in the
     # cluster. The http resolver has no field here; it's turned off in
