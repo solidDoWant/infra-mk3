@@ -12,7 +12,7 @@ Actors:
 
 **The question being tested:** can CI runtime for one of the owner's projects be cut a lot by moving from GitHub-hosted runners to self-hosted Tekton in the homelab, with the agent-project setup doing the work?
 
-**The outcome:** yes, roughly halved, but most of the gain came from changing how the tests run, not from the hardware.
+**The outcome:** yes, roughly halved. The gains came from two kinds of change. The local infrastructure removed what GHA charges for setup and caching: fast storage and network, copy-on-write cache snapshots, in-cluster registry caches, and one big VM per run (section 3.2a). Changing how the tests run then removed most of the remaining e2e waiting. More CPU and memory alone did little for e2e, which mostly waits rather than computes (section 3.3).
 
 | Measure | GitHub Actions | Tekton at the Phase 4 cutover | After CI-speed rounds 1 and 2 | Now (after the kind image cache) |
 |---|---|---|---|---|
@@ -23,7 +23,7 @@ Actors:
 | unit / integration / lint / generate | 3.3 / 3.5 / 2.5 / 2.2 min | 1.1 / 1.3 / 0.3 / 0.1 min | ~1.1 / 1.3 min | same |
 
 - The whole `ci` TaskRun is now about 4.5 min against GHA's 9.5 min p50: about 48%. The PaC wall clock adds pod start (~9s), the `test-guard` and `report` pods and PaC's own reporting on top, roughly 30–40s more.
-- The owner's estimate was "a little under half, maybe 40%". The defensible numbers are 48% (TaskRun) to ~55% (PaC wall clock). Round 3 (#239–#243) was still running when this was written and should cut further; its estimate is a walkthrough of ~155s and a whole run of ~3.5 min.
+- The owner's estimate was "a little under half, maybe 40%". The defensible numbers are 48% (TaskRun) to ~55% (PaC wall clock). Round 3 (#239–#243) was still running when this was written and should cut further; its estimate is a walkthrough of ~155s and a whole run of ~3.5 min. Its first merge (#244, skipping the walkthrough's teardown in CI) already took the walkthrough to 182s and the whole TaskRun to 231–236s, about 40% of the GHA p50: in line with the owner's estimate.
 - **Phase 4's cutover alone barely beat GHA (9.1 vs 9.5).** It removed every job's Nix setup and ran all stages at once in one VM. But the e2e job, which was the critical path, didn't get faster, because its time was waiting, not compute. Everything after the cutover came from finding where the e2e waits were and removing them.
 
 ## 2. Timeline
@@ -115,7 +115,17 @@ Rough total agent spend for the migration: **~$50** (Phase 4 $42.53 + round 1 $6
 - **Golden cache:** a per-run copy-on-write clone of the project's latest snapshot, promoted only from successful default-branch push builds. It gives warm Go and Docker caches with no network transfer.
 - **Not fixed:** e2e still took about 8.4 min, and set the whole run.
 
-### 3.3 Why the extra hardware didn't help e2e
+### 3.2a What the local infrastructure contributed (owner correction)
+
+An earlier draft said "the hardware made no difference". The owner corrected it, and they were right:
+- **Caches restore by snapshot, not by download.** A per-run copy-on-write clone of the golden volume (Ceph RBD, erasure coded) is ready as soon as the pod starts, with pod start at ~9s including the clone and the kata boot. On GHA every job paid 2.0–2.7 min of Nix install plus `actions/cache` restore, and paid again to save. That cost is gone entirely, and it was the largest cost in every GHA job except e2e.
+- **Bandwidth and latency:** local disk and 10G networking, and in-cluster Harbor proxy caches behind registrygate. Image and module pulls come from the same rack, not the internet. A 62 MB layer arrives in 0.26–0.41s through the full CI path.
+- **One large VM per run** (32 vCPUs, 14 GiB for dind) lets every stage run at once in one place, sharing one warm cache, rather than as separate 4-vCPU runners that each restore their own copy.
+- **Persistent state across runs** is cheap enough to use for more than Go caches: the CI image, Docker layers, and now each kind node's whole containerd store (infra-mk3 #909).
+
+What the extra resources did **not** change is the e2e test phase itself, which spent most of its time waiting (section 3.3). So: the infrastructure removed the setup and caching cost, and test-suite changes removed the waiting.
+
+### 3.3 Why more CPU and memory didn't speed up the e2e tests themselves
 - **My first claim:** the stage table showed e2e at ~0.1 cores and a 0.3 GiB peak, so I said e2e was "latency-bound". **That table only measures the stage container** (`go test`, `kubectl`, `helm`). The kind node containers, which run the API server, etcd, Harbor and so on, are outside its cgroup. cAdvisor can't see inside kata VMs either, so no cluster metric showed CI CPU at all.
 - **The direct measurement:** sampling `/proc/stat` and `docker stats` from inside the build VM, during a run.
   - Setup phase, about 2 min: 2–5 of 32 cores, with 4–14% iowait. The kind nodes peaked at 100–300%.
@@ -240,7 +250,7 @@ Most of the real gains came from the owner asking "why" until the answer was a m
 - "Why does the cluster start with an empty image store?"
 - "Is Harbor required, or would a generic registry do?"
 
-The PM agents never raised these questions themselves. Within the frozen checklist, "PR p50 below GHA" was met at 9.1 vs 9.5, and the PM stopped there. That's correct behaviour under the skill's "agents can't raise the bar" rule, but it means extra speed needs an owner or operator who keeps asking.
+The PM agents never raised these questions themselves. Within the frozen checklist, "PR p50 below GHA" was met at 9.1 vs 9.5, and the PM stopped there. That's correct behaviour under the skill's "agents can't raise the bar" rule, but it means extra speed needs an owner or operator who keeps asking. Something that watches project health across issues would catch this kind of long-running problem without relying on the owner (section 8, "Monitor project health").
 
 Owner decisions along the way:
 - accepted n=2 master runs for AC-4-06;
@@ -335,7 +345,7 @@ From the wait log of warm run `timing-warm-k9q89`. Round 3 is working on these.
 ## 7. Observations for migrating other projects
 Raw, not yet a playbook:
 - **Measure first.** Get the GHA baseline per job and per step, the setup cost per job, and the test suite's own waits. Cheap instrumentation like `e2e-wait:` lines with durations helps a lot. Decide what's waiting and what's working before sizing anything.
-- **Hardware only helps the working part.** On GHA the visible cost was per-job setup. On Tekton the remaining cost was waiting inside e2e. More CPU or memory changed neither.
+- **Local infrastructure removes setup and caching cost; it doesn't remove waiting.** On GHA the biggest cost was per-job setup and cache save/restore. Local storage and networking with copy-on-write snapshots remove that (section 3.2a), and that alone is worth the move. Inside e2e the remaining cost was waiting, which more CPU or memory doesn't change: only test-suite changes do.
 - **The biggest wins, roughly in order:**
   1. one pod and one VM for all stages, with a prebuilt CI image (no per-job setup);
   2. parallel tests inside the e2e suite;
@@ -359,6 +369,28 @@ Raw, not yet a skill change:
 - **Expire operator instructions.** Lines in `state.md` should carry an ID and an end condition, and the planner should delete them when the round ends.
 - **Profile before optimizing:** for any phase whose goal is speed, the first issue should be instrumentation (like #228), and the design should be based on its output.
 - **Speed goals need someone to push past "below baseline".** Under a frozen checklist, the PM stops at the first number that passes. If the owner wants "as fast as reasonable", the checklist should say so as a target, or the operator should plan rounds after the phase, as happened here.
+- **Monitor project health, not just issue progress** (the owner's suggestion). Nothing in the skill or the loop watches problems that build up across many issues. The PM only sees one issue at a time and the checklist. The owner caught these here, and nothing automated would have:
+  - CI time staying the largest share of every issue's cycle time;
+  - e2e being latency-bound;
+  - kind pulls bypassing the cache;
+  - the cluster-wide DNS stalls;
+  - the disk filling up.
+
+  Raw ideas for a "project health" job, a special job like the bug hunt but recurring (for example daily, or every N merged PRs), and possibly run by the operator rather than by the PM:
+  - **Trend metrics,** recorded somewhere durable (a `pm:health` issue, or a file in `.pm/`):
+    - CI wall clock p50/p90 per event type, and stage times;
+    - queue time;
+    - flake and re-run rate;
+    - time from PR opened to merged, and how much of it was CI;
+    - issue cycle time;
+    - agent cost per merged PR;
+    - prompt-cache misses from CI waits;
+    - golden-cache disk use;
+    - how often the planner or operator had to step in.
+  - **Triggers to report to the owner:** a metric gets worse over a window, or stops improving while it still dominates. "CI is more than half of issue cycle time for 20 PRs" would have triggered this whole investigation on day one.
+  - **Profiling, not guessing:** when CI dominates, the job reads the slowest stage's own timing data (the `e2e-wait:` lines here) and proposes the top few waits as candidate issues, each with an estimate. The owner decides. That keeps the "agents can't raise the bar" rule: the job proposes and never adds to a checklist.
+  - **Cross-checks that agents can't do inside one issue:** for example, comparing the stage table's CPU and memory with what the VM actually used, or checking that caches are hit (`using its image cache`, registrygate's `decision: mirror`).
+  - **Infra signals that leak into CI time** (NIC drops, DNS timeouts, disk EIO) need cluster access, so that part belongs to the operator's check-ins, not to the VM agents.
 - **Cost is low compared to the time:** about $50 of agent spend for the whole migration. The real limits were owner and operator attention, and CI wall clock.
 - **Prompt cache economics:** workers waiting more than about 5 minutes for CI lose their cache, so CI time directly drives agent cost as well as the issue tail. Cutting CI time pays for itself.
 - **Keep the infra boundary,** with "operator implements, owner approves" for infra-mk3. It worked and kept the owner in control. The operator should prototype infra changes in a throwaway TaskRun before opening a PR. Every infra PR here was prototyped, and every prototype caught at least one bug.
