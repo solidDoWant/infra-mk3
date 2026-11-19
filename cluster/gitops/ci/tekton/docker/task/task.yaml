@@ -36,6 +36,22 @@
 # those hosts (registrygate-ca, in certs.d), and the step's Docker CLI gets the
 # pod's ServiceAccount token for them from the credential helper. Elsewhere
 # the step finds no such entries and leaves Docker as it is.
+#
+# kind: in those projects, dind.sh also writes /run/ci-kind/kind-patch.yaml.
+# With it, a kind cluster's nodes pull the same hosts through registrygate
+# (with the pod's token, into the project's Harbor caches) instead of from the
+# internet. It has extraMounts for every node, which give the nodes their own
+# /etc/hosts and /etc/containerd/certs.d, and kubeadmConfigPatches for the
+# kubelet's credential provider (kubeadm v1beta4: Kubernetes 1.31 and later).
+# Merge it into the project's kind config, which must list its nodes, when the
+# file exists:
+#
+#   if [ -f /run/ci-kind/kind-patch.yaml ]; then
+#     yq eval-all 'select(fileIndex == 1) as $p | select(fileIndex == 0)
+#       | .nodes[] |= (.extraMounts = (.extraMounts // []) + $p.extraMounts)
+#       | .kubeadmConfigPatches = (.kubeadmConfigPatches // []) + $p.kubeadmConfigPatches' \
+#       kind.yaml /run/ci-kind/kind-patch.yaml > kind-ci.yaml
+#   fi
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -119,6 +135,11 @@ spec:
       configMap:
         name: registrygate-ca
         optional: true
+    # What dind.sh writes for kind nodes to mount (see above). The step reads
+    # kind-patch.yaml from it.
+    - name: ci-kind
+      emptyDir:
+        sizeLimit: 1Mi
   sidecars:
     - name: dind
       image: mirror.gcr.io/library/docker:29.10.0-dind@sha256:4bbc7223f81db790097c6dea42fb93e05b8fead4f0431fbe6ccaba6e8473201c
@@ -136,6 +157,12 @@ spec:
           readOnly: true
         - name: registrygate-ca
           mountPath: /etc/registrygate
+          readOnly: true
+        - name: ci-kind
+          mountPath: /run/ci-kind
+        # Mounted into kind nodes from here, for their credential provider.
+        - name: registrygate-token
+          mountPath: /var/run/secrets/registrygate
           readOnly: true
       computeResources:
         requests:
@@ -172,6 +199,9 @@ spec:
           readOnly: true
         - name: registrygate-token
           mountPath: /var/run/secrets/registrygate
+          readOnly: true
+        - name: ci-kind
+          mountPath: /run/ci-kind
           readOnly: true
       script: |
         #!/bin/sh
