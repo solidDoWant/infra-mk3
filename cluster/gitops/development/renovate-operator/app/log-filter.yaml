@@ -50,3 +50,27 @@ spec:
             record["log"] = msg
             return 2, ts, record
           end
+---
+# Drops ghcr-proxy (jobs/ghcr-proxy) access-log lines for routine traffic:
+# ghcr.io requests that succeeded on the first attempt, including the 401 of
+# the registry token handshake and 307 redirects to blob storage, and tunnels
+# Renovate closed itself (CONNECT 200 `DC`). Requests Envoy retried
+# (`attempts` > 1, i.e. GHCR 429s), other statuses and other flags still ship.
+# Envoy's access-log filters can't test the attempt count, hence fluent-bit.
+#
+# Matches the raw line, before `kubernetes`. Envoy's json_format sorts keys,
+# so the field order is fixed.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-renovate-ghcr-proxy-routine
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.development\.renovate-[^.]*\.ghcr-proxy\.
+  filters:
+    - grep:
+        exclude: 'log ^\{"attempts":1,"authority":"ghcr\.io","duration_ms":\d+,"flags":"-",.*"status":(200|307|401),"time":'
+    - grep:
+        exclude: 'log ^\{"attempts":1,"authority":"[^"]+","duration_ms":\d+,"flags":"DC","method":"CONNECT","path":null,"status":200,'

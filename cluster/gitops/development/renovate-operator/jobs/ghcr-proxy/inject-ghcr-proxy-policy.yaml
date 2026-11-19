@@ -33,6 +33,12 @@ spec:
               - name: ghcr-proxy
                 image: mirror.gcr.io/envoyproxy/envoy:contrib-v1.40.2@sha256:dc50a95c3d54a8f98cf682494db6fc42d77fde4ef12404fac3654d866a1f405d
                 restartPolicy: Always
+                env:
+                  # Read by the image's entrypoint (--log-level). Skips the ~25
+                  # info lines Envoy logs starting and stopping in every job
+                  # pod. Access logs are separate and unaffected.
+                  - name: loglevel
+                    value: warn
                 securityContext:
                   readOnlyRootFilesystem: true
                   allowPrivilegeEscalation: false
