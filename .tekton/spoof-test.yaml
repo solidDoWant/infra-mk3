@@ -23,7 +23,9 @@ spec:
           metadata:
             labels:
               pipelinesascode.tekton.dev/event-type: push
-              ci.home.arpa/spoof-marker2: "true"
+              ci.home.arpa/spoof-marker3: "true"
+              tekton.dev/pipelineRun: fake-run-name
+              tekton.dev/pipelineRunUID: fake-uid
             annotations:
               pipelinesascode.tekton.dev/event-type: push
               pipelinesascode.tekton.dev/branch: refs/tags/v9.9.9
