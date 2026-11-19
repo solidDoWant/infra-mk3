@@ -1,0 +1,28 @@
+---
+# Throwaway test (to be closed unmerged): does Pipelines-as-Code overwrite
+# labels and annotations that a pull request's template sets for its own keys?
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: spoof-test-
+  labels:
+    pipelinesascode.tekton.dev/event-type: push
+    ci.home.arpa/spoof-marker: "true"
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "pull_request" && target_branch == "master" &&
+      ".tekton/spoof-test.yaml".pathChanged()
+    pipelinesascode.tekton.dev/event-type: push
+    pipelinesascode.tekton.dev/branch: refs/tags/v9.9.9
+    pipelinesascode.tekton.dev/source-branch: refs/tags/v9.9.9
+spec:
+  pipelineSpec:
+    tasks:
+      - name: noop
+        taskSpec:
+          steps:
+            - name: noop
+              image: mirror.gcr.io/library/docker:29.9.3-cli@sha256:5a7af0dcb0e46c803efe9b45371dd21cb500e5b4453250394ac6f06d49b6e6f1
+              script: |
+                #!/bin/sh
+                echo noop
