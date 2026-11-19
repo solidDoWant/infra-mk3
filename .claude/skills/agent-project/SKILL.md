@@ -14,7 +14,7 @@ This packages the workflow first run for `solidDoWant/vault-sync` (2026-10-18; s
 
 Templates are in `templates/` (copy into the new repo) and helper scripts in `scripts/`. The templates come from vault-sync: lines about sync simulation, E2EE, Obsidian, path normalization, `test-sim`/`test-e2e`, and `check-generate` are **examples** — replace them with the new project's equivalents rather than copying them blindly. `{{PROJECT}}` and `{{GH_USER}}` are placeholders.
 
-**Gates:** confirm with the user before (a) the spec/phase plan is final, (b) creating the repo (name + visibility), and (c) starting the PM. Everything else in this skill is pre-authorized by invoking it.
+**Gates:** confirm with the user before (a) the spec/phase plan is final, (b) creating the repo (name + visibility; also ask them to add it to the Tekton CI App, see Step 2), and (c) starting the PM. Everything else in this skill is pre-authorized by invoking it.
 
 **infra-mk3 changes:** the operator may make **project-scoped** infra-mk3 changes itself when it judges them needed: onboarding the project's CI (Step 2b), its concurrency, memory/CPU/pod/disk quotas, and the `ghcrPush` repositories it realistically needs. Deploying a **new service** in the cluster is not project-scoped: that needs the owner. PM and VM agents never change infra-mk3 (their GitHub token can technically write to it, so this is a rule they follow, not a limit): they file a `needs-human` + `area:ops` issue with the exact change, and the operator decides and makes it.
 
@@ -39,7 +39,7 @@ The operator then made a dozen local process fixes: follow-up rules, design-gap 
 3. **Done is a frozen, owner-approved acceptance checklist of user-visible scenarios**, roughly 20–40 per phase. Plus the owner using the build for real.
    - Never make phase exit "N clean runs" of a simulator, fuzzer or proof that agents can extend.
    - Agents never add to the checklist. Only the owner does.
-4. **Agents can't raise the bar.** Reviewers, simulation, bug hunts and proofs may block only on a checklist scenario or real loss of user data. Everything else goes on a later list that the owner prioritizes.
+4. **Agents can't raise the bar.** Reviewers, simulation, bug hunts and proofs may block only on a checklist scenario or real loss of user data. Everything else goes on a later list that the owner prioritizes. The same goes for the spec's CI time budget: only the owner changes it.
 5. **Ship a usable end-to-end slice early.** Deploy it to the owner by the end of the first product phase. Bugs found in real use set the priorities. A "deploy for dogfooding" issue that sits open is a red flag.
 6. **More rigor is a product decision, not a fix for failing tests.** Moving from randomized simulation to formal methods, or adding a new class of guarantee, needs the owner's decision with a cost and time estimate. First ask whether the requirement that keeps failing is actually needed.
 7. **Agree a budget per phase** (spend and calendar time) with the owner. If it runs out, stop and review with the owner. Don't extend it silently, and don't move a cutoff you announced.
@@ -56,7 +56,7 @@ The operator then made a dozen local process fixes: follow-up rules, design-gap 
 
 ## Step 1 — Design and spec
 
-Usually this follows a design discussion. Turn it into `SPEC.md` (authoritative reference) with: purpose; **non-negotiable principles** (3–5, the things reviewers enforce); target environment; architecture; data model; protocols/APIs; security model; the **reference behaviour and "won't do" list**; testing strategy (randomized or adversarial layers are fine for finding bugs, but they never define done; see "Read first"); repo layout; **documentation plan** (the audiences and what each already knows and needs, and the `docs/` tree per audience; see "Docs" in Step 4); **phases**, each with an owner-approved acceptance checklist, a budget, and a deployable result the owner can use; open questions. Read the existing project repos the user points at (here: `solidDoWant/tape-archiver`, `solidDoWant/media-processor`) for conventions: Nix flake dev shell, single Makefile with `##@` help, golangci-lint (`errcheck govet staticcheck wsl_v5` + goimports local-prefix), testify table tests, Given/When/Then issues, `.claude/commands/{create,start}-issue.md`, Renovate presets under `.github/renovate/`.
+Usually this follows a design discussion. Turn it into `SPEC.md` (authoritative reference) with: purpose; **non-negotiable principles** (3–5, the things reviewers enforce); target environment; architecture; data model; protocols/APIs; security model; the **reference behaviour and "won't do" list**; testing strategy (randomized or adversarial layers are fine for finding bugs, but they never define done; see "Read first"); repo layout; **documentation plan** (the audiences and what each already knows and needs, and the `docs/` tree per audience; see "Docs" in Step 4); **phases**, each with an owner-approved acceptance checklist, a budget, and a deployable result the owner can use; a **CI time budget** the owner sets, e.g. "a PR run takes at most 5 minutes" (5 minutes is the subagents' prompt-cache lifetime: a worker waiting longer on CI reloads its whole context); open questions. Agents never change the CI budget, like the checklist (see "Agents can't raise the bar"); the planner measures against it (`docs/agents/project-manager.md`, CI health). Read the existing project repos the user points at (here: `solidDoWant/tape-archiver`, `solidDoWant/media-processor`) for conventions: Nix flake dev shell, single Makefile with `##@` help, golangci-lint (`errcheck govet staticcheck wsl_v5` + goimports local-prefix), testify table tests, Given/When/Then issues, `.claude/commands/{create,start}-issue.md`, Renovate presets under `.github/renovate/`.
 
 ## Step 2 — Create a seed repo (devcontainer)
 
@@ -68,6 +68,8 @@ gh repo edit OWNER/NAME --enable-squash-merge --enable-merge-commit=false \
   --enable-rebase-merge=false --delete-branch-on-merge --enable-wiki=false \
   --enable-auto-merge   # reviewers arm auto-merge pinned to the reviewed head instead of waiting for CI
 ```
+
+**Ask the owner to add the repo to the Tekton CI GitHub App** (`infra-mk3-tekton`) at the repo gate, or to confirm the App is installed on all repositories. The operator can't do it: the devcontainer's `gh` token gets 403 on `user/installations/<id>/repositories`. The installation id is on any PaC PipelineRun's `pipelinesascode.tekton.dev/installation-id` annotation (registrygate's is 182047609). Confirm it after Step 2b: the first push must create a PipelineRun in `ci-<repo>`.
 
 **Lock interactions to collaborators immediately** — agents read issue/PR comments, and attackers have tried to get agents in the user's other repos to download and run malicious code via comments:
 
@@ -89,7 +91,7 @@ CI runs on the cluster's Tekton with Pipelines-as-Code (PaC), not GitHub Actions
 - `docker.registrygate.ghcrPush`: only the `ghcr.io` repositories the releases publish. Only the `ci-release` ServiceAccount gets push; PR and master builds only pull.
 - `release.refs`: keep the default (version tags) unless the project publishes from a branch.
 
-Check it landed: the `ci-<name>` namespace, the Repository CR, and `kubectl -n ci-<name> get registryaccesspolicy` showing push only on `releases`. The Tekton CI GitHub App (`infra-mk3-tekton`) must have access to the repo; if PaC ignores the first push, ask the owner to add the repo to the App's installation.
+Check it landed: the `ci-<name>` namespace, the Repository CR, and `kubectl -n ci-<name> get registryaccesspolicy` showing push only on `releases`. The first push (Step 4) must then create a PipelineRun in `ci-<name>`; if none appears, the repo isn't in the Tekton CI App's installation yet (see Step 2): ask the owner again.
 
 ## Step 3 — Coder VM workspace
 
@@ -118,7 +120,7 @@ timeout 1200 coder ssh NAME-vm --wait yes -- 'echo ok'   # waits for the agent
 - **GitHub credentials:** `GITHUB_TOKEN` in the env is a static 8 h token; only `~/.local/bin/gh` (a wrapper calling `coder external-auth access-token github-restricted`) refreshes, and git pushes go through `GIT_ASKPASS`. Hence: never put `gh` in the flake dev shell, and `pm-loop.sh` re-prepends `~/.local/bin` inside `nix develop`. Git author/committer come from env; commits are SSH-signed automatically.
 - **Process environment:** `CODER_AGENT_*`, `GIT_ASKPASS`, `CLAUDE_CODE_OAUTH_TOKEN` exist only in sessions spawned by the coder agent. Start long-running things from `coder ssh` inside tmux — a systemd unit would lack them. Consequence: nothing restarts the loop after a VM reboot; the operator's monitoring does.
 - **CI re-runs:** Tekton runs have no `gh run rerun`. `gh pr update-branch` re-runs CI by merging master in; a `/retest` PR comment re-runs it without a change but runs every pipeline again. One CI run per head commit: re-run only after a failure that isn't the code's.
-- **CI logs:** PaC posts one check run per PipelineRun and no log lines (they may hold secrets). Agents read the logs through the toolgate `tekton` MCP server (namespace `ci-<repo>`, TaskRun `<run>-ci`, step `run`); `enable_toolgate=true` gives them it.
+- **CI logs:** PaC posts one check run per PipelineRun and no log lines (they may hold secrets). Agents read the logs through the toolgate `tekton` MCP server (namespace `ci-<repo>`, TaskRun `<run>-ci`, step `run`). VM agents get it by default with `enable_toolgate=true`. It's per-user: it runs as the owner's Kubernetes identity through the authentik token exchange, and the `ci/project` chart's `user-rolebinding.yaml` gives the "Tekton access" group read access to every `ci-<project>` namespace. So a new project's namespace is readable as soon as it's onboarded, with nothing else to set up, and agents can read **every** `ci-*` namespace (read-only), not only their own project's.
 - Smoke-test: `claude -p "Reply with exactly: ok" --dangerously-skip-permissions --model opus`.
 
 ## Step 4 — Scaffold, validate and protect (in the VM)
@@ -172,7 +174,7 @@ Pure GitHub API work, so it can run from the devcontainer (which has `python3`).
 python3 scripts/create_issues.py OWNER/REPO /path/to/issues.py /path/to/state.json
 ```
 
-It creates labels (`status:*` incl. `status:triage`, `follow-up`, `needs-human`, `phase:N`, `severity:*`, `area:*`, `bughunt`, `security`, `pm:status`, `pm:decisions`, …), one milestone + epic per phase, sub-issues (API needs the child's database `id`, not its number), and blocked-by links — topologically ordered and idempotent (re-run resumes). Detail phases 1–2 fully; later phases at feature level (the PM decomposes them before starting the phase). Mark human-only work `needs-human`.
+It creates labels (`status:*` incl. `status:triage`, `follow-up`, `needs-human`, `ci-health`, `phase:N`, `severity:*`, `area:*`, `bughunt`, `security`, `pm:status`, `pm:decisions`, …), one milestone + epic per phase, sub-issues (API needs the child's database `id`, not its number), and blocked-by links — topologically ordered and idempotent (re-run resumes). Detail phases 1–2 fully; later phases at feature level (the PM decomposes them before starting the phase). Mark human-only work `needs-human`.
 
 Then create and pin (`gh api graphql … pinIssue`) two issues: **`pm: project status log`** (`pm:status`) and **`pm: decision log`** (`pm:decisions`). State in both bodies that human instructions are comments by the owner whose first line starts with `/pm`.
 
