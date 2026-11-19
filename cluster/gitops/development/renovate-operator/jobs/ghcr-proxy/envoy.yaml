@@ -46,6 +46,25 @@ static_resources:
                 stat_prefix: ghcr
                 access_log:
                   - name: envoy.access_loggers.stdout
+                    # Skips clean CONNECT tunnels (Go module, npm, GitHub API
+                    # fetches): ~90% of lines, ~900k/day. ghcr.io lookups, any
+                    # status >= 300 and any response flag still log.
+                    filter:
+                      or_filter:
+                        filters:
+                          - header_filter:
+                              header:
+                                name: ":method"
+                                string_match:
+                                  exact: CONNECT
+                                invert_match: true
+                          - status_code_filter:
+                              comparison:
+                                op: GE
+                                value:
+                                  default_value: 300
+                                  runtime_key: access_log.min_logged_status
+                          - response_flag_filter: {}
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
                       log_format:
