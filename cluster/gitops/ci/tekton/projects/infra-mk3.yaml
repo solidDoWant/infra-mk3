@@ -19,7 +19,7 @@ spec:
   values:
     name: infra-mk3
     # Publishes from master: the project-zomboid image goes to Harbor on every
-    # push to master that changes it (.tekton/project-zomboid-push.yaml).
+    # push to master that changes it (.tekton/project-zomboid/push.yaml).
     release:
       refs: "^master$"
     harbor:

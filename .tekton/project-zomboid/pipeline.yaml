@@ -1,7 +1,7 @@
 ---
 # Builds "container images/project-zomboid" with its Makefile, for the two
-# runs that reference it: project-zomboid.yaml (pull requests, build only) and
-# project-zomboid-push.yaml (pushes to master, build and push). The image
+# runs that reference it: pull-request.yaml (pull requests, build only) and
+# push.yaml (pushes to master, build and push). The image
 # holds a full Steam install of the game, so it only ever goes to the private
 # Harbor. registrygate supplies the Harbor credential; the build only has its
 # ServiceAccount token, and only the push run's ServiceAccount may push.
