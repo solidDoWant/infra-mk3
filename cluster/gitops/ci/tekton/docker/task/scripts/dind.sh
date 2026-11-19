@@ -32,6 +32,143 @@ if [ -f /etc/registrygate/ca.crt ]; then
   done
 fi
 
+# kind: the same interception for a kind cluster's nodes, whose containerd
+# uses neither this container's /etc/hosts nor dockerd's certs.d. These files
+# are for the nodes to mount (kind extraMounts), so their paths are this
+# container's; kind-patch.yaml lists the mounts and the kubelet flags (see the
+# Task). The kubelet gets the pod's registrygate token from a credential
+# provider that reads the token file on every call, so rotation needs nothing.
+KIND_DIR=/run/ci-kind
+hosts=$(awk -v marker="$marker" '{ m = 0; for (i = 2; i <= NF; i++) if ($i == marker) m = 1 } m { for (i = 2; i <= NF; i++) if ($i != marker) print $i }' /etc/hosts)
+if [ -n "$hosts" ] && [ -f /etc/registrygate/ca.crt ]; then
+  mkdir -p "$KIND_DIR/certs.d" "$KIND_DIR/kubelet/bin"
+  {
+    echo "127.0.0.1 localhost"
+    echo "::1 localhost ip6-localhost ip6-loopback"
+    awk -v marker="$marker" '{ for (i = 2; i <= NF; i++) if ($i == marker) { print; next } }' /etc/hosts
+  } > "$KIND_DIR/hosts"
+  match_images=""
+  auth_hosts=""
+  for host in $hosts; do
+    # containerd calls Docker Hub docker.io and reaches it at
+    # registry-1.docker.io; index.docker.io is a name only Docker uses.
+    case "$host" in
+      index.docker.io|registry-1.docker.io) continue ;;
+      docker.io) server=registry-1.docker.io ;;
+      *) server=$host ;;
+    esac
+    mkdir -p "$KIND_DIR/certs.d/$host"
+    cp /etc/registrygate/ca.crt "$KIND_DIR/certs.d/$host/ca.crt"
+    cat > "$KIND_DIR/certs.d/$host/hosts.toml" <<TOML
+server = "https://$server"
+
+[host."https://$server"]
+  capabilities = ["pull", "resolve"]
+  ca = "/etc/containerd/certs.d/$host/ca.crt"
+TOML
+    match_images="$match_images      - $host
+"
+    auth_hosts="$auth_hosts $host"
+  done
+  cat > "$KIND_DIR/kubelet/credential-provider.yaml" <<YAML
+apiVersion: kubelet.config.k8s.io/v1
+kind: CredentialProviderConfig
+providers:
+  - name: registrygate
+    apiVersion: credentialprovider.kubelet.k8s.io/v1
+    defaultCacheDuration: 1m
+    matchImages:
+$match_images
+YAML
+  # The kubelet's credential provider protocol: a request on stdin, a
+  # response with a username and password per registry host on stdout. The
+  # proxy takes the token as the password and ignores the username.
+  {
+    echo "#!/bin/sh"
+    echo "hosts=\"$auth_hosts\""
+    cat <<'SH'
+cat >/dev/null
+token=$(cat /var/run/secrets/registrygate/token)
+printf '{"apiVersion":"credentialprovider.kubelet.k8s.io/v1","kind":"CredentialProviderResponse","cacheKeyType":"Registry","cacheDuration":"1m","auth":{'
+sep=
+for host in $hosts; do
+  printf '%s"%s":{"username":"registrygate","password":"%s"}' "$sep" "$host" "$token"
+  sep=,
+done
+printf '}}\n'
+SH
+  } > "$KIND_DIR/kubelet/bin/registrygate"
+  chmod 755 "$KIND_DIR/kubelet/bin/registrygate"
+  kubelet_args='        - name: image-credential-provider-config
+          value: /etc/ci-kind/kubelet/credential-provider.yaml
+        - name: image-credential-provider-bin-dir
+          value: /etc/ci-kind/kubelet/bin'
+  cat > "$KIND_DIR/kind-patch.yaml" <<YAML
+# Merge into a kind cluster config: extraMounts into every node,
+# kubeadmConfigPatches into the cluster's. See the docker Task.
+extraMounts:
+  - hostPath: $KIND_DIR/hosts
+    containerPath: /etc/hosts
+    readOnly: true
+  - hostPath: $KIND_DIR/certs.d
+    containerPath: /etc/containerd/certs.d
+    readOnly: true
+  - hostPath: $KIND_DIR/kubelet
+    containerPath: /etc/ci-kind/kubelet
+    readOnly: true
+  - hostPath: /var/run/secrets/registrygate
+    containerPath: /var/run/secrets/registrygate
+    readOnly: true
+kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+$kubelet_args
+  - |
+    kind: JoinConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+$kubelet_args
+YAML
+  echo "kind: node config for registrygate in $KIND_DIR/kind-patch.yaml"
+fi
+
+# ci-kind-config, on the step's PATH: prints a kind config with
+# kind-patch.yaml merged in, or unchanged where there's no patch.
+mkdir -p "$KIND_DIR/bin"
+cat > "$KIND_DIR/bin/ci-kind-config" <<'SH'
+#!/bin/sh
+# Usage: ci-kind-config [FILE] | kind create cluster --config=-
+# Prints the kind config in FILE ("-" for stdin; none for kind's default
+# cluster) with what this build's kind nodes need merged in, so that their
+# image pulls go through registrygate like Docker's do: mounts for every node
+# and the kubelet's flags. Without registrygate, prints the config unchanged.
+set -eu
+patch=/run/ci-kind/kind-patch.yaml
+yq=/opt/ci-kind/yq/usr/bin/yq
+default='kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4'
+if [ $# -eq 0 ]; then
+  config=$(printf '%s\n' "$default")
+else
+  config=$(cat -- "$1")
+fi
+if [ ! -f "$patch" ]; then
+  printf '%s\n' "$config"
+  exit 0
+fi
+# kind's default when a config lists no nodes is one control-plane node.
+printf '%s\n' "$config" | "$yq" eval-all '
+  select(fileIndex == 1) as $patch
+  | select(fileIndex == 0)
+  | .nodes = (.nodes // [{"role": "control-plane"}])
+  | .nodes[] |= (.extraMounts = (.extraMounts // []) + $patch.extraMounts)
+  | .kubeadmConfigPatches = (.kubeadmConfigPatches // []) + $patch.kubeadmConfigPatches
+' - "$patch"
+SH
+chmod 755 "$KIND_DIR/bin/ci-kind-config"
+
 # A clone can be bigger than the snapshot it came from (the project's cache
 # size was raised), so grow the filesystem to fill the volume. Online, and a
 # no-op when it already does.
