@@ -5,7 +5,11 @@ prometheus:
     enabled: true
 service:
   clusterIP: 10.33.0.10 # By convention, set the last octet to 10
-  trafficDistribution: PreferClose
+  # Answer from the CoreDNS pod on the client's own node, falling back to the
+  # others when it has none ready. The switch drops some packets between nodes
+  # during traffic bursts. TCP recovers quickly; a lost UDP DNS packet costs the
+  # client a 5s timeout. (PreferClose does nothing here: the nodes have no zone label.)
+  trafficDistribution: PreferSameNode
   name: kube-dns # Conventional name for the service
 serviceAccount:
   create: true
