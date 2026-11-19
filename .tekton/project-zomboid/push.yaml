@@ -1,0 +1,38 @@
+---
+# Builds and pushes the project-zomboid image (pipeline.yaml)
+# to Harbor (infra-mk3/project-zomboid) for pushes to master that change it. It
+# runs as ci-release, the only ServiceAccount registrygate lets push, which the
+# ci-release-pipelineruns admission policy allows only for pushes to the
+# project's release refs (master here).
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  # A fixed name collides with the previous run, which Pipelines-as-Code keeps.
+  generateName: project-zomboid-push-
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "push" &&
+      target_branch == "master" &&
+      "container images/project-zomboid/***".pathChanged()
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  pipelineRef:
+    name: project-zomboid
+  params:
+    - name: target
+      value: push
+  taskRunTemplate:
+    serviceAccountName: ci-release
+  # A cold build downloads ~7 GB from Steam.
+  timeouts:
+    pipeline: 2h
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: ssd-replicated-3x
+          resources:
+            requests:
+              storage: 1Gi

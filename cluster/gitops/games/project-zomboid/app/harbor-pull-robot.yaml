@@ -1,6 +1,6 @@
 ---
 # Pulls the game image from the infra-mk3 Harbor project, which the repository's
-# CI pipeline pushes it to (.tekton/project-zomboid.yaml). harbor-operator
+# CI pipeline pushes it to (.tekton/project-zomboid/). harbor-operator
 # creates the robot and writes its credentials to the harbor-pull Secret.
 apiVersion: harbor.soliddowant.dev/v1alpha1
 kind: HarborProjectRobot

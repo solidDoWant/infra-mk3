@@ -1,0 +1,78 @@
+---
+# Builds "container images/project-zomboid" with its Makefile, for the two
+# runs that reference it: pull-request.yaml (pull requests, build only) and
+# push.yaml (pushes to master, build and push). The image
+# holds a full Steam install of the game, so it only ever goes to the private
+# Harbor. registrygate supplies the Harbor credential; the build only has its
+# ServiceAccount token, and only the push run's ServiceAccount may push.
+#
+# Pipelines-as-Code finds this by name in .tekton/ and inlines it into each
+# run. Tasks come only from ci-tekton through the cluster resolver.
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: project-zomboid
+spec:
+  # Pipelines-as-Code fills in the {{ }} defaults from the event before it
+  # inlines this into a run. harbor_host comes from the Repository (the
+  # ci/project chart), so the cluster's domain stays out of this public
+  # repository.
+  params:
+    - name: repo_url
+      type: string
+      default: "{{ repo_url }}"
+    - name: revision
+      type: string
+      default: "{{ revision }}"
+    - name: registry
+      description: Registry and Harbor project the image goes to.
+      type: string
+      default: "{{ harbor_host }}/infra-mk3"
+    - name: target
+      description: The Makefile target to run, "image" to build or "push" to build and push.
+      type: string
+  workspaces:
+    - name: source
+  tasks:
+    - name: clone
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone
+          - name: namespace
+            value: ci-tekton
+      params:
+        - name: url
+          value: $(params.repo_url)
+        - name: revision
+          value: $(params.revision)
+      workspaces:
+        - name: output
+          workspace: source
+    - name: build
+      runAfter:
+        - clone
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: docker
+          - name: namespace
+            value: ci-tekton
+      params:
+        - name: script
+          value: |
+            # The Makefile decides the image name and tag; the CLI image
+            # has no make.
+            apk add --no-cache make >/dev/null
+            cd "container images/project-zomboid"
+            make "$(params.target)" CONTAINER_REGISTRY="$(params.registry)"
+            echo "image: $(make print-image-name CONTAINER_REGISTRY="$(params.registry)")"
+      workspaces:
+        - name: source
+          workspace: source
