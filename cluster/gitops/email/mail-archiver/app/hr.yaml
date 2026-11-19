@@ -110,6 +110,9 @@ spec:
               # The image enables Server GC, sized for all 27 node CPUs. Workstation
               # GC suits this mostly idle app.
               DOTNET_gcServer: "0"
+              # One JSON object per log event instead of the two-line
+              # `info: <Category>[<id>]` text format (log-filters.yaml).
+              Logging__Console__FormatterName: json
               # Needed for MCP server to be able to create API keys
               Api__Enabled: true
               # The MCP endpoint (/mcp), read-only, authenticated with each

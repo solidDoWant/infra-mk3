@@ -42,6 +42,7 @@ spec:
   wait: true
   dependsOn:
     - name: prometheus-crds
+    - name: fluent-crds
     - name: gateway-crds
     - name: rook-ceph-cluster
     - name: mail-archiver-backend

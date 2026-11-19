@@ -1,0 +1,53 @@
+---
+# Drops the line the liveness and readiness probes produce: the app has no
+# health endpoint, so they GET /Auth/Login, which logs an OAuth auto-redirect
+# each time (~1.4k lines/hour). A real sign-in logs the same line; the sign-in
+# itself is recorded by Authentik. Runs before `kubernetes`, on the raw
+# JSON-console line (`Logging__Console__FormatterName: json` in hr.yaml).
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: drop-mail-archiver-probe-redirect
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.email\.mail-archiver-[^.]*\.mail-archiver\.
+  filters:
+    - grep:
+        exclude: 'log "Category":"MailArchiver\.Controllers\.AuthController","Message":"Auto-redirecting to OAuth provider '
+---
+# Sets `_msg` to the .NET JSON console formatter's `Message` and maps its
+# `LogLevel` to the usual words. Fields stay under `log_fields.*`. Runs after
+# `kubernetes`, which populates `log_fields`.
+#
+# The operator joins the Lua onto one line with `;` per line: keep each
+# statement on a single line.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: promote-mail-archiver-message
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  matchRegex: ^kube\.email\.mail-archiver-[^.]*\.mail-archiver\.
+  filters:
+    - lua:
+        call: promote_message
+        code: |
+          local levels = { Trace = "trace", Debug = "debug", Information = "info", Warning = "warning", Error = "error", Critical = "fatal" }
+
+          function promote_message(tag, ts, record)
+            local fields = record["log_fields"]
+            if type(fields) ~= "table" then
+              return 0, ts, record
+            end
+            local msg = fields["Message"]
+            if type(msg) ~= "string" or msg == "" then
+              return 0, ts, record
+            end
+            fields["level"] = levels[fields["LogLevel"]] or fields["LogLevel"]
+            record["log"] = msg
+            return 2, ts, record
+          end

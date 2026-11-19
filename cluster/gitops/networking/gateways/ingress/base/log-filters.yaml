@@ -7,8 +7,9 @@
 # (istio-system/istio/base).
 #
 # Drops internal-gateway lines for machine keepalive traffic: health probes,
-# Temporal worker long-polls/heartbeats, and Coder DERP latency checks (only
-# while a Coder client is connected). Each rule pins the request AND
+# Temporal worker long-polls/heartbeats, Coder DERP latency checks (only
+# while a Coder client is connected), Teleport JWKS and database-CA polling,
+# and OTLP telemetry pushes to toolgate. Each rule pins the request AND
 # `200 - via_upstream` with no transport failure, so failed or abnormal
 # requests still ship. gRPC application errors are still HTTP 200, hence
 # exact paths only. The external gateway is deliberately excluded: its log is
@@ -33,7 +34,7 @@ spec:
     - lua:
         call: parse_gateway_access
         code: |
-          local keepalive = { ["POST /grpc.health.v1.Health/Check HTTP/2"] = true, ["POST /temporal.api.workflowservice.v1.WorkflowService/PollActivityTaskQueue HTTP/2"] = true, ["POST /temporal.api.workflowservice.v1.WorkflowService/PollWorkflowTaskQueue HTTP/2"] = true, ["POST /temporal.api.workflowservice.v1.WorkflowService/RecordWorkerHeartbeat HTTP/2"] = true, ["GET /derp/latency-check HTTP/1.1"] = true }
+          local keepalive = { ["POST /grpc.health.v1.Health/Check HTTP/2"] = true, ["POST /temporal.api.workflowservice.v1.WorkflowService/PollActivityTaskQueue HTTP/2"] = true, ["POST /temporal.api.workflowservice.v1.WorkflowService/PollWorkflowTaskQueue HTTP/2"] = true, ["POST /temporal.api.workflowservice.v1.WorkflowService/RecordWorkerHeartbeat HTTP/2"] = true, ["GET /derp/latency-check HTTP/1.1"] = true, ["GET /workload-identity/jwt-jwks.json HTTP/2"] = true, ["GET /webapi/auth/export?type=db-client&format=json HTTP/2"] = true, ["POST /v1/metrics HTTP/1.1"] = true, ["POST /v1/logs HTTP/1.1"] = true }
 
           function parse_gateway_access(tag, ts, record)
             local f = record["log_fields"]
