@@ -9,8 +9,8 @@ spec:
   # Switch to the official chart once https://github.com/kedacore/charts/issues/20 lands.
   url: oci://ghcr.io/home-operations/charts-mirror/keda
   ref:
-    tag: 2.21.0
-    digest: sha256:26bd1e75796532a074cb0b557d6132a9cf37e120f47faa967ef1beb18d7ce9bf
+    tag: 2.21.1
+    digest: sha256:c0355de9486c09180e2eabf1c5c8f603c12d4dbd52794ab7ba452cd382548f4b
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -42,11 +42,11 @@ spec:
       keda:
         registry: ""
         repository: ghcr.io/kedacore/keda
-        tag: 2.21.0@sha256:81fe6547ce8d1cc29273f887b76507e9b853e5bc1f875ec23fe60061a38ed809
+        tag: 2.21.1@sha256:d09d92c0a310e3057a3c54df387b99abf2bf31352218dbe1adcb00e807886488
       webhooks:
         registry: ""
         repository: ghcr.io/kedacore/keda-admission-webhooks
-        tag: 2.21.0@sha256:e1969628cca6123e32eea13c47c75817091af2657fa68d9d0d58a8620d1b75b1
+        tag: 2.21.1@sha256:5f4b0b0f7831b9f53738be85e99449a1747a5effa970305fe602455ab0f4fcd3
 
     priorityClassName: system-cluster-critical
 
