@@ -28,3 +28,18 @@ spec:
   endpoints:
     - port: http-metrics
   jobLabel: app
+---
+# Pruner controller (the webhook's Service has no metrics port)
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  namespace: ci-tekton
+  name: tekton-pruner
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: tekton-pruner
+      app.kubernetes.io/component: controller
+  endpoints:
+    - port: http-metrics
+  jobLabel: app

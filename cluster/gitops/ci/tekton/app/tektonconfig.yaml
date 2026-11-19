@@ -31,12 +31,47 @@ spec:
     disabled: true
   result:
     disabled: true
-  # Pipelines-as-Code prunes the runs it creates (default-max-keep-runs), and
-  # it creates every run here. Logs are kept by VictoriaLogs.
+  # Finished runs are deleted 2 hours after they finish, by the event-based
+  # pruner (the job-based `pruner` must stay disabled for it to run).
+  # Pipelines-as-Code's count-based cleanup (default-max-keep-runs) only runs
+  # when a new run starts, so an idle project kept its last runs forever, and
+  # with them their pods' Docker cache volumes, each pinning the golden
+  # snapshot it was cloned from in Ceph. Build logs stay in VictoriaLogs.
+  #
+  # `global`: namespaces can't override this with their own ConfigMaps.
   pruner:
     disabled: true
   tektonpruner:
-    disabled: true
+    disabled: false
+    global-config:
+      enforcedConfigLevel: global
+      ttlSecondsAfterFinished: 7200
+    options:
+      deployments:
+        tekton-pruner-controller:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: controller
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: &pruner_controller_memory 128Mi
+                      limits:
+                        memory: *pruner_controller_memory
+        tekton-pruner-webhook:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: webhook
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: &pruner_webhook_memory 64Mi
+                      limits:
+                        memory: *pruner_webhook_memory
   # The `all` profile always installs a Dashboard, whose ServiceAccount the
   # operator binds cluster-wide to read every pod and pod log. It's scaled to
   # 0; ../dashboard runs one limited to the project namespaces.
