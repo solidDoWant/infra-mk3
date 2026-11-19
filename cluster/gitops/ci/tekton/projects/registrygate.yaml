@@ -47,3 +47,12 @@ spec:
       cacheVolumeSize: 50Gi
       registrygate:
         harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+        # Releases (.tekton/release.yaml, on version tags) push both images
+        # and the chart to ghcr.io. Only the ci-release ServiceAccount gets
+        # these push rules; PR and master builds still only pull.
+        ghcrPush:
+          enabled: true
+          repositories:
+            - soliddowant/registrygate
+            - soliddowant/registrygate-credential-helper
+            - soliddowant/charts/registrygate
