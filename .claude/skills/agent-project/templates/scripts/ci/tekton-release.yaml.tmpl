@@ -1,0 +1,100 @@
+# The template of the release PipelineRun, .tekton/release.yaml, written by
+# scripts/ci/tekton-generate.sh (`make generate`).
+#
+# A version tag starts it: v<X.Y.Z> or v<X.Y.Z>-rc.<K>, pushed by the
+# release-manager. It runs as ci-release, the only ServiceAccount whose
+# registrygate rules allow pushes (the project's ghcrPush repositories and its
+# Harbor project); the cluster refuses ci-release for any other event or ref.
+# /retest is refused for it, so a release runs again only when its tag is
+# pushed again, and every step must be safe to repeat.
+#
+# It publishes images and charts only. The GitHub release is created by the
+# release-manager agent after this run's check passes: runs get no GitHub
+# token.
+#
+# There is no cancel-in-progress annotation: a release always runs to the end.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  # A fixed name collides with the previous run, which Pipelines-as-Code keeps.
+  generateName: {{PROJECT}}-release-
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "push" && target_branch.matches("^refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-rc\\.[0-9]+)?$")
+    pipelinesascode.tekton.dev/max-keep-runs: "10"
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: ref
+      value: "{{ target_branch }}"
+  timeouts:
+    pipeline: 1h
+  taskRunTemplate:
+    serviceAccountName: ci-release
+  workspaces:
+    - name: source
+      emptyDir: {}
+  taskRunSpecs:
+    # Size from a measured release run, like the CI run's sidecar. No CPU
+    # limit.
+    - pipelineTaskName: publish
+      sidecarSpecs:
+        - name: dind
+          computeResources:
+            requests:
+              cpu: "4"
+              memory: 4Gi
+            limits:
+              memory: 4Gi
+      stepSpecs:
+        - name: run
+          computeResources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 256Mi
+  pipelineSpec:
+    params:
+      - name: repo_url
+        type: string
+      - name: revision
+        type: string
+      - name: ref
+        type: string
+    workspaces:
+      - name: source
+    tasks:
+      - name: publish
+        taskRef:
+          resolver: cluster
+          params:
+            - name: kind
+              value: task
+            - name: name
+              value: docker
+            - name: namespace
+              value: ci-tekton
+        params:
+          - name: script
+            value: |
+              set -eu
+              # The trigger only matches version tags, so the ref is
+              # refs/tags/v<version>; publish-release.sh checks it again.
+              ref='$(params.ref)'
+              version="${ref##*/}"
+              mkdir src
+              cd src
+              git init -q .
+              git remote add origin "$(params.repo_url)"
+              git fetch -q --depth 1 origin "$(params.revision)"
+              git checkout -q --detach "$(params.revision)"
+              RELEASE_VERSION="${version#v}"
+              export RELEASE_VERSION
+              exec ./scripts/ci/stages.sh release
+        workspaces:
+          - name: source
+            workspace: source

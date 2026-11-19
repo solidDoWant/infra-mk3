@@ -89,5 +89,6 @@ A phase is complete when every issue in its milestone — as listed live from Gi
 - **Subagent crashed or returned nothing useful:** check its worktree and branch; re-dispatch with what it left behind.
 - **CI is red on `master`:** stop dispatching feature work; dispatch one worker to fix `master` first.
 - **Merge conflicts:** the reviewer sends the PR back; the worker rebases onto `master`.
-- **Flaky test:** file a `bug` issue with the evidence; do not retry-until-green without recording it. Reviewers re-run CI themselves (`gh run rerun`, or `gh pr update-branch`); do not dispatch a worker just to re-trigger CI.
+- **Flaky test:** file a `bug` issue with the evidence; do not retry-until-green without recording it. Reviewers re-run CI themselves (`gh pr update-branch`, or a `/retest` comment when the branch is current); do not dispatch a worker just to re-trigger CI. One CI run per head commit otherwise. CI logs aren't on GitHub: read them with the toolgate `tekton` MCP tools (namespace `ci-{{PROJECT}}`, TaskRun `<run>-ci`).
+- **CI stuck queued or a run that never reports:** Tekton CI runs in the cluster, so it's an operator problem: note the PipelineRun name on the status issue and carry on.
 - **Environment problems** (disk full, docker down, nix broken, GitHub auth failing): record the symptom in the state file and the status issue, label `needs-human` if you cannot fix it inside the VM, and exit.

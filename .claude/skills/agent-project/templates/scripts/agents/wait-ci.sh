@@ -5,10 +5,10 @@
 # of `gh pr checks --watch` (see wait-for.sh for why waits are bounded).
 #
 # CI counts as still running until at least one required check (branch
-# protection's, e.g. the `checks` aggregator job) is reported for the PR's
-# head: right after a push the only check listed may be one that finishes at
-# once (CodeRabbit), and `checks` is only registered once the jobs it needs
-# have finished. A PR whose base branch requires no checks therefore never
+# protection's: the Tekton CI check `Tekton CI / <project>-pull-request-`) is
+# reported for the PR's head: right after a push the only check listed may be
+# one that finishes at once (CodeRabbit), and Pipelines-as-Code registers its
+# check only once the run is created, after it leaves the concurrency queue. A PR whose base branch requires no checks therefore never
 # exits 0; it exits 3 at the deadline.
 #
 # The run ends by the deadline whatever GitHub does (a merge state of UNKNOWN,
