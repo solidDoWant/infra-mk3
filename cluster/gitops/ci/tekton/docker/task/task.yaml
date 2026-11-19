@@ -52,6 +52,17 @@
 # (kubeadmConfigPatches, kubeadm v1beta4: Kubernetes 1.31 and later). A node's
 # own /etc/containerd/certs.d is replaced.
 #
+# Image cache: pass the cluster's name and node image to ci-kind-config
+# instead of to kind, and every node keeps its containerd store (pulled and
+# unpacked images) on the build's Docker volume between builds, which the
+# golden cache carries forward from default-branch push builds:
+#
+#   ci-kind-config --name e2e --image "$node_image" kind.yaml | kind create cluster --config=-
+#
+# A node's cache is keyed by its container name (<name>-control-plane,
+# <name>-worker, ...), seeded from the node image on first use or when the
+# image changes, and reseeded above 12 GiB.
+#
 # To run kind from a container started on the build's dockerd instead (a CI
 # image, say), mount both directories at the same paths, which dockerd also
 # has, and call the script by its path:
