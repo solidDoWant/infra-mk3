@@ -68,6 +68,18 @@ spec:
         options:
           - name: ndots
             value: "1"
+      # Spread the docker Task pods (each a large kata VM) across nodes when
+      # there is room, but never hold one back for it: several on one node is
+      # fine. The scheduler's default spread constraints don't reach these
+      # pods (they only apply to pods of Services and controllers), and they are
+      # hard rules.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              ci.home.arpa/docker-task: "true"
     # No fetching Tasks or Pipelines from outside a repo's own .tekton/
     # directory. The cluster resolver only reads objects already in the
     # cluster. The http resolver has no field here; it's turned off in

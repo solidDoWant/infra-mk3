@@ -18,14 +18,17 @@ spec:
         name: infra-mk3
   values:
     name: registrygate
-    # Agents open many PRs, and PRs share the queue with master pushes: at 2,
-    # a PR can wait behind two master runs for longer than the CI takes.
-    concurrencyLimit: 3
+    # Agents open many PRs, and PRs share the queue with master pushes, so a
+    # run waiting in the queue adds to an issue's time as much as the CI does.
+    # A run is ~4 min now. Runs that the nodes have no room for wait Pending.
+    concurrencyLimit: 6
     quota:
       # One run is ~14.5 GiB (a 14 GiB dind sidecar, sized from the stages'
-      # cold-cache peaks, plus small pods and kata overhead), so this fits 3
+      # cold-cache peaks, plus small pods and kata overhead), so this fits 6
       # at once. A ceiling, not a reservation.
-      memory: 48Gi
+      memory: 96Gi
+      # Up to 3 pods a run (ci, test-guard, report).
+      pods: 20
     harbor:
       # CI pushes no images: releases go to ghcr.io.
       enabled: false
