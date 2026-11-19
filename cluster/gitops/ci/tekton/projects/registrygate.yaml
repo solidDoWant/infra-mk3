@@ -18,14 +18,21 @@ spec:
         name: infra-mk3
   values:
     name: registrygate
-    # Agents open many PRs, and PRs share the queue with master pushes: at 2,
-    # a PR can wait behind two master runs for longer than the CI takes.
-    concurrencyLimit: 3
+    # Agents open many PRs, and PRs share the queue with master pushes, so a
+    # run waiting in the queue adds to an issue's time as much as the CI does.
+    # A run is ~4 min now. Past what the quota or the nodes have room for, runs
+    # wait (Tekton retries pods over quota; the scheduler leaves the rest
+    # Pending), so this is a ceiling.
+    concurrencyLimit: 10
     quota:
-      # One run is ~14.5 GiB (a 14 GiB dind sidecar, sized from the stages'
-      # cold-cache peaks, plus small pods and kata overhead), so this fits 3
-      # at once. A ceiling, not a reservation.
-      memory: 48Gi
+      # Measured 2026-11-19 inside a warm run's VM: 4.0 GiB used at the peak
+      # (page cache excluded), both kind clusters included. With registrygate's
+      # dind sidecar at 8 GiB (2x that, see registrygate's .tekton/), a run is
+      # ~8.5 GiB, so this fits 10 at once with room for a cold-cache run. A
+      # ceiling, not a reservation.
+      memory: 96Gi
+      # Up to 3 pods a run (ci, test-guard, report).
+      pods: 32
     harbor:
       # CI pushes no images: releases go to ghcr.io.
       enabled: false
