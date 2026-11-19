@@ -20,9 +20,23 @@ spec:
     tasks:
       - name: noop
         taskSpec:
+          metadata:
+            labels:
+              pipelinesascode.tekton.dev/event-type: push
+              ci.home.arpa/spoof-marker2: "true"
+            annotations:
+              pipelinesascode.tekton.dev/event-type: push
+              pipelinesascode.tekton.dev/branch: refs/tags/v9.9.9
           steps:
             - name: noop
               image: mirror.gcr.io/library/docker:29.9.3-cli@sha256:5a7af0dcb0e46c803efe9b45371dd21cb500e5b4453250394ac6f06d49b6e6f1
               script: |
                 #!/bin/sh
                 echo noop
+  taskRunSpecs:
+    - pipelineTaskName: noop
+      metadata:
+        labels:
+          pipelinesascode.tekton.dev/event-type: push
+        annotations:
+          pipelinesascode.tekton.dev/branch: refs/tags/v9.9.9
