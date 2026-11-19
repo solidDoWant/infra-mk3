@@ -17,14 +17,6 @@ spec:
   pipelineRef:
     name: project-zomboid
   params:
-    - name: repo_url
-      value: "{{ repo_url }}"
-    - name: revision
-      value: "{{ revision }}"
-    # harbor_host comes from the Repository (the ci/project chart), so the
-    # cluster's domain stays out of this public repository.
-    - name: registry
-      value: "{{ harbor_host }}/infra-mk3"
     - name: target
       value: image
   # A cold build downloads ~7 GB from Steam.
