@@ -1,0 +1,50 @@
+---
+# solidDoWant/githubgate: GitHub App access broker for CI and workspaces,
+# built by agents. CI layout copied from registrygate (parallel stages in one
+# dind sidecar per run, kind clusters for e2e).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ci-project-githubgate
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/ci/project
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    name: githubgate
+    # Agents open many PRs, and a run waiting in the queue adds to every
+    # issue's time. Starting point for a new project; raise it once runs are
+    # measured.
+    concurrencyLimit: 6
+    quota:
+      # About 6 runs at registrygate's ~8.5 GiB each (8 GiB dind sidecar plus
+      # the task), with room for a cold-cache run. A ceiling, not a
+      # reservation; revisit after the first measured run.
+      memory: 64Gi
+      # Up to 3 pods a run (ci, test-guard, report).
+      pods: 20
+    harbor:
+      # CI pushes no images: releases go to ghcr.io.
+      enabled: false
+    docker:
+      # Same shape as registrygate: the CI image from flake.nix, Go caches,
+      # the kind node image and e2e images, with kind clusters during e2e.
+      # registrygate needed 50Gi.
+      cacheVolumeSize: 50Gi
+      registrygate:
+        harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+        # Releases (.tekton/release.yaml, on version tags) push the server and
+        # client images and the chart. Only the ci-release ServiceAccount gets
+        # push; PR and master builds only pull.
+        ghcrPush:
+          enabled: true
+          repositories:
+            - soliddowant/githubgate
+            - soliddowant/githubgate-client
+            - soliddowant/charts/githubgate
