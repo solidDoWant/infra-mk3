@@ -1,0 +1,39 @@
+---
+# Drops the DEBUG narration of Talos' built-in BGP (network.BGPController and
+# its embedded gobgp). It was ~93% of the controller-runtime stream, about
+# 1.1M lines/day across the three nodes:
+#
+#   reconciled BGP route imports    one per instance (cilium, fabric) per
+#   prepared BGP instance outputs   reconcile; the reconcile runs ~1/s even when
+#                                   nothing changed (current == desired).
+#   Implicit withdrawal of old path ...
+#                                   gobgp, one line per route each time Cilium
+#                                   re-sends its whole table (~240 routes). Cilium
+#                                   does a "soft reset out" on every Service
+#                                   create/delete, because the no-export community
+#                                   on the advertisement is a per-Service route
+#                                   policy. Short-lived Services (backup-tool's
+#                                   temporary CNPG clusters, toolgate sessions)
+#                                   trigger most of them.
+#
+# Talos has no log level for machined's controllers (see talos-drop-machined-authz),
+# so collector-side dropping is the only lever. Only these three DEBUG messages
+# are dropped; peer state changes and anything at INFO or above still ship.
+#
+# The `log` value starts with the controller's own timestamp and level
+# ("2026-11-19T06:57:14.080Z DEBUG reconciled ..."), which is why the regex
+# skips one token first. Same mechanics as the other talos-drop-* filters: match
+# the post-rewrite_tag tag, where `msg` is already renamed to `log`. ClusterFilter
+# (NOT namespaced) for the fluent/fluent-operator#1211 reason.
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: talos-drop-bgp-debug
+  labels:
+    config.fluentbit.fluent.io/enabled: "true"
+    config.fluentbit.fluent.io/agent: node
+spec:
+  match: talos.service.controller-runtime
+  filters:
+    - grep:
+        exclude: 'log ^\S+ DEBUG (reconciled BGP route imports|prepared BGP instance outputs|Implicit withdrawal of old path)'

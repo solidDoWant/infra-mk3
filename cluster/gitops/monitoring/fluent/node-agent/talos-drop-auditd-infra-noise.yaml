@@ -21,7 +21,8 @@
 #   - type=USER_*/CRED_*  PAM auth/session/credential events (e.g. root cron logins).
 #   - type=PATH/CWD  file-access context for the kept events.
 #   - type=SYSCALL from any comm OTHER than the three infra actors -- i.e. an
-#                    unexpected process making syscalls is exactly what surfaces.
+#                    unexpected host process making syscalls is exactly what surfaces
+#                    (pod and kubelet SYSCALLs are dropped, see unlabeled-write below).
 #
 # What we DROP:
 #   - type=EOE          delimiter, no value.
@@ -44,7 +45,8 @@
 # k8tz zoneinfo and containerd dirs on EPHEMERAL. SELinux is permissive, so
 # nothing is blocked; the files simply carry no label. Dropped as a group:
 #   - the AVC itself (only write-to-unlabeled_t:dir from those two domains),
-#   - its SYSCALL (by comm, as above),
+#   - its SYSCALL (any comm in those two domains; the kept AVC already names
+#     the comm, so a SYSCALL for a kept denial adds little),
 #   - its PATH records, which all have name=(null) (no path, inode only),
 #   - its CWD, always cwd="/".
 # Any other denial (other tcontext, perm or domain) still ships.
@@ -81,8 +83,10 @@ spec:
     # Unlabeled-write denials: see the header.
     - grep:
         exclude: 'log type=AVC .*denied +\{ write \} for .* scontext=system_u:system_r:(pod_containerd_t|kubelet_t):s0 tcontext=system_u:object_r:unlabeled_t:s0 tclass=dir '
+    # Keyed on the subject domain, not comm: any pod can write to an unlabeled
+    # emptyDir, and a comm allowlist missed source-controller (~4M lines/day).
     - grep:
-        exclude: 'log type=SYSCALL .* comm="(flb-pipeline|enqueue_thread|flush_thread_[0-9]+|event_loop|kubelet|containerd)" .*subj=system_u:system_r:(pod_containerd_t|kubelet_t):s0'
+        exclude: 'log type=SYSCALL .* subj=system_u:system_r:(pod_containerd_t|kubelet_t):s0'
     - grep:
         exclude: 'log type=PATH .* name=\(null\) .*(obj=system_u:object_r:unlabeled_t:s0 |nametype=CREATE )'
     - grep:
