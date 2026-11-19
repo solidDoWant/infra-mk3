@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/postfinance/charts/kubelet-csr-approver
   ref:
-    tag: 1.2.15
-    digest: sha256:0d9657c08107f5b7c15133c0fd34b92c42494bcc6651de53d4009167c981dc71
+    tag: 1.2.16
+    digest: sha256:0c12f1db0483dc850a623dd0eaf4875d9cfa2afaefb6c5d33341bcb4fd1b15ab
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -28,7 +28,7 @@ spec:
     # Not in the bootstrap values: Renovate doesn't read helmfile values files.
     image:
       repository: ghcr.io/postfinance/kubelet-csr-approver
-      tag: v1.2.15@sha256:6469ef517d2b6d3cb108fce8a913483533a48b1cd78b5d4af307fa09e04a7818
+      tag: v1.2.16@sha256:3a09df2f9e1e628863fccbe5479e63b11bbc1f411c82134ee975778e1a25b5e6
     metrics:
       serviceMonitor:
         enabled: true
