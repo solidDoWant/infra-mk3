@@ -1,0 +1,17 @@
+---
+# Agent VMs (the agent-project skill names them <project>-vm) read only CI
+# logs, through victorialogs-ci. The full victorialogs server reads every
+# namespace's logs, which can hold tokens and personal data. Coder workspace
+# IDs are attested (coder/<owner>/<workspace>), so a session can't claim
+# another workspace to get around this.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: ToolgateRule
+metadata:
+  name: no-full-logs-in-agent-vms
+spec:
+  match:
+    workspaces:
+      - coder/*/*-vm
+    servers:
+      - victorialogs
+  reason: Agent VMs may only read CI logs; use the victorialogs-ci server
