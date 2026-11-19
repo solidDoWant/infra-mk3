@@ -119,7 +119,7 @@ Rough total agent spend for the migration: **~$50** (Phase 4 $42.53 + round 1 $6
 
 An earlier draft said "the hardware made no difference". The owner corrected it, and they were right:
 - **Caches restore by snapshot, not by download.** A per-run copy-on-write clone of the golden volume (Ceph RBD, erasure coded) is ready as soon as the pod starts, with pod start at ~9s including the clone and the kata boot. On GHA every job paid 2.0–2.7 min of Nix install plus `actions/cache` restore, and paid again to save. That cost is gone entirely, and it was the largest cost in every GHA job except e2e.
-- **Bandwidth and latency:** local disk and 10G networking, and in-cluster Harbor proxy caches behind registrygate. Image and module pulls come from the same rack, not the internet. A 62 MB layer arrives in 0.26–0.41s through the full CI path.
+- **Bandwidth and latency:** local disk and networking (each node has two 10G links in an LACP bond), and in-cluster Harbor proxy caches behind registrygate. Image and module pulls come from the same rack, not the internet. A 62 MB layer arrives in 0.26–0.41s through the full CI path.
 - **One large VM per run** (32 vCPUs, 14 GiB for dind) lets every stage run at once in one place, sharing one warm cache, rather than as separate 4-vCPU runners that each restore their own copy.
 - **Persistent state across runs** is cheap enough to use for more than Go caches: the CI image, Docker layers, and now each kind node's whole containerd store (infra-mk3 #909).
 
