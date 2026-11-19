@@ -102,7 +102,7 @@ spec:
     - name: registrygate-helper
       image:
         # renovate: image
-        reference: ghcr.io/soliddowant/registrygate-credential-helper:0.3.0@sha256:b309f2c0ba86c468cb419f7b6eeaf78e71f2624a8b945c76f74c0ae6e21a52d0
+        reference: ghcr.io/soliddowant/registrygate-credential-helper:0.4.0@sha256:90f7fc5f68be8853ffe98889b5534a32046015bd55923cd14d54b36876e2eb97
         pullPolicy: IfNotPresent
     # The token the helper hands to Docker, for registrygate only.
     - name: registrygate-token
