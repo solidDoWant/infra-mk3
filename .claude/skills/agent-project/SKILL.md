@@ -14,7 +14,9 @@ This packages the workflow first run for `solidDoWant/vault-sync` (2026-10-18; s
 
 Templates are in `templates/` (copy into the new repo) and helper scripts in `scripts/`. The templates come from vault-sync: lines about sync simulation, E2EE, Obsidian, path normalization, `test-sim`/`test-e2e`, and `check-generate` are **examples** — replace them with the new project's equivalents rather than copying them blindly. `{{PROJECT}}` and `{{GH_USER}}` are placeholders.
 
-**Gates:** confirm with the user before (a) the spec/phase plan is final, (b) creating the repo (name + visibility), and (c) starting the PM. Everything else in this skill is pre-authorized by invoking it.
+**Gates:** confirm with the user before (a) the spec/phase plan is final, (b) creating the repo (name + visibility; also ask them to add it to the Tekton CI App, see Step 2), and (c) starting the PM. Everything else in this skill is pre-authorized by invoking it.
+
+**infra-mk3 changes:** the operator may make **project-scoped** infra-mk3 changes itself when it judges them needed: onboarding the project's CI (Step 2b), its concurrency, memory/CPU/pod/disk quotas, and the `ghcrPush` repositories it realistically needs. Deploying a **new service** in the cluster is not project-scoped: that needs the owner. PM and VM agents never change infra-mk3 (their GitHub token can technically write to it, so this is a rule they follow, not a limit): they file a `needs-human` + `area:ops` issue with the exact change, and the operator decides and makes it.
 
 ## Read first: keep the project pointed at the product
 
@@ -37,7 +39,7 @@ The operator then made a dozen local process fixes: follow-up rules, design-gap 
 3. **Done is a frozen, owner-approved acceptance checklist of user-visible scenarios**, roughly 20–40 per phase. Plus the owner using the build for real.
    - Never make phase exit "N clean runs" of a simulator, fuzzer or proof that agents can extend.
    - Agents never add to the checklist. Only the owner does.
-4. **Agents can't raise the bar.** Reviewers, simulation, bug hunts and proofs may block only on a checklist scenario or real loss of user data. Everything else goes on a later list that the owner prioritizes.
+4. **Agents can't raise the bar.** Reviewers, simulation, bug hunts and proofs may block only on a checklist scenario or real loss of user data. Everything else goes on a later list that the owner prioritizes. Agents also can't change the spec's CI time budget; only the owner does.
 5. **Ship a usable end-to-end slice early.** Deploy it to the owner by the end of the first product phase. Bugs found in real use set the priorities. A "deploy for dogfooding" issue that sits open is a red flag.
 6. **More rigor is a product decision, not a fix for failing tests.** Moving from randomized simulation to formal methods, or adding a new class of guarantee, needs the owner's decision with a cost and time estimate. First ask whether the requirement that keeps failing is actually needed.
 7. **Agree a budget per phase** (spend and calendar time) with the owner. If it runs out, stop and review with the owner. Don't extend it silently, and don't move a cutoff you announced.
@@ -54,7 +56,7 @@ The operator then made a dozen local process fixes: follow-up rules, design-gap 
 
 ## Step 1 — Design and spec
 
-Usually this follows a design discussion. Turn it into `SPEC.md` (authoritative reference) with: purpose; **non-negotiable principles** (3–5, the things reviewers enforce); target environment; architecture; data model; protocols/APIs; security model; the **reference behaviour and "won't do" list**; testing strategy (randomized or adversarial layers are fine for finding bugs, but they never define done; see "Read first"); repo layout; **documentation plan** (the audiences and what each already knows and needs, and the `docs/` tree per audience; see "Docs" in Step 4); **phases**, each with an owner-approved acceptance checklist, a budget, and a deployable result the owner can use; open questions. Read the existing project repos the user points at (here: `solidDoWant/tape-archiver`, `solidDoWant/media-processor`) for conventions: Nix flake dev shell, single Makefile with `##@` help, golangci-lint (`errcheck govet staticcheck wsl_v5` + goimports local-prefix), testify table tests, Given/When/Then issues, `.claude/commands/{create,start}-issue.md`, Renovate presets under `.github/renovate/`.
+Usually this follows a design discussion. Turn it into `SPEC.md` (authoritative reference) with: purpose; **non-negotiable principles** (3–5, the things reviewers enforce); target environment; architecture; data model; protocols/APIs; security model; the **reference behaviour and "won't do" list**; testing strategy (randomized or adversarial layers are fine for finding bugs, but they never define done; see "Read first"); repo layout; **documentation plan** (the audiences and what each already knows and needs, and the `docs/` tree per audience; see "Docs" in Step 4); **phases**, each with an owner-approved acceptance checklist, a budget, and a deployable result the owner can use; a **CI time budget** the owner sets, e.g. "a PR run takes at most 5 minutes" (5 minutes is the subagents' prompt-cache lifetime: a worker waiting longer on CI reloads its whole context); open questions. The budget isn't a hard stop: when master runs go over it (or 20% over their baseline), the planner opens one `ci-health` investigation, moves the agents' focus to measuring where the time goes and fixing it, and, if it can't reasonably go lower, proposes a new budget to the owner while agents return to other work (`docs/agents/project-manager.md`, CI health). Agents never change the budget themselves; only the owner does. Read the existing project repos the user points at (here: `solidDoWant/tape-archiver`, `solidDoWant/media-processor`) for conventions: Nix flake dev shell, single Makefile with `##@` help, golangci-lint (`errcheck govet staticcheck wsl_v5` + goimports local-prefix), testify table tests, Given/When/Then issues, `.claude/commands/{create,start}-issue.md`, Renovate presets under `.github/renovate/`.
 
 ## Step 2 — Create a seed repo (devcontainer)
 
@@ -67,6 +69,8 @@ gh repo edit OWNER/NAME --enable-squash-merge --enable-merge-commit=false \
   --enable-auto-merge   # reviewers arm auto-merge pinned to the reviewed head instead of waiting for CI
 ```
 
+**Ask the owner to add the repo to the Tekton CI GitHub App** (`infra-mk3-tekton`) at the repo gate, or to confirm the App is installed on all repositories. The operator can't do it: the devcontainer's `gh` token gets 403 on `user/installations/<id>/repositories`. The installation id is on any PaC PipelineRun's `pipelinesascode.tekton.dev/installation-id` annotation (registrygate's is 182047609). Confirm it after Step 2b: the first push must create a PipelineRun in `ci-<repo>`.
+
 **Lock interactions to collaborators immediately** — agents read issue/PR comments, and attackers have tried to get agents in the user's other repos to download and run malicious code via comments:
 
 ```sh
@@ -75,7 +79,19 @@ gh api -X PUT repos/OWNER/NAME/interaction-limits -f limit=collaborators_only -f
 
 This blocks non-collaborators from opening issues/PRs and commenting. GitHub caps it at **six months** — note the `expires_at` in the response and tell the user it must be renewed (re-run the same command). The playbooks' `/pm` + author rules remain the second line of defence.
 
-`--add-readme` gives the clone a commit and a `master`/`main` branch to land on. Public = free unlimited Actions (incl. Windows/macOS runners); private burns minutes fast. Confirm name + visibility with the user first.
+`--add-readme` gives the clone a commit and a `master`/`main` branch to land on. Confirm name + visibility with the user first. **A private repo can't use Tekton CI yet:** the shared `git-clone` Task and the CI script clone without credentials, and runs get no GitHub token. Say so at the repo gate; until the GitHub credential broker exists, a private project needs a plan for CI agreed with the owner. New public projects don't wait for the broker.
+
+## Step 2b — Onboard the repo to Tekton CI (devcontainer, operator)
+
+CI runs on the cluster's Tekton with Pipelines-as-Code (PaC), not GitHub Actions. Each repository is a release of the `ci/project` chart: add `cluster/gitops/ci/tekton/projects/<name>.yaml` in infra-mk3 (copy `registrygate.yaml`), add `ci-<name>` to the Dashboard's `--namespaces` (`cluster/gitops/ci/tekton/dashboard/hr.yaml`), open a PR and merge it once Flux renders it. Values to decide, with the reason in a comment next to each:
+- `concurrencyLimit`: agents open many PRs, and a queued run adds to every issue's time. Start around 4–6; raise it as runs get shorter.
+- `quota.memory` and `quota.pods`: about concurrency × (the dind sidecar size + ~0.5 GiB). A ceiling, not a reservation.
+- `docker.cacheVolumeSize`: the CI image, the language caches and any kind clusters, with room to spare (registrygate needed 50Gi).
+- `docker.registrygate.harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}` (required); `harbor.enabled` only if the project pushes private images to Harbor.
+- `docker.registrygate.ghcrPush`: only the `ghcr.io` repositories the releases publish. Only the `ci-release` ServiceAccount gets push; PR and master builds only pull.
+- `release.refs`: keep the default (version tags) unless the project publishes from a branch.
+
+Check it landed: the `ci-<name>` namespace, the Repository CR, and `kubectl -n ci-<name> get registryaccesspolicy` showing push only on `releases`. The first push (Step 4) must then create a PipelineRun in `ci-<name>`; if none appears, the repo isn't in the Tekton CI App's installation yet (see Step 2): ask the owner again.
 
 ## Step 3 — Coder VM workspace
 
@@ -101,14 +117,15 @@ timeout 1200 coder ssh NAME-vm --wait yes -- 'echo ok'   # waits for the agent
 8 CPU / 16 GiB is the template maximum; there is no swap, so cap concurrency in the playbook: 5 subagents total, 3 workers + 2 reviewers by default, shifting to 2 + 3 (and pausing filler work) while 3+ PRs await review. At 5 agents the VM had ~9 GiB free and load ~6 — the binding constraint is the user's usage limit, not the VM. Repo lands at `/workspace/REPO` (persistent disk). VM facts:
 
 - No `python3`, no `tmux` in the image → `nix profile add nixpkgs#tmux nixpkgs#jq` (use `nix shell nixpkgs#python3 -c …` for one-off scripts).
-- **GitHub credentials:** the VM's App token **can** push `.github/workflows/*` (the devcontainer's token lacks the `workflow` scope and cannot). `GITHUB_TOKEN` in the env is a static 8 h token; only `~/.local/bin/gh` (a wrapper calling `coder external-auth access-token github-restricted`) refreshes, and git pushes go through `GIT_ASKPASS`. Hence: never put `gh` in the flake dev shell, and `pm-loop.sh` re-prepends `~/.local/bin` inside `nix develop`. Git author/committer come from env; commits are SSH-signed automatically.
+- **GitHub credentials:** `GITHUB_TOKEN` in the env is a static 8 h token; only `~/.local/bin/gh` (a wrapper calling `coder external-auth access-token github-restricted`) refreshes, and git pushes go through `GIT_ASKPASS`. Hence: never put `gh` in the flake dev shell, and `pm-loop.sh` re-prepends `~/.local/bin` inside `nix develop`. Git author/committer come from env; commits are SSH-signed automatically.
 - **Process environment:** `CODER_AGENT_*`, `GIT_ASKPASS`, `CLAUDE_CODE_OAUTH_TOKEN` exist only in sessions spawned by the coder agent. Start long-running things from `coder ssh` inside tmux — a systemd unit would lack them. Consequence: nothing restarts the loop after a VM reboot; the operator's monitoring does.
-- **CI re-runs:** the `github-restricted` App token cannot call `gh run rerun` ("Resource not accessible by integration"). Reviewers fall back to `gh pr update-branch` (re-runs CI without a code change). Granting the Coder GitHub App `actions: write` would fix it properly — that is the human's call; mention it.
+- **CI re-runs:** Tekton runs have no `gh run rerun`. `gh pr update-branch` re-runs CI by merging master in; a `/retest` PR comment re-runs it without a change but runs every pipeline again. One CI run per head commit: re-run only after a failure that isn't the code's.
+- **CI logs:** PaC posts one check run per PipelineRun and no log lines (they may hold secrets). Agents read the logs through the toolgate `tekton` MCP server (namespace `ci-<repo>`, TaskRun `<run>-ci`, step `run`). VM agents get it by default with `enable_toolgate=true`. It's per-user: it runs as the owner's Kubernetes identity through the authentik token exchange, and the `ci/project` chart's `user-rolebinding.yaml` gives the "Tekton access" group read access to every `ci-<project>` namespace. So a new project's namespace is readable as soon as it's onboarded, with nothing else to set up, and agents can read **every** `ci-*` namespace (read-only), not only their own project's.
 - Smoke-test: `claude -p "Reply with exactly: ok" --dangerously-skip-permissions --model opus`.
 
 ## Step 4 — Scaffold, validate and protect (in the VM)
 
-Everything that builds or pushes happens in the VM, so the scaffold is validated in exactly the environment the agents use, the first `nix develop` / `npm ci` pre-warm the VM, and the workflow file pushes without a detour. The operator's file tools only reach the devcontainer, so author files in a scratchpad mirror and ship them over:
+Everything that builds or pushes happens in the VM, so the scaffold is validated in exactly the environment the agents use, and the first `nix develop` / `npm ci` pre-warm the VM. The operator's file tools only reach the devcontainer, so author files in a scratchpad mirror and ship them over:
 
 ```sh
 tar -C "$SCRATCH/REPO" -cf - . | coder ssh NAME-vm -- 'tar -C /workspace/REPO -xf -'
@@ -122,13 +139,23 @@ tar -C "$SCRATCH/REPO" -cf - . | coder ssh NAME-vm -- 'tar -C /workspace/REPO -x
   - the `simple-english` skill vendored into `.claude/skills/simple-english/` from [AminBlg/SimpleEnglish](https://github.com/AminBlg/SimpleEnglish) (MIT; pin the commit in a `VENDORED.md`), with its `evals/ste_lint.py` and `slop.tsv` in `scripts/docs/`;
   - `docs/README.md` with the audience table (who, knows, cares about, doesn't care about);
   - one directory per audience: `docs/user/`, `docs/admin/`, `docs/dev/` and `docs/agents/`;
-  - a `make docs-check` target (link check and generated-reference diff; the SimpleEnglish lint only as an advisory report) run by the `docs` CI job. **Never gate on word counts or lint scores:** the owner called word budgets "a bad metric", and agents optimise whatever number they are given.
+  - a `make docs-check` target (link check and generated-reference diff; the SimpleEnglish lint only as an advisory report) run by the `docs` CI stage. **Never gate on word counts or lint scores:** the owner called word budgets "a bad metric", and agents optimise whatever number they are given.
 - `docs/agents/project-manager.md`, `.claude/agents/*.md`, `.claude/commands/*.md`, `scripts/agents/pm-loop.sh` from `templates/` (fill placeholders; adapt the domain examples).
-- Tooling: `flake.nix` (+ `.envrc`), `Makefile` (fmt/vet/lint/test/build, TODO stubs for later test tiers; `lint` runs every linter and type check and reports all failures before exiting non-zero, never stopping at the first, because agents run it before every push), lint config, a minimal compiling binary + one real test per language, codegen pipeline if any, `.github/workflows/ci.yml` + `.github/actions/nix-dev-shell` from `templates/` — test tiers as **parallel** jobs (everything via `nix develop -c make …`) with the Nix store and Go/npm caches restored by the composite action; a `dorny/paths-filter` `changes` job skips all test jobs for docs/playbook/Markdown-only changes; and one always-run aggregator job named `checks` (success-or-skipped) that `needs` **every** test job, matrix jobs included. Require **only** `checks` in branch protection: a skipped matrix job reports no per-entry check names, so requiring those leaves docs-only PRs pending forever, Renovate config, README, LICENSE (user's repos use AGPL-3.0).
+- Tooling: `flake.nix` (+ `.envrc`), `Makefile` (fmt/vet/lint/test/build, TODO stubs for later test tiers; `lint` runs every linter and type check and reports all failures before exiting non-zero, never stopping at the first, because agents run it before every push), lint config, a minimal compiling binary + one real test per language, codegen pipeline if any, Renovate config, README, LICENSE (user's repos use AGPL-3.0).
+- **Tekton CI from `templates/scripts/ci/`** (built from registrygate's, which went from GHA's 9.5-min PR median to ~3 min):
+  - `tekton-pipelinerun.yaml.tmpl` and `tekton-release.yaml.tmpl`, rendered by `tekton-generate.sh` into `.tekton/pull-request.yaml`, `push.yaml` and `release.yaml`. Call it from `make generate`, so `make check-generate` fails on a stale `.tekton/`. Never hand-edit `.tekton/`.
+  - One `ci` task on the shared `docker` Task (dind in a kata VM, with a Docker cache cloned from the last good master run). `stages.sh` runs the test tiers **in parallel** as containers of a CI image built from `flake.nix` (`ci-image.sh`), so CI uses the agents' toolchain. It prints each stage's log, a stage table (time, memory, CPU) and the VM's peak memory.
+  - `changes.py` picks the stages a PR needs (docs-only → `docs`). The run itself always starts, so the required check always reports; never filter the PR pipeline with PaC's `pathChanged()`.
+  - `release.yaml` runs as `ci-release` on `v*` tags and only publishes images and charts (`publish-release.sh`). The release-manager creates the GitHub release itself after the run's check passes.
+  - **No GitHub token in any task:** never read the per-run token Secret PaC offers. Runs get no GitHub credentials.
+  - Size the dind sidecar from a measured run: `max(4 GiB, 1.5 × the printed VM peak)`, request == limit (kata), no CPU limit. Fill `{{PROJECT}}` and `{{GH_USER_LOWER}}`, and adapt `command_of`, `changes.py` and `publish-release.sh` to the Makefile.
+  - Renovate: there are no workflows, so leave out the `github-actions` manager. Images are pinned in `scripts/ci/` (the Dockerfile, templates), never in the generated `.tekton/`: add `.tekton/**` to `ignorePaths`.
+  - Projects that run kind create clusters with the Task's `ci-kind-config --name … --image …` (pulls through registrygate, node image cache kept between runs); see the comment in `stages.sh`.
+- **CI time is a cost in every PR** (add to `CLAUDE.md`): when a change affects CI time (new tests or stages, setup, images, caches, dependencies), weigh what it costs there. Faster CI lowers cost everywhere: agents waiting, prompt caches expiring past 5 minutes, and the issue tail. So early investments in CI speed pay off. Workers report a noticeable change in the PR body (compare the stage table with a recent master run); reviewers question unexplained increases and prefer the faster of two reasonable designs. It isn't a gate.
 - **No Docker Hub images, from day one** (the owner's rule after Docker Hub pulls failed CI in several projects; toolgate's master went red when testcontainers' `ryuk` reaper couldn't be pulled):
   - Copy `templates/snippets/CLAUDE-container-images.md` into `CLAUDE.md`. The order is `ghcr.io`, then `quay.io`, then `mirror.gcr.io` (`mirror.gcr.io/library/<name>` for official images). Never `docker.io` or unqualified names, and always pinned by digest.
   - Add a `make lint` check that fails on an unqualified or `docker.io` image reference. It must cover Go image constants, YAML `image:` fields, Dockerfile `FROM` lines and shell scripts, and must skip SQL `FROM`.
-  - In CI's top-level `env`, set `TESTCONTAINERS_RYUK_DISABLED: "true"`. The reaper image is on Docker Hub, and runners are discarded after each job anyway.
+  - Set `TESTCONTAINERS_RYUK_DISABLED=true` in the stage environment (`stages.sh` does). The reaper image is on Docker Hub, and the build VM is discarded after each run anyway.
   - Pin kind's node image through `mirror.gcr.io/kindest/node:<version>@sha256:…`, because kind publishes only to Docker Hub.
   - Make sure Renovate's package rules still update the mirrored images.
   - Designs and issue bodies name the image with its full registry, so workers don't fall back to the bare name.
@@ -137,8 +164,8 @@ tar -C "$SCRATCH/REPO" -cf - . | coder ssh NAME-vm -- 'tar -C /workspace/REPO -x
 Then, in the VM:
 
 1. `git add -N flake.nix` (flakes ignore untracked files); `nix develop -c make lint test build` until green. npm ≥ 12 gates install scripts: `npm install-scripts approve esbuild`.
-2. Commit with explicit paths and push directly to the default branch (no protection yet). Watch the first CI run (`gh run watch --exit-status`) until `checks` is green.
-3. Protect the default branch: `PUT repos/O/R/branches/master/protection` with `required_status_checks: {strict: false, contexts: ["checks"]}`, `enforce_admins: true`, `required_linear_history: true`, no force-push/deletion, no required reviews (all agents share one GitHub identity, so approvals are impossible; reviewers post `--comment` reviews and merge). From here on every change, including the operator's, goes through a PR.
+2. Commit with explicit paths and push directly to the default branch (no protection yet). The push starts the `push` run: watch it with the toolgate `tekton` tools or `kubectl -n ci-REPO get pipelineruns -w` until it succeeds. Its success also seeds the Docker cache. Then resize the dind sidecar from the printed VM peak.
+3. Protect the default branch with a ruleset (`POST repos/O/R/rulesets`, target `branch`, `~DEFAULT_BRANCH`): `deletion`, `non_fast_forward`, `required_linear_history`, and `required_status_checks` with `strict_required_status_checks_policy: false` and the one context **`Tekton CI / REPO-pull-request-`** (PaC's check name: the App name, then the PipelineRun's `generateName`, trailing dash included), pinned to the Tekton CI App's `integration_id` (read it from a PR's check run: `gh api repos/O/R/commits/SHA/check-runs -q '.check_runs[].app.id'`). No required reviews (all agents share one GitHub identity, so approvals are impossible; reviewers post `--comment` reviews and merge). Add a tag ruleset so only the owner can create `v*` tags: a tag push starts a publishing run. From here on every change, including the operator's, goes through a PR.
 
 ## Step 5 — Issues (devcontainer)
 
@@ -148,7 +175,7 @@ Pure GitHub API work, so it can run from the devcontainer (which has `python3`).
 python3 scripts/create_issues.py OWNER/REPO /path/to/issues.py /path/to/state.json
 ```
 
-It creates labels (`status:*` incl. `status:triage`, `follow-up`, `needs-human`, `phase:N`, `severity:*`, `area:*`, `bughunt`, `security`, `pm:status`, `pm:decisions`, …), one milestone + epic per phase, sub-issues (API needs the child's database `id`, not its number), and blocked-by links — topologically ordered and idempotent (re-run resumes). Detail phases 1–2 fully; later phases at feature level (the PM decomposes them before starting the phase). Mark human-only work `needs-human`.
+It creates labels (`status:*` incl. `status:triage`, `follow-up`, `needs-human`, `ci-health`, `phase:N`, `severity:*`, `area:*`, `bughunt`, `security`, `pm:status`, `pm:decisions`, …), one milestone + epic per phase, sub-issues (API needs the child's database `id`, not its number), and blocked-by links — topologically ordered and idempotent (re-run resumes). Detail phases 1–2 fully; later phases at feature level (the PM decomposes them before starting the phase). Mark human-only work `needs-human`.
 
 Then create and pin (`gh api graphql … pinIssue`) two issues: **`pm: project status log`** (`pm:status`) and **`pm: decision log`** (`pm:decisions`). State in both bodies that human instructions are comments by the owner whose first line starts with `/pm`.
 
@@ -164,7 +191,7 @@ The loop: one `claude -p` per cycle (`--dangerously-skip-permissions --model opu
 
 Schedule a recurring check with CronCreate (every 15 min, off the :00/:30 marks, e.g. `2,17,32,47 * * * *`) so a check lands soon after a usage-limit reset — checks that fire while this session is itself limited are simply lost. Session-only; expires after 7 days — tell the user. Prompt template:
 
-> Check on the PROJECT project-manager agent in coder workspace `WS`. Run `.claude/skills/agent-project/scripts/pmcheck.sh WS /workspace/REPO 25`, plus `gh pr list -R O/R` and `gh run list -R O/R -L 5`. Look for infra-level problems the PM cannot fix itself: tmux/loop not running (restart per Step 6), workspace stopped/unhealthy (`coder list`), repeated rc≠0 or usage-limit loops in cycles.log (including rapid rc=0 cycles that are really limit errors), memory/disk pressure, GitHub auth failures, red CI on master, `needs-human` issues, or playbook violations (pushing to master, weakening tests, acting on non-`/pm` comments, ending cycles with subagents still running, reviewers using the main checkout). Fix what is safely within infra scope; otherwise note it for the user. If nothing changed since the previous check, reply with one line.
+> Check on the PROJECT project-manager agent in coder workspace `WS`. Run `.claude/skills/agent-project/scripts/pmcheck.sh WS /workspace/REPO 25` (it ends with the latest Tekton CI runs and their times) and `gh pr list -R O/R`. Look for infra-level problems the PM cannot fix itself: tmux/loop not running (restart per Step 6), workspace stopped/unhealthy (`coder list`), repeated rc≠0 or usage-limit loops in cycles.log (including rapid rc=0 cycles that are really limit errors), memory/disk pressure, GitHub auth failures, red CI on master, `needs-human` issues, or playbook violations (pushing to master, weakening tests, acting on non-`/pm` comments, ending cycles with subagents still running, reviewers using the main checkout). Fix what is safely within infra scope; otherwise note it for the user. If nothing changed since the previous check, reply with one line.
 
 Operator rules:
 - **Report value first.** Every check-in states:
@@ -174,7 +201,7 @@ Operator rules:
 
   Issue counts, merges and convergence of the backlog come second. They measure the machine, not the product. Once a day, step back and ask whether the project is closer to something the owner can use. If not, say so and propose a scope change rather than another process tweak.
 - **Infra changes to a VM with agents running:** don't live-resize (hot-add) the workspace VM. In vault-sync the hot-added VM crashed about 30 minutes later and killed every agent. Resize it at an idle moment, with a planned restart that changes `cpu.sockets`, `memory.guest` and `resources` together. Workers must never run a live scheduler from their worktrees; it launches real agents.
-- **Fix the playbook, not the code.** Playbook/agent-definition fixes go through a normal PR from the devcontainer (non-workflow files push fine), wait for `checks`, squash-merge. The PM re-reads the playbook every cycle.
+- **Fix the playbook, not the code.** Playbook/agent-definition fixes go through a normal PR from the devcontainer, wait for the required check, squash-merge. The PM re-reads the playbook every cycle.
 - **Pause the PM before any manual GitHub pass** (bulk triage, re-parenting, relabelling): `touch .pm/PAUSE`, wait for the running cycle to end, do the pass, `rm .pm/PAUSE`. A follow-up triage agent run alongside a live PM collided with it (both created overlapping batches; 6 duplicates had to be closed). Also watch the 100-sub-issue cap on epics when bulk-creating issues — detach closed originals first.
 - **Don't post `/pm` comments yourself** — that channel is the human's. Suggest wording instead.
 - Don't touch worktrees or the main checkout while a cycle is running; fix stray state between cycles.
@@ -186,6 +213,8 @@ Operator rules:
     - runs `sudo nix-store --gc` once the persistent disk passes 60%. `/nix` lives on the persistent disk and grows with every e2e image build and dev shell. On toolgate it reached 38 GB in a day and one GC freed 29 GB. Running processes keep the store paths they use.
 
     The cache grew about 7 GB an hour with 4 agents. Restart the window together with the scheduler loop after a VM reboot.
+- **Watch CI duration as a project-health signal.** CI wall time drives how long every issue takes, and a run over five minutes also costs agents their prompt cache. Read the stage table of a recent master run at each daily step-back; if the total or one stage has grown, find out why and file an issue. Every CI speed-up in registrygate came from the operator asking why something was slow, never from the agents.
+- **PaC leaks runs cancelled while queued.** A PR pushed again while its previous run waits in the concurrency queue leaves that run cancelled but never marked done, so PaC's `max-keep-runs` cleanup skips it forever. Delete such runs now and then: `kubectl -n ci-REPO get pipelineruns` with reason `Cancelled` and no TaskRuns.
 - Report the notional per-cycle cost from cycles.log occasionally; a long cycle cost ~$60 equivalent. The PM, its subagents, and this session all draw on the user's subscription limits.
 
 ## Lessons from the first run (already folded into the templates)
@@ -232,7 +261,7 @@ Operator rules:
 - **Hung tests:** simulation seeds that hang held workers 30–60 min. Fix: 15-min default test timeout, kill after 5 min without output (`kill -QUIT` a Go test for a goroutine dump) and file it; workers time-box at ~45 min with a draft PR. The operator can SIGQUIT a hung test binary too.
 - **Loop restarts:** set `.pm/PAUSE` (checked between cycles), wait for `claude -p` to exit, `git pull`, kill tmux, remove PAUSE, start tmux — never edit pm-loop.sh under a running loop.
 - **Usage limits are the real ceiling** (5-h window used up in ~2.5–3.5 h; weekly cap reached ~37% in 23 h of nonstop running). Plan for it rather than adding agents.
-- **CI was one sequential ~9-10 min job that ran even for docs-only PRs.** Fixed: parallel tiers (~6.5 min), toolchain caches, path filter + always-run `checks` aggregator.
+- **CI speed:** vault-sync's CI was one sequential ~9-10 min GitHub Actions job. registrygate moved to Tekton (2026-11; retrospective in infra-mk3 PR #911): parallel stages in one dind VM, a Docker cache restored by copy-on-write snapshot, a kind image cache and NIC/DNS fixes took a PR run from a 9.5-min median to ~3 min. The templates start from that.
 - **Sub-issue parents were never set after initial scoping** (175 of ~220 issues orphaned by day 3). The playbook now requires every issue's parent to be **in its own milestone**: a follow-up goes under its origin issue only if that issue is in the same phase, otherwise under the phase epic, so each epic's tree is exactly its phase. (A first backfill hung follow-ups under origin issues in earlier phases and left the Phase 3 epic nearly empty.) Reviewers leave parent and milestone to PM triage. A parent holds at most 100 sub-issues. Tools, both dry-run by default: `scripts/backfill_parents.py OWNER/REPO [--apply]` links orphans; `scripts/reparent_by_milestone.py OWNER/REPO [--apply]` fixes cross-milestone parents.
 - **Triage set `phase:N` without the milestone** → invisible to the phase-completion check (twice: #111, #163). Playbook now requires the milestone; operator-filed issues need it too.
 - The PM handled usage-limit stops cleanly: the in-flight dispatch was lost, then reconciled and re-dispatched after the reset.
@@ -295,5 +324,6 @@ Operator rules:
 - `templates/docs/agents/project-manager.md` — PM playbook: durable records, trust boundary, startup/reconcile, the cycle, judgment calls → decision log, `needs-human`, hard limits, phase transitions (bug hunt + security review, severity triage), failure handling.
 - `templates/.claude/agents/{issue-worker,pr-reviewer,bug-hunter,security-auditor,release-manager,design-reviewer,merge-fixer}.md` — subagent definitions. `release-manager` cuts gated releases (milestone, open critical/high bugs, CI, long sim, upgrade tests, vulncheck, dry run; a version-bump + CHANGELOG PR goes through the normal reviewer); `1.0.0` needs a `/pm` instruction. Adapt its gate commands to the project's Makefile and set `{{GH_USER_LOWER}}` (the lower-cased registry owner).
 - `templates/.claude/commands/{create-issue,start-issue}.md` — interactive human workflow (start-issue keeps the human plan-approval loop; agents use issue-worker instead).
-- `templates/scripts/agents/pm-loop.sh`, `templates/.github/workflows/ci.yml`, `templates/snippets/CLAUDE-shell-hygiene.md`, `templates/snippets/CLAUDE-documentation.md`, `templates/snippets/CLAUDE-container-images.md`, `templates/snippets/CLAUDE-no-tracking-ids.md`.
-- `scripts/create_issues.py` + `scripts/issues_example.py` (the full vault-sync issue set — a worked example of AC style), `scripts/pmcheck.sh WS REPO_DIR [N]`.
+- `templates/scripts/ci/` — the Tekton CI: PipelineRun templates, `tekton-generate.sh`, `stages.sh`, `changes.py`, `ci-image.sh` + `ci-image.Dockerfile`, `publish-release.sh`.
+- `templates/scripts/agents/pm-loop.sh`, `templates/snippets/CLAUDE-shell-hygiene.md`, `templates/snippets/CLAUDE-documentation.md`, `templates/snippets/CLAUDE-container-images.md`, `templates/snippets/CLAUDE-no-tracking-ids.md`.
+- `scripts/create_issues.py` + `scripts/issues_example.py` (the full vault-sync issue set — a worked example of AC style), `scripts/pmcheck.sh WS REPO_DIR [N] [CI_NAMESPACE]`.

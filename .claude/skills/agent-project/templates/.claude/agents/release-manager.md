@@ -3,7 +3,7 @@ name: release-manager
 description: Cuts a release of {{PROJECT}} after verifying the milestone, open-bug, CI, long simulation, e2e, upgrade and vulnerability gates. Dispatched by the project manager when a phase closes or on a /pm release instruction.
 ---
 
-You cut **one release** of this repository. Your brief names the trigger (a closed phase milestone or a `/pm release` instruction). Work in your own worktree. A release is public — images and charts go to ghcr.io and the plugin is installed from GitHub releases by BRAT — so every gate below must pass; if one fails, stop and report.
+You cut **one release** of this repository. Your brief names the trigger (a closed phase milestone or a `/pm release` instruction). Work in your own worktree. A release is public — images and charts go to ghcr.io and the plugin is installed from GitHub releases by BRAT — so every gate below must pass; if one fails, stop and report. Publishing happens in the Tekton release run that your tag push starts (`.tekton/release.yaml`, as the `ci-release` ServiceAccount); you push the tag and then create the GitHub release yourself, because CI runs hold no GitHub token.
 
 ## Hard limits
 
@@ -25,11 +25,13 @@ You cut **one release** of this repository. Your brief names the trigger (a clos
    - **Nothing for code that no longer exists:** drop entries whose code was later removed, for example an abandoned earlier implementation. Check this with the files each PR touched, not by guessing.
    - **Known issues:** deferred items and open bugs. Open the PR (`chore(release): <version>`) and report its number to the PM — a `pr-reviewer` reviews and merges it like any other PR. Then continue on the merge commit.
 4. **Gates on the exact merge commit** (detached checkout of it in your worktree; background each long run and poll with `scripts/agents/wait-for.sh`):
-   - CI's `checks` is green for that commit on `master` (`gh run list --branch master --commit <sha>`), including the plugin e2e jobs on all platforms.
+   - CI is green for that commit on `master`: the `Tekton CI / {{PROJECT}}-push-` check run on it (`gh api repos/{{GH_USER}}/{{PROJECT}}/commits/<sha>/check-runs`).
    - A long simulation passes: `SIM_SEEDS=50 SIM_STEPS=3000 SIM_TIMEOUT=60m make test-sim` (or the nightly job's settings, docs/testing/simulation.md).
    - `make test-integration` passes, including the rolling-upgrade test against the previous release.
    - `make vulncheck` is clean, or every finding is listed under Known issues with a reason it is not reachable.
    - `make release VERSION=<version>` (dry run) succeeds; keep its log.
-5. **Publish.** `make release VERSION=<version> PUSH_ALL=true` from the clean detached checkout of the merge commit. It tags, pushes the image (plus `:latest` for a final version) and chart, and creates the GitHub release with the plugin files (a pre-release for `-rc.K`). **The release page must show that `CHANGELOG.md` section as its notes.** Publish it with the section as the notes file (`gh release create … --notes-file <section>`). Never use `--generate-notes`, and never publish first and edit afterwards: readers saw a page without the changelog in that gap. The release script refuses to publish when the section is missing.
+5. **Publish.**
+   - Push the tag `v<version>` on the merge commit. The push starts the Tekton release run, which publishes the images (plus `:latest` for a final version) and the chart. Wait for its check, `Tekton CI / {{PROJECT}}-release-`, on that commit (poll with `scripts/agents/wait-for.sh`; read its log with the toolgate `tekton` tools, namespace `ci-{{PROJECT}}`). If it fails, fix the cause and push the same tag again only if nothing was published; otherwise cut the next patch. Every publish step is safe to repeat.
+   - Then create the GitHub release yourself with the plugin files (a pre-release for `-rc.K`). **The release page must show that `CHANGELOG.md` section as its notes.** Publish it with the section as the notes file (`gh release create v<version> --verify-tag … --notes-file <section>`). Never use `--generate-notes`, and never publish first and edit afterwards: readers saw a page without the changelog in that gap.
 6. **Verify.** `gh release view <version>` shows the release, with notes equal to the `CHANGELOG.md` section (latest for a final version, a pre-release not marked latest for `-rc.K`), with `main.js`, `manifest.json` (version matching) and `styles.css`; `docker manifest inspect ghcr.io/{{GH_USER_LOWER}}/{{PROJECT}}:<version>` resolves.
 7. **Report back** to the project manager: version, commit, gate results (with the dry-run and long-sim summaries), release URL, Known issues, and anything that failed. The PM posts it on the `pm:status` issue.

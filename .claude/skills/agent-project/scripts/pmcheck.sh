@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Summarize PM loop health inside a coder workspace.
-# Usage: pmcheck.sh WORKSPACE REPO_DIR [N_RECENT_TOOL_CALLS]
+# Usage: pmcheck.sh WORKSPACE REPO_DIR [N_RECENT_TOOL_CALLS] [CI_NAMESPACE]
 #   e.g. pmcheck.sh vault-sync-vm /workspace/vault-sync 25
+# CI_NAMESPACE defaults to ci-<basename of REPO_DIR>; pass it when the checkout
+# directory differs from the repository name.
 set -uo pipefail
-ws="$1" repo="$2" n="${3:-15}"
+ws="$1" repo="$2" n="${3:-15}" ci_ns="${4:-ci-$(basename "$2")}"
 
 # coder ssh prints its own timestamped startup lines ("2026-10-18 02:34:52.710Z ...");
 # drop only those, not the loop's ISO-8601 cycles.log lines.
@@ -19,3 +21,12 @@ echo '== state.md'; head -c 1500 .pm/state.md 2>/dev/null
 echo; echo '== main checkout / worktrees'; git status -sb | head -1; git worktree list
 echo '== mem/disk'; free -g | sed -n 2p; df -h '$repo' | tail -1; uptime
 " 2>&1 | grep -v '^20..-..-.. ..:..:..\.[0-9]*Z'
+
+# The latest Tekton CI runs, from this devcontainer (kubectl), with their
+# duration: watch for red master runs, stuck queues and CI time creeping up.
+echo "== CI ($ci_ns, latest 6)"
+kubectl -n "$ci_ns" get pipelineruns --sort-by=.metadata.creationTimestamp -o json 2>&1 |
+  jq -r '.items[-6:][] | [.metadata.name, (.status.conditions[0].reason // "Pending"),
+    (if .status.completionTime and .status.startTime then
+       (((.status.completionTime | fromdateiso8601) - (.status.startTime | fromdateiso8601)) | tostring) + "s"
+     else "-" end)] | @tsv' 2>/dev/null || echo "(no access to $ci_ns)"
