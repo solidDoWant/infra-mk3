@@ -8,10 +8,11 @@
 # /retest is refused for it, so a release runs again only when its tag is
 # pushed again, and every step must be safe to repeat.
 #
-# publish runs code from the repository and holds no GitHub token. Then
-# github-release creates the GitHub release with a short-lived contents:write
-# token from githubgate (the ci/project chart's ci-release policy); it runs only
-# its inline script, never code from the repository. If releases carry files,
+# publish runs code from the repository and has no GitHub access. Then
+# github-release creates the GitHub release through githubgate's interceptor
+# (the inject label below), as ci-release: githubgate allows only reading the
+# release and CHANGELOG.md and creating a release of a v* tag. It runs only its
+# inline script, never code from the repository. If releases carry files,
 # extend github-release: create the release as a draft, upload the files, then
 # publish it, so the page never shows without them.
 #
@@ -41,6 +42,13 @@ spec:
     - name: source
       emptyDir: {}
   taskRunSpecs:
+    - pipelineTaskName: github-release
+      metadata:
+        labels:
+          # githubgate's injection webhook adds its interceptor: GitHub
+          # requests go through githubgate's proxy as this task's
+          # ServiceAccount, with no token in the pod.
+          githubgate.soliddowant.dev/inject: "true"
     # Size from a measured release run, like the CI run's sidecar. No CPU
     # limit.
     - pipelineTaskName: publish
@@ -114,26 +122,6 @@ spec:
           params:
             - name: ref
               type: string
-          volumes:
-            # githubgate's client, a static binary.
-            - name: githubgate-client
-              image:
-                # renovate: image
-                reference: ghcr.io/soliddowant/githubgate-client:0.3.1@sha256:0674f582a9fd5ecefe1d36811f415e5b9b9184b0b8923294a85fb6239504b468
-                pullPolicy: IfNotPresent
-            # The ServiceAccount token githubgate checks.
-            - name: githubgate-token
-              projected:
-                sources:
-                  - serviceAccountToken:
-                      audience: githubgate
-                      expirationSeconds: 600
-                      path: token
-            # githubgate's certificate chains to the cluster root CA, which
-            # Kyverno copies into every namespace.
-            - name: githubgate-ca
-              configMap:
-                name: root-ca-pub-cert
           steps:
             - name: release
               image: mirror.gcr.io/library/python:3.14.9@sha256:30a34d141e34b8fbedabecb8f86b3d49a62e348d8112ad3c1289f0b2b216ad3e
@@ -144,37 +132,22 @@ spec:
                 limits:
                   memory: 256Mi
               env:
-                - name: GITHUBGATE_URL
-                  value: https://githubgate.ci.svc:8443
-                - name: GITHUBGATE_CA_FILE
-                  value: /etc/githubgate-ca/ca.crt
                 # Through the environment, not the script text.
                 - name: REF
                   value: $(params.ref)
-              volumeMounts:
-                - name: githubgate-client
-                  mountPath: /opt/githubgate
-                - name: githubgate-token
-                  mountPath: /var/run/secrets/githubgate
-                - name: githubgate-ca
-                  mountPath: /etc/githubgate-ca
               script: |
                 #!/usr/bin/env python3
-                import json, os, re, subprocess, sys, urllib.error, urllib.parse, urllib.request
+                import json, os, re, sys, urllib.error, urllib.parse, urllib.request
                 tag = os.environ["REF"].rsplit("/", 1)[-1]
                 if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?", tag):
                     sys.exit(f"not a version tag: {tag}")
                 version = tag[1:]
-                token = subprocess.run(
-                    ["/opt/githubgate/githubgate-client", "token", "--owner", "{{ repo_owner }}", "--repo", "{{ repo_name }}", "--permission", "contents=write"],
-                    check=True, capture_output=True, text=True,
-                ).stdout.strip()
                 api = "https://api.github.com/repos/{{ repo_owner }}/{{ repo_name }}"
                 def call(method, path, body=None, accept="application/vnd.github+json"):
                     request = urllib.request.Request(
                         api + path, method=method,
                         data=None if body is None else json.dumps(body).encode(),
-                        headers={"Authorization": "Bearer " + token, "Accept": accept},
+                        headers={"Accept": accept},
                     )
                     with urllib.request.urlopen(request, timeout=30) as response:
                         return response.read()
