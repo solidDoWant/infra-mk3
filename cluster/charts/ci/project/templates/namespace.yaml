@@ -26,8 +26,14 @@ metadata:
     {{- end }}
     {{- if .Values.githubgate.enabled }}
     # Admits the namespace to githubgate's GitHubInstallation, and its pods to
-    # githubgate's token API (ci/githubgate).
+    # githubgate's token API and proxy (ci/githubgate).
     githubgate.home.arpa/client: "true"
+    # githubgate's injection webhook adds its interceptor to every pod here:
+    # requests to github.com, api.github.com and uploads.github.com go through
+    # githubgate's proxy, decided by the pod's ServiceAccount's proxy rules
+    # (githubgate.yaml). Pipelines need no GitHub setup. The webhook fails
+    # closed: while githubgate is down, no pod here can be created.
+    githubgate.soliddowant.dev/inject: "true"
     {{- end }}
     {{- if or .Values.harbor.enabled (and .Values.docker.registrygate.intercept .Values.docker.registrygate.mirrors) }}
     # Admits this namespace to the harbor-operator connection

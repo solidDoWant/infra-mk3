@@ -26,6 +26,8 @@ spec:
   dependsOn:
     # Issues the serving certificate (tls.yaml)
     - name: ci-namespace-issuer
+    # The self-signed ClusterIssuer behind the proxy CA (tls.yaml)
+    - name: cluster-issuers
     # Approves its request
     - name: approver-policy
     # ServiceMonitor

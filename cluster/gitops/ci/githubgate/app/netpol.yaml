@@ -32,10 +32,12 @@ specs:
           - ports:
               - port: "6443"
                 protocol: TCP
-      # GitHub's API: App JWT calls, installation lookups and token minting.
-      # (Proxy mode will add uploads.github.com and github.com.)
+      # GitHub: App JWT calls, installation lookups and token minting, and
+      # proxied requests (API, uploads, git over HTTPS).
       - toFQDNs:
           - matchName: api.github.com
+          - matchName: uploads.github.com
+          - matchName: github.com
         toPorts:
           - ports:
               - port: "443"
@@ -50,7 +52,16 @@ specs:
           - ports:
               - port: "8443"
                 protocol: TCP
-      # The validating webhook, from the API server
+      # The proxy, from injected interceptors in client namespaces (Service
+      # githubgate-proxy:443 → 9443)
+      - fromEndpoints:
+          - matchLabels:
+              io.cilium.k8s.namespace.labels.githubgate.home.arpa/client: "true"
+        toPorts:
+          - ports:
+              - port: "9443"
+                protocol: TCP
+      # The validating and injection webhooks, from the API server
       - fromEntities:
           - kube-apiserver
         toPorts:

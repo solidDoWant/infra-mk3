@@ -88,22 +88,70 @@ githubgate:
     name: soliddowant
   # The repository the policies cover. Empty means the release name (`name`).
   repository: ""
-  # PR and default-branch builds (ci-build): read the repository.
-  build:
-    permissions:
-      contents: read
-  # Publishing runs (ci-release, only on release.refs; see serviceaccount.yaml):
-  # also create tags and GitHub releases.
-  release:
-    permissions:
-      contents: write
-  # The pipelines' own reporting tasks (ci-report: the test guard's label read
-  # and the report task's `stage:` check runs). They run no repository code.
-  report:
-    permissions:
-      checks: write
-      pull_requests: read
-      issues: read
+  # GitHub access per ServiceAccount: each entry makes a GitHubAccessPolicy
+  # named after the ServiceAccount, covering `repository`, capped by the
+  # installation's ceiling.
+  #
+  #   enabled: false skips the entry (default true), e.g. to turn off a
+  #     chart default.
+  #   permissions: GitHub App permissions (e.g. contents: read).
+  #   token.enabled: a token rule. The pod mints installation tokens with
+  #     githubgate-client token.
+  #   proxy: a proxy rule when `enabled`. Every pod in the namespace is
+  #     intercepted (namespace.yaml): its GitHub requests go through
+  #     githubgate's proxy as its ServiceAccount, decided by this rule. The
+  #     rest of the block is passed through: allowOperations/denyOperations
+  #     (GitHub REST operation ids), allowMutations/denyMutations (GraphQL),
+  #     pushRefs. git fetches need only contents: read and skip the operation
+  #     lists.
+  #
+  # Token and proxy become separate rules: githubgate refuses proxy limits on a
+  # rule that also hands out tokens, which the pod could use without them.
+  serviceAccounts:
+    # PR and default-branch builds (Tekton's default ServiceAccount): fetch
+    # the repository, private or public. Runs PR code, so read only. Fetching
+    # any other GitHub repository from a pod is refused.
+    ci-build:
+      enabled: true
+      permissions:
+        contents: read
+      token:
+        enabled: true
+      proxy:
+        enabled: true
+    # The pipelines' own reporting tasks: the report task's `stage:` check
+    # runs and the test guard's label read. A PR's own .tekton can pick this
+    # ServiceAccount, so the proxy rule allows only those operations.
+    ci-report:
+      enabled: true
+      permissions:
+        checks: write
+        pull_requests: read
+        issues: read
+      token:
+        enabled: true
+      proxy:
+        enabled: true
+        allowOperations:
+          - checks/create
+          - issues/list-labels-on-issue
+    # Publishing runs (only on release.refs; see serviceaccount.yaml): the
+    # release pipeline's github-release task checks for the release, reads
+    # CHANGELOG.md at the tag and creates the release, for version tags only.
+    ci-release:
+      enabled: true
+      permissions:
+        contents: write
+      token:
+        enabled: true
+      proxy:
+        enabled: true
+        allowOperations:
+          - repos/get-release-by-tag
+          - repos/get-content
+          - repos/create-release
+        pushRefs:
+          - refs/tags/v*
 release:
   # A regular expression (RE2, as CEL's matches()). The default is version tags.
   refs: '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'

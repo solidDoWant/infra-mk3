@@ -73,3 +73,103 @@ spec:
       - server auth
   constraints:
     maxDuration: 24h
+---
+# The CA that signs the proxy's certificate for the GitHub hosts. Pods never
+# trust it: injected pods trust their own interceptor's per-pod CA, and the
+# interceptor trusts only this CA, for the proxy (inject reads it from the
+# githubgate-proxy Secret's ca.crt). Its name constraint limits it to
+# github.com and its subdomains. It can't come from root-ca, whose constraints
+# only permit internal names.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: githubgate-proxy-ca
+spec:
+  isCA: true
+  commonName: infra-mk3 githubgate proxy Certificate Authority
+  subject:
+    organizations:
+      - infra-mk3
+  usages:
+    - cert sign
+    - crl sign
+  nameConstraints:
+    critical: true
+    permitted:
+      dnsDomains:
+        # Covers api.github.com and uploads.github.com.
+        - github.com
+  duration: 87660h # 10 years
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
+    group: cert-manager.io
+  secretName: githubgate-proxy-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: githubgate-proxy-ca
+spec:
+  ca:
+    secretName: githubgate-proxy-ca
+---
+# The proxy's serving certificate (hr.yaml, proxy.existingSecret). githubgate
+# reloads it from disk when it's renewed.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: githubgate-proxy
+spec:
+  commonName: api.github.com
+  dnsNames:
+    - api.github.com
+    - uploads.github.com
+    - github.com
+  usages:
+    - server auth
+  duration: 2160h # 90 days
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    name: githubgate-proxy-ca
+    kind: Issuer
+    group: cert-manager.io
+  secretName: githubgate-proxy
+---
+# Approve only that certificate from the proxy CA.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: githubgate-proxy-ca-serving-cert
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: githubgate-proxy-ca
+    namespace:
+      matchNames:
+        - ci
+  allowed:
+    commonName:
+      required: true
+      value: api.github.com
+    dnsNames:
+      required: true
+      values:
+        - api.github.com
+        - uploads.github.com
+        - github.com
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 2160h

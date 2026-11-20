@@ -44,11 +44,25 @@ spec:
       existingSecret: githubgate-serving
       annotations:
         cert-manager.io/inject-ca-from: ci/githubgate-serving
-    # Token mode only for now. Proxy mode and sidecar injection come with the
-    # CI and Coder steps (githubgate #21).
+    # Proxy mode: githubgate answers for api.github.com, uploads.github.com
+    # and github.com, decides each request by the caller's proxy rules, and
+    # forwards it with an installation token the caller never sees. Pods reach
+    # it only through an injected interceptor (inject below), so no fixed
+    # clusterIP is needed. Certificate in tls.yaml.
     proxy:
-      enabled: false
+      enabled: true
+      existingSecret: githubgate-proxy
+    # Adds the interceptor sidecar to pods labelled
+    # githubgate.soliddowant.dev/inject=true (or in namespaces with that
+    # label): hostAliases for the three GitHub hosts, a per-pod CA in the trust
+    # variables, and a projected ServiceAccount token only the sidecar reads.
+    # Pods need no GitHub configuration. The interceptor trusts only the proxy
+    # CA, from the githubgate-proxy Secret's ca.crt. Same webhook server and
+    # certificate as the validating webhook (webhook.annotations).
     inject:
-      enabled: false
+      enabled: true
+      image:
+        # renovate: image=ghcr.io/soliddowant/githubgate-client
+        digest: sha256:0674f582a9fd5ecefe1d36811f415e5b9b9184b0b8923294a85fb6239504b468
     serviceMonitor:
       enabled: true
