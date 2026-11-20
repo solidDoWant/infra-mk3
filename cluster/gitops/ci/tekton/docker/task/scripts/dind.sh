@@ -157,13 +157,18 @@ cat > "$KIND_DIR/bin/ci-kind-config" <<'SH'
 #   volume, so a cluster of the same name in a later build starts with the
 #   images it pulled. Pass these here instead of to kind. The first use of a
 #   cache, or a new node image, seeds it from the node image (a few seconds).
+#   A cache that has grown more than 2 GiB past its seed is reseeded. Its size
+#   is measured in the background after the claim, never on the way to kind
+#   create: walking a few GB of containerd store on a busy disk took 16-47 s.
 set -eu
 patch=/run/ci-kind/kind-patch.yaml
 yq=/opt/ci-kind/yq/usr/bin/yq
 # On dockerd's side: kind's mounts and docker run -v name paths there.
 caches=/var/lib/docker/ci-kind
-# Reseed a node's cache above this size (KiB), so it can't grow without end.
-max_kib=$((12 * 1024 * 1024))
+# Reseed a node's cache once it has grown this much (KiB) past its seed. CI
+# clusters are never deleted, so every run leaves its containers' snapshots
+# and replaced images behind in the store.
+grow_kib=$((2 * 1024 * 1024))
 name=
 image=
 while [ $# -gt 0 ]; do
@@ -215,28 +220,47 @@ for role in $(printf '%s\n' "$config" | "$yq" '.nodes[].role'); do
 done
 
 # Seed each node's cache in a container of the node image itself,
-# which has the store to seed from. kind would pull the image anyway.
-docker pull -q "$image" >/dev/null
+# which has the store to seed from. kind would pull the image anyway; skip
+# the registry round trip when it's already here (it's pinned by digest).
+docker image inspect "$image" >/dev/null 2>&1 || docker pull -q "$image" >/dev/null
 id=$(docker image inspect -f '{{.Id}}' "$image")
+# The sizes come from the files the background measurement (below) and the
+# seed write: <key>.size and <key>.seed-size, in KiB. A cache without a seed
+# size (made before these files existed) is reseeded once.
 # shellcheck disable=SC2016,SC2086 # expanded in the container; keys split
 claimed=$(docker run --rm -v "$caches:/c" --entrypoint sh "$image" -c '
-  id=$1; max=$2; shift 2
+  id=$1; grow=$2; shift 2
   mkdir -p /c/cache
   for key in "$@"; do
     dir=/c/cache/$key
-    size=$(du -sk "$dir" 2>/dev/null | cut -f1)
-    if [ "$(cat "$dir.image" 2>/dev/null)" != "$id" ] || [ "${size:-0}" -gt "$max" ]; then
-      rm -rf "$dir" "$dir.image"
+    size=$(cat "$dir.size" 2>/dev/null || echo 0)
+    seed=$(cat "$dir.seed-size" 2>/dev/null || echo 0)
+    if [ "$(cat "$dir.image" 2>/dev/null)" != "$id" ] || [ "${seed:-0}" -eq 0 ] || [ "${size:-0}" -gt $((seed + grow)) ]; then
+      rm -rf "$dir" "$dir.image" "$dir.size" "$dir.seed-size"
       mkdir -p "$dir"
       cp -a /var/lib/containerd/. "$dir/"
+      seed=$(du -sk "$dir" | cut -f1)
+      echo "$seed" > "$dir.seed-size"
+      echo "$seed" > "$dir.size"
       echo "$id" > "$dir.image"
-      echo "ci-kind-config: $key: seeded its image cache from the node image" >&2
+      echo "ci-kind-config: $key: seeded its image cache from the node image ($((seed / 1024)) MiB)" >&2
     else
-      echo "ci-kind-config: $key: using its image cache ($((size / 1024)) MiB)" >&2
+      echo "ci-kind-config: $key: using its image cache ($((size / 1024)) MiB at its last measurement, seed $((seed / 1024)) MiB)" >&2
     fi
     echo "$key"
   done
-' sh "$id" "$max_kib" $keys)
+' sh "$id" "$grow_kib" $keys)
+
+# Measure the claimed caches for the next build, in the background and at low
+# priority, so it's off the way to kind create. An unfinished measurement
+# leaves the previous size in place (written to a temporary file, then moved).
+# shellcheck disable=SC2016,SC2086 # expanded in the container; keys split
+docker run -d --rm -v "$caches:/c" --entrypoint sh "$image" -c '
+  for key in "$@"; do
+    dir=/c/cache/$key
+    size=$(nice -n 19 du -sk "$dir" | cut -f1) && echo "$size" > "$dir.size.tmp" && mv "$dir.size.tmp" "$dir.size"
+  done
+' sh $claimed >/dev/null
 
 i=0
 for key in $keys; do
