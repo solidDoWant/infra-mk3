@@ -4,8 +4,14 @@
 # https://github.com/VictoriaMetrics/mcp-victorialogs
 #
 # No `scope`: the template references nothing user-specific, so toolgate runs
-# one shared instance. The logs API has no auth; who can use the server is
-# decided by `access` below.
+# one shared instance. It reaches VictoriaLogs with one shared, read-only
+# vmauth bearer token; who can use the server is decided by `access` below.
+#
+# The token is a template secret: toolgate copies it from the
+# victorialogs-vmauth-token Secret in `ai` (victorialogs-vmauth-token.yaml)
+# into the instance's own Secret before its pod starts.
+#
+# `$${` is Flux's escape: it reaches toolgate as a literal `${`.
 apiVersion: toolgate.soliddowant.dev/v1alpha1
 kind: MCPServerTemplate
 metadata:
@@ -30,55 +36,82 @@ spec:
     service: victorialogs
     port: 8080
   resources:
+    # The vmauth token (template secret, see above). The reload label makes
+    # the cluster's reloader policy restart the Deployment when toolgate
+    # updates it, since the server reads it from an environment variable.
     - apiVersion: v1
-      kind: Pod
+      kind: Secret
+      metadata:
+        name: victorialogs-vmauth-token
+        labels:
+          kyverno.home.arpa/reload: "true"
+      stringData:
+        token: $${templateSecret:victorialogs-vmauth-token/token}
+    # A Deployment rather than a bare Pod: Kubernetes recreates a deleted or
+    # evicted pod, and the cluster's reloader policy restarts it when the
+    # token Secret changes.
+    - apiVersion: apps/v1
+      kind: Deployment
       metadata:
         name: victorialogs
-        labels:
-          app: victorialogs
-          endpoints.netpols.home.arpa/logs-querier: "true"
       spec:
-        automountServiceAccountToken: false
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 1000 # the image's `mcp` user
-          runAsGroup: 1000
-          seccompProfile:
-            type: RuntimeDefault
-        containers:
-          - name: server
-            image: ghcr.io/victoriametrics/mcp-victorialogs:v1.9.0@sha256:753bb4fbe402ca1a782842f44636830f9895736f11d7fe783b924f8a0daf083d
-            ports:
-              - name: http
-                containerPort: 8080
-            env:
-              - name: MCP_SERVER_MODE
-                value: http
-              - name: MCP_LISTEN_ADDR
-                value: ":8080"
-              # The same vmauth that Grafana queries, so results cover both
-              # VictoriaLogs instances.
-              - name: VL_INSTANCE_ENTRYPOINT
-                value: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
-              - name: MCP_LOG_FORMAT
-                value: json
-            readinessProbe:
-              httpGet:
-                path: /health/readiness
-                port: http
-              periodSeconds: 10
-            resources:
-              requests:
-                cpu: 20m
-                memory: 128Mi
-              limits:
-                memory: 128Mi
+        replicas: 1
+        revisionHistoryLimit: 1
+        selector:
+          matchLabels:
+            app: victorialogs
+        template:
+          metadata:
+            labels:
+              app: victorialogs
+              endpoints.netpols.home.arpa/logs-querier: "true"
+          spec:
+            automountServiceAccountToken: false
             securityContext:
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop:
-                  - ALL
+              runAsNonRoot: true
+              runAsUser: 1000 # the image's `mcp` user
+              runAsGroup: 1000
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: server
+                image: ghcr.io/victoriametrics/mcp-victorialogs:v1.9.0@sha256:753bb4fbe402ca1a782842f44636830f9895736f11d7fe783b924f8a0daf083d
+                ports:
+                  - name: http
+                    containerPort: 8080
+                env:
+                  - name: MCP_SERVER_MODE
+                    value: http
+                  - name: MCP_LISTEN_ADDR
+                    value: ":8080"
+                  # The same vmauth that Grafana queries, so results cover both
+                  # VictoriaLogs instances.
+                  - name: VL_INSTANCE_ENTRYPOINT
+                    value: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
+                  - name: VL_INSTANCE_BEARER_TOKEN
+                    valueFrom:
+                      secretKeyRef:
+                        name: victorialogs-vmauth-token
+                        key: token
+                  - name: MCP_LOG_FORMAT
+                    value: json
+                readinessProbe:
+                  httpGet:
+                    path: /health/readiness
+                    port: http
+                  periodSeconds: 10
+                resources:
+                  requests:
+                    cpu: 20m
+                    memory: 128Mi
+                  limits:
+                    memory: 128Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop:
+                      - ALL
     - apiVersion: v1
       kind: Service
       metadata:

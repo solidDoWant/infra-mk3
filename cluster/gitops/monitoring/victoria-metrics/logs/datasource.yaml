@@ -9,11 +9,30 @@ spec:
     type: victoriametrics-logs-datasource
     name: VictoriaLogs
     url: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
+    basicAuth: true
+    basicAuthUser: grafana
     jsonData:
       maxLines: 1000
   instanceSelector:
     matchLabels:
       grafana.home.arpa/instance: grafana
+  valuesFrom:
+    - targetPath: secureJsonData.basicAuthPassword
+      valueFrom:
+        secretKeyRef:
+          name: victoria-logs-grafana-credentials
+          key: password
   plugins:
     - name: victoriametrics-logs-datasource
       version: 0.34.0
+---
+# vmauth credential for the datasource above. Value comes from Flux
+# substitution (cluster-secrets.sops.yaml); vmauth-config.yaml holds the
+# matching user.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: victoria-logs-grafana-credentials
+type: Opaque
+stringData:
+  password: ${SECRET_VICTORIA_LOGS_GRAFANA_PASSWORD}

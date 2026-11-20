@@ -20,6 +20,10 @@ spec:
         - path:
             type: PathPrefix
             value: /select/logsql
+        # vmauth's SSO login flow (login start and OIDC callback)
+        - path:
+            type: PathPrefix
+            value: /_vmauth/sso
     - matches:
         - path:
             type: PathPrefix

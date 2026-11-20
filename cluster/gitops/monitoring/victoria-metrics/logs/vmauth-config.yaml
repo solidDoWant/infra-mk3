@@ -1,0 +1,87 @@
+---
+# vmauth config for VictoriaLogs, written by hand (VMAuth spec.externalConfig)
+# because the VMAuth CRD has no field for vmauth's `sso` section. Values come
+# from Flux substitution (cluster-secrets.sops.yaml).
+#
+# There is no `unauthorized_user` section: every request needs credentials.
+# - People: browser login through Authentik (`sso`), after which the ID token
+#   in the session cookie is checked by the `jwt` user below.
+# - In-cluster services: one static credential each. vmauth only forbids
+#   mixing jwt with static credentials inside a single user entry; separate
+#   entries are fine.
+#
+# Everyone gets read-only access (/select/...). Nothing writes through vmauth:
+# the fluentd aggregator ships logs straight to each VLSingle.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: victoria-logs-vmauth-config
+type: Opaque
+stringData:
+  config.yaml: |
+    sso:
+      # Regex on the request Host. Only the public hostname gets the browser
+      # login flow; in-cluster callers just get 401 without credentials.
+      - src_host: vm-logs\.${SECRET_PUBLIC_DOMAIN_NAME}
+        oidc:
+          # Canonical in-cluster OIDC origin (see
+          # security/authentik/openid-configuration-proxy). It rewrites the
+          # browser-facing authorize URL to the public Authentik hostname and
+          # stamps this exact issuer into the discovery doc and the token `iss`.
+          issuer: &issuer https://openid-configuration-proxy.security.svc.cluster.local/application/o/victoria-logs/
+          client_id: ${SECRET_VICTORIA_LOGS_AUTHENTIK_OIDC_CLIENT_ID}
+          client_secret: ${SECRET_VICTORIA_LOGS_AUTHENTIK_OIDC_CLIENT_SECRET}
+          # HMAC key for the short-lived CSRF cookie of the login flow.
+          cookie_secret: ${SECRET_VICTORIA_LOGS_SSO_COOKIE_SECRET}
+          scopes:
+            - openid
+            - profile
+          # The cookie also expires with the ID token (Authentik's
+          # access_token_validity for this provider), whichever is sooner.
+          session_duration: 8h
+
+    users:
+      # Browser sessions. The SSO cookie holds the Authentik ID token.
+      - name: sso
+        jwt:
+          oidc:
+            issuer: *issuer
+          match_claims:
+            # Required by OIDC: the token must have been issued to this client.
+            aud: ${SECRET_VICTORIA_LOGS_AUTHENTIK_OIDC_CLIENT_ID}
+            # Authentik already refuses to log in anyone outside this group;
+            # checking it here as well keeps that true if the policy binding
+            # is ever changed.
+            groups: VictoriaLogs access
+          # Authentik tokens carry no `vm_access` claim, and vmauth rejects a
+          # JWT that has neither the claim nor this default. Tenant 0:0 is the
+          # only tenant in use.
+          default_vm_access_claim:
+            logs_account_id: 0
+            logs_project_id: 0
+        url_map: &read_only
+          - src_paths:
+              - /select/.*
+            # Fully qualified on purpose: Bare `.svc` cannot resolve absolutely
+            # and only works via search-path fallback, costing NXDOMAINs.
+            url_prefix: http://srv+victoria-logs.monitoring.svc.cluster.local:9428
+            discover_backend_ips: true
+
+      # Grafana's VictoriaLogs datasource (datasource.yaml).
+      - name: grafana
+        username: grafana
+        password: ${SECRET_VICTORIA_LOGS_GRAFANA_PASSWORD}
+        url_map: *read_only
+
+      # toolgate's VictoriaLogs MCP server (ai/toolgate/catalog/victorialogs.yaml).
+      - name: toolgate-victorialogs-mcp
+        bearer_token: ${SECRET_VICTORIA_LOGS_TOOLGATE_MCP_TOKEN}
+        url_map: *read_only
+
+      # tape-archiver web's run log panel (backup/tape-archiver/web/hr.yaml).
+      # The app has no auth setting, so the credentials ride in the URL's
+      # userinfo, which Go's HTTP client sends as basic auth.
+      - name: tape-archiver-web
+        username: tape-archiver-web
+        password: ${SECRET_VICTORIA_LOGS_TAPE_ARCHIVER_PASSWORD}
+        url_map: *read_only
