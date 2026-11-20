@@ -1,0 +1,54 @@
+---
+# githubgate: GitHub App access for CI pipelines and workspaces, by
+# ServiceAccount, without handing them the App's key:
+# https://github.com/solidDoWant/githubgate
+#
+# ci is its admin namespace: the GitHubApp (and its key) and the
+# GitHubInstallation that caps every policy live here, and nothing else writes
+# to ci. Policies live in the client namespaces (the ci/project chart, Coder).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name githubgate-app
+spec:
+  targetNamespace: ci
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/githubgate/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # Issues the serving certificate (tls.yaml)
+    - name: ci-namespace-issuer
+    # Approves its request
+    - name: approver-policy
+    # ServiceMonitor
+    - name: prometheus-crds
+---
+# The GitHubApp, its key Secret and the GitHubInstallation (they need the
+# chart's CRDs and its validating webhook).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name githubgate-config
+spec:
+  targetNamespace: ci
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/githubgate/config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    - name: githubgate-app

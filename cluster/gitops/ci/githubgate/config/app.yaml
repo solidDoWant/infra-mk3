@@ -1,0 +1,41 @@
+---
+# The production GitHub App, installed on every repository of the account.
+# Its ID and private key are in app-key.sops.yaml.
+apiVersion: githubgate.soliddowant.dev/v1alpha1
+kind: GitHubApp
+metadata:
+  name: github
+spec:
+  appIDSecretRef:
+    name: githubgate-app
+    key: app-id
+  privateKeySecretRef:
+    name: githubgate-app
+    key: private-key.pem
+---
+# The App's installation on the account, and the most any policy may get
+# through it. No administration, workflows or other repository settings, so no
+# client can change branch protection, rulesets or Actions.
+apiVersion: githubgate.soliddowant.dev/v1alpha1
+kind: GitHubInstallation
+metadata:
+  name: soliddowant
+spec:
+  appRef:
+    name: github
+  owner: solidDoWant
+  ceiling:
+    - repositories:
+        - "*"
+      permissions:
+        contents: write
+        pull_requests: write
+        issues: write
+        checks: write
+        statuses: write
+  # Namespaces whose policies may use it (the ci/project chart and the Coder
+  # template label them).
+  allowedNamespaces:
+    selector:
+      matchLabels:
+        githubgate.home.arpa/client: "true"

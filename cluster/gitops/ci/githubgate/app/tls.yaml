@@ -1,0 +1,75 @@
+---
+# The serving certificate for the githubgate Service, used by both the token
+# API (8443) and the validating webhook (9444), from ci's namespace issuer.
+# githubgate reloads it from disk when it's renewed, and cainjector keeps the
+# webhook configuration's caBundle current (hr.yaml, webhook.annotations).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: githubgate-serving
+spec:
+  commonName: githubgate
+  dnsNames:
+    - githubgate.ci.svc
+    - githubgate.ci.svc.cluster.local
+  subject:
+    countries:
+      - US
+    provinces:
+      - ${SECRET_STATE}
+    organizations:
+      - infra-mk3
+  usages:
+    - server auth
+  duration: 24h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    encoding: PKCS8
+    rotationPolicy: Always
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: ci-intermediary-ca
+  secretName: githubgate-serving
+---
+# Approve the githubgate-serving certificate specifically.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: ci-intermediary-ca-githubgate-serving
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: ci-intermediary-ca
+    namespace:
+      matchNames:
+        - ci
+  allowed:
+    commonName:
+      required: true
+      value: githubgate
+    dnsNames:
+      required: true
+      values:
+        - githubgate.ci.svc
+        - githubgate.ci.svc.cluster.local
+    subject:
+      countries:
+        required: true
+        values:
+          - US
+      provinces:
+        required: true
+        values:
+          - ${SECRET_STATE}
+      organizations:
+        required: true
+        values:
+          - infra-mk3
+    usages:
+      - server auth
+  constraints:
+    maxDuration: 24h

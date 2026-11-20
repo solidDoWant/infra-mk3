@@ -1,0 +1,75 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: githubgate
+specs:
+  - description: githubgate
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: githubgate
+        app.kubernetes.io/instance: githubgate
+    egress:
+      # DNS resolution
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: networking
+              endpoints.netpols.home.arpa/cluster-dns: "true"
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
+      # kube-apiserver: token reviews, the custom resources and their status,
+      # Secret watches in ci, leader election
+      - toEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "6443"
+                protocol: TCP
+      # GitHub's API: App JWT calls, installation lookups and token minting.
+      # (Proxy mode will add uploads.github.com and github.com.)
+      - toFQDNs:
+          - matchName: api.github.com
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+    ingress:
+      # The token API, from client namespaces (labelled
+      # githubgate.home.arpa/client=true, e.g. by the ci/project chart)
+      - fromEndpoints:
+          - matchLabels:
+              io.cilium.k8s.namespace.labels.githubgate.home.arpa/client: "true"
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+      # The validating webhook, from the API server
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "9444"
+                protocol: TCP
+      # Metrics, scraped by vmagent
+      - fromEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: monitoring
+              endpoints.netpols.home.arpa/metrics-scraper: "true"
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP
+      # Kubelet health and readiness probes
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8080"
+                protocol: TCP

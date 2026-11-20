@@ -1,0 +1,54 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: githubgate
+spec:
+  interval: 1h
+  # Not cosign-signed yet, so no verify block.
+  url: oci://ghcr.io/soliddowant/charts/githubgate
+  ref:
+    tag: 0.3.1
+    digest: sha256:ebe500303bca1c09ddc9558d87fcf0a2f48f7413a77db3e6f64260ebb9777a08
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: githubgate
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: githubgate
+  values:
+    # Every replica serves (it is stateless; tokens are cached per replica)
+    # and the status controller is leader-elected, so 2 survive a node drain.
+    replicas: 2
+    podDisruptionBudget:
+      enabled: true
+      maxUnavailable: 1
+    image:
+      digest: sha256:9874e0b7d0ab6fe411313d93c43151e1747bae570b3f21b3957d06001689b718
+    # Only ci holds the GitHubApp, its key and the GitHubInstallation.
+    adminNamespaces:
+      - ci
+    # The chart makes no certificates: they're spelled out in tls.yaml.
+    certManager:
+      enabled: false
+    tls:
+      existingSecret: githubgate-serving
+    # Rejects GitHubApp/GitHubInstallation objects outside ci and rules outside
+    # the installation's ceiling at admission. Same Service, same certificate.
+    webhook:
+      enabled: true
+      existingSecret: githubgate-serving
+      annotations:
+        cert-manager.io/inject-ca-from: ci/githubgate-serving
+    # Token mode only for now. Proxy mode and sidecar injection come with the
+    # CI and Coder steps (githubgate #21).
+    proxy:
+      enabled: false
+    inject:
+      enabled: false
+    serviceMonitor:
+      enabled: true
