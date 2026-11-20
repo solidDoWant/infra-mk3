@@ -1,105 +1,46 @@
 {{- if .Values.githubgate.enabled }}
 {{- $repository := .Values.githubgate.repository | default .Values.name }}
+{{- range $serviceAccount, $access := .Values.githubgate.serviceAccounts }}
+{{- if $access }}
+{{- $token := and $access.token $access.token.enabled }}
+{{- $proxy := and $access.proxy $access.proxy.enabled }}
+{{- if not (or $token $proxy) }}
+{{- fail (printf "githubgate.serviceAccounts.%s needs token.enabled or proxy.enabled" $serviceAccount) }}
+{{- end }}
 ---
-# PR and default-branch builds: read the repository (cloning a private one,
-# reading releases). Runs code from pull requests, so read only.
+# GitHub access for the {{ $serviceAccount }} ServiceAccount (values.yaml,
+# githubgate.serviceAccounts).
 apiVersion: githubgate.soliddowant.dev/v1alpha1
 kind: GitHubAccessPolicy
 metadata:
-  name: ci-build
-  namespace: {{ include "ci-project.namespace" . }}
+  name: {{ $serviceAccount }}
+  namespace: {{ include "ci-project.namespace" $ }}
 spec:
   serviceAccounts:
-    - ci-build
+    - {{ $serviceAccount }}
   rules:
-    - name: build
+    {{- if $token }}
+    - name: token
       installationRef:
-        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+        {{- toYaml $.Values.githubgate.installation | nindent 8 }}
       repositories:
         - {{ $repository | quote }}
       permissions:
-        {{- toYaml .Values.githubgate.build.permissions | nindent 8 }}
+        {{- toYaml $access.permissions | nindent 8 }}
       token:
         enabled: true
-    - name: build-proxy
+    {{- end }}
+    {{- if $proxy }}
+    - name: proxy
       installationRef:
-        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+        {{- toYaml $.Values.githubgate.installation | nindent 8 }}
       repositories:
         - {{ $repository | quote }}
       permissions:
-        {{- toYaml .Values.githubgate.build.permissions | nindent 8 }}
+        {{- toYaml $access.permissions | nindent 8 }}
       proxy:
-        enabled: true
-        {{- with .Values.githubgate.build.proxy }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
----
-# Publishing runs: the ci-release-runs admission policy lets a PipelineRun use
-# ci-release only for a push whose ref matches release.refs, so this write
-# access is reachable only from release tags.
-apiVersion: githubgate.soliddowant.dev/v1alpha1
-kind: GitHubAccessPolicy
-metadata:
-  name: ci-release
-  namespace: {{ include "ci-project.namespace" . }}
-spec:
-  serviceAccounts:
-    - ci-release
-  rules:
-    - name: release
-      installationRef:
-        {{- toYaml .Values.githubgate.installation | nindent 8 }}
-      repositories:
-        - {{ $repository | quote }}
-      permissions:
-        {{- toYaml .Values.githubgate.release.permissions | nindent 8 }}
-      token:
-        enabled: true
-    - name: release-proxy
-      installationRef:
-        {{- toYaml .Values.githubgate.installation | nindent 8 }}
-      repositories:
-        - {{ $repository | quote }}
-      permissions:
-        {{- toYaml .Values.githubgate.release.permissions | nindent 8 }}
-      proxy:
-        enabled: true
-        {{- with .Values.githubgate.release.proxy }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
----
-# The reporting tasks (test guard labels, `stage:` check runs). A pull request's
-# pipeline could also pick ci-report, but these permissions are what any task
-# could already get from PaC's per-run token, and the required check is PaC's
-# own.
-apiVersion: githubgate.soliddowant.dev/v1alpha1
-kind: GitHubAccessPolicy
-metadata:
-  name: ci-report
-  namespace: {{ include "ci-project.namespace" . }}
-spec:
-  serviceAccounts:
-    - ci-report
-  rules:
-    - name: report
-      installationRef:
-        {{- toYaml .Values.githubgate.installation | nindent 8 }}
-      repositories:
-        - {{ $repository | quote }}
-      permissions:
-        {{- toYaml .Values.githubgate.report.permissions | nindent 8 }}
-      token:
-        enabled: true
-    - name: report-proxy
-      installationRef:
-        {{- toYaml .Values.githubgate.installation | nindent 8 }}
-      repositories:
-        - {{ $repository | quote }}
-      permissions:
-        {{- toYaml .Values.githubgate.report.permissions | nindent 8 }}
-      proxy:
-        enabled: true
-        {{- with .Values.githubgate.report.proxy }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        {{- toYaml $access.proxy | nindent 8 }}
+    {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}
