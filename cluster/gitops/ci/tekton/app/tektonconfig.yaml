@@ -221,9 +221,10 @@ spec:
           # secrets.
           error-log-snippet: "false"
           error-detection-from-container-logs: "false"
-          # The per-run git token only covers the repository being built.
-          secret-auto-create: "true"
-          secret-github-app-token-scoped: "true"
+          # No per-run git token Secret in run namespaces: pipelines get
+          # GitHub tokens from githubgate (ci/githubgate), by ServiceAccount
+          # and with the ci/project chart's per-project policies.
+          secret-auto-create: "false"
           # No fetching tasks from Artifact Hub or URLs.
           remote-tasks: "false"
           default-max-keep-runs: "10"
