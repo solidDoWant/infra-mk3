@@ -8,13 +8,14 @@
 # /retest is refused for it, so a release runs again only when its tag is
 # pushed again, and every step must be safe to repeat.
 #
-# publish runs code from the repository and has no GitHub access. Then
-# github-release creates the GitHub release through githubgate's interceptor
-# (the inject label below), as ci-release: githubgate allows only reading the
-# release and CHANGELOG.md and creating a release of a v* tag. It runs only its
-# inline script, never code from the repository. If releases carry files,
-# extend github-release: create the release as a draft, upload the files, then
-# publish it, so the page never shows without them.
+# publish publishes images and charts. Then github-release creates the GitHub
+# release through githubgate's interceptor, which the CI cluster adds to every
+# ci-report and ci-release task; githubgate allows ci-release only to read the
+# release and CHANGELOG.md and to create a release of a v* tag. Only a
+# version-tag push starts this run, so only what can push tags reaches that
+# access. If releases carry files, extend github-release: create the release
+# as a draft, upload the files, then publish it, so the page never shows
+# without them.
 #
 # There is no cancel-in-progress annotation: a release always runs to the end.
 apiVersion: tekton.dev/v1
@@ -42,13 +43,6 @@ spec:
     - name: source
       emptyDir: {}
   taskRunSpecs:
-    - pipelineTaskName: github-release
-      metadata:
-        labels:
-          # githubgate's injection webhook adds its interceptor: GitHub
-          # requests go through githubgate's proxy as this task's
-          # ServiceAccount, with no token in the pod.
-          githubgate.soliddowant.dev/inject: "true"
     # Size from a measured release run, like the CI run's sidecar. No CPU
     # limit.
     - pipelineTaskName: publish
