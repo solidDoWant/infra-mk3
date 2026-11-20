@@ -182,3 +182,6 @@ spec:
     # The chart's RegistryMirror/UpstreamCredential/RegistryAccessPolicy
     # need registrygate's CRDs and UpstreamRegistry objects.
     - name: registrygate-config
+    # The chart's GitHubAccessPolicy objects need githubgate's CRDs, its
+    # validating webhook, and the GitHubInstallation they reference.
+    - name: githubgate-config

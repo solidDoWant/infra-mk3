@@ -75,6 +75,28 @@ docker:
 # on the PipelineRun, which a repository's .tekton/ can't override: the branch
 # name for a branch push ("master"), "refs/tags/<tag>" for a tag. Pull requests,
 # comment re-runs (/retest) and other branches never qualify.
+# GitHub access through githubgate (ci/githubgate), by ServiceAccount: a step
+# mounts a projected token with audience githubgate and asks githubgate's token
+# API for a short-lived installation token. No GitHub credential is stored in
+# the namespace.
+githubgate:
+  enabled: true
+  # The GitHubInstallation (ci/githubgate/config/app.yaml) whose ceiling caps
+  # these policies.
+  installation:
+    namespace: ci
+    name: soliddowant
+  # The repository the policies cover. Empty means the release name (`name`).
+  repository: ""
+  # PR and default-branch builds (ci-build): read the repository.
+  build:
+    permissions:
+      contents: read
+  # Publishing runs (ci-release, only on release.refs; see serviceaccount.yaml):
+  # also create tags and GitHub releases.
+  release:
+    permissions:
+      contents: write
 release:
   # A regular expression (RE2, as CEL's matches()). The default is version tags.
   refs: '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'

@@ -24,6 +24,11 @@ metadata:
     registrygate.home.arpa/ghcr-push: "true"
     {{- end }}
     {{- end }}
+    {{- if .Values.githubgate.enabled }}
+    # Admits the namespace to githubgate's GitHubInstallation, and its pods to
+    # githubgate's token API (ci/githubgate).
+    githubgate.home.arpa/client: "true"
+    {{- end }}
     {{- if or .Values.harbor.enabled (and .Values.docker.registrygate.intercept .Values.docker.registrygate.mirrors) }}
     # Admits this namespace to the harbor-operator connection
     # (development/harbor/operator/config/connection.yaml), for the project's
