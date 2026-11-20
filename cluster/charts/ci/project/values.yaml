@@ -120,11 +120,14 @@ githubgate:
       proxy:
         enabled: true
     # The pipelines' own reporting tasks: the report task's `stage:` check
-    # runs and the test guard's label read. A PR's own .tekton can pick this
-    # ServiceAccount, so the proxy rule allows only those operations.
+    # runs, and the test guard's label read and fetch of the repository (it
+    # runs `make test-guard` on the PR). A PR's own .tekton can pick this
+    # ServiceAccount, so the proxy rule allows only those operations (git
+    # fetches skip the operation lists).
     ci-report:
       enabled: true
       permissions:
+        contents: read
         checks: write
         pull_requests: read
         issues: read
