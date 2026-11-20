@@ -95,8 +95,10 @@ githubgate:
   #   enabled: false skips the entry (default true), e.g. to turn off a
   #     chart default.
   #   permissions: GitHub App permissions (e.g. contents: read).
-  #   token.enabled: a token rule. The pod mints installation tokens with
-  #     githubgate-client token.
+  #   token.enabled: a token rule (default off). The pod could mint
+  #     installation tokens with githubgate-client token, which proxy limits
+  #     can't restrain; CI pipelines don't need it. Also open githubgate's
+  #     token API port in templates/netpol.yaml.
   #   proxy: a proxy rule when `enabled`. Every pod in the namespace is
   #     intercepted (namespace.yaml): its GitHub requests go through
   #     githubgate's proxy as its ServiceAccount, decided by this rule. The
@@ -115,8 +117,6 @@ githubgate:
       enabled: true
       permissions:
         contents: read
-      token:
-        enabled: true
       proxy:
         enabled: true
     # The pipelines' own reporting tasks: the report task's `stage:` check
@@ -131,8 +131,6 @@ githubgate:
         checks: write
         pull_requests: read
         issues: read
-      token:
-        enabled: true
       proxy:
         enabled: true
         allowOperations:
@@ -145,8 +143,6 @@ githubgate:
       enabled: true
       permissions:
         contents: write
-      token:
-        enabled: true
       proxy:
         enabled: true
         allowOperations:
