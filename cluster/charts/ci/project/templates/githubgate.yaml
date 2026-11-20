@@ -1,7 +1,7 @@
 {{- if .Values.githubgate.enabled }}
 {{- $repository := .Values.githubgate.repository | default .Values.name }}
 {{- range $serviceAccount, $access := .Values.githubgate.serviceAccounts }}
-{{- if $access }}
+{{- if and $access (or (not (hasKey $access "enabled")) $access.enabled) }}
 {{- $token := and $access.token $access.token.enabled }}
 {{- $proxy := and $access.proxy $access.proxy.enabled }}
 {{- if not (or $token $proxy) }}

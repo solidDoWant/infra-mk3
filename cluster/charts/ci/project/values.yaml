@@ -90,8 +90,10 @@ githubgate:
   repository: ""
   # GitHub access per ServiceAccount: each entry makes a GitHubAccessPolicy
   # named after the ServiceAccount, covering `repository`, capped by the
-  # installation's ceiling. Set an entry to null to drop it.
+  # installation's ceiling.
   #
+  #   enabled: false skips the entry (default true), e.g. to turn off a
+  #     chart default.
   #   permissions: GitHub App permissions (e.g. contents: read).
   #   token.enabled: a token rule. The pod mints installation tokens with
   #     githubgate-client token.
@@ -110,6 +112,7 @@ githubgate:
     # the repository, private or public. Runs PR code, so read only. Fetching
     # any other GitHub repository from a pod is refused.
     ci-build:
+      enabled: true
       permissions:
         contents: read
       token:
@@ -120,6 +123,7 @@ githubgate:
     # runs and the test guard's label read. A PR's own .tekton can pick this
     # ServiceAccount, so the proxy rule allows only those operations.
     ci-report:
+      enabled: true
       permissions:
         checks: write
         pull_requests: read
@@ -135,6 +139,7 @@ githubgate:
     # release pipeline's github-release task checks for the release, reads
     # CHANGELOG.md at the tag and creates the release, for version tags only.
     ci-release:
+      enabled: true
       permissions:
         contents: write
       token:
