@@ -1,0 +1,29 @@
+---
+# The chart makes its own CA and Issuer (githubgate) and asks it for the token
+# API's and the webhook's serving certificates, both for the githubgate
+# Service. Approve exactly those.
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: githubgate-serving-certs
+spec:
+  selector:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: githubgate
+    namespace:
+      matchNames:
+        - ci
+  allowed:
+    dnsNames:
+      required: true
+      values:
+        - githubgate.ci.svc
+        - githubgate.ci.svc.cluster.local
+    # cert-manager's defaults, which the chart's Certificates use.
+    usages:
+      - digital signature
+      - key encipherment
+  constraints:
+    maxDuration: 2160h
