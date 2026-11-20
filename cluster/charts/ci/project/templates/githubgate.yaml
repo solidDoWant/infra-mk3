@@ -43,4 +43,27 @@ spec:
         {{- toYaml .Values.githubgate.release.permissions | nindent 8 }}
       token:
         enabled: true
+---
+# The reporting tasks (test guard labels, `stage:` check runs). A pull request's
+# pipeline could also pick ci-report, but these permissions are what any task
+# could already get from PaC's per-run token, and the required check is PaC's
+# own.
+apiVersion: githubgate.soliddowant.dev/v1alpha1
+kind: GitHubAccessPolicy
+metadata:
+  name: ci-report
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  serviceAccounts:
+    - ci-report
+  rules:
+    - name: report
+      installationRef:
+        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+      repositories:
+        - {{ $repository | quote }}
+      permissions:
+        {{- toYaml .Values.githubgate.report.permissions | nindent 8 }}
+      token:
+        enabled: true
 {{- end }}

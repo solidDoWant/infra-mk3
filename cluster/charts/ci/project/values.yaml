@@ -97,6 +97,13 @@ githubgate:
   release:
     permissions:
       contents: write
+  # The pipelines' own reporting tasks (ci-report: the test guard's label read
+  # and the report task's `stage:` check runs). They run no repository code.
+  report:
+    permissions:
+      checks: write
+      pull_requests: read
+      issues: read
 release:
   # A regular expression (RE2, as CEL's matches()). The default is version tags.
   refs: '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'
