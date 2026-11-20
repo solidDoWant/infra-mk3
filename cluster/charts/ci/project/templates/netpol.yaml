@@ -48,7 +48,8 @@ specs:
               - port: "8443"
                 protocol: TCP
       {{- if .Values.githubgate.enabled }}
-      # githubgate's token API, for short-lived GitHub tokens (ci/githubgate)
+      # githubgate (ci/githubgate): the token API (8443), and the proxy (9443)
+      # that injected interceptors send GitHub requests to
       - toEndpoints:
           - matchLabels:
               io.kubernetes.pod.namespace: ci
@@ -57,6 +58,8 @@ specs:
         toPorts:
           - ports:
               - port: "8443"
+                protocol: TCP
+              - port: "9443"
                 protocol: TCP
       {{- end }}
       {{- if .Values.egress.internet }}

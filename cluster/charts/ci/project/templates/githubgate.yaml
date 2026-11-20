@@ -43,6 +43,18 @@ spec:
         {{- toYaml .Values.githubgate.release.permissions | nindent 8 }}
       token:
         enabled: true
+    - name: release-proxy
+      installationRef:
+        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+      repositories:
+        - {{ $repository | quote }}
+      permissions:
+        {{- toYaml .Values.githubgate.release.permissions | nindent 8 }}
+      proxy:
+        enabled: true
+        {{- with .Values.githubgate.release.proxy }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
 ---
 # The reporting tasks (test guard labels, `stage:` check runs). A pull request's
 # pipeline could also pick ci-report, but these permissions are what any task
@@ -66,4 +78,16 @@ spec:
         {{- toYaml .Values.githubgate.report.permissions | nindent 8 }}
       token:
         enabled: true
+    - name: report-proxy
+      installationRef:
+        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+      repositories:
+        - {{ $repository | quote }}
+      permissions:
+        {{- toYaml .Values.githubgate.report.permissions | nindent 8 }}
+      proxy:
+        enabled: true
+        {{- with .Values.githubgate.report.proxy }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
 {{- end }}

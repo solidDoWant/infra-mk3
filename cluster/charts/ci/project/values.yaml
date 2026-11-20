@@ -88,6 +88,12 @@ githubgate:
     name: soliddowant
   # The repository the policies cover. Empty means the release name (`name`).
   repository: ""
+  # Each role has a token rule (githubgate-client token) and a proxy rule (for
+  # pods labelled githubgate.soliddowant.dev/inject=true, whose GitHub requests
+  # an injected interceptor sends through githubgate's proxy). A proxy rule can
+  # also limit the REST operations (GitHub REST operation ids) and the refs a
+  # request may write, which a token rule can't.
+  #
   # PR and default-branch builds (ci-build): read the repository.
   build:
     permissions:
@@ -97,6 +103,16 @@ githubgate:
   release:
     permissions:
       contents: write
+    proxy:
+      # The release pipeline's github-release task: is the release there, read
+      # CHANGELOG.md at the tag, create the release.
+      allowOperations:
+        - repos/get-release-by-tag
+        - repos/get-content
+        - repos/create-release
+      # Only releases of version tags.
+      pushRefs:
+        - refs/tags/v*
   # The pipelines' own reporting tasks (ci-report: the test guard's label read
   # and the report task's `stage:` check runs). They run no repository code.
   report:
@@ -104,6 +120,11 @@ githubgate:
       checks: write
       pull_requests: read
       issues: read
+    proxy:
+      # The report task's check runs, and the test guard's label read.
+      allowOperations:
+        - checks/create
+        - issues/list-labels-on-issue
 release:
   # A regular expression (RE2, as CEL's matches()). The default is version tags.
   refs: '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'
