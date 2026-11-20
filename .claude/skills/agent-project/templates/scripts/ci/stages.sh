@@ -99,6 +99,10 @@ command_of() {
 	generate) echo 'make check-generate' ;;
 	integration) echo 'make test-integration' ;;
 	e2e) echo 'make test-e2e' ;;
+	# Fuzzing, if the project has fuzz targets: its own stage, targets at the
+	# same time with bounded -parallel (fixed-time work never goes serially into
+	# unit, and unbounded workers starve the stages sharing this VM).
+	# fuzz) echo 'make test-fuzz' ;;
 	docs) echo 'make docs-check' ;;
 	release)
 		# The version comes in through the environment, never the command
