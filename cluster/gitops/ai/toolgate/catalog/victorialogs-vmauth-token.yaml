@@ -1,0 +1,12 @@
+---
+# Source of the victorialogs MCP server's vmauth bearer token (template
+# secret, see victorialogs.yaml). Value comes from Flux substitution
+# (cluster-secrets.sops.yaml); the matching vmauth user is in
+# monitoring/victoria-metrics/logs/vmauth-config.yaml.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: victorialogs-vmauth-token
+type: Opaque
+stringData:
+  token: ${SECRET_VICTORIA_LOGS_TOOLGATE_MCP_TOKEN}

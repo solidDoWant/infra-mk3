@@ -13,6 +13,8 @@ spec:
   extraArgs:
     # Accept the VictoriaMetrics Enterprise ESA (https://victoriametrics.com/legal/esa/).
     eula: "true"
+    # Picks up changes to the mounted config Secret (see externalConfig).
+    configCheckInterval: 1m
   podDisruptionBudget:
     minAvailable: 1
   priorityClassName: system-cluster-critical
@@ -22,14 +24,33 @@ spec:
     labels:
       app.kubernetes.io/part-of: victoria-logs
       endpoints.netpols.home.arpa/logs-supplier: "true"
+      # OIDC discovery, JWKS and token exchange via the
+      # openid-configuration-proxy.
+      endpoints.netpols.home.arpa/oidc-querier: "true"
   useStrictSecurity: true
-  # TODO figure out auth and ideally multitenancy
-  unauthorizedUserAccessSpec:
-    url_map:
-      - src_paths:
-          - ".*"
-        # Fully qualified on purpose: a literal url_prefix is passed through verbatim, so
-        # VM_CLUSTERDOMAINNAME (set on the operator) does not reach it. Bare `.svc` cannot
-        # resolve absolutely and only works via search-path fallback, costing NXDOMAINs.
-        url_prefix: "http://srv+victoria-logs.monitoring.svc.cluster.local:9428"
-        discover_backend_ips: true
+  # Hand-written config (vmauth-config.yaml): the CRD can't express vmauth's
+  # `sso` section. The operator mounts this Secret directly and runs no
+  # config-reloader, so vmauth re-reads the file itself.
+  # TODO move back to an operator-managed config (spec.sso plus VMUsers) and
+  # delete vmauth-config.yaml once a release includes
+  # https://github.com/VictoriaMetrics/operator/pull/2706
+  externalConfig:
+    secretRef:
+      name: victoria-logs-vmauth-config
+      key: config.yaml
+  # The openid-configuration-proxy serves a cluster-CA-issued cert. Mounted as
+  # one extra file in the system trust dir (Go reads every cert under
+  # /etc/ssl/certs), so the image's public-CA bundle stays intact.
+  volumes:
+    - name: root-ca
+      secret:
+        secretName: root-ca-pub-cert
+        defaultMode: 0444
+        items:
+          - key: ca.pem
+            path: root-ca.pem
+  volumeMounts:
+    - name: root-ca
+      mountPath: /etc/ssl/certs/root-ca.pem
+      subPath: root-ca.pem
+      readOnly: true

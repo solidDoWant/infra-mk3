@@ -1,0 +1,112 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-victoria-logs-application-blueprint
+  labels:
+    k8s-sidecar.home.arpa/application: authentik
+type: Opaque
+stringData:
+  # Unfortunately this must be a secret (rather than secretGenerator) or Flux will not substitute
+  # values within it
+  authentik-victoria-logs-application-blueprint.yaml: |
+    ---
+    # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+    version: 1
+    metadata:
+      name: VictoriaLogs application
+      labels:
+        blueprints.goauthentik.io/description: OIDC provider for the VictoriaLogs web UI (vmauth SSO)
+    entries:
+      # Dependencies
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Implicit provider authentication
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Password authentication flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Invalidation flow
+          required: true
+      - model: authentik_blueprints.metaapplyblueprint
+        attrs:
+          identifiers:
+            name: Blueprint library
+          required: true
+      # Application. vmauth runs the login flow and keeps the ID token as its
+      # session cookie, checking `aud` and `groups` on every request.
+      - model: authentik_providers_oauth2.oauth2provider
+        id: victoria-logs-provider
+        identifiers:
+          name: VictoriaLogs
+        attrs:
+          name: VictoriaLogs
+          authorization_flow:
+            !Find [authentik_flows.flow, [slug, implicit-authorization-flow]]
+          client_type: confidential
+          # Required: the model default is an empty list, which rejects every
+          # login. vmauth never refreshes tokens; it sends the user through
+          # the login flow again once the ID token expires.
+          grant_types:
+            - authorization_code
+          client_id: "${SECRET_VICTORIA_LOGS_AUTHENTIK_OIDC_CLIENT_ID}"
+          client_secret: "${SECRET_VICTORIA_LOGS_AUTHENTIK_OIDC_CLIENT_SECRET}"
+          redirect_uris:
+            - url: https://vm-logs.${SECRET_PUBLIC_DOMAIN_NAME}/_vmauth/sso/callback
+              matching_mode: strict
+          signing_key:
+            !Find [
+              authentik_crypto.certificatekeypair,
+              [name, authentik Self-signed Certificate],
+            ]
+          authentication_flow:
+            !Find [authentik_flows.flow, [slug, password-authentication-flow]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, invalidation-flow]]
+          access_code_validity: minutes=1
+          # Also the ID token's lifetime, which caps the vmauth session
+          # (sso.oidc.session_duration in vmauth-config.yaml).
+          access_token_validity: hours=8
+          property_mappings:
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'openid'"],
+              ]
+            # Includes the `groups` claim vmauth matches on.
+            - !Find [
+                authentik_providers_oauth2.scopemapping,
+                [name, "authentik default OAuth Mapping: OpenID 'profile'"],
+              ]
+          sub_mode: hashed_user_id
+          # vmauth only sees the ID token, so the claims must be in it.
+          include_claims_in_id_token: true
+          issuer_mode: per_provider
+      - model: authentik_core.application
+        id: victoria-logs-application
+        identifiers:
+          slug: victoria-logs
+        attrs:
+          name: VictoriaLogs
+          slug: victoria-logs
+          group: Infra access
+          provider: !KeyOf victoria-logs-provider
+          policy_engine_mode: any
+          meta_launch_url: https://vm-logs.${SECRET_PUBLIC_DOMAIN_NAME}
+      # Groups. The name is also matched by vmauth (vmauth-config.yaml).
+      - model: authentik_core.group
+        id: victoria-logs-group
+        identifiers:
+          name: VictoriaLogs access
+        attrs:
+          attributes:
+            discord_role_id: "${SECRET_AUTHENTIK_VICTORIA_LOGS_DISCORD_ROLE_ID}"
+      - model: authentik_policies.policybinding
+        identifiers:
+          order: 0
+          group: !KeyOf victoria-logs-group
+          target: !KeyOf victoria-logs-application

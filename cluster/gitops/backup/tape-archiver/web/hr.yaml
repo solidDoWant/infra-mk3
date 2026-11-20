@@ -67,7 +67,11 @@ spec:
           # Run log panel, via the Victoria Logs vmauth. Note: the data
           # worker's container logs on the storage host are not shipped to
           # VictoriaLogs yet, so this only surfaces control-worker logs.
-          victoriaLogsUrl: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
+          # vmauth needs credentials (read-only user in
+          # monitoring/victoria-metrics/logs/vmauth-config.yaml). The app has
+          # no auth setting, so they ride in the URL's userinfo, which Go's
+          # HTTP client sends as basic auth.
+          victoriaLogsUrl: http://tape-archiver-web:${SECRET_VICTORIA_LOGS_TAPE_ARCHIVER_PASSWORD}@vmauth-victoria-logs.monitoring.svc.cluster.local:9428
           # The log pipeline's fluentbit kubernetes filter (mergeLog,
           # monitoring/fluent/node-agent/kubernetes-filter.yaml) parses the
           # worker's slog JSON under this merge key, so RunID/level/msg
