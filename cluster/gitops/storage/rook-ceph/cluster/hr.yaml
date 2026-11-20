@@ -59,6 +59,14 @@ spec:
         CephNodeInconsistentMTU:
           disabled: true
     pspEnable: false
+    # ceph.conf for every daemon. osd_memory_target_cgroup_limit_ratio has to
+    # be here, not in cephConfig: Ceph derives osd_memory_target from the pod's
+    # memory limit at startup (parse_env), before the cluster config is read,
+    # and the env-level value outranks it. 0.6 x 6Gi = 3.6Gi target; see the
+    # OSD resources in cephClusterSpec.resources.
+    configOverride: |
+      [osd]
+      osd_memory_target_cgroup_limit_ratio = 0.6
     cephClusterSpec:
       labels:
         mgr:
@@ -298,11 +306,19 @@ spec:
             # p95 35m, p99 74m, max 258m. The window includes the current
             # degraded backfill, so this already covers recovery load.
             cpu: 150m
-            # memory intentionally left at the chart default 4Gi to match
-            # osd_memory_target (4GiB). Note the chart also sets limits.memory=4Gi,
-            # i.e. the hard limit equals the bluestore cache target, which leaves
-            # no room for the ~20% RSS overshoot Ceph can exhibit. Observed peak is
-            # 2.9Gi so it is fine today, but that pairing is worth revisiting.
+            # The OSDs were OOM-killed at the old 4Gi: osd.1 and osd.2 within 8s
+            # of each other on 2026-11-19 18:53 (two of three OSDs down at once),
+            # osd.0 on 2026-11-20 07:04. Hourly RSS peaks had crept from 3.0 to
+            # 3.8Gi over a week (likely more PGs and the CI caches on Ceph), spikes past
+            # 4Gi. Ceph sets osd_memory_target = min(request, limit * ratio) from
+            # these values at the env level, which outranks the cluster config
+            # (src/common/config.cc parse_env), so the old target was 3.2Gi and
+            # the cache plus overshoot ran into the limit. 6Gi with the ratio at
+            # 0.6 (configOverride, at the top of the values) gives a 3.6Gi target
+            # and 2.4Gi of room.
+            memory: &osd_memory 6Gi
+          limits:
+            memory: *osd_memory
         mon:
           requests:
             cpu: 75m # p95 24-45m, max 47m
