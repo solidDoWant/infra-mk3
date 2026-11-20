@@ -24,7 +24,9 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
-    # Approves the serving and webhook certificates' requests
+    # Issues the serving certificate (tls.yaml)
+    - name: ci-namespace-issuer
+    # Approves its request
     - name: approver-policy
     # ServiceMonitor
     - name: prometheus-crds

@@ -32,11 +32,18 @@ spec:
     # Only ci holds the GitHubApp, its key and the GitHubInstallation.
     adminNamespaces:
       - ci
+    # The chart makes no certificates: they're spelled out in tls.yaml.
+    certManager:
+      enabled: false
+    tls:
+      existingSecret: githubgate-serving
     # Rejects GitHubApp/GitHubInstallation objects outside ci and rules outside
-    # the installation's ceiling at admission. Its certificate comes from the
-    # chart's own issuer (tls.yaml approves it).
+    # the installation's ceiling at admission. Same Service, same certificate.
     webhook:
       enabled: true
+      existingSecret: githubgate-serving
+      annotations:
+        cert-manager.io/inject-ca-from: ci/githubgate-serving
     # Token mode only for now. Proxy mode and sidecar injection come with the
     # CI and Coder steps (githubgate #21).
     proxy:
