@@ -47,6 +47,18 @@ specs:
           - ports:
               - port: "8443"
                 protocol: TCP
+      {{- if .Values.githubgate.enabled }}
+      # githubgate's token API, for short-lived GitHub tokens (ci/githubgate)
+      - toEndpoints:
+          - matchLabels:
+              io.kubernetes.pod.namespace: ci
+              app.kubernetes.io/name: githubgate
+              app.kubernetes.io/instance: githubgate
+        toPorts:
+          - ports:
+              - port: "8443"
+                protocol: TCP
+      {{- end }}
       {{- if .Values.egress.internet }}
       # The internet, for dependencies. Private ranges are excluded so the
       # home network stays out of reach.

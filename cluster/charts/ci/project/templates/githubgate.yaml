@@ -1,0 +1,46 @@
+{{- if .Values.githubgate.enabled }}
+{{- $repository := .Values.githubgate.repository | default .Values.name }}
+---
+# PR and default-branch builds: read the repository (cloning a private one,
+# reading releases). Runs code from pull requests, so read only.
+apiVersion: githubgate.soliddowant.dev/v1alpha1
+kind: GitHubAccessPolicy
+metadata:
+  name: ci-build
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  serviceAccounts:
+    - ci-build
+  rules:
+    - name: build
+      installationRef:
+        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+      repositories:
+        - {{ $repository | quote }}
+      permissions:
+        {{- toYaml .Values.githubgate.build.permissions | nindent 8 }}
+      token:
+        enabled: true
+---
+# Publishing runs: the ci-release-runs admission policy lets a PipelineRun use
+# ci-release only for a push whose ref matches release.refs, so this write
+# access is reachable only from release tags.
+apiVersion: githubgate.soliddowant.dev/v1alpha1
+kind: GitHubAccessPolicy
+metadata:
+  name: ci-release
+  namespace: {{ include "ci-project.namespace" . }}
+spec:
+  serviceAccounts:
+    - ci-release
+  rules:
+    - name: release
+      installationRef:
+        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+      repositories:
+        - {{ $repository | quote }}
+      permissions:
+        {{- toYaml .Values.githubgate.release.permissions | nindent 8 }}
+      token:
+        enabled: true
+{{- end }}
