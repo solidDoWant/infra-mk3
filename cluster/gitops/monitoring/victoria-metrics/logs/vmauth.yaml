@@ -31,6 +31,9 @@ spec:
   # Hand-written config (vmauth-config.yaml): the CRD can't express vmauth's
   # `sso` section. The operator mounts this Secret directly and runs no
   # config-reloader, so vmauth re-reads the file itself.
+  # TODO move back to an operator-managed config (spec.sso plus VMUsers) and
+  # delete vmauth-config.yaml once a release includes
+  # https://github.com/VictoriaMetrics/operator/pull/2706
   externalConfig:
     secretRef:
       name: victoria-logs-vmauth-config
