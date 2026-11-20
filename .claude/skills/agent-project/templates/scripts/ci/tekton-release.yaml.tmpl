@@ -10,8 +10,8 @@
 #
 # publish publishes images and charts. Then github-release creates the GitHub
 # release through githubgate's interceptor, which the CI cluster adds to every
-# ci-report and ci-release task; githubgate allows ci-release only to read the
-# release and CHANGELOG.md and to create a release of a v* tag. Only a
+# pod; githubgate allows ci-release only to fetch the repository, read the
+# release and CHANGELOG.md, and create a release of a v* tag. Only a
 # version-tag push starts this run, so only what can push tags reaches that
 # access. If releases carry files, extend github-release: create the release
 # as a draft, upload the files, then publish it, so the page never shows
