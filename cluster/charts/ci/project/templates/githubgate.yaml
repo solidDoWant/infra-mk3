@@ -21,6 +21,18 @@ spec:
         {{- toYaml .Values.githubgate.build.permissions | nindent 8 }}
       token:
         enabled: true
+    - name: build-proxy
+      installationRef:
+        {{- toYaml .Values.githubgate.installation | nindent 8 }}
+      repositories:
+        - {{ $repository | quote }}
+      permissions:
+        {{- toYaml .Values.githubgate.build.permissions | nindent 8 }}
+      proxy:
+        enabled: true
+        {{- with .Values.githubgate.build.proxy }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
 ---
 # Publishing runs: the ci-release-runs admission policy lets a PipelineRun use
 # ci-release only for a push whose ref matches release.refs, so this write

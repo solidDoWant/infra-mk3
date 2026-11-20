@@ -89,14 +89,16 @@ githubgate:
   # The repository the policies cover. Empty means the release name (`name`).
   repository: ""
   # Each role has a token rule (githubgate-client token) and a proxy rule.
-  # TaskRuns running as ci-report or ci-release are intercepted (Kyverno,
-  # ci/githubgate/config/kyverno.yaml): an injected interceptor sends their
-  # GitHub requests through githubgate's proxy, which decides them by the proxy
-  # rule. A proxy rule can also limit the REST operations (GitHub REST
-  # operation ids) and the refs a request may write, which a token rule can't.
-  # git fetches need only contents: read and skip the operation lists.
+  # Every pod in the namespace is intercepted (namespace.yaml): an injected
+  # interceptor sends its GitHub requests through githubgate's proxy, which
+  # decides them by the pod's ServiceAccount's proxy rule. A proxy rule can
+  # also limit the REST operations (GitHub REST operation ids) and the refs a
+  # request may write, which a token rule can't. git fetches need only
+  # contents: read and skip the operation lists.
   #
-  # PR and default-branch builds (ci-build): read the repository.
+  # PR and default-branch builds (ci-build, Tekton's default ServiceAccount):
+  # read the repository (fetching it, private or public). Runs PR code, so
+  # read only. Fetching any other GitHub repository from a pod is refused.
   build:
     permissions:
       contents: read
