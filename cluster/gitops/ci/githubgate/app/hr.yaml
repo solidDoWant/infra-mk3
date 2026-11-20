@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed yet, so no verify block.
   url: oci://ghcr.io/soliddowant/charts/githubgate
   ref:
-    tag: 0.3.1
-    digest: sha256:ebe500303bca1c09ddc9558d87fcf0a2f48f7413a77db3e6f64260ebb9777a08
+    tag: 0.5.0
+    digest: sha256:f3846c4fee4aaee9db26bba7d68d5860dd0b61346ef01a8cd2922c5bf5977e6c
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -20,6 +20,12 @@ spec:
   chartRef:
     kind: OCIRepository
     name: githubgate
+  # The chart ships the CRDs. Without CreateReplace an upgrade keeps the old
+  # CRDs, and the API server drops fields that a newer release adds to them.
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
   values:
     # Every replica serves (it is stateless; tokens are cached per replica)
     # and the status controller is leader-elected, so 2 survive a node drain.
@@ -28,7 +34,7 @@ spec:
       enabled: true
       maxUnavailable: 1
     image:
-      digest: sha256:9874e0b7d0ab6fe411313d93c43151e1747bae570b3f21b3957d06001689b718
+      digest: sha256:4799b24d78897d75fa86efc95867ab78680af0d984f20ed1ed772e22ce8adbb1
     # Only ci holds the GitHubApp, its key and the GitHubInstallation.
     adminNamespaces:
       - ci
@@ -63,6 +69,6 @@ spec:
       enabled: true
       image:
         # renovate: image=ghcr.io/soliddowant/githubgate-client
-        digest: sha256:0674f582a9fd5ecefe1d36811f415e5b9b9184b0b8923294a85fb6239504b468
+        digest: sha256:5b9f45fdb84d9a7de927d10d529542af9bb2dc1a549c7da791f4a73770efe319
     serviceMonitor:
       enabled: true
