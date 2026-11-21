@@ -6,6 +6,5 @@ kind: Kustomization
 commonAnnotations:
   helm.sh/resource-policy: keep
 resources:
-  - https://raw.githubusercontent.com/solidDoWant/githubgate/2200ae3a6fad3227a2f2e02ff38dab867fcdbed5/config/crd/bases/githubgate.soliddowant.dev_githubapps.yaml # v0.5.0
-  - https://raw.githubusercontent.com/solidDoWant/githubgate/2200ae3a6fad3227a2f2e02ff38dab867fcdbed5/config/crd/bases/githubgate.soliddowant.dev_githubinstallations.yaml # v0.5.0
-  - https://raw.githubusercontent.com/solidDoWant/githubgate/2200ae3a6fad3227a2f2e02ff38dab867fcdbed5/config/crd/bases/githubgate.soliddowant.dev_githubaccesspolicies.yaml # v0.5.0
+  # Every githubgate CRD, attached to each GitHub release.
+  - https://github.com/solidDoWant/githubgate/releases/download/v0.6.4/crds.yaml
