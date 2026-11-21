@@ -20,12 +20,6 @@ spec:
   chartRef:
     kind: OCIRepository
     name: githubgate
-  # The chart ships the CRDs. Without CreateReplace an upgrade keeps the old
-  # CRDs, and the API server drops fields that a newer release adds to them.
-  install:
-    crds: CreateReplace
-  upgrade:
-    crds: CreateReplace
   values:
     # Every replica serves (it is stateless; tokens are cached per replica)
     # and the status controller is leader-elected, so 2 survive a node drain.
