@@ -19,13 +19,14 @@ spec:
   values:
     name: githubgate
     # Agents open many PRs, and a run waiting in the queue adds to every
-    # issue's time. Starting point for a new project; raise it once runs are
-    # measured.
-    concurrencyLimit: 6
+    # issue's time. Lowered from 6 (2026-11-21): a run's dind sidecar needs
+    # 13 GiB (measured peak ~8.6 GiB with envtest, kind and -race), and the
+    # fuzz and lint stages use every CPU they see, so six parallel runs
+    # starved one node and OOM-killed sidecars.
+    concurrencyLimit: 4
     quota:
-      # About 6 runs at registrygate's ~8.5 GiB each (8 GiB dind sidecar plus
-      # the task), with room for a cold-cache run. A ceiling, not a
-      # reservation; revisit after the first measured run.
+      # 4 runs at ~14.5 GiB each (13 GiB dind sidecar plus the task). A
+      # ceiling, not a reservation.
       memory: 64Gi
       # Up to 3 pods a run (ci, test-guard, report).
       pods: 20
