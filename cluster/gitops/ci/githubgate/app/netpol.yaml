@@ -33,7 +33,8 @@ specs:
               - port: "6443"
                 protocol: TCP
       # GitHub: App JWT calls, installation lookups and token minting, and
-      # proxied requests (API, uploads, git over HTTPS).
+      # proxied requests (API, uploads, git over HTTPS), and the device flow and
+      # user token refreshes (github.com/login/...).
       - toFQDNs:
           - matchName: api.github.com
           - matchName: uploads.github.com

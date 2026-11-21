@@ -1,6 +1,7 @@
 ---
 # The production GitHub App, installed on every repository of the account.
-# Its ID and private key are in app-key.sops.yaml.
+# Its ID, OAuth client ID and private key are in app-key.sops.yaml. The client
+# ID is only for GitHubUserAuthorizations (device flow, user access tokens).
 apiVersion: githubgate.soliddowant.dev/v1alpha1
 kind: GitHubApp
 metadata:
@@ -9,6 +10,9 @@ spec:
   appIDSecretRef:
     name: githubgate-app
     key: app-id
+  clientIDSecretRef:
+    name: githubgate-app
+    key: client-id
   privateKeySecretRef:
     name: githubgate-app
     key: private-key.pem
