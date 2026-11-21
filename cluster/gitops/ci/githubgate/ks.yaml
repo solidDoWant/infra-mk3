@@ -1,4 +1,24 @@
 ---
+# githubgate's CRDs. Kept out of the Helm release so that uninstalling the
+# chart can't delete them (and with them every GitHubAccessPolicy), and never
+# pruned.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name githubgate-crds
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/githubgate/crds
+  prune: false # Don't ever drop the CRDs
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+---
 # githubgate: GitHub App access for CI pipelines and workspaces, by
 # ServiceAccount, without handing them the App's key:
 # https://github.com/solidDoWant/githubgate
@@ -24,6 +44,7 @@ spec:
     name: infra-mk3
   wait: true
   dependsOn:
+    - name: githubgate-crds
     # Issues the serving certificate (tls.yaml)
     - name: ci-namespace-issuer
     # The self-signed ClusterIssuer behind the proxy CA (tls.yaml)

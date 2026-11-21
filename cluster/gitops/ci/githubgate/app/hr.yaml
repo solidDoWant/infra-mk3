@@ -21,6 +21,9 @@ spec:
     kind: OCIRepository
     name: githubgate
   values:
+    # CRDs are deployed in a separate Flux Kustomization (githubgate-crds).
+    crds:
+      install: false
     # Every replica serves (it is stateless; tokens are cached per replica)
     # and the status controller is leader-elected, so 2 survive a node drain.
     replicas: 2
