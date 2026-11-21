@@ -34,10 +34,11 @@ spec:
       # CI pushes no images: releases go to ghcr.io.
       enabled: false
     docker:
-      # Same shape as registrygate: the CI image from flake.nix, Go caches,
+      # The CI image from flake.nix, Go module and build caches (with -race),
       # the kind node image and e2e images, with kind clusters during e2e.
-      # registrygate needed 50Gi.
-      cacheVolumeSize: 50Gi
+      # Raised from 50Gi (2026-11-21): phase 4's caches left it 82% full after
+      # cleanup, over cleanup.sh's limit. Thin RBD on ci-cache-ec.
+      cacheVolumeSize: 80Gi
       registrygate:
         harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
         # Releases (.tekton/release.yaml, on version tags) push the server and
