@@ -138,7 +138,8 @@ githubgate:
           - issues/list-labels-on-issue
     # Publishing runs (only on release.refs; see serviceaccount.yaml): the
     # release pipeline's github-release task checks for the release, reads
-    # CHANGELOG.md at the tag and creates the release, for version tags only.
+    # CHANGELOG.md at the tag, creates the release and attaches its files
+    # (crds.yaml, client binaries), for version tags only.
     ci-release:
       enabled: true
       permissions:
@@ -149,6 +150,8 @@ githubgate:
           - repos/get-release-by-tag
           - repos/get-content
           - repos/create-release
+          - repos/list-release-assets
+          - repos/upload-release-asset
         pushRefs:
           - refs/tags/v*
 release:
