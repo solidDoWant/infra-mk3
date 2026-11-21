@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed yet, so no verify block.
   url: oci://ghcr.io/soliddowant/charts/githubgate
   ref:
-    tag: 0.3.1
-    digest: sha256:ebe500303bca1c09ddc9558d87fcf0a2f48f7413a77db3e6f64260ebb9777a08
+    tag: 0.6.4
+    digest: sha256:3770c639128a22638ba54bf9cc1e393a97ad3923541730e2d922953662fefcdd
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -21,6 +21,9 @@ spec:
     kind: OCIRepository
     name: githubgate
   values:
+    # CRDs are deployed in a separate Flux Kustomization (githubgate-crds).
+    crds:
+      install: false
     # Every replica serves (it is stateless; tokens are cached per replica)
     # and the status controller is leader-elected, so 2 survive a node drain.
     replicas: 2
@@ -28,7 +31,7 @@ spec:
       enabled: true
       maxUnavailable: 1
     image:
-      digest: sha256:9874e0b7d0ab6fe411313d93c43151e1747bae570b3f21b3957d06001689b718
+      digest: sha256:50c9c6fe53c66d8f0a5860a1215ce0508c9a027013cf007105e06c6b18a652b9
     # Only ci holds the GitHubApp, its key and the GitHubInstallation.
     adminNamespaces:
       - ci
@@ -63,6 +66,6 @@ spec:
       enabled: true
       image:
         # renovate: image=ghcr.io/soliddowant/githubgate-client
-        digest: sha256:0674f582a9fd5ecefe1d36811f415e5b9b9184b0b8923294a85fb6239504b468
+        digest: sha256:481db5a08292ac9dad5c3794c0af7ecd8499f91e9edcc438b544da804d04de08
     serviceMonitor:
       enabled: true
