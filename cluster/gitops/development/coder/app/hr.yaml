@@ -95,6 +95,13 @@ spec:
               - datavolumes
             verbs:
               - "*"
+          # The VM template's signing-key Jobs (coder/signing-keys)
+          - apiGroups:
+              - batch
+            resources:
+              - jobs
+            verbs:
+              - "*"
           # Rule to manage per-workspace cloud-init Secrets (k8s-vm-workspace
           # template). KubeVirt caps inline cloudInitNoCloud userData at 2048
           # bytes, so the VM references a Secret instead.

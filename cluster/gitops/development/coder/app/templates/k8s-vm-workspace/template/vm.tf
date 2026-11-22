@@ -93,6 +93,10 @@ resource "kubernetes_secret_v1" "cloudinit" {
       NFS_ADDRESS    = local.nfs_address
       NFS_PATH       = local.nfs_path
       NFS_MOUNT_PATH = local.nfs_mount_path
+      # This start's SSH signing key (signing-keys.tf), or "" without one.
+      SIGNING_KEY_B64 = local.signing_key_enabled ? base64encode(tls_private_key.git_signing[0].private_key_openssh) : ""
+      SIGNING_KEY_DIR = local.signing_key_dir
+      UID             = local.uid
     })
   }
 }

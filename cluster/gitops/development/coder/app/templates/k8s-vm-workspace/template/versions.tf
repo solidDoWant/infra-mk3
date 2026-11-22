@@ -33,5 +33,11 @@ terraform {
       source  = "integrations/github"
       version = "~> 6.0"
     }
+
+    # The per-start SSH signing key (signing-keys.tf)
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.1"
+    }
   }
 }

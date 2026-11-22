@@ -7,7 +7,7 @@ locals {
 data "coder_parameter" "enable_github_integration" {
   name         = "enable_github_integration"
   display_name = "Enable GitHub integration"
-  description  = "If enabled, configures Git to use your GitHub identity and uploads your SSH public key to GitHub for authentication."
+  description  = "If enabled, configures Git to use your GitHub identity and signs commits with a key that is added to your GitHub account at every start (through githubgate) and removed at stop."
   default      = "true"
   type         = "bool"
   form_type    = "checkbox"
@@ -95,14 +95,6 @@ data "coder_external_auth" "github_in_workspace_restricted" {
   count = local.enable_github_integration ? 1 : 0
 
   id = "github-restricted"
-}
-
-module "git_commit_signing" {
-  count   = local.enable_github_integration ? 1 : 0
-  source  = "registry.coder.com/coder/git-commit-signing/coder"
-  version = "~> 1.0"
-
-  agent_id = coder_agent.main.id
 }
 
 data "github_user" "current" {
@@ -218,24 +210,4 @@ resource "coder_env" "github_token" {
   agent_id = coder_agent.main.id
   name     = "GITHUB_TOKEN"
   value    = local.github_workspace_token
-}
-
-# This can't use a github provider terraform resource because the key is account-specific,
-# not workspace-specific. This would cause conflicts if multiple workspaces tried to manage it.
-resource "coder_script" "github_upload_ssh_signing_keys" {
-  count = local.github_provisioner_token_available ? 1 : 0
-
-  agent_id     = coder_agent.main.id
-  display_name = "Upload SSH Signing Keys to GitHub"
-  icon         = "/icon/github.svg"
-
-  run_on_start       = true
-  start_blocks_login = true
-  timeout            = 30 # seconds
-
-  script = templatefile("./upload-ssh-signing-keys.sh.tftpl", {
-    GITHUB_TOKEN     = local.github_provisioner_token
-    PUBLIC_KEY       = trimspace(data.coder_workspace_owner.me.ssh_public_key)
-    SIGNING_KEY_NAME = "Coder @ ${data.coder_workspace.me.access_url}"
-  })
 }
