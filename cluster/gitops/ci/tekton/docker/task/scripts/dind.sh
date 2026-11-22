@@ -306,6 +306,30 @@ JSON
 # devices of this container). Same device numbers as the kernel's.
 [ -e /dev/kmsg ] || mknod -m 600 /dev/kmsg c 1 11
 
+# Kubelet mounts an image volume as overlayfs with `volatile`, and the kernel
+# refuses such a mount (EIO, "upperdir has an unseen error") once the disk's
+# filesystem has had a write error that no syncfs has reported yet. The kind
+# nodes' containerd stores are on this disk, so after one such error every
+# image volume fails until something syncs it (githubgate e2e: pods stuck on
+# ImageVolumeMountFailed ... input/output error). Copy the kernel's storage
+# errors into this log, where a build's own logs can't see them (the VM's
+# kernel log is only readable here), and sync the disk when the kernel asks
+# for it.
+(
+  seen=0
+  while sleep 5; do
+    log=$(dmesg 2>/dev/null) || continue
+    n=$(printf '%s\n' "$log" | wc -l)
+    [ "$n" -lt "$seen" ] && seen=0
+    new=$(printf '%s\n' "$log" | tail -n +"$((seen + 1))")
+    seen=$n
+    printf '%s\n' "$new" | grep -i -E 'unseen error|EXT4-fs (error|warning)|I/O error|writeback error|lost async page write' | sed 's/^/kernel: /'
+    if printf '%s\n' "$new" | grep -q 'unseen error'; then
+      sync -f /var/lib/docker && echo "kernel watch: synced /var/lib/docker to clear its unseen write error"
+    fi
+  done
+) &
+
 # Started through the image's own dind wrapper, which sets up cgroup v2
 # nesting first: it moves this process out of the root cgroup and delegates
 # every controller to the children. Without that, systemd in a container
