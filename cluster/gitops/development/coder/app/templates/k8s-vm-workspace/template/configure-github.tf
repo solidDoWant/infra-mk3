@@ -7,7 +7,7 @@ locals {
 data "coder_parameter" "enable_github_integration" {
   name         = "enable_github_integration"
   display_name = "Enable GitHub integration"
-  description  = "If enabled, configures Git to use your GitHub identity and signs commits with a key that is added to your GitHub account at every start (through githubgate) and removed at stop."
+  description  = "If enabled, configures Git to use your GitHub identity."
   default      = "true"
   type         = "bool"
   form_type    = "checkbox"

@@ -15,7 +15,9 @@
 # its key stays on the account. Its private key is gone with the VM, so the
 # leftover key signs nothing new; delete it in the GitHub settings.
 locals {
-  signing_key_enabled = local.enable_github_integration && data.coder_workspace.me.start_count == 1
+  # Every running workspace signs; this does not depend on the GitHub
+  # integration parameter.
+  signing_key_enabled = data.coder_workspace.me.start_count == 1
 
   # The script matches keys by the "(<workspace id>)" suffix, so renaming the
   # workspace keeps working.
@@ -46,9 +48,8 @@ resource "tls_private_key" "git_signing" {
 }
 
 locals {
-  # Exactly one of the two Jobs exists: add while the workspace runs with the
-  # integration on, remove otherwise (also when the integration is turned off
-  # on a running workspace).
+  # Exactly one of the two Jobs exists: add while the workspace runs, remove
+  # while it is stopped.
   signing_key_jobs = local.signing_key_enabled ? {
     add = {
       PUBLIC_KEY = trimspace(tls_private_key.git_signing[0].public_key_openssh)
@@ -176,8 +177,8 @@ resource "coder_script" "git_signing" {
       git config --global tag.gpgsign true
       echo "Commits are signed with this workspace's key (${local.signing_key_path})"
     else
-      # No key (GitHub integration off): don't leave git pointing at a missing
-      # key, or every commit fails.
+      # No key (cloud-init did not write it): don't leave git pointing at a
+      # missing key, or every commit fails.
       case "$(git config --global --get user.signingkey || true)" in
       "${local.signing_key_path}" | *git-commit-signing/coder)
         git config --global --unset user.signingkey
