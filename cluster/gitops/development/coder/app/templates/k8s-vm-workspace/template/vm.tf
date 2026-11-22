@@ -122,6 +122,7 @@ resource "kubectl_manifest" "vm" {
   depends_on = [
     kubectl_manifest.root_datavolume,
     kubernetes_secret_v1.cloudinit,
+    kubernetes_secret_v1.git_signing,
   ]
 
   server_side_apply = true
@@ -209,6 +210,12 @@ resource "kubectl_manifest" "vm" {
                   virtiofs = {}
                 },
                 {
+                  # This start's SSH signing key (see the volume below). The
+                  # image's git-signing module shows it to the coder user.
+                  name     = "git-signing-key"
+                  virtiofs = {}
+                },
+                {
                   # Teleport join token (see the volume below), read by Teleport
                   # (via the in-guest bindfs workaround) to join the cluster as
                   # a node.
@@ -259,6 +266,15 @@ resource "kubectl_manifest" "vm" {
               name = "root-ca"
               secret = {
                 secretName = local.cluster_ca_secret
+              }
+            },
+            {
+              # This start's SSH signing key (signing-keys.tf). The Secret
+              # exists only while the workspace runs, and the VM only runs
+              # then.
+              name = "git-signing-key"
+              secret = {
+                secretName = local.signing_key_secret
               }
             },
             {

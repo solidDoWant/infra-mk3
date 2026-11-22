@@ -79,3 +79,47 @@ spec:
         failureAction: Enforce
         message: The Coder service account can only modify Secrets for Coder Workspaces.
         deny: *conditions
+    # The VM template's githubgate policies. The SA may only write
+    # workspace-labelled policies for workspace accounts, and a user rule (the
+    # owner's user access token) only for a signing-key Job account
+    # (coder-signing-keys-*, signing-keys.tf), never for a launcher pod's.
+    - name: deny-coder-sa-non-coder-githubgate-policy
+      match:
+        resources:
+          kinds:
+            - githubgate.soliddowant.dev/v1alpha1/GitHubAccessPolicy
+          namespaces:
+            - development
+      preconditions:
+        all:
+          - key: >-
+              {{ request.userInfo.username }}
+            operator: Equals
+            value: system:serviceaccount:development:coder
+          - key: >-
+              {{ request.operation }}
+            operator: AnyIn
+            value:
+              - CREATE
+              - UPDATE
+      validate:
+        failureAction: Enforce
+        message: >-
+          The Coder service account can only write GitHubAccessPolicies for
+          Coder Workspaces: the coder-workspace label, workspace service
+          accounts, and user rules only for coder-signing-keys-* accounts.
+        deny:
+          conditions:
+            any:
+              - key: >-
+                  {{ request.object.metadata.labels."app.kubernetes.io/name" || "" }}
+                operator: NotEquals
+                value: coder-workspace
+              - key: >-
+                  {{ request.object.spec.serviceAccounts[?!starts_with(@, 'coder-signing-keys-') && !starts_with(@, 'coder-vm-workspace-')] | length(@) }}
+                operator: GreaterThan
+                value: 0
+              - key: >-
+                  {{ (request.object.spec.rules[?userAuthorizationRef] | length(@)) > `0` && (request.object.spec.serviceAccounts[?!starts_with(@, 'coder-signing-keys-')] | length(@)) > `0` }}
+                operator: Equals
+                value: true

@@ -1,0 +1,30 @@
+---
+# The owner's GitHub account, authorized for the production App through the
+# device flow. Coder VM workspaces register a fresh SSH signing key on it at
+# every start and delete it at stop, through githubgate (the Jobs in the VM
+# template, as development/coder-signing-keys). No PAT, and no token of the
+# owner's ever reaches a workspace.
+#
+# The App needs device flow on and the "SSH signing keys" account permission.
+# Authorize (and re-authorize after RefreshTokenRevoked or SpecChanged):
+#   kubectl -n ci annotate githubuserauthorization soliddowant githubgate.soliddowant.dev/authorize=$(date +%s) --overwrite
+#   kubectl -n ci get githubuserauthorization soliddowant -o jsonpath='{.status.authorization}'
+# then enter the code at the address, signed in as the login below.
+apiVersion: githubgate.soliddowant.dev/v1alpha1
+kind: GitHubUserAuthorization
+metadata:
+  name: soliddowant
+spec:
+  appRef:
+    name: github
+  login: solidDoWant
+  # The delete operation can delete any signing key of the account. The Jobs
+  # only delete the keys titled for their own workspace.
+  ceiling:
+    operations:
+      - users/list-ssh-signing-keys-for-authenticated-user
+      - users/create-ssh-signing-key-for-authenticated-user
+      - users/delete-ssh-signing-key-for-authenticated-user
+  allowedNamespaces:
+    names:
+      - development

@@ -6,3 +6,7 @@ metadata:
   labels:
     pod-security.kubernetes.io/enforce: privileged
     resource.kubernetes.io/admin-access: "true"
+    # Lets the githubgate proxy (ci/githubgate netpol) admit this namespace's
+    # injected interceptors: the Coder VM template's signing-key Jobs. Pods
+    # opt in to interception one by one (pod label), never namespace-wide.
+    githubgate.home.arpa/client: "true"
