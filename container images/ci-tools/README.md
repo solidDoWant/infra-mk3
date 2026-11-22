@@ -22,4 +22,4 @@ ServiceAccount, and githubgate's interceptor sends every GitHub request.
 
 - `make test`: the unit tests and shellcheck, in the image.
 - `make e2e`: the fixture project (`tests/fixture/`) through `ci-stages` and a dry-run `ci-release`. It needs a Tekton `docker` Task's dind, so it runs in infra-mk3's CI (`.tekton/ci-tools/`), not on a workstation.
-- A merge to master that changes this directory pushes `ghcr.io/soliddowant/ci-tools:<content hash>`. The run prints the digest. Move the `-next` Pipelines to it first; githubgate runs them as the canary. Then move the stable ones.
+- A merge to master that changes this directory pushes `ghcr.io/soliddowant/ci-tools:<content hash>`. The run prints the digest; pin it in the shared Pipelines (`cluster/gitops/ci/tekton/pipelines/`).

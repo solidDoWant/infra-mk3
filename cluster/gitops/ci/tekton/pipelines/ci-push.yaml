@@ -1,0 +1,106 @@
+---
+# The shared master push Pipeline of the agent projects (container
+# images/ci-tools has the design and ci.yaml's format). A project's
+# .tekton/push.yaml runs it like ci-pull-request, without
+# pull_request_number, with taskRunSpecs that run `report` as ci-report and
+# size the `ci` task's dind sidecar.
+#
+# ci clones the commit and runs every push stage, then trims the build's
+# caches (the golden cache promoter keeps the volume of a successful master
+# push for the next builds). report gives each stage a check run and fails
+# the run when one failed; it runs as ci-report and runs no repository code.
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  namespace: ci-tekton
+  name: ci-push
+  annotations:
+    # The scripts use shell ${...} syntax.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  params:
+    - name: ci-tools-image
+      type: string
+      description: The ci-tools image, by digest. Projects leave the default.
+      default: ghcr.io/soliddowant/ci-tools@sha256:a2731670872c8d9bac142d61fd18530de6cd98bae013f44e8168ff3c72708c94
+    - name: repo_url
+      type: string
+    - name: revision
+      type: string
+    - name: repo
+      type: string
+      description: owner/name
+    - name: cpus
+      type: string
+      description: The ci task's dind CPU request, the stages' CPU budget.
+      default: "8"
+  workspaces:
+    - name: source
+  tasks:
+    - name: ci
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: docker
+          - name: namespace
+            value: ci-tekton
+      params:
+        - name: script
+          value: |
+            set -eu
+            export CI_TOOLS_IMAGE='$(params.ci-tools-image)' REPO_URL='$(params.repo_url)' \
+              REVISION='$(params.revision)' CI_REPO='$(params.repo)' CI_CPUS='$(params.cpus)'
+            docker run --rm "$CI_TOOLS_IMAGE" cat /ci-tools/lib/tekton-step.sh >/tmp/tekton-step.sh
+            exec sh /tmp/tekton-step.sh push
+      workspaces:
+        - name: source
+          workspace: source
+  finally:
+    - name: report
+      params:
+        - name: image
+          value: $(params.ci-tools-image)
+        - name: stages
+          value: $(tasks.ci.results.output)
+        - name: repo
+          value: $(params.repo)
+        - name: revision
+          value: $(params.revision)
+      taskSpec:
+        params:
+          - name: image
+            type: string
+          - name: stages
+            type: string
+          - name: repo
+            type: string
+          - name: revision
+            type: string
+        steps:
+          - name: report
+            image: $(params.image)
+            computeResources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            env:
+              # Through the environment, never the script text.
+              - name: STAGES
+                value: $(params.stages)
+              - name: CI_REPO
+                value: $(params.repo)
+              - name: CI_REVISION
+                value: $(params.revision)
+              # Pipelines-as-Code's link to this run on the Dashboard; Tekton
+              # copies the PipelineRun's annotations to its pods.
+              - name: DETAILS_URL
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.annotations['pipelinesascode.tekton.dev/log-url']
+            command:
+              - /ci-tools/bin/ci-report
