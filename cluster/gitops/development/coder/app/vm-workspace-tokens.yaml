@@ -22,7 +22,8 @@
 # KubeVirt can't do this itself: its serviceAccount volume only re-shares the
 # pod's API-audience token, and the VM spec can't add volumes to the pod.
 #
-# Matched on the launcher pod's service account, so every VM workspace gets
+# Matched on the launcher pod's service account (coder-vm-workspace, or a
+# workspace's own coder-vm-workspace-<id>), so every VM workspace gets
 # both mounts and its containerPath volumes never point at a missing path.
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingAdmissionPolicy
@@ -49,7 +50,7 @@ spec:
   matchConditions:
     - name: vm-workspace-launcher
       expression: >-
-        object.spec.serviceAccountName == 'coder-vm-workspace' &&
+        object.spec.serviceAccountName.startsWith('coder-vm-workspace') &&
         has(object.metadata.labels) &&
         object.metadata.labels[?'kubevirt.io'].orValue('') == 'virt-launcher'
     - name: not-yet-added
