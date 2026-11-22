@@ -9,8 +9,7 @@ cd "$(dirname "$0")/../.."
 context=$(mktemp -d)
 trap 'rm -rf "$context"' EXIT
 cp flake.nix flake.lock "$context/"
-# The flake reads go.mod only for the Go version (TEMPLATE: drop for non-Go
-# projects, or copy what else the dev shell reads).
+# The flake reads go.mod only for the Go version.
 grep -E '^(module|go|toolchain) ' go.mod > "$context/go.mod"
 tag={{PROJECT}}-ci:$(cat "$context/flake.nix" "$context/flake.lock" "$context/go.mod" | sha256sum | cut -c1-16)
 docker build -q -f scripts/ci/ci-image.Dockerfile -t "$tag" "$context" >&2

@@ -1,0 +1,63 @@
+#!/bin/sh
+# Cleans dockerd's storage at the end of a master push run on Tekton, before
+# the cache promoter may snapshot it, and fails when it is still nearly full.
+# The builder's garbage collection limits only the build cache: old CI images
+# and old versions of the preloaded e2e images would otherwise fill the volume until master runs
+# fail and no new snapshot is promoted.
+#
+# It runs in a container without bash, so the caller lists the images to keep
+# (scripts/ci/e2e-images.sh --node, which needs bash) and passes the file.
+#
+#   scripts/ci/cleanup.sh <current CI image tag> <file listing the e2e images to keep>
+set -eu
+current="${1:?usage: cleanup.sh <current CI image tag> <keep file>}"
+keep="${2:?usage: cleanup.sh <current CI image tag> <keep file>}"
+# The build cache budget: the CI image's layers (~3.5 GB) and the e2e image
+# builds, with room for one flake change.
+build_cache_budget="${CI_BUILD_CACHE_BUDGET:-8GB}"
+# The Go caches: the build cache, the fuzz cache and the lint cache live in the
+# gobuild volume and are trimmed to this many KiB (about 12 GB), least recently
+# used first. Entries used in the last hour (this run) are kept.
+go_cache_budget_kib="${CI_GO_CACHE_BUDGET_KIB:-11718750}"
+go_cache_protect_seconds=3600
+max_percent=80
+
+docker image prune -f >/dev/null
+for old in $(docker image ls --format '{{.Repository}}:{{.Tag}}' {{PROJECT}}-ci); do
+	if [ "$old" != "$current" ]; then
+		docker image rm "$old" >/dev/null
+	fi
+done
+# Preloaded e2e images the tree no longer names (older versions after a bump).
+[ -s "$keep" ] || { echo "cleanup: no e2e images listed, not removing any" >&2; exit 1; }
+for stale in $(docker image ls --format '{{.Repository}}:{{.Tag}}' | /bin/sh "$(dirname "$0")/stale-images.sh" "$keep"); do
+	docker image rm "$stale" >/dev/null
+done
+docker builder prune -f --keep-storage "$build_cache_budget" >/dev/null
+
+# The Go cache volumes are mounted only in containers of the dind sidecar too.
+# The script goes in on stdin, because this container can't mount the repo.
+go_volumes() {
+	docker run --rm -i -v gomod:/cache/gomod:ro -v gobuild:/cache/gobuild --entrypoint /bin/sh "$current" "$@"
+}
+go_sizes() {
+	# shellcheck disable=SC2016 # the container's shell expands these
+	go_volumes -c 'for d in /cache/gomod /cache/gobuild/go /cache/gobuild/go/fuzz /cache/gobuild/golangci-lint; do
+	printf "%s: %s\n" "$d" "$(du -sh "$d" 2>/dev/null | cut -f1)"
+done'
+}
+echo "Go cache sizes before the trim (fuzz is part of go):"
+go_sizes
+go_volumes -s -- "$go_cache_budget_kib" "$go_cache_protect_seconds" /cache/gobuild <"$(dirname "$0")/trim-cache.sh"
+echo "Go cache sizes after the trim:"
+go_sizes
+
+# dockerd's storage is its own filesystem, mounted only in the dind sidecar.
+used=$(docker run --rm -v /var/lib/docker:/storage:ro --entrypoint /bin/sh "$current" \
+	-c 'df -P /storage' | /bin/sh "$(dirname "$0")/df-percent.sh")
+docker system df
+echo "docker storage: ${used}% used after cleanup"
+if [ "$used" -gt "$max_percent" ]; then
+	echo "docker storage is ${used}% full after cleanup" >&2
+	exit 1
+fi

@@ -3,7 +3,7 @@
 # e2e stage. The build context is only flake.nix, flake.lock and a go.mod cut
 # to its module, go and toolchain lines (scripts/ci/ci-image.sh), so Docker's
 # layer cache rebuilds it only when the toolchain changes.
-FROM ghcr.io/nixos/nix:2.35.6@sha256:b49cb33f3a7e5cf3933ad8774529de0e3807ec5cf54987aa7ccdfb49f2fc55ed
+FROM ghcr.io/nixos/nix:2.36.0@sha256:746280551ddc1c72177d1a597c05eacac86dfaa18d5d649bf86411278bcd5470
 ENV NIX_CONFIG="experimental-features = nix-command flakes"
 COPY flake.nix flake.lock go.mod /src/
 # The flake refuses a path source, so the three files go into a throwaway git

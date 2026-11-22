@@ -158,7 +158,18 @@ tar -C "$SCRATCH/REPO" -cf - . | coder ssh NAME-vm -- 'tar -C /workspace/REPO -x
   - `tekton-pipelinerun.yaml.tmpl` and `tekton-release.yaml.tmpl`, rendered by `tekton-generate.sh` into `.tekton/pull-request.yaml`, `push.yaml` and `release.yaml`. Call it from `make generate`, so `make check-generate` fails on a stale `.tekton/`. Never hand-edit `.tekton/`.
   - One `ci` task on the shared `docker` Task (dind in a kata VM, with a Docker cache cloned from the last good master run). `stages.sh` runs the test tiers **in parallel** as containers of a CI image built from `flake.nix` (`ci-image.sh`), so CI uses the agents' toolchain. It prints each stage's log, a stage table (time, memory, CPU) and the VM's peak memory.
   - `changes.py` picks the stages a PR needs (docs-only → `docs`). The run itself always starts, so the required check always reports; never filter the PR pipeline with PaC's `pathChanged()`.
-  - `release.yaml` runs as `ci-release` on `v*` tags: `publish` publishes images and charts (`publish-release.sh`), then `github-release` creates the GitHub release from the `## <version>` section of `CHANGELOG.md`. The release-manager pushes the tag and verifies.
+  - `release.yaml` runs as `ci-release` on `v*` tags, as **one `publish` task with no shared workspace** (a PVC workspace makes Tekton start an affinity-assistant pod as `ci-release`, which the cluster's `ci-release-pods` admission policy refuses, so the run hangs Pending). `publish-release.sh`:
+    1. publishes the images and charts through registrygate;
+    2. builds the release assets (`build-release-assets.sh`): `crds.yaml` with every CRD, static binaries of every client the project ships, and `checksums.txt`;
+    3. creates the GitHub release from the `## <version>` section of `CHANGELOG.md`, and uploads the assets (`upload-release-assets.py`).
+
+    It checks GitHub TLS from a stage container first (`github-api-check.py`), with the same code path as the upload. Adapt `build-release-assets.sh` and `publish-release.sh` to the project's images, charts and binaries, and keep `release-assets_test.sh` and `tekton-release_test.py` (they run in CI and catch a broken release path before a tag does). The release-manager pushes the tag and verifies: the release is latest, all assets are there and the checksums match.
+  - **The release path only runs on a tag, so PR CI never exercises it.** githubgate's 0.6.0–0.6.3 each failed there in turn:
+    - the affinity-assistant pod above;
+    - a stage container missing the interceptor's CA, so `ca-bundle.sh` joins it into the bundle (`stage-env.sh` points every trust variable at that bundle, `NIX_SSL_CERT_FILE` included, because Nix OpenSSL prefers it over `SSL_CERT_FILE`);
+    - a check that used a code path different from the real upload.
+
+    So a project's **first release, and any release after a release-path change, ships as `-rc.1` first**, and the operator reads the release-path diff and checks the rc's assets before the final.
   - **GitHub access only through githubgate's interceptor** (`ci/githubgate`): the `ci/project` chart labels the project namespace so githubgate adds its interceptor to every CI pod. A task only names its ServiceAccount and calls `https://api.github.com` or `github.com` with no credential (see `github-release` in the release template). githubgate decides each request by the ServiceAccount's proxy rules in the chart: `ci-build` (the default; PR and `master` builds) may fetch the project's own repository, private ones included, and nothing else on GitHub; `ci-report` (the reporting tasks) may create check runs and list PR labels; `ci-release` (only version-tag runs) may also read a release and `CHANGELOG.md` and create a `v*` release. A new need is a new operation in the chart's proxy allowlist. No pod holds a GitHub token; PaC's per-run token is off.
   - Size the dind sidecar from a measured run: `max(4 GiB, 1.5 × the printed VM peak)`, request == limit (kata), no CPU limit. Fill `{{PROJECT}}` and `{{GH_USER_LOWER}}`, and adapt `command_of`, `changes.py` and `publish-release.sh` to the Makefile.
   - Renovate: there are no workflows, so leave out the `github-actions` manager. Images are pinned in `scripts/ci/` (the Dockerfile, templates), never in the generated `.tekton/`: add `.tekton/**` to `ignorePaths`.
@@ -352,6 +363,16 @@ Operator rules:
 - `templates/docs/agents/project-manager.md` — PM playbook: durable records, trust boundary, startup/reconcile, the cycle, judgment calls → decision log, `needs-human`, hard limits, phase transitions (bug hunt + security review, severity triage), failure handling.
 - `templates/.claude/agents/{issue-worker,pr-reviewer,bug-hunter,security-auditor,release-manager,design-reviewer,merge-fixer,project-health}.md` — subagent definitions. `release-manager` cuts gated releases (milestone, open critical/high bugs, CI, long sim, upgrade tests, vulncheck, dry run; a version-bump + CHANGELOG PR goes through the normal reviewer); `1.0.0` needs a `/pm` instruction. Adapt its gate commands to the project's Makefile and set `{{GH_USER_LOWER}}` (the lower-cased registry owner).
 - `templates/.claude/commands/{create-issue,start-issue}.md` — interactive human workflow (start-issue keeps the human plan-approval loop; agents use issue-worker instead).
-- `templates/scripts/ci/` — the Tekton CI: PipelineRun templates, `tekton-generate.sh`, `stages.sh`, `changes.py`, `ci-image.sh` + `ci-image.Dockerfile`, `publish-release.sh`.
+- `templates/scripts/ci/` — the Tekton CI, from githubgate's (current as of 0.7.1). It includes:
+  - the PipelineRun templates and `tekton-generate.sh`;
+  - `stages.sh`, with `cpuset-first.sh` CPU pinning and `stage-env.sh`/`ca-bundle.sh` trust;
+  - `changes.py` and `changed-files.sh`;
+  - `ci-image.sh` with `ci-image.Dockerfile`;
+  - the release scripts `publish-release.sh`, `build-release-assets.sh`, `upload-release-assets.py`, `github-api-check.py` and `github_https.py`;
+  - the cache and disk housekeeping `cleanup.sh`, `trim-cache.sh`, `df-percent.sh` and `stale-images.sh`;
+  - the reporting scripts `stages-report.py`, `measure-ci.py`, `go-test-json.sh` and `test-guard.py`;
+  - a test for each.
+
+  Names that mean "this repository" are `CI_REPO`, `CI_GITHUB_API_URL` and `CI_GITHUB_UPLOAD_URL`. `GITHUBGATE_INTERCEPT_*` and `/var/run/githubgate/trust` are the githubgate service's, so leave them as they are.
 - `templates/scripts/agents/pm-loop.sh`, `templates/snippets/CLAUDE-shell-hygiene.md`, `templates/snippets/CLAUDE-documentation.md`, `templates/snippets/CLAUDE-container-images.md`, `templates/snippets/CLAUDE-no-tracking-ids.md`.
 - `scripts/create_issues.py` + `scripts/issues_example.py` (the full vault-sync issue set — a worked example of AC style), `scripts/pmcheck.sh WS REPO_DIR [N] [CI_NAMESPACE]`.

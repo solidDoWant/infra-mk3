@@ -3,26 +3,22 @@
 # and @CEL@ are replaced, and the lines between "@pull_request {" and
 # "@pull_request }" are kept only for pull requests.
 #
-# Both runs start for every pull request and every master push, so the
-# required check always reports; scripts/ci/stages.sh decides which stages a
-# change needs. Don't add a pathChanged() filter here: a pull request it skips
-# never reports the required check and can't merge.
-#
 # There is no cancel-in-progress annotation: Pipelines-as-Code rejects it on a
 # Repository with a concurrency limit, so a superseded pull request run runs
 # to the end.
 #
-# No task reads the per-run GitHub token Pipelines-as-Code offers: CI has no
-# GitHub credentials. Results go to the check run Pipelines-as-Code posts and the
-# step log.
+# The CI cluster adds githubgate's interceptor to every pod, and githubgate
+# decides each GitHub request by the pod's ServiceAccount: the build (ci-build)
+# may only fetch this repository, and test-guard and report (ci-report) may
+# only create check runs and list the PR's labels. No pod holds a GitHub token.
 #
-# The pipeline is inline: Tasks come only from ci-tekton through the cluster
-# resolver.
+# The pipeline is inline: Pipelines-as-Code here does not resolve references
+# to other .tekton/ files, and Tasks come only from ci-tekton through the
+# cluster resolver.
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   # A fixed name collides with the previous run, which Pipelines-as-Code keeps.
-  # The check run is named "Tekton CI / {{PROJECT}}-@NAME@-" after this.
   generateName: {{PROJECT}}-@NAME@-
   annotations:
     pipelinesascode.tekton.dev/on-cel-expression: >-
@@ -41,21 +37,31 @@ spec:
     # can mount the checkout.
     - name: source
       emptyDir: {}
+#@pull_request {
+    - name: guard
+      emptyDir: {}
+#@pull_request }
   taskRunSpecs:
+#@pull_request {
+    - pipelineTaskName: test-guard
+      serviceAccountName: ci-report
+#@pull_request }
+    - pipelineTaskName: report
+      serviceAccountName: ci-report
     # Every stage runs inside the dind sidecar's cgroup, so its memory is the
-    # memory of all stages together. Kata VMs need request == limit. Start at
-    # 4Gi and resize to max(4 GiB, 1.5 times the measured peak; the end of the
-    # step log prints it, page cache excluded). No CPU limit: a kata VM's CPU
-    # request only places the pod and sets its share.
+    # memory of all stages together. The size is max(8 GiB, 1.5 times the
+    # measured peak of used memory, page cache excluded; the final stage table
+    # prints it). No CPU limit: a kata VM's CPU request only places the pod and
+    # sets its share.
     - pipelineTaskName: ci
       sidecarSpecs:
         - name: dind
           computeResources:
             requests:
-              cpu: "4"
-              memory: 4Gi
+              cpu: "8"
+              memory: 13Gi
             limits:
-              memory: 4Gi
+              memory: 13Gi
       stepSpecs:
         - name: run
           computeResources:
@@ -72,6 +78,9 @@ spec:
         type: string
     workspaces:
       - name: source
+#@pull_request {
+      - name: guard
+#@pull_request }
     tasks:
       - name: ci
         taskRef:
@@ -91,7 +100,8 @@ spec:
               cd src
               git init -q .
               git remote add origin "$(params.repo_url)"
-              # master too: the stage selection diffs against the merge base.
+              # The full history: the change rules need the merge base with
+              # master, and `make test` runs the test guard's tests over it.
               git fetch -q origin '+refs/heads/master:refs/remotes/origin/master' "$(params.revision)"
               git checkout -q --detach "$(params.revision)"
 #@pull_request {
@@ -102,7 +112,135 @@ spec:
                 exit 1
               fi
 #@pull_request }
+              export CI_REPO="{{ repo_owner }}/{{ repo_name }}"
               exec ./scripts/ci/stages.sh @EVENT@
         workspaces:
           - name: source
             workspace: source
+#@pull_request {
+      - name: test-guard
+        workspaces:
+          - name: guard
+            workspace: guard
+        taskSpec:
+          workspaces:
+            - name: guard
+              mountPath: /workspace/guard
+          steps:
+            # Reads the labels when the run starts, so a /retest after the
+            # owner adds test-removal-approved picks it up. It runs this script
+            # and nothing from the repository.
+            - name: labels
+              image: mirror.gcr.io/library/python:3.14.9@sha256:30a34d141e34b8fbedabecb8f86b3d49a62e348d8112ad3c1289f0b2b216ad3e
+              computeResources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 256Mi
+              script: |
+                #!/usr/bin/env python3
+                import json, urllib.request
+                request = urllib.request.Request(
+                    "https://api.github.com/repos/{{ repo_owner }}/{{ repo_name }}/issues/{{ pull_request_number }}/labels?per_page=100",
+                    headers={"Accept": "application/vnd.github+json"},
+                )
+                with urllib.request.urlopen(request, timeout=30) as response:
+                    labels = [label["name"] for label in json.load(response)]
+                with open("/workspace/guard/labels", "w") as out:
+                    out.write(",".join(labels))
+                print("labels:", ",".join(labels))
+            # No token from here on.
+            - name: guard
+              image: mirror.gcr.io/library/python:3.14.9@sha256:30a34d141e34b8fbedabecb8f86b3d49a62e348d8112ad3c1289f0b2b216ad3e
+              computeResources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 256Mi
+              script: |
+                #!/bin/sh
+                set -eu
+                mkdir /workspace/guard/src
+                cd /workspace/guard/src
+                git init -q .
+                git remote add origin "$(params.repo_url)"
+                git fetch -q origin '+refs/heads/master:refs/remotes/origin/master' "$(params.revision)"
+                git checkout -q --detach "$(params.revision)"
+                TEST_GUARD_PR_LABELS=$(cat /workspace/guard/labels) make test-guard
+#@pull_request }
+    finally:
+      # Fails the run when a stage failed or ci left no result: ci itself
+      # exits 0 after its stages ran, because a finally task cannot rely on
+      # the results of a failed task. Gives every stage its own check run, so
+      # the failing stage and its failure report show on the commit. Runs
+      # only this script with GitHub access (githubgate's interceptor, as
+      # ci-report), never code from the repository.
+      - name: report
+        params:
+          - name: stages
+            value: $(tasks.ci.results.output)
+        taskSpec:
+          params:
+            - name: stages
+              type: string
+          steps:
+            - name: report
+              image: mirror.gcr.io/library/python:3.14.9@sha256:30a34d141e34b8fbedabecb8f86b3d49a62e348d8112ad3c1289f0b2b216ad3e
+              computeResources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 256Mi
+              env:
+                # Through the environment, not the script text, so the
+                # result's content is never parsed as code.
+                - name: STAGES
+                  value: $(params.stages)
+                - name: DETAILS_URL
+                  value: https://tekton.echozulu.games/#/namespaces/$(context.pipelineRun.namespace)/pipelineruns/$(context.pipelineRun.name)
+              script: |
+                #!/usr/bin/env python3
+                import datetime, json, os, sys, urllib.request
+
+                try:
+                    stages = json.loads(os.environ.get("STAGES", ""))
+                except ValueError:
+                    print("ci left no stages result: it did not finish", file=sys.stderr)
+                    sys.exit(1)
+                def iso(seconds):
+                    return datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                failed = []
+                for stage in stages:
+                    passed = stage["result"] == "passed"
+                    if not passed:
+                        failed.append(stage["name"])
+                    title = f"{stage['name']} {stage['result']} in {stage['seconds']}s"
+                    print(title)
+                    body = {
+                        "name": "stage: " + stage["name"],
+                        "head_sha": "{{ revision }}",
+                        "status": "completed",
+                        "conclusion": "success" if passed else "failure",
+                        "started_at": iso(stage["started"]),
+                        "completed_at": iso(stage["ended"]),
+                        "details_url": os.environ["DETAILS_URL"],
+                        "output": {"title": title, "summary": title, "text": stage.get("report", "")},
+                    }
+                    request = urllib.request.Request(
+                        "https://api.github.com/repos/{{ repo_owner }}/{{ repo_name }}/check-runs",
+                        data=json.dumps(body).encode(),
+                        method="POST",
+                        headers={"Accept": "application/vnd.github+json"},
+                    )
+                    # A check run GitHub does not accept is reported, not
+                    # fatal: only a failed stage fails the run.
+                    try:
+                        urllib.request.urlopen(request, timeout=30).close()
+                    except Exception as error:
+                        print(f"check run for {stage['name']} not created: {error}", file=sys.stderr)
+                if failed:
+                    print("failed stages: " + ", ".join(failed), file=sys.stderr)
+                    sys.exit(1)
