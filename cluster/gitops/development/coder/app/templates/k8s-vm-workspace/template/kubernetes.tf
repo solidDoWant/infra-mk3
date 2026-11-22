@@ -35,15 +35,16 @@ locals {
   uid = 1000
   gid = local.uid
 
-  # NFS bulk storage. A single mount of the pool root exposes every share
-  # underneath it (e.g. /mnt/bulk-pool-01/media), provided the NFS server
-  # exports the parent path - the client never enumerates individual shares.
-  # These mirror NFS_ADDRESS / the parent of NFS_MEDIA_PATH from the Flux
-  # cluster-config; Flux variable substitution does not reach this template
-  # (it is pushed with `coder templates push`), so the values are inlined.
-  nfs_address    = "10.2.3.1"
-  nfs_path       = "/mnt/bulk-pool-01"
-  nfs_mount_path = "/mnt/bulk-pool-01"
+  # NFS: the media share of bulk-pool-01 only (not the rest of the pool, such as
+  # archive). The kubelet mounts it from a Flux-managed NFS PV/PVC
+  # (coder/app/vm-workspace-nfs.yaml), the VM gets the PVC as a virtiofs share
+  # (vm.tf), and cloud-init mounts that in the guest, at the same path as on the
+  # storage host. The guest can't mount NFS itself: the workspace netpol has no
+  # egress to the NFS server, and NixOS owns /etc/fstab, so cloud-init
+  # `mounts:` is ignored.
+  nfs_pvc_name   = "coder-vm-workspace-media"
+  nfs_tag        = "media"
+  nfs_mount_path = "/mnt/bulk-pool-01/media"
 
   # Cluster PKI root CA. Mounted into the VM via virtiofs (from this secret) at
   # /mnt/root-ca; the NixOS image (see nix/.../modules/ca-trust) builds a combined
@@ -241,7 +242,7 @@ data "coder_parameter" "root_disk_size" {
 data "coder_parameter" "enable_nfs" {
   name         = "enable_nfs"
   display_name = "Mount NFS storage"
-  description  = "Mount the bulk-pool-01 NFS storage (all shares) at ${local.nfs_mount_path}"
+  description  = "Mount the media NFS share (downloads, library, converted) at ${local.nfs_mount_path}. Writable only where the share lets any user write (downloads, library)."
   type         = "bool"
   default      = "false"
   mutable      = true

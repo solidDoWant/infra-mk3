@@ -19,7 +19,9 @@ bootcmd:
   - [ sh, -c, 'mkdir -p /etc/coder; printf %s "${HOSTNAME}" > /etc/coder/hostname; chmod 0644 /etc/coder/hostname' ]
 
 %{ if ENABLE_NFS ~}
-# nofail/_netdev keep boot resilient if the server is unreachable.
-mounts:
-  - [ "${NFS_ADDRESS}:${NFS_PATH}", "${NFS_MOUNT_PATH}", "nfs", "defaults,nofail,_netdev", "0", "0" ]
+
+  # The media NFS share, from the launcher pod over virtiofs (vm.tf). Not
+  # `mounts:`: NixOS owns /etc/fstab, so cloud-init can't add an entry. A failed
+  # mount must not stop the boot.
+  - [ sh, -c, 'mkdir -p ${NFS_MOUNT_PATH}; mountpoint -q ${NFS_MOUNT_PATH} || mount -t virtiofs ${NFS_TAG} ${NFS_MOUNT_PATH} || true' ]
 %{ endif ~}

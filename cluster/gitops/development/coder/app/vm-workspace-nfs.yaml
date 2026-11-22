@@ -1,0 +1,41 @@
+---
+# The media share of the bulk-pool-01 NFS pool (NFS_MEDIA_PATH, as the apps
+# mount it) for k8s-vm-workspace VMs that enable "Mount NFS storage". Only
+# media: the rest of the pool (archive) holds sensitive data that no VM needs.
+# The kubelet mounts it on the node, like the apps' inline NFS volumes, and the
+# template shares the PVC with the guest over virtiofs (vm.tf), so the VM's
+# netpol needs no egress to the NFS server (guests can't mount other paths of
+# the pool themselves) and the guest needs no NFS client. virtiofsd runs as uid
+# 107: it can read the share and write only where its modes let any user write
+# (media/downloads, media/library), not media/converted.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: coder-vm-workspace-media
+spec:
+  capacity:
+    # Not enforced for NFS; required by the API.
+    storage: 1Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef:
+    namespace: development
+    name: coder-vm-workspace-media
+  nfs:
+    server: ${NFS_ADDRESS}
+    path: ${NFS_MEDIA_PATH}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: coder-vm-workspace-media
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: coder-vm-workspace-media
+  resources:
+    requests:
+      storage: 1Ti
