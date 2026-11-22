@@ -19,7 +19,6 @@ metadata:
     kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   params:
-    # First: ../next patches it by index.
     - name: ci-tools-image
       type: string
       description: The ci-tools image, by digest. Projects leave the default.
