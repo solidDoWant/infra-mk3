@@ -32,7 +32,7 @@ print-image-name: ## Print the image name and tag.
 ##@ Test
 .PHONY: test
 test: image ## Run the unit tests and shellcheck in the image.
-	docker run --rm "$(IMAGE)" tests/run.sh
+	docker run --rm "$(IMAGE)" /ci-tools/tests/run.sh
 
 .PHONY: e2e
 e2e: image ## Run the fixture project through ci-stages and a dry-run ci-release (needs CI_REPO and a Tekton docker Task).
