@@ -106,12 +106,24 @@ fi
 if [ -f "$pod/docker-config.json" ]; then cp "$pod/docker-config.json" "$ci/docker/config.json"; fi
 cp "$lib/stage-env.sh" "$lib/github-api-check.py" "$lib/github_https.py" "$ci/tools/"
 
-# Every run checks, from a stage container in the stage environment, the way
-# a release reaches GitHub: one read-only GitHub API request from Python and
-# one from curl get an HTTP response over verified TLS. A broken bundle or
-# interception then fails a pull request, not a release. Any status passes.
-if ! docker run --rm --network host -v "$WS:$WS" -w "$src" -e CI_CA="$ci/ca-bundle.crt" "$image" \
-	bash -c 'source /etc/devshell.sh && source "$1/stage-env.sh" && exec python3 -I "$1/github-api-check.py" "$2"' bash "$ci/tools" "$CI_REPO"; then
+# Every run checks that GitHub answers over verified TLS, so a broken bundle
+# or interception fails a pull request, not a release. Any HTTP status
+# passes: a policy may deny the request, and that still proves the TLS chain.
+#   - here, in ci-tools, with Python and curl: the code path of ci-release's
+#     GitHub release upload;
+#   - in a stage container of the project's CI image, with its curl (what git
+#     and the stage commands use), in the stage environment, which also points
+#     Nix's NIX_SSL_CERT_FILE at the bundle. Skipped when the image has none.
+# shellcheck source=/dev/null # lib/stage-env.sh, in the image
+if ! (export CI_CA="$ci/ca-bundle.crt" && source "$lib/stage-env.sh" && python3 -I "$lib/github-api-check.py" "$CI_REPO"); then
+	echo "ci-tools cannot reach the GitHub API over verified TLS; see above" >&2
+	exit 1
+fi
+if ! docker run --rm --network host -v "$WS:$WS" -w "$src" -e CI_CA="$ci/ca-bundle.crt" -e CI_REPO="$CI_REPO" "$image" \
+	bash -c 'source /etc/devshell.sh && source "$1/stage-env.sh"
+		command -v curl >/dev/null || { echo "the CI image has no curl: its TLS check is skipped"; exit 0; }
+		code=$(curl -sS --max-time 60 -o /dev/null -w "%{http_code}" "https://api.github.com/repos/$CI_REPO") || exit 1
+		echo "GitHub API reachable over verified TLS from curl in a stage container: HTTP $code"' bash "$ci/tools"; then
 	echo "a stage container cannot reach the GitHub API over verified TLS; see above" >&2
 	exit 1
 fi
