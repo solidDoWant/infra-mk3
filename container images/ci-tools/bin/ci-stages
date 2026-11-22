@@ -68,7 +68,7 @@ case "$cpus" in '' | *[!0-9]* | 0*) echo "CI_CPUS must be a positive whole numbe
 available=$(docker run --rm --entrypoint /bin/sh "$image" -c 'cat /sys/fs/cgroup/cpuset.cpus.effective 2>/dev/null || cat /sys/devices/system/cpu/online')
 stat_dir=$(mktemp -d)
 cp /proc/stat "$stat_dir/before"; sleep 1; cp /proc/stat "$stat_dir/after"
-pinned=$(sh "$lib/cpuset-first.sh" "$available" "$cpus" "$stat_dir/before" "$stat_dir/after" "${CI_HOST:-$(hostname)}")
+pinned=$(sh "$lib/cpuset-first.sh" "$available" "$cpus" "$stat_dir/before" "$stat_dir/after" "${CI_HOST:-$(cat /proc/sys/kernel/hostname)}")
 rm -rf "$stat_dir"
 cpuset=$(echo "$pinned" | head -n 1)
 cpus=${cpuset#* }
@@ -258,8 +258,12 @@ for stage in $failed; do
 	cat "$out/$stage.log"
 done
 
-# Leave nothing but caches on the volume the promoter may keep.
-leftover=$(docker ps -aq)
+# Leave nothing but caches on the volume the promoter may keep (a kind
+# cluster left behind is only its node containers), except this container:
+# ci-stages itself runs in one on the same dockerd. Its ID is in the paths
+# Docker bind-mounts its hosts and resolv.conf from.
+self_id=$(grep -o -m1 '/containers/[0-9a-f]\{64\}' /proc/self/mountinfo | cut -d/ -f3 || true)
+leftover=$(docker ps -aq --no-trunc | grep -v -x "${self_id:-none}" || true)
 if [ -n "$leftover" ]; then
 	# shellcheck disable=SC2086 # a list of IDs
 	docker rm -f $leftover >/dev/null 2>&1 || true
