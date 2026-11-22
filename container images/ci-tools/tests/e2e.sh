@@ -54,6 +54,7 @@ step push "$(head_of master)" || fail "push run failed"
 got=$(stages_of)
 [ "$got" = "lint unit docs cleanup" ] || fail "push ran '$got', want 'lint unit docs cleanup'"
 grep -q '"result": *"failed"' "$w/output" && fail "a push stage failed"
+[ "$(wc -l <"$w/with-runs")" -eq 1 ] || fail "the with job lint and unit share ran $(wc -l <"$w/with-runs") times, want once"
 
 echo "=== pull request: a docs-only change runs only docs and the test guard"
 setup "$ws/e2e-pr"

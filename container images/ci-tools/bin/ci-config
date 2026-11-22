@@ -32,7 +32,8 @@ ci.yaml, version 1:
         run: make test-e2e
         kind: true            # creates kind clusters; starts first
         ignore: ["**/*_test.go", "!test/e2e/**"]  # changes that don't need it
-        with: ./test/e2e/build-images.sh   # started next to it; not a stage
+        with: ./test/e2e/build-images.sh   # started next to it; not a stage;
+                                           # stages with the same `with` share one job
       docs:
         run: make docs-check
         run-pull-request: make docs-check && ./scripts/docs/style_report.sh || true
