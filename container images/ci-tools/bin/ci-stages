@@ -15,6 +15,8 @@
 #   CI_HOST         the task pod's hostname (seeds the CPU choice)
 #   CI_CPUS         the run's CPU budget, default 8: the dind sidecar's request
 #   REGISTRYGATE_HOSTS  registries the CI cluster's registrygate intercepts
+#   CI_PR_LABELS    a pull request's labels, comma-separated, for the
+#                   test-guard stage (ci.yaml `test-guard: true`)
 # and $WS/ci/pod/, files the step copied from the pod (dockerd can't see the
 # step's own mounts): system-ca.crt, trust/ca.crt and ssl-cert-file (the
 # githubgate interceptor's CAs, when the pod is intercepted),
@@ -175,7 +177,7 @@ start_stage() {
 			-e DOCKER_HOST=tcp://127.0.0.1:2375 -e DOCKER_CONFIG="$ci/docker" \
 			-e REGISTRYGATE_HOSTS="${REGISTRYGATE_HOSTS:-}" -e REGISTRYGATE_TOKEN_FILE="$ci/token" \
 			-e CI_BIN="$ci/bin" -e CI_CA="$ci/ca-bundle.crt" -e CI_STATS="$out/$stage.stats" \
-			-e CI_REPO="$CI_REPO" -e CI_EVENT="$event" \
+			-e CI_REPO="$CI_REPO" -e CI_EVENT="$event" -e CI_PR_LABELS="${CI_PR_LABELS:-}" \
 			-e CI_WITH_EXIT_FILE="${CI_WITH_EXIT_FILE:-}" -e CI_WITH_LOG="${CI_WITH_LOG:-}" \
 			"${env_args[@]}" -e STAGE_COMMAND="$cmd" -e CI_TOOLS_DIR="$ci/tools" \
 			"$image" bash -c '

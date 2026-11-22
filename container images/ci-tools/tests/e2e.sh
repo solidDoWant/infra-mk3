@@ -73,13 +73,13 @@ got=$(stages_of "$w")
 [ "$got" = "lint unit docs cleanup" ] || fail "push ran '$got', want 'lint unit docs cleanup'"
 grep -q '"result": *"failed"' "$w/ci/stages.json" && fail "a push stage failed"
 
-echo "=== pull request: a docs-only change runs only docs"
+echo "=== pull request: a docs-only change runs only docs and the test guard"
 w="$ws/e2e-pr"
 setup "$w"
 (cd "$w/src" && echo "More words." >>README.md && git -c user.email=ci@ci -c user.name=ci commit -qam docs)
-ci_tools "$w" "$image" ci-stages pull_request || fail "pull request run failed"
+ci_tools "$w" -e CI_PR_LABELS=test-removal-approved "$image" ci-stages pull_request || fail "pull request run failed"
 got=$(stages_of "$w")
-[ "$got" = "docs" ] || fail "docs-only pull request ran '$got', want 'docs'"
+[ "$got" = "docs test-guard" ] || fail "docs-only pull request ran '$got', want 'docs test-guard'"
 
 echo "=== pull request: a failing stage fails the run and is reported"
 w="$ws/e2e-fail"

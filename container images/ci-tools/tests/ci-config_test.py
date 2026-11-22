@@ -102,7 +102,7 @@ class Checking(unittest.TestCase):
 class Fixture(unittest.TestCase):
     def test_the_fixture_projects_ci_yaml_is_valid(self):
         config = ci_config.load(str(SCRIPT.parent.parent / "tests" / "fixture" / "ci.yaml"))
-        self.assertEqual(list(config["stages"]), ["lint", "unit", "docs"])
+        self.assertEqual(list(config["stages"]), ["lint", "unit", "docs", "test-guard"])
         self.assertEqual(config["release"]["charts"], ["deploy/charts/fixture"])
 
 
@@ -130,6 +130,15 @@ class Selection(unittest.TestCase):
 
     def test_no_change_runs_nothing(self):
         self.assertEqual(self.select("pull_request", []), [])
+
+    def test_the_test_guard_runs_on_every_pull_request_change_only(self):
+        config = load(BASE + "test-guard: true\n")
+        self.assertIn("make test-guard", config["stages"]["test-guard"]["run"])
+        self.assertIn("CI_PR_LABELS", config["stages"]["test-guard"]["run"])
+        self.assertIn("test-guard", ci_config.select(config, "pull_request", ["README.md"]))
+        self.assertIn("test-guard", ci_config.select(config, "pull_request", ["go.mod"]))
+        self.assertNotIn("test-guard", ci_config.select(config, "push", []))
+        self.assertEqual(ci_config.select(config, "pull_request", []), [])
 
     def test_star_stays_inside_one_segment(self):
         self.assertTrue(ci_config.matches("README.md", ["*.md"]))

@@ -38,7 +38,9 @@ ci.yaml, version 1:
         paths: ["**/*.md", "docs/**"]
     cleanup:
       keep-images: ./scripts/ci/e2e-images.sh --node   # prints images to keep
-    test-guard: true          # run `make test-guard` on pull requests
+    test-guard: true          # a `test-guard` stage on every pull request:
+                              # `make test-guard`, with the PR's labels in
+                              # TEST_GUARD_PR_LABELS (comma-separated)
     release:
       assets: make release-assets   # writes files into $RELEASE_ASSETS
       build: make build-images VERSION="$RELEASE_VERSION" PUSH_ALL=true
@@ -60,7 +62,7 @@ import sys
 import yaml
 
 STAGE_NAME = re.compile(r"^[a-z][a-z0-9-]{0,30}$")
-RESERVED = {"release", "cleanup"}
+RESERVED = {"release", "cleanup", "test-guard"}
 TOP = {"version", "image", "env", "not-code", "stages", "cleanup", "test-guard", "release"}
 STAGE_KEYS = {"run", "run-pull-request", "paths", "push", "own-tree", "kind", "with"}
 RELEASE_KEYS = {"assets", "build", "images", "charts", "chart-registry"}
@@ -152,6 +154,15 @@ def normalize(doc):
 
     test_guard = doc.get("test-guard", False)
     need(isinstance(test_guard, bool), "test-guard", "must be true or false")
+    if test_guard:
+        # The pull request Pipeline reads the labels (as ci-report, before
+        # any repository code runs) and hands them to ci-stages as
+        # CI_PR_LABELS. Any change runs it: removing a test is a change.
+        out_stages["test-guard"] = {
+            "run": 'TEST_GUARD_PR_LABELS="${CI_PR_LABELS:-}" make test-guard',
+            "run-pull-request": None, "paths": ["**"], "push": False,
+            "own-tree": False, "kind": False, "with": None,
+        }
 
     release = None
     if "release" in doc:

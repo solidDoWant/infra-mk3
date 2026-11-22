@@ -12,6 +12,7 @@ stages:
   docs:
     run: make docs-check
     paths: ["**/*.md"]
+test-guard: true
 release:
   assets: make release-assets
   charts: [deploy/charts/fixture]
