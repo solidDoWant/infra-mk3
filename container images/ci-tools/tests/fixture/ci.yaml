@@ -5,10 +5,13 @@ image:
       lines: '^(module|go|toolchain) '
 not-code: ["*.md", "**/*.md"]
 stages:
+  # The same `with` job on two stages runs once (the e2e test counts it).
   lint:
     run: make lint
+    with: echo ran >>../with-runs
   unit:
     run: make test
+    with: echo ran >>../with-runs
   docs:
     run: make docs-check
     paths: ["**/*.md"]

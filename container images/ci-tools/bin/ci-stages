@@ -211,20 +211,28 @@ command_for() {
 # Stages that create kind clusters start first, so their clusters come up
 # before the CPU-heavy stages compete for the cores. A stage's `with` job
 # starts next to it; the stage reads CI_WITH_EXIT_FILE and CI_WITH_LOG to wait
-# for it. The `with` jobs are not stages: their logs and times stay out of the
-# stage table.
+# for it. Stages with the same `with` command share one job (two e2e tracks
+# that need the same images build them once). The `with` jobs are not stages:
+# their logs and times stay out of the stage table.
 first="" rest=""
 for stage in $stages; do
 	if [ "$(field "$stage" '.stages[$s].kind')" = true ]; then first="$first $stage"; else rest="$rest $stage"; fi
 done
+declare -A with_job=()
 for stage in $first $rest; do
 	with=$(field "$stage" '.stages[$s].with // empty')
 	if [ -n "$with" ]; then
-		CI_WITH_EXIT_FILE="$out/$stage-with.exit" CI_WITH_LOG="$out/$stage-with.log"
-		rm -f "$CI_WITH_EXIT_FILE"
+		job=${with_job[$with]:-}
+		started=true
+		if [ -z "$job" ]; then
+			job="$stage-with" started=false
+			with_job[$with]=$job
+		fi
+		CI_WITH_EXIT_FILE="$out/$job.exit" CI_WITH_LOG="$out/$job.log"
+		[ "$started" = true ] || rm -f "$CI_WITH_EXIT_FILE"
 		export CI_WITH_EXIT_FILE CI_WITH_LOG
 		start_stage "$stage" "$(command_for "$stage")"
-		start_stage "$stage-with" "$with"
+		[ "$started" = true ] || start_stage "$job" "$with"
 		unset CI_WITH_EXIT_FILE CI_WITH_LOG
 	else
 		start_stage "$stage" "$(command_for "$stage")"
