@@ -316,6 +316,12 @@ JSON
 # kernel log is only readable here), and sync the disk when the kernel asks
 # for it.
 (
+  # Says whether the watch works: silence after this means no storage errors.
+  if lines=$(dmesg 2>&1 | wc -l) && dmesg >/dev/null 2>&1; then
+    echo "kernel watch: reading the VM's kernel log ($lines lines so far)"
+  else
+    echo "kernel watch: can't read the VM's kernel log: $(dmesg 2>&1 | head -1)"
+  fi
   seen=0
   while sleep 5; do
     log=$(dmesg 2>/dev/null) || continue
