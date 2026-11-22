@@ -98,5 +98,14 @@ if [ ! -s "$result" ]; then
 	exit "$((status == 0 ? 1 : status))"
 fi
 if [ -n "${DOCKER_TASK_OUTPUT:-}" ]; then cp "$result" "$DOCKER_TASK_OUTPUT"; fi
-[ "$status" -eq 0 ] || echo "tekton-step: stages failed; the report task fails the run"
+[ "$status" -eq 0 ] && exit 0
+# Tekton drops a result that its termination message can't hold, and then
+# skips the report task, so the run would pass. stages-report.py keeps the
+# result under 1536 bytes; past 1800 (escapes included) fail here instead.
+size=$(sed 's/["\\]/&&/g' "$result" | wc -c)
+if [ "$size" -gt 1800 ]; then
+	echo "tekton-step: stages failed and their result ($size bytes) is too big to report" >&2
+	exit "$status"
+fi
+echo "tekton-step: stages failed; the report task fails the run"
 exit 0

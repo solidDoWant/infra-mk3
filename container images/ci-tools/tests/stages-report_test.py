@@ -2,7 +2,9 @@
 """Tests lib/stages-report.py's stage summary: results, failure
 reports and the size limit of the Task result."""
 
+import contextlib
 import importlib.util
+import io
 import json
 import pathlib
 import tempfile
@@ -15,8 +17,9 @@ spec.loader.exec_module(stages_report)
 
 
 # The termination message the step's share of the pod's budget keeps: the
-# pod has the step, the dind sidecar and Tekton's init containers.
-TERMINATION_BUDGET = 2304
+# pod has the step, the dind sidecar and Tekton's init containers. Measured:
+# a githubgate run's message was cut at 2048 bytes.
+TERMINATION_BUDGET = 2048
 
 
 class StagesReportTest(unittest.TestCase):
@@ -52,14 +55,29 @@ class StagesReportTest(unittest.TestCase):
         raw = summary.read_text()
         return raw, json.loads(raw)
 
-    def test_a_stage_that_exited_zero_passed_with_its_time_and_use(self):
+    def test_a_stage_that_exited_zero_passed_with_its_time(self):
         self.stage("lint", 0, stats="memory_peak 2147483648\nusage_usec 30000000\n")
         _, summaries = self.run_report("lint")
         self.assertEqual(
             summaries,
-            [{"name": "lint", "result": "passed", "started": 100, "ended": 160, "seconds": 60,
-              "memory_peak_bytes": 2147483648, "cpu_seconds": 30.0}],
+            [{"name": "lint", "result": "passed", "started": 100, "ended": 160, "seconds": 60}],
         )
+
+    def test_the_table_shows_memory_and_cpu_use(self):
+        self.stage("lint", 0, stats="memory_peak 2147483648\nusage_usec 30000000\n")
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            self.run_report("lint")
+        self.assertIn("2.0 GiB", printed.getvalue())
+        self.assertIn("0.5", printed.getvalue())
+
+    def test_many_passed_stages_and_a_long_failure_fit_the_termination_message(self):
+        names = [f"stage-{n}" for n in range(12)]
+        for name in names:
+            self.stage(name, 0, stats="memory_peak 3058642944\nusage_usec 224500000\n")
+        self.stage("e2e", 1, log="--- FAIL: TestTokenModeOnKind\n" + "z" * 20000)
+        raw, summaries = self.run_report(*names, "e2e")
+        self.assertLessEqual(len(self.termination_message(raw)), TERMINATION_BUDGET)
+        self.assertIn("--- FAIL: TestTokenModeOnKind", summaries[-1]["report"])
 
     def test_a_stage_that_exited_non_zero_failed_with_its_failure_lines_and_tail(self):
         log = "ok  a\n--- FAIL: TestPush (0.1s)\n    Error Trace: push_test.go:12\n" + "".join(f"line {n}\n" for n in range(40))
@@ -101,7 +119,7 @@ class StagesReportTest(unittest.TestCase):
     def test_the_failure_reports_use_the_space_left(self):
         self.stage("unit", 1, log="--- FAIL: TestA\n" + "y" * 10000)
         raw, _ = self.run_report("unit")
-        self.assertGreater(len(self.termination_message(raw)), TERMINATION_BUDGET - 512)
+        self.assertGreater(len(self.termination_message(raw)), TERMINATION_BUDGET - 768)
 
 
 if __name__ == "__main__":
