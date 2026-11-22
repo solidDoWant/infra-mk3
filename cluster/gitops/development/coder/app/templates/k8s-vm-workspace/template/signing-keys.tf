@@ -224,7 +224,9 @@ resource "kubernetes_job_v1" "signing_key" {
   ]
 
   metadata {
-    name        = "${local.name}-signing-key-${each.key}"
+    # The pod gets the Job name as a label (at most 63 bytes): this is 59 or
+    # 62.
+    name        = "${local.signing_key_account}-${each.key}"
     namespace   = local.namespace
     labels      = local.signing_key_job_labels
     annotations = local.annotations
