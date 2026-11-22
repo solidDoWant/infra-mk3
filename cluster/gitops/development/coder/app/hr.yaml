@@ -95,7 +95,16 @@ spec:
               - datavolumes
             verbs:
               - "*"
-          # The VM template's signing-key Jobs (coder/signing-keys)
+          # The VM template's githubgate policies (signing-keys.tf). The
+          # restrict-coder-netpol-access policy (rbac.yaml) limits what they
+          # may say.
+          - apiGroups:
+              - githubgate.soliddowant.dev
+            resources:
+              - githubaccesspolicies
+            verbs:
+              - "*"
+          # The VM template's signing-key Jobs (signing-keys.tf)
           - apiGroups:
               - batch
             resources:

@@ -8,6 +8,7 @@
   imports = [
     ./modules/ca-trust
     ./modules/git
+    ./modules/git-signing
     ./modules/persistence
     ./modules/teleport-node
     ./modules/toolgate-attestation
@@ -27,7 +28,7 @@
           version = "2.39.4";
           src = prev.fetchurl {
             url = "https://github.com/coder/coder/releases/download/v${version}/coder_${version}_linux_amd64.tar.gz";
-            hash = "sha256-Sb3QANrESPEQ4jueBxLNW1HKijRfnHBh1Z3Ty1JtT+U=";
+            hash = "sha256-tuopxRhURH51NLQ6sZ7M03484fZjk6Z8SsQlf3vf978=";
           };
         });
       })

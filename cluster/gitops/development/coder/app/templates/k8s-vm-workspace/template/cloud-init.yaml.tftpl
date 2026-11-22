@@ -17,12 +17,6 @@ bootcmd:
   # Read by coder-set-hostname.service, the authoritative hostname source (the
   # `hostname:` key above is only an early hint). Ordered before Teleport.
   - [ sh, -c, 'mkdir -p /etc/coder; printf %s "${HOSTNAME}" > /etc/coder/hostname; chmod 0644 /etc/coder/hostname' ]
-%{ if SIGNING_KEY_B64 != "" ~}
-
-  # This start's SSH signing key (signing-keys.tf), on /run (tmpfs) so it never
-  # reaches the persistent disk. Readable by the coder user only.
-  - [ sh, -c, 'install -d -m 0700 -o ${UID} -g ${UID} ${SIGNING_KEY_DIR}; umask 077; printf %s "${SIGNING_KEY_B64}" | base64 -d > ${SIGNING_KEY_DIR}/key; chown ${UID}:${UID} ${SIGNING_KEY_DIR}/key' ]
-%{ endif ~}
 
 %{ if ENABLE_NFS ~}
 # nofail/_netdev keep boot resilient if the server is unreachable.

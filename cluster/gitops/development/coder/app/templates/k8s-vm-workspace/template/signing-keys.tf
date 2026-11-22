@@ -4,12 +4,16 @@
 #
 # Every start makes a new ed25519 key (it is destroyed with the start_count, so
 # a stop drops it). A Job adds its public key to the account; at stop another
-# Job deletes it. The Jobs run as development/coder-signing-keys, whose
-# githubgate policy (coder/signing-keys) lets it list, create and delete the
-# owner's signing keys with the owner's user access token (GitHubUserAuthorization
-# ci/soliddowant). Their pods are intercepted by githubgate, so they call
-# api.github.com with no credentials. The guest gets only the private key, from
-# the cloud-init Secret into /run (tmpfs), and cannot add or delete keys.
+# Job deletes it. The guest gets the private key from a Secret, shared with the
+# VM over virtiofs (vm.tf, image modules/git-signing); it is never written in
+# the guest, and it goes with the Secret at stop. The Jobs run as this
+# workspace's coder-signing-keys-<id> ServiceAccount, whose githubgate policy
+# lets it list, create and delete the owner's signing keys with the owner's
+# user access token (GitHubUserAuthorization ci/soliddowant). The account,
+# policy and netpol live as long as the workspace, so githubgate's audit log
+# names the workspace behind every key change. Their pods are intercepted by githubgate, so they call
+# api.github.com with no credentials. The guest gets only the private key, and
+# cannot add or delete keys.
 #
 # Deleting a RUNNING workspace runs `terraform destroy` with no stop first, so
 # its key stays on the account. Its private key is gone with the VM, so the
@@ -23,16 +27,18 @@ locals {
   # workspace keeps working.
   signing_key_title = "Coder ${data.coder_workspace_owner.me.name}/${data.coder_workspace.me.name} (${data.coder_workspace.me.id})"
 
-  # In the guest: written at every boot by cloud-init (bootcmd), on /run so it
-  # never reaches the persistent disk.
-  signing_key_dir  = "/run/coder-git-signing"
-  signing_key_path = "${local.signing_key_dir}/key"
+  signing_key_secret = "${local.name}-git-signing-key"
+  # Not under coder-vm-workspace-*: the launcher pod's account must never get
+  # a user rule (the coder Kyverno policy in coder/app/rbac.yaml).
+  signing_key_account = "coder-signing-keys-${data.coder_workspace.me.id}"
+  # In the guest: the Secret's `key`, through the image's git-signing module.
+  signing_key_path = "/run/coder-git-signing/key"
 
   signing_key_job_labels = merge(local.labels, {
-    # Overrides the coder-workspace name: the coder-signing-keys netpol selects
-    # these pods, the workspace netpol must not.
+    # Overrides the coder-workspace name: the workspace netpol must not select
+    # these pods; the signing-key netpol below does.
     "app.kubernetes.io/name"     = "coder-signing-keys"
-    "app.kubernetes.io/instance" = "coder-signing-keys-${data.coder_workspace.me.id}"
+    "app.kubernetes.io/instance" = local.signing_key_account
     # githubgate injects its interceptor into labelled pods only.
     "githubgate.soliddowant.dev/inject" = "true"
   })
@@ -41,10 +47,160 @@ locals {
   signing_key_job_image = "mirror.gcr.io/alpine/k8s:1.37.2@sha256:dcb7185e112a453aa72f426754849a97357727ef8f40168fb208c8cf59952042"
 }
 
+resource "kubernetes_service_account_v1" "signing_keys" {
+  metadata {
+    name        = local.signing_key_account
+    namespace   = local.namespace
+    labels      = local.labels
+    annotations = local.annotations
+  }
+
+  # githubgate mounts its own projected token in the interceptor only.
+  automount_service_account_token = false
+}
+
+resource "kubectl_manifest" "signing_keys_policy" {
+  server_side_apply = true
+  wait              = false
+  ignore_fields     = ["status"]
+
+  yaml_body = yamlencode({
+    apiVersion = "githubgate.soliddowant.dev/v1alpha1"
+    kind       = "GitHubAccessPolicy"
+    metadata = {
+      name        = local.signing_key_account
+      namespace   = local.namespace
+      labels      = local.labels
+      annotations = local.annotations
+    }
+    spec = {
+      serviceAccounts = [kubernetes_service_account_v1.signing_keys.metadata[0].name]
+      rules = [
+        {
+          name = "signing-keys"
+          userAuthorizationRef = {
+            namespace = "ci"
+            name      = "soliddowant"
+          }
+          proxy = {
+            enabled = true
+            allowOperations = [
+              "users/list-ssh-signing-keys-for-authenticated-user",
+              "users/create-ssh-signing-key-for-authenticated-user",
+              "users/delete-ssh-signing-key-for-authenticated-user",
+            ]
+          }
+        }
+      ]
+    }
+  })
+}
+
+# The Jobs' pods reach only DNS and githubgate's proxy, which the injected
+# interceptor sends the GitHub requests to. Nothing goes to GitHub directly.
+resource "kubectl_manifest" "signing_keys_netpol" {
+  server_side_apply = true
+  # cilium-operator writes derived state back (see the workspace netpol).
+  force_conflicts = true
+  wait            = true
+  ignore_fields   = ["status"]
+
+  yaml_body = yamlencode({
+    apiVersion = "cilium.io/v2"
+    kind       = "CiliumNetworkPolicy"
+    metadata = {
+      name      = local.signing_key_account
+      namespace = local.namespace
+      # The coder-workspace label: the coder SA may only manage those netpols.
+      labels = local.labels
+    }
+    specs = [
+      {
+        description = "coder-signing-keys"
+        endpointSelector = {
+          matchLabels = {
+            "app.kubernetes.io/name"     = "coder-signing-keys"
+            "app.kubernetes.io/instance" = local.signing_key_account
+          }
+        }
+        egress = [
+          {
+            toEndpoints = [
+              {
+                matchLabels = {
+                  "io.kubernetes.pod.namespace"             = "networking"
+                  "endpoints.netpols.home.arpa/cluster-dns" = "true"
+                }
+              }
+            ]
+            toPorts = [
+              {
+                ports = [
+                  {
+                    port     = "53"
+                    protocol = "UDP"
+                  },
+                  {
+                    port     = "53"
+                    protocol = "TCP"
+                  }
+                ]
+                rules = {
+                  dns = [
+                    {
+                      matchPattern = "*"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            toEndpoints = [
+              {
+                matchLabels = {
+                  "io.kubernetes.pod.namespace" = "ci"
+                  "app.kubernetes.io/name"      = "githubgate"
+                  "app.kubernetes.io/instance"  = "githubgate"
+                }
+              }
+            ]
+            toPorts = [
+              {
+                ports = [
+                  {
+                    port     = "9443"
+                    protocol = "TCP"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  })
+}
+
 resource "tls_private_key" "git_signing" {
   count = local.signing_key_enabled ? 1 : 0
 
   algorithm = "ED25519"
+}
+
+resource "kubernetes_secret_v1" "git_signing" {
+  count = local.signing_key_enabled ? 1 : 0
+
+  metadata {
+    name        = local.signing_key_secret
+    namespace   = local.namespace
+    labels      = local.labels
+    annotations = local.annotations
+  }
+
+  data = {
+    key = tls_private_key.git_signing[0].private_key_openssh
+  }
 }
 
 locals {
@@ -61,6 +217,11 @@ locals {
 
 resource "kubernetes_job_v1" "signing_key" {
   for_each = local.signing_key_jobs
+
+  depends_on = [
+    kubectl_manifest.signing_keys_policy,
+    kubectl_manifest.signing_keys_netpol,
+  ]
 
   metadata {
     name        = "${local.name}-signing-key-${each.key}"
@@ -80,7 +241,7 @@ resource "kubernetes_job_v1" "signing_key" {
       }
 
       spec {
-        service_account_name = "coder-signing-keys"
+        service_account_name = kubernetes_service_account_v1.signing_keys.metadata[0].name
         # githubgate mounts its own projected token in the interceptor only.
         automount_service_account_token = false
         restart_policy                  = "Never"
@@ -177,8 +338,8 @@ resource "coder_script" "git_signing" {
       git config --global tag.gpgsign true
       echo "Commits are signed with this workspace's key (${local.signing_key_path})"
     else
-      # No key (cloud-init did not write it): don't leave git pointing at a
-      # missing key, or every commit fails.
+      # No key (the share is missing): don't leave git pointing at a missing
+      # key, or every commit fails.
       case "$(git config --global --get user.signingkey || true)" in
       "${local.signing_key_path}" | *git-commit-signing/coder)
         git config --global --unset user.signingkey
