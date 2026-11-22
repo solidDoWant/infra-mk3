@@ -20,8 +20,11 @@ locals {
   github_integration_order_start = 0
   github_integration_size        = 2
 
-  # The installation's owner. Repository names in the policy are under it.
-  github_owner = "solidDoWant"
+  # The installation's owner, also the user the signing keys are added for
+  # (GitHubUserAuthorization ci/soliddowant). Repository names in the policy
+  # are under it. The id is GitHub's (public, fixed) user id.
+  github_owner    = "solidDoWant"
+  github_owner_id = 16456946
 }
 
 data "coder_parameter" "github_access" {
@@ -133,7 +136,24 @@ locals {
     }
   }
 
-  github_repository_rules = local.github_access != "none" && length(local.github_repositories) > 0 ? [
+  # A GraphQL request gets one token for every exact repository name in the
+  # caller's rules, at the lowest level any of them has (githubgate can't tell
+  # which repositories a query touches). So the rules below never put an
+  # exact repository with less access next to the chosen ones: a read-only
+  # one would make every GraphQL write (gh pr create) fail. Rules with only
+  # `*` patterns don't take part in GraphQL tokens.
+  github_main_rule_exact = length([for name in local.github_repositories : name if !strcontains(name, "*")]) > 0
+  github_main_rule       = local.github_access != "none" && length(local.github_repositories) > 0
+
+  # Public repositories of other owners (git clone, nix flake inputs, the REST
+  # API) and github.com downloads (releases). publicRead needs a rule naming a
+  # repository without `*`, so it goes on the main rule when that names one.
+  github_public_proxy = {
+    publicRead = true
+    webPaths   = true
+  }
+
+  github_repository_rules = local.github_main_rule ? [
     {
       name = "repositories"
       installationRef = {
@@ -142,31 +162,52 @@ locals {
       }
       repositories = local.github_repositories
       permissions  = local.github_presets[local.github_access].permissions
-      proxy        = merge({ enabled = true }, local.github_presets[local.github_access].proxy)
+      proxy = merge(
+        { enabled = true },
+        local.github_presets[local.github_access].proxy,
+        local.github_main_rule_exact ? local.github_public_proxy : {},
+      )
     }
   ] : []
 
-  # Every workspace: public repositories of other owners (git clone, nix
-  # flake inputs, the REST API) and github.com downloads (releases), plus
-  # reading toolgate, whose Claude Code plugin marketplace the workspace
-  # clones (toolgate.tf). publicRead needs a rule naming a repository without
-  # `*`; githubgate limits its read-only token to these repositories.
-  github_public_rule = {
-    name = "public"
-    installationRef = {
-      namespace = "ci"
-      name      = "soliddowant"
-    }
-    repositories = ["toolgate"]
-    permissions = {
-      contents = "read"
-    }
-    proxy = {
-      enabled    = true
-      publicRead = true
-      webPaths   = true
-    }
-  }
+  github_other_rules = concat(
+    [
+      # Reading toolgate, whose Claude Code plugin marketplace the workspace
+      # clones (toolgate.tf). A pattern, so it stays out of GraphQL tokens.
+      {
+        name = "toolgate"
+        installationRef = {
+          namespace = "ci"
+          name      = "soliddowant"
+        }
+        repositories = ["toolgate*"]
+        permissions = {
+          contents = "read"
+        }
+        proxy = {
+          enabled = true
+        }
+      }
+    ],
+    # Without a main rule naming an exact repository (None, or "*"), public
+    # reads need a rule of their own. GraphQL then reaches only toolgate,
+    # read-only; with "*" it can't reach the chosen repositories anyway
+    # (githubgate needs exact names for GraphQL).
+    local.github_main_rule_exact ? [] : [
+      {
+        name = "public"
+        installationRef = {
+          namespace = "ci"
+          name      = "soliddowant"
+        }
+        repositories = ["toolgate"]
+        permissions = {
+          contents = "read"
+        }
+        proxy = merge({ enabled = true }, local.github_public_proxy)
+      }
+    ],
+  )
 }
 
 # Resources
@@ -201,16 +242,18 @@ resource "kubectl_manifest" "github_policy" {
     }
     spec = {
       serviceAccounts = [kubernetes_service_account_v1.workspace.metadata[0].name]
-      rules           = concat(local.github_repository_rules, [local.github_public_rule])
+      rules           = concat(local.github_repository_rules, local.github_other_rules)
     }
   })
 }
 
-# git identity: the owner's Coder account. For GitHub to show commits as
-# Verified, the email must be a verified email of the GitHub account.
+# git identity. For GitHub to show a commit as Verified, the committer email
+# must belong to the account the signing key is on (signing-keys.tf: the
+# GitHubUserAuthorization's login). The account's noreply address always
+# does; the Coder account's email may not (it gave "unknown_key").
 locals {
   git_name  = data.coder_workspace_owner.me.full_name != "" ? data.coder_workspace_owner.me.full_name : data.coder_workspace_owner.me.name
-  git_email = data.coder_workspace_owner.me.email
+  git_email = "${local.github_owner_id}+${local.github_owner}@users.noreply.github.com"
 }
 
 resource "coder_env" "git_author_name" {
