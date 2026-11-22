@@ -67,14 +67,20 @@ spec:
       # collaborators, org members and OWNERS-file entries, and lets them
       # drive it from comments. Here:
       # - Pull requests are only delivered if they were opened by my account
-      #   (16456946, solidDoWant) or the Renovate bot (338430720,
-      #   infra-mk3-renovate-operator[bot]). That covers pull_request events,
-      #   reviews and review comments, and comments on the pull request.
+      #   (16456946, solidDoWant), the Renovate bot (338430720,
+      #   infra-mk3-renovate-operator[bot]) or the githubgate App's bot
+      #   (359098002, ghgate[bot]): the agent VMs act as that App through
+      #   githubgate, which also sends any other githubgate caller's requests
+      #   (each limited by its GitHubAccessPolicy, written only by Flux and the
+      #   Coder template). That covers pull_request events, reviews and review
+      #   comments, and comments on the pull request.
       # - Comment commands (/ok-to-test, /test, /retest, /cancel,
-      #   comment-triggered pipelines) and "Re-run" clicks (rerequested check
-      #   runs and suites) are only delivered from my account.
+      #   comment-triggered pipelines) are only delivered from my account or
+      #   ghgate[bot] (the agents' /retest); "Re-run" clicks (rerequested check
+      #   runs and suites) only from my account.
       # - Pushes (branches and tags) are only delivered if they were made by my
-      #   account or the Renovate bot.
+      #   account, the Renovate bot or ghgate[bot] (agent pushes, release tags,
+      #   and merges of PRs whose auto-merge the agents armed).
       # Matching is on account IDs, which survive a rename (and a freed login
       # can't be re-registered under them). These events are enforced with the
       # CRS removed, so PR, comment and commit text can't trip it; other events
@@ -96,7 +102,7 @@ spec:
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1022,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment or review from another account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:pull_request_review|pull_request_review_comment|issue_comment|commit_comment)$" "chain"
-          SecRule ARGS_POST:json.sender.id "!@rx ^(?:16456946)$" "t:none"
+          SecRule ARGS_POST:json.sender.id "!@rx ^(?:16456946|359098002)$" "t:none"
       # Pull request events, reviews and review comments: the pull request
       # must be opened by me or the Renovate bot.
       SecRule TX:pac_gated_event "@eq 1" \
@@ -106,7 +112,7 @@ spec:
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1024,phase:2,deny,status:403,log,msg:'Pipelines-as-Code pull request not opened by an allowed account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@rx ^(?:pull_request|pull_request_review|pull_request_review_comment)$" "chain"
-          SecRule ARGS_POST:json.pull_request.user.id "!@rx ^(?:16456946|338430720)$" "t:none"
+          SecRule ARGS_POST:json.pull_request.user.id "!@rx ^(?:16456946|338430720|359098002)$" "t:none"
       # Comments on pull requests (and issues): the pull request must be
       # opened by me or the Renovate bot.
       SecRule TX:pac_gated_event "@eq 1" \
@@ -116,7 +122,7 @@ spec:
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1026,phase:2,deny,status:403,log,msg:'Pipelines-as-Code comment on a pull request not opened by an allowed account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@streq issue_comment" "chain"
-          SecRule ARGS_POST:json.issue.user.id "!@rx ^(?:16456946|338430720)$" "t:none"
+          SecRule ARGS_POST:json.issue.user.id "!@rx ^(?:16456946|338430720|359098002)$" "t:none"
       # "Re-run" clicks in GitHub: the sender must be me.
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1027,phase:2,deny,status:403,log,msg:'Pipelines-as-Code check re-run (missing)',chain"
@@ -135,6 +141,6 @@ spec:
       SecRule TX:pac_gated_event "@eq 1" \
         "id:1030,phase:2,deny,status:403,log,msg:'Pipelines-as-Code push from another account',chain"
         SecRule REQUEST_HEADERS:X-GitHub-Event "@streq push" "chain"
-          SecRule ARGS_POST:json.sender.id "!@rx ^(?:16456946|338430720)$" "t:none"
+          SecRule ARGS_POST:json.sender.id "!@rx ^(?:16456946|338430720|359098002)$" "t:none"
       Include @crs-setup-conf
       Include @owasp_crs/*.conf
