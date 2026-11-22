@@ -30,8 +30,8 @@ cd "$REPO_DIR" || exit 1
 # runs under `nix develop`; agents then had to prefix commands with
 # `nix develop -c`, which the worktree guard often rejects. Instead, export
 # the dev shell as a file that Claude Code sources before every Bash command.
-# ~/.local/bin goes last-but-first so the coder gh wrapper (fresh GitHub token
-# per call) wins.
+# ~/.local/bin goes first, for tools installed there (claude, toolgate). gh
+# needs no token helper: the VM reaches GitHub through githubgate.
 ENV_FILE="$REPO_DIR/.pm/devenv.sh"
 refresh_env_file() {
   if nix print-dev-env "$REPO_DIR" >"$ENV_FILE.tmp" 2>"$LOG_DIR/devenv.stderr"; then
@@ -85,8 +85,8 @@ while true; do
   ts="$(date -u +%Y%m%dT%H%M%SZ)"
   log="$LOG_DIR/cycle-$ts.jsonl"
   start=$(date +%s)
-  # The PM's own Bash calls source CLAUDE_ENV_FILE too; ~/.local/bin first so
-  # the coder gh wrapper wins.
+  # The PM's own Bash calls source CLAUDE_ENV_FILE too; ~/.local/bin first for
+  # the tools installed there.
   PATH="$HOME/.local/bin:$PATH" claude -p "$PROMPT" \
     --dangerously-skip-permissions \
     --model "$MODEL" \
