@@ -90,8 +90,7 @@ resource "kubernetes_secret_v1" "cloudinit" {
       # URL, CA, etc.) is supplied per-workspace.
       AGENT_ENV_B64  = base64encode(join("\n", [for k, v in local.env_vars : "${k}=${v}"]))
       ENABLE_NFS     = local.enable_nfs
-      NFS_ADDRESS    = local.nfs_address
-      NFS_PATH       = local.nfs_path
+      NFS_TAG        = local.nfs_tag
       NFS_MOUNT_PATH = local.nfs_mount_path
     })
   }
@@ -247,6 +246,13 @@ resource "kubectl_manifest" "vm" {
                   name     = "toolgate-token"
                   virtiofs = {}
                 }
+                ] : [], local.enable_nfs ? [
+                {
+                  # The bulk-pool-01 NFS pool (see the volume below), mounted
+                  # by cloud-init at local.nfs_mount_path.
+                  name     = local.nfs_tag
+                  virtiofs = {}
+                }
               ] : [])
               interfaces = [
                 {
@@ -339,6 +345,16 @@ resource "kubectl_manifest" "vm" {
               name = "toolgate-token"
               containerPath = {
                 path = "/var/run/secrets/toolgate"
+              }
+            }
+            ] : [], local.enable_nfs ? [
+            {
+              # The kubelet mounts the NFS pool (coder/app/vm-workspace-nfs.yaml)
+              # and virtiofsd shares it with the guest. Read-write where the
+              # pool lets any user write; virtiofsd runs as uid 107.
+              name = local.nfs_tag
+              persistentVolumeClaim = {
+                claimName = local.nfs_pvc_name
               }
             }
             ] : [], [
