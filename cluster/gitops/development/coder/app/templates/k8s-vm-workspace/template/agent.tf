@@ -98,7 +98,8 @@ resource "coder_env" "coder_url" {
 }
 
 locals {
-  # Whether the plan runs for a workspace, not for a template push (where
-  # Coder gives no workspace name).
-  is_workspace_plan = data.coder_workspace.me.name != ""
+  # Whether the plan runs for a workspace build, not for a template push or a
+  # local plan. The provider defaults the workspace name to "default" outside
+  # a build, but the owner's session token is set only in one.
+  is_workspace_plan = data.coder_workspace_owner.me.session_token != ""
 }
