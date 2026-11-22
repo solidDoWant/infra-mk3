@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Gives every CI stage its own check run on the commit, from the stages
+result ci-stages wrote, and fails when a stage failed or the result is
+missing. Runs in the shared Pipelines' report task (finally), as ci-report,
+whose only GitHub access (githubgate's interceptor) is creating check runs;
+it runs no code from the repository.
+
+    STAGES=<stages.json content> CI_REPO=owner/name CI_REVISION=<sha> \\
+      DETAILS_URL=<url> ci-report
+
+A check run GitHub refuses is reported, not fatal: only a failed stage fails
+the run. CI_GITHUB_API_URL replaces the GitHub endpoint (tests).
+"""
+import datetime
+import json
+import os
+import sys
+import urllib.request
+
+API = os.environ.get("CI_GITHUB_API_URL", "https://api.github.com")
+
+
+def iso(seconds):
+    return datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def main():
+    try:
+        stages = json.loads(os.environ.get("STAGES", ""))
+    except ValueError:
+        print("ci left no stages result: it did not finish", file=sys.stderr)
+        return 1
+    repo, revision = os.environ["CI_REPO"], os.environ["CI_REVISION"]
+    failed = []
+    for stage in stages:
+        passed = stage["result"] == "passed"
+        if not passed:
+            failed.append(stage["name"])
+        title = f"{stage['name']} {stage['result']} in {stage['seconds']}s"
+        print(title)
+        body = {
+            "name": "stage: " + stage["name"],
+            "head_sha": revision,
+            "status": "completed",
+            "conclusion": "success" if passed else "failure",
+            "started_at": iso(stage["started"]),
+            "completed_at": iso(stage["ended"]),
+            "details_url": os.environ.get("DETAILS_URL", ""),
+            "output": {"title": title, "summary": title, "text": stage.get("report", "")},
+        }
+        request = urllib.request.Request(
+            f"{API}/repos/{repo}/check-runs",
+            data=json.dumps(body).encode(),
+            method="POST",
+            headers={"Accept": "application/vnd.github+json"},
+        )
+        try:
+            urllib.request.urlopen(request, timeout=30).close()
+        except Exception as error:  # noqa: BLE001 - reported, not fatal
+            print(f"check run for {stage['name']} not created: {error}", file=sys.stderr)
+    if failed:
+        print("failed stages: " + ", ".join(failed), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

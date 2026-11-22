@@ -1,0 +1,79 @@
+---
+# Publishes ci-tools when master changes it: the same tests as a pull request,
+# then the image, pushed to ghcr.io/soliddowant/ci-tools under a content
+# hash. The run prints the digest reference, which the shared Pipelines in
+# ci-tekton pin (the -next ones first; see cluster/gitops/ci/tekton/pipelines).
+# Runs as ci-release (this repository's release ref is master), the only
+# ServiceAccount registrygate lets push.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: ci-tools-push-
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "push" &&
+      target_branch == "master" &&
+      "container images/ci-tools/***".pathChanged()
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+  timeouts:
+    pipeline: 1h
+  taskRunTemplate:
+    serviceAccountName: ci-release
+  workspaces:
+    # An emptyDir, never a claim: a claim makes Tekton start an
+    # affinity-assistant pod, which the cluster refuses to run as ci-release.
+    - name: source
+      emptyDir: {}
+  taskRunSpecs:
+    - pipelineTaskName: publish
+      sidecarSpecs:
+        - name: dind
+          computeResources:
+            requests:
+              cpu: "4"
+              memory: 8Gi
+            limits:
+              memory: 8Gi
+  pipelineSpec:
+    params:
+      - name: repo_url
+        type: string
+      - name: revision
+        type: string
+    workspaces:
+      - name: source
+    tasks:
+      - name: publish
+        taskRef:
+          resolver: cluster
+          params:
+            - name: kind
+              value: task
+            - name: name
+              value: docker
+            - name: namespace
+              value: ci-tekton
+        params:
+          - name: script
+            value: |
+              set -eu
+              apk add --no-cache make git >/dev/null
+              git init -q src
+              cd src
+              git remote add origin "$(params.repo_url)"
+              git fetch -q --depth 1 origin "$(params.revision)"
+              git checkout -q --detach "$(params.revision)"
+              cd "container images/ci-tools"
+              export CI_REPO="{{ repo_owner }}/{{ repo_name }}" CI_CPUS=4
+              make test
+              make e2e E2E_WORKSPACE=/workspace/source/e2e
+              make push
+        workspaces:
+          - name: source
+            workspace: source

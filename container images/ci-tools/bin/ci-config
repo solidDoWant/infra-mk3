@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""Reads and checks a project's ci.yaml, the only CI configuration a project
+has. Every other ci-tools command reads ci.yaml through this one.
+
+    ci-config check   [FILE]         check it, print nothing (exit 1 with the field at fault)
+    ci-config json    [FILE]         print it, checked and with defaults filled in, as JSON
+    ci-config stages  EVENT [FILE] < changed-files
+                                     print the stages EVENT runs, in ci.yaml order
+    ci-config release-check [FILE]   also require a `release` section
+
+FILE defaults to ./ci.yaml. EVENT is pull_request, push or release.
+
+ci.yaml, version 1:
+
+    version: 1
+    image:                    # the project's CI image: the dev shell of flake.nix
+      inputs:                 # extra files the dev shell depends on, besides
+        - path: go.mod        # flake.nix and flake.lock
+          lines: '^(module|go|toolchain) '   # optional: keep only these lines
+    env:                      # extra variables for every stage
+      E2E_CLUSTER: myproject-ci
+    not-code: ["*.md", "docs/**"]   # paths that can't change the build or tests
+    stages:                   # run at once, each in its own container
+      lint:
+        run: make lint
+      unit:
+        run: make test && make build
+      generate:
+        run: make check-generate
+        own-tree: true        # a copy of the checkout (the stage rewrites files)
+      e2e:
+        run: make test-e2e
+        kind: true            # creates kind clusters; starts first
+        with: ./test/e2e/build-images.sh   # started next to it; not a stage
+      docs:
+        run: make docs-check
+        run-pull-request: make docs-check && ./scripts/docs/style_report.sh || true
+        paths: ["**/*.md", "docs/**"]
+    cleanup:
+      keep-images: ./scripts/ci/e2e-images.sh --node   # prints images to keep
+    test-guard: true          # run `make test-guard` on pull requests
+    release:
+      assets: make release-assets   # writes files into $RELEASE_ASSETS
+      build: make build-images VERSION="$RELEASE_VERSION" PUSH_ALL=true
+      images: [ghcr.io/soliddowant/myproject]   # tagged latest on a final version
+      charts: [deploy/charts/myproject]
+      chart-registry: oci://ghcr.io/soliddowant/charts
+
+Which stages a pull request runs: a stage with `paths` runs when a changed
+file matches one of them; a stage without `paths` runs when a changed file
+is not `not-code`. A push runs every stage with `push` not false. A release
+runs only the release. Globs: `*` stays inside one path segment, `**` spans
+any number of segments.
+"""
+import json
+import pathlib
+import re
+import sys
+
+import yaml
+
+STAGE_NAME = re.compile(r"^[a-z][a-z0-9-]{0,30}$")
+RESERVED = {"release", "cleanup"}
+TOP = {"version", "image", "env", "not-code", "stages", "cleanup", "test-guard", "release"}
+STAGE_KEYS = {"run", "run-pull-request", "paths", "push", "own-tree", "kind", "with"}
+RELEASE_KEYS = {"assets", "build", "images", "charts", "chart-registry"}
+
+
+class Invalid(Exception):
+    pass
+
+
+def need(cond, where, what):
+    if not cond:
+        raise Invalid(f"ci.yaml: {where}: {what}")
+
+
+def strings(value, where):
+    need(isinstance(value, list) and all(isinstance(v, str) and v for v in value), where, "must be a list of non-empty strings")
+    return value
+
+
+def command(value, where):
+    need(isinstance(value, str) and value.strip(), where, "must be a non-empty shell command")
+    return value
+
+
+def load(path):
+    try:
+        with open(path) as f:
+            doc = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise Invalid(f"{path}: missing (every project needs a ci.yaml)")
+    except yaml.YAMLError as error:
+        raise Invalid(f"{path}: not valid YAML: {error}")
+    return normalize(doc)
+
+
+def normalize(doc):
+    need(isinstance(doc, dict), "top level", "must be a mapping")
+    unknown = set(doc) - TOP
+    need(not unknown, "top level", f"unknown keys {sorted(unknown)}")
+    need(doc.get("version") == 1, "version", "must be 1")
+
+    image = doc.get("image") or {}
+    need(isinstance(image, dict) and set(image) <= {"inputs"}, "image", "may only have `inputs`")
+    inputs = []
+    for i, entry in enumerate(image.get("inputs") or []):
+        where = f"image.inputs[{i}]"
+        need(isinstance(entry, dict) and set(entry) <= {"path", "lines"} and entry.get("path"), where, "needs `path` (and optional `lines`)")
+        need(not pathlib.PurePosixPath(entry["path"]).is_absolute() and ".." not in entry["path"].split("/"), where, "must be a path inside the repository")
+        if "lines" in entry:
+            try:
+                re.compile(entry["lines"])
+            except re.error as error:
+                raise Invalid(f"ci.yaml: {where}.lines: not a valid regular expression: {error}")
+        inputs.append({"path": entry["path"], "lines": entry.get("lines")})
+
+    env = doc.get("env") or {}
+    need(isinstance(env, dict), "env", "must be a mapping")
+    for key, value in env.items():
+        need(re.fullmatch(r"[A-Z_][A-Z0-9_]*", str(key)), f"env.{key}", "must be an upper-case variable name")
+        need(isinstance(value, (str, int, bool)), f"env.{key}", "must be a string")
+        need(not str(key).startswith("CI_"), f"env.{key}", "CI_ names are ci-tools' own")
+    env = {str(k): str(v).lower() if isinstance(v, bool) else str(v) for k, v in env.items()}
+
+    not_code = strings(doc.get("not-code") or [], "not-code")
+
+    stages = doc.get("stages")
+    need(isinstance(stages, dict) and stages, "stages", "must name at least one stage")
+    out_stages = {}
+    for name, stage in stages.items():
+        where = f"stages.{name}"
+        need(isinstance(name, str) and STAGE_NAME.match(name), where, "names are lower-case letters, digits and dashes")
+        need(name not in RESERVED, where, f"`{name}` is reserved")
+        need(isinstance(stage, dict), where, "must be a mapping")
+        unknown = set(stage) - STAGE_KEYS
+        need(not unknown, where, f"unknown keys {sorted(unknown)}")
+        out_stages[name] = {
+            "run": command(stage.get("run"), f"{where}.run"),
+            "run-pull-request": command(stage["run-pull-request"], f"{where}.run-pull-request") if "run-pull-request" in stage else None,
+            "paths": strings(stage["paths"], f"{where}.paths") if "paths" in stage else None,
+            "push": bool(stage.get("push", True)),
+            "own-tree": bool(stage.get("own-tree", False)),
+            "kind": bool(stage.get("kind", False)),
+            "with": command(stage["with"], f"{where}.with") if "with" in stage else None,
+        }
+
+    cleanup = doc.get("cleanup") or {}
+    need(isinstance(cleanup, dict) and set(cleanup) <= {"keep-images"}, "cleanup", "may only have `keep-images`")
+    keep_images = command(cleanup["keep-images"], "cleanup.keep-images") if "keep-images" in cleanup else None
+
+    test_guard = doc.get("test-guard", False)
+    need(isinstance(test_guard, bool), "test-guard", "must be true or false")
+
+    release = None
+    if "release" in doc:
+        r = doc["release"]
+        need(isinstance(r, dict), "release", "must be a mapping")
+        unknown = set(r) - RELEASE_KEYS
+        need(not unknown, "release", f"unknown keys {sorted(unknown)}")
+        images = strings(r.get("images") or [], "release.images")
+        charts = strings(r.get("charts") or [], "release.charts")
+        need(not charts or r.get("chart-registry"), "release.chart-registry", "needed when `charts` are listed")
+        if r.get("chart-registry"):
+            need(str(r["chart-registry"]).startswith("oci://"), "release.chart-registry", "must be an oci:// URL")
+        need(not images or r.get("build"), "release.build", "needed when `images` are listed (it builds and pushes them)")
+        release = {
+            "assets": command(r["assets"], "release.assets") if "assets" in r else None,
+            "build": command(r["build"], "release.build") if "build" in r else None,
+            "images": images,
+            "charts": charts,
+            "chart-registry": r.get("chart-registry"),
+        }
+        need(any(release[k] for k in ("assets", "build", "charts")), "release", "publishes nothing")
+
+    return {
+        "version": 1,
+        "image": {"inputs": inputs},
+        "env": env,
+        "not-code": not_code,
+        "stages": out_stages,
+        "cleanup": {"keep-images": keep_images},
+        "test-guard": test_guard,
+        "release": release,
+    }
+
+
+def matches(path, patterns):
+    pure = pathlib.PurePosixPath(path)
+    return any(pure.full_match(p) for p in patterns)
+
+
+def select(config, event, files):
+    if event == "release":
+        return ["release"]
+    stages = config["stages"]
+    if event == "push":
+        return [name for name, s in stages.items() if s["push"]]
+    code = any(not matches(f, config["not-code"]) for f in files)
+    chosen = []
+    for name, s in stages.items():
+        if s["paths"] is not None:
+            if any(matches(f, s["paths"]) for f in files):
+                chosen.append(name)
+        elif code:
+            chosen.append(name)
+    return chosen
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__, file=sys.stderr)
+        return 2
+    cmd, rest = argv[1], argv[2:]
+    try:
+        if cmd in ("check", "json", "release-check"):
+            config = load(rest[0] if rest else "ci.yaml")
+            if cmd == "release-check":
+                need(config["release"], "release", "missing: this project's ci.yaml publishes no release")
+            if cmd == "json":
+                print(json.dumps(config, indent=2))
+            return 0
+        if cmd == "stages":
+            if not rest or rest[0] not in ("pull_request", "push", "release"):
+                print("usage: ci-config stages pull_request|push|release [FILE] < changed-files", file=sys.stderr)
+                return 2
+            config = load(rest[1] if len(rest) > 1 else "ci.yaml")
+            files = [line.strip() for line in sys.stdin if line.strip()] if rest[0] == "pull_request" else []
+            print(" ".join(select(config, rest[0], files)))
+            return 0
+    except Invalid as error:
+        print(error, file=sys.stderr)
+        return 1
+    print(__doc__, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

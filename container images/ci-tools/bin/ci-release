@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Publishes a release of the project, from the shared release Pipeline in
+# ci-tekton (a version-tag push; it runs as ci-release, the only
+# ServiceAccount registrygate lets push and githubgate lets create releases).
+# It holds no registry credential and no GitHub token: registrygate pushes
+# for it, and githubgate's interceptor sends its GitHub requests.
+#
+#   ci-release <version>|v<version>      # from the checkout's root
+#
+# Same environment and $WS/ci/pod/ files as ci-stages. In order, each step
+# safe to run again for the same version:
+#   1. the assets: ci.yaml release.assets in the project's CI image writes
+#      files into $RELEASE_ASSETS, then checksums.txt is added. First, so a
+#      build failure stops the release before anything is pushed;
+#   2. the images: release.build in the CI image (it builds and pushes them);
+#   3. for a final version (no -rc.K suffix), release.images tagged latest;
+#   4. the charts: packaged at the version and pushed to release.chart-registry;
+#   5. the GitHub release (notes: the `## <version>` section of CHANGELOG.md)
+#      if it is missing, and the assets it lacks.
+# CI_RELEASE_DRY_RUN=true prints the publishing commands instead (tests).
+set -euo pipefail
+version="${1:?usage: ci-release <version>}"
+version="${version#v}"
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+	echo "ci-release: '$version' is not a release version (X.Y.Z or X.Y.Z-rc.K)" >&2
+	exit 1
+fi
+: "${WS:?WS must name the Task workspace}" "${CI_REPO:?CI_REPO must name the repository (owner/name)}"
+lib=/ci-tools/lib
+src="$WS/src"
+ci="$WS/ci"
+pod="$ci/pod"
+mkdir -p "$ci/bin" "$ci/docker" "$ci/tools"
+cd "$src"
+ci-config release-check
+config=$(ci-config json)
+project="${CI_REPO#*/}"
+dry="${CI_RELEASE_DRY_RUN:-false}"
+run() {
+	if [[ "$dry" == true ]]; then echo "would run: $*"; else "$@"; fi
+}
+
+# The stage environment, as ci-stages builds it.
+SYSTEM_CA="$pod/system-ca.crt" TRUST_DIR="$pod/trust" SSL_CERT_FILE="$pod/ssl-cert-file" \
+	sh "$lib/ca-bundle.sh" "$ci/ca-bundle.crt"
+f=$(find /etc/docker/certs.d -mindepth 2 -maxdepth 2 -name ca.crt 2>/dev/null | head -n1 || true)
+if [ -n "$f" ]; then cat "$f" >>"$ci/ca-bundle.crt"; fi
+if [ -x "$pod/docker-credential-registrygate" ]; then
+	cp "$pod/docker-credential-registrygate" "$ci/bin/"
+	cp "$pod/token" "$ci/token"
+fi
+if [ -f "$pod/docker-config.json" ]; then cp "$pod/docker-config.json" "$ci/docker/config.json"; fi
+cp "$lib/stage-env.sh" "$lib/github-api-check.py" "$lib/github_https.py" "$lib/upload-release-assets.py" "$ci/tools/"
+# This container's own tools trust the same bundle and use the same
+# registrygate credentials as the stage containers.
+export CI_CA="$ci/ca-bundle.crt"
+# shellcheck disable=SC1091
+source "$lib/stage-env.sh"
+export DOCKER_CONFIG="$ci/docker" PATH="$ci/bin:$PATH" REGISTRYGATE_TOKEN_FILE="$ci/token"
+
+image=$(ci-image "$project")
+env_args=()
+while IFS=$'\t' read -r key value; do
+	[ -n "$key" ] && env_args+=(-e "$key=$value")
+done < <(jq -r '.env | to_entries[] | [.key, .value] | @tsv' <<<"$config")
+in_stage() {
+	docker run --rm --network host -v "$WS:$WS" -w "$src" \
+		-e DOCKER_HOST=tcp://127.0.0.1:2375 -e DOCKER_CONFIG="$ci/docker" \
+		-e REGISTRYGATE_HOSTS="${REGISTRYGATE_HOSTS:-}" -e REGISTRYGATE_TOKEN_FILE="$ci/token" \
+		-e CI_BIN="$ci/bin" -e CI_CA="$ci/ca-bundle.crt" -e CI_REPO="$CI_REPO" -e CI_TOOLS_DIR="$ci/tools" \
+		-e RELEASE_VERSION="$version" -e RELEASE_ASSETS="$ci/release-assets" \
+		"${env_args[@]}" -e STAGE_COMMAND="$1" "$image" bash -c '
+			source /etc/devshell.sh
+			source "$CI_TOOLS_DIR/stage-env.sh"
+			export PATH="$CI_BIN:$PATH"
+			git config --global --add safe.directory "*"
+			bash -c "set -e; $STAGE_COMMAND"
+		'
+}
+
+# The release reaches GitHub over verified TLS on the upload's own code path.
+python3 -I "$lib/github-api-check.py" "$CI_REPO"
+
+assets_cmd=$(jq -r '.release.assets // empty' <<<"$config")
+rm -rf "$ci/release-assets"
+mkdir -p "$ci/release-assets"
+if [[ -n "$assets_cmd" ]]; then
+	echo "ci-release: building the assets ($assets_cmd)"
+	in_stage "$assets_cmd"
+	files=$(cd "$ci/release-assets" && find . -maxdepth 1 -type f ! -name checksums.txt -printf '%f\n' | sort)
+	[[ -n "$files" ]] || { echo "ci-release: release.assets wrote no file into \$RELEASE_ASSETS" >&2; exit 1; }
+	# shellcheck disable=SC2086 # a list of file names
+	(cd "$ci/release-assets" && sha256sum $files >checksums.txt)
+	echo "ci-release: assets: ${files//$'\n'/ } checksums.txt"
+fi
+
+build_cmd=$(jq -r '.release.build // empty' <<<"$config")
+if [[ -n "$build_cmd" ]]; then
+	echo "ci-release: building and pushing the images ($build_cmd)"
+	if [[ "$dry" == true ]]; then echo "would run in the CI image: $build_cmd"; else in_stage "$build_cmd"; fi
+fi
+if [[ "$version" != *-* ]]; then
+	while read -r name; do
+		[[ -n "$name" ]] && run crane tag "$name:$version" latest
+	done < <(jq -r '.release.images[]' <<<"$config")
+fi
+
+registry=$(jq -r '.release["chart-registry"] // empty' <<<"$config")
+while read -r chart; do
+	[[ -n "$chart" ]] || continue
+	name=$(yq -r '.name' "$chart/Chart.yaml")
+	run helm package "$chart" --version "$version" --app-version "$version" --destination "$ci/charts"
+	run helm push "$ci/charts/$name-$version.tgz" "$registry"
+done < <(jq -r '.release.charts[]' <<<"$config")
+
+run python3 -I "$lib/upload-release-assets.py" "v$version" "$ci/release-assets"
+echo "ci-release: published $version"
