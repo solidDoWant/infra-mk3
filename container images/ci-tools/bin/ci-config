@@ -31,6 +31,7 @@ ci.yaml, version 1:
       e2e:
         run: make test-e2e
         kind: true            # creates kind clusters; starts first
+        ignore: ["**/*_test.go", "!test/e2e/**"]  # changes that don't need it
         with: ./test/e2e/build-images.sh   # started next to it; not a stage
       docs:
         run: make docs-check
@@ -38,7 +39,9 @@ ci.yaml, version 1:
         paths: ["**/*.md", "docs/**"]
     cleanup:
       keep-images: ./scripts/ci/e2e-images.sh --node   # prints images to keep
-    test-guard: true          # run `make test-guard` on pull requests
+    test-guard: true          # a `test-guard` stage on every pull request:
+                              # `make test-guard`, with the PR's labels in
+                              # TEST_GUARD_PR_LABELS (comma-separated)
     release:
       assets: make release-assets   # writes files into $RELEASE_ASSETS
       build: make build-images VERSION="$RELEASE_VERSION" PUSH_ALL=true
@@ -48,7 +51,8 @@ ci.yaml, version 1:
 
 Which stages a pull request runs: a stage with `paths` runs when a changed
 file matches one of them; a stage without `paths` runs when a changed file
-is not `not-code`. A push runs every stage with `push` not false. A release
+is not `not-code` and not ignored by the stage's `ignore` (gitignore-like:
+the last matching pattern wins, and `!` un-ignores). A push runs every stage with `push` not false. A release
 runs only the release. Globs: `*` stays inside one path segment, `**` spans
 any number of segments.
 """
@@ -60,9 +64,9 @@ import sys
 import yaml
 
 STAGE_NAME = re.compile(r"^[a-z][a-z0-9-]{0,30}$")
-RESERVED = {"release", "cleanup"}
+RESERVED = {"release", "cleanup", "test-guard"}
 TOP = {"version", "image", "env", "not-code", "stages", "cleanup", "test-guard", "release"}
-STAGE_KEYS = {"run", "run-pull-request", "paths", "push", "own-tree", "kind", "with"}
+STAGE_KEYS = {"run", "run-pull-request", "paths", "ignore", "push", "own-tree", "kind", "with"}
 RELEASE_KEYS = {"assets", "build", "images", "charts", "chart-registry"}
 
 
@@ -136,10 +140,12 @@ def normalize(doc):
         need(isinstance(stage, dict), where, "must be a mapping")
         unknown = set(stage) - STAGE_KEYS
         need(not unknown, where, f"unknown keys {sorted(unknown)}")
+        need(not ("paths" in stage and "ignore" in stage), where, "`paths` and `ignore` don't go together")
         out_stages[name] = {
             "run": command(stage.get("run"), f"{where}.run"),
             "run-pull-request": command(stage["run-pull-request"], f"{where}.run-pull-request") if "run-pull-request" in stage else None,
             "paths": strings(stage["paths"], f"{where}.paths") if "paths" in stage else None,
+            "ignore": strings(stage["ignore"], f"{where}.ignore") if "ignore" in stage else [],
             "push": bool(stage.get("push", True)),
             "own-tree": bool(stage.get("own-tree", False)),
             "kind": bool(stage.get("kind", False)),
@@ -152,6 +158,15 @@ def normalize(doc):
 
     test_guard = doc.get("test-guard", False)
     need(isinstance(test_guard, bool), "test-guard", "must be true or false")
+    if test_guard:
+        # The pull request Pipeline reads the labels (as ci-report, before
+        # any repository code runs) and hands them to ci-stages as
+        # CI_PR_LABELS. Any change runs it: removing a test is a change.
+        out_stages["test-guard"] = {
+            "run": 'TEST_GUARD_PR_LABELS="${CI_PR_LABELS:-}" make test-guard',
+            "run-pull-request": None, "paths": ["**"], "ignore": [], "push": False,
+            "own-tree": False, "kind": False, "with": None,
+        }
 
     release = None
     if "release" in doc:
@@ -191,19 +206,29 @@ def matches(path, patterns):
     return any(pure.full_match(p) for p in patterns)
 
 
+def ignored(path, patterns):
+    """gitignore-like: the last matching pattern decides, `!` un-ignores."""
+    result = False
+    for pattern in patterns:
+        negated = pattern.startswith("!")
+        if matches(path, [pattern[1:] if negated else pattern]):
+            result = not negated
+    return result
+
+
 def select(config, event, files):
     if event == "release":
         return ["release"]
     stages = config["stages"]
     if event == "push":
         return [name for name, s in stages.items() if s["push"]]
-    code = any(not matches(f, config["not-code"]) for f in files)
+    code = [f for f in files if not matches(f, config["not-code"])]
     chosen = []
     for name, s in stages.items():
         if s["paths"] is not None:
             if any(matches(f, s["paths"]) for f in files):
                 chosen.append(name)
-        elif code:
+        elif any(not ignored(f, s["ignore"]) for f in code):
             chosen.append(name)
     return chosen
 
