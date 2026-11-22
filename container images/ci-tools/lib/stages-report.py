@@ -7,12 +7,15 @@ Reads each stage's files in the output directory (`<stage>.exit`, `.start`,
 use, and writes the summary as JSON for the report task: a list with each
 stage's name, result, start and end time, and for a failed stage a short
 failure report. Tekton hands the result over inside the step's termination
-message, as a JSON string in Tekton's own JSON. Kubernetes cuts that message
-to a share of the pod's 12 KiB budget for termination messages, which the
-step shares with the sidecar and Tekton's init containers. A cut message
-loses the result, and the report task is then skipped. So the result is
-measured as it is encoded there and fits in RESULT_LIMIT, well inside the
-smallest share; the failure reports are cut to share what is left.
+message, as a JSON string in Tekton's own JSON next to Tekton's own entries.
+Kubernetes cuts that message to a share of the pod's 12 KiB budget for
+termination messages, which the step shares with the sidecar and Tekton's
+init containers: 2 KiB in the docker Task's pod. A cut message loses the
+result, and the report task is then skipped. So the result holds only what
+the report task reads (not the memory and CPU use, which only the table
+shows), is measured as it is encoded there, and fits in RESULT_LIMIT, which
+leaves room for Tekton's entries; the failure reports are cut to share what
+is left.
 
     stages-report.py OUT_DIR SUMMARY_JSON STAGE...
 """
@@ -21,7 +24,7 @@ import json
 import pathlib
 import sys
 
-RESULT_LIMIT = 2048
+RESULT_LIMIT = 1536
 # Lines that locate a Go test failure.
 FAILURE_MARKERS = ("--- FAIL:", "Error Trace:", "FAIL\t", "panic:")
 TAIL_LINES = 20
@@ -114,8 +117,13 @@ def wrapped_length(text):
     return len(json.dumps(text)) - 2
 
 
+# Shown in the table only, and left out of the result.
+TABLE_ONLY = ("memory_peak_bytes", "cpu_seconds")
+
+
 def encode(summaries):
-    return json.dumps(summaries, separators=(",", ":"))
+    result = [{key: value for key, value in s.items() if key not in TABLE_ONLY} for s in summaries]
+    return json.dumps(result, separators=(",", ":"))
 
 
 def table(summaries):
