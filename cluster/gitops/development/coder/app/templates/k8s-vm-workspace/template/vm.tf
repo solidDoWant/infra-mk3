@@ -248,8 +248,8 @@ resource "kubectl_manifest" "vm" {
                 }
                 ] : [], local.enable_nfs ? [
                 {
-                  # The bulk-pool-01 NFS pool (see the volume below), mounted
-                  # by cloud-init at local.nfs_mount_path.
+                  # The media NFS share (see the volume below), mounted by
+                  # cloud-init at local.nfs_mount_path.
                   name     = local.nfs_tag
                   virtiofs = {}
                 }
@@ -349,9 +349,10 @@ resource "kubectl_manifest" "vm" {
             }
             ] : [], local.enable_nfs ? [
             {
-              # The kubelet mounts the NFS pool (coder/app/vm-workspace-nfs.yaml)
-              # and virtiofsd shares it with the guest. Read-write where the
-              # pool lets any user write; virtiofsd runs as uid 107.
+              # The kubelet mounts the media NFS share
+              # (coder/app/vm-workspace-nfs.yaml) and virtiofsd shares it with
+              # the guest. Read-write where the share lets any user write;
+              # virtiofsd runs as uid 107.
               name = local.nfs_tag
               persistentVolumeClaim = {
                 claimName = local.nfs_pvc_name
