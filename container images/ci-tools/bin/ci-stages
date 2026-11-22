@@ -1,0 +1,298 @@
+#!/usr/bin/env bash
+# The jq programs are in single quotes on purpose: $s is jq's, not the shell's.
+# shellcheck disable=SC2016
+# Runs a project's CI stages (ci.yaml) for a pull request or a push: all at
+# once, each in its own container of the project's CI image (ci-image), on the
+# run's dockerd. Started by the shared Pipelines in ci-tekton, in a ci-tools
+# container on the run's dind:
+#
+#   ci-stages pull_request|push
+#
+# Environment (set by the Pipeline):
+#   WS              the Task workspace; the checkout is $WS/src. The step and
+#                   dockerd see it at the same path.
+#   CI_REPO         owner/name of the repository
+#   CI_HOST         the task pod's hostname (seeds the CPU choice)
+#   CI_CPUS         the run's CPU budget, default 8: the dind sidecar's request
+#   REGISTRYGATE_HOSTS  registries the CI cluster's registrygate intercepts
+# and $WS/ci/pod/, files the step copied from the pod (dockerd can't see the
+# step's own mounts): system-ca.crt, trust/ca.crt and ssl-cert-file (the
+# githubgate interceptor's CAs, when the pod is intercepted),
+# docker-credential-registrygate and token (registrygate), docker-config.json.
+#
+# Writes $WS/ci/stages.json (each stage's name, result, times and failure
+# report, lib/stages-report.py), which the report task turns into check runs,
+# and exits non-zero after writing it when a stage failed.
+set -euo pipefail
+event="${1:?usage: ci-stages pull_request|push}"
+case "$event" in pull_request | push) ;; *) echo "ci-stages: unknown event '$event'" >&2; exit 2 ;; esac
+: "${WS:?WS must name the Task workspace}" "${CI_REPO:?CI_REPO must name the repository (owner/name)}"
+lib=/ci-tools/lib
+src="$WS/src"
+ci="$WS/ci"
+out="$ci/out"
+pod="$ci/pod"
+mkdir -p "$out" "$ci/bin" "$ci/docker" "$ci/tools"
+cd "$src"
+t0=$(date +%s)
+elapsed() { echo $(($(date +%s) - t0)); }
+
+ci-config check
+project="${CI_REPO#*/}"
+
+# Samples the VM's used memory (total minus available, so page cache does not
+# count) every 2 seconds and keeps the peak in KiB, to size the dind sidecar.
+peak_file="$out/vm-peak-kib"
+echo 0 >"$peak_file"
+(
+	peak=0
+	while :; do
+		used=$(awk '/^MemTotal:/ {t=$2} /^MemAvailable:/ {a=$2} END {print t-a}' /proc/meminfo)
+		if [ "$used" -gt "$peak" ]; then peak=$used; echo "$peak" >"$peak_file"; fi
+		sleep 2
+	done
+) &
+sampler=$!
+
+image=$(ci-image "$project")
+echo "CI image: $image (after $(elapsed)s)"
+
+# The run's CPU budget: the dind sidecar's CPU request. The pod has no CPU
+# limit (cluster policy), so without a cap the stages, which all start at
+# once and each size themselves to every CPU they see, take the whole node
+# and starve the other runs on it. Every stage container is pinned to the
+# same CI_CPUS CPUs, the ones the node used least in the last second, and
+# GOMAXPROCS is set to the budget. A kind node is not pinned.
+cpus="${CI_CPUS:-8}"
+case "$cpus" in '' | *[!0-9]* | 0*) echo "CI_CPUS must be a positive whole number of CPUs, not '$cpus'" >&2; exit 1 ;; esac
+available=$(docker run --rm --entrypoint /bin/sh "$image" -c 'cat /sys/fs/cgroup/cpuset.cpus.effective 2>/dev/null || cat /sys/devices/system/cpu/online')
+stat_dir=$(mktemp -d)
+cp /proc/stat "$stat_dir/before"; sleep 1; cp /proc/stat "$stat_dir/after"
+pinned=$(sh "$lib/cpuset-first.sh" "$available" "$cpus" "$stat_dir/before" "$stat_dir/after" "${CI_HOST:-$(cat /proc/sys/kernel/hostname)}")
+rm -rf "$stat_dir"
+cpuset=$(echo "$pinned" | head -n 1)
+cpus=${cpuset#* }
+cpuset=${cpuset% *}
+echo "CPU budget: $cpus CPUs; stages pinned to CPUs $cpuset of $available"
+
+# Runs a command in the CI image's dev shell, from the checkout.
+in_image() {
+	docker run --rm -i -v "$WS:$WS" -w "$src" "$image" bash -c \
+		'source /etc/devshell.sh && git config --global --add safe.directory "*" && "$@"' bash "$@"
+}
+
+if [ "$event" = push ]; then
+	stages=$(ci-config stages push </dev/null)
+else
+	# The PR's changes: against its merge base with master.
+	# Both the old and the new path of a moved file.
+	git diff --no-renames --name-only "$(git merge-base HEAD origin/master)" HEAD >"$ci/changed-files"
+	stages=$(ci-config stages pull_request <"$ci/changed-files")
+fi
+
+# What a stage needs to reach the registries and GitHub like the task pod: the
+# pod's system CAs, the githubgate interceptor's CAs when the pod is
+# intercepted (its stages share the pod's network), registrygate's CA
+# (dockerd's certs.d), its Docker credential helper, its token and the Docker
+# configuration that names it. The stages source $WS/ci/tools/stage-env.sh.
+SYSTEM_CA="$pod/system-ca.crt" TRUST_DIR="$pod/trust" SSL_CERT_FILE="$pod/ssl-cert-file" \
+	sh "$lib/ca-bundle.sh" "$ci/ca-bundle.crt"
+f=$(find /etc/docker/certs.d -mindepth 2 -maxdepth 2 -name ca.crt 2>/dev/null | head -n1 || true)
+if [ -n "$f" ]; then cat "$f" >>"$ci/ca-bundle.crt"; fi
+if [ -x "$pod/docker-credential-registrygate" ]; then
+	cp "$pod/docker-credential-registrygate" "$ci/bin/"
+	cp "$pod/token" "$ci/token"
+fi
+if [ -f "$pod/docker-config.json" ]; then cp "$pod/docker-config.json" "$ci/docker/config.json"; fi
+cp "$lib/stage-env.sh" "$lib/github-api-check.py" "$lib/github_https.py" "$ci/tools/"
+
+# Every run checks that GitHub answers over verified TLS, so a broken bundle
+# or interception fails a pull request, not a release. Any HTTP status
+# passes: a policy may deny the request, and that still proves the TLS chain.
+#   - here, in ci-tools, with Python and curl: the code path of ci-release's
+#     GitHub release upload;
+#   - in a stage container of the project's CI image, with its curl (what git
+#     and the stage commands use), in the stage environment, which also points
+#     Nix's NIX_SSL_CERT_FILE at the bundle. Skipped when the image has none.
+# shellcheck source=/dev/null # lib/stage-env.sh, in the image
+if ! (export CI_CA="$ci/ca-bundle.crt" && source "$lib/stage-env.sh" && python3 -I "$lib/github-api-check.py" "$CI_REPO"); then
+	echo "ci-tools cannot reach the GitHub API over verified TLS; see above" >&2
+	exit 1
+fi
+if ! docker run --rm --network host -v "$WS:$WS" -w "$src" -e CI_CA="$ci/ca-bundle.crt" -e CI_REPO="$CI_REPO" "$image" \
+	bash -c 'source /etc/devshell.sh && source "$1/stage-env.sh"
+		command -v curl >/dev/null || { echo "the CI image has no curl: its TLS check is skipped"; exit 0; }
+		code=$(curl -sS --max-time 60 -o /dev/null -w "%{http_code}" "https://api.github.com/repos/$CI_REPO") || exit 1
+		echo "GitHub API reachable over verified TLS from curl in a stage container: HTTP $code"' bash "$ci/tools"; then
+	echo "a stage container cannot reach the GitHub API over verified TLS; see above" >&2
+	exit 1
+fi
+
+if [ -z "$stages" ]; then
+	echo "no stage needs to run for these changes"
+	echo '[]' >"$ci/stages.json"
+	kill "$sampler" 2>/dev/null || true
+	exit 0
+fi
+echo "stages: $stages"
+
+# The caches live on dockerd's volume, which the cache promoter keeps after a
+# successful master push run.
+docker volume create gomod >/dev/null
+docker volume create gobuild >/dev/null
+docker volume create ci-cache >/dev/null
+
+config=$(ci-config json)
+field() { jq -r --arg s "$1" "$2" <<<"$config"; }
+env_args=()
+while IFS=$'\t' read -r key value; do
+	[ -n "$key" ] && env_args+=(-e "$key=$value")
+done < <(jq -r '.env | to_entries[] | [.key, .value] | @tsv' <<<"$config")
+
+start_stage() {
+	local stage="$1" cmd="$2"
+	local mounts=(-v "$WS:$WS")
+	if [ "$(field "$stage" '.stages[$s]["own-tree"] // false')" = true ]; then
+		# It rewrites files while the other stages build them: its own copy of
+		# the tree, mounted at the same path so build cache entries still match.
+		local tree="$WS/tree-$stage"
+		rm -rf "$tree"
+		git clone -q --no-hardlinks "$src" "$tree"
+		git -C "$tree" checkout -q --detach "$(git rev-parse HEAD)"
+		mounts+=(-v "$tree:$src")
+	fi
+	if [ "$(field "${stage%-with}" '.stages[$s].kind // false')" = true ] && [ -x /run/ci-kind/bin/ci-kind-config ]; then
+		mounts+=(-v /run/ci-kind:/run/ci-kind:ro -v /opt/ci-kind:/opt/ci-kind:ro)
+	fi
+	date +%s >"$out/$stage.start"
+	(
+		status=0
+		docker run --rm --name "stage-$stage" --network host "${mounts[@]}" -w "$src" \
+			--cpuset-cpus "$cpuset" -e GOMAXPROCS="$cpus" \
+			-v gomod:/cache/gomod -v gobuild:/cache/gobuild -v ci-cache:/cache/ci \
+			-e GOMODCACHE=/cache/gomod -e GOCACHE=/cache/gobuild/go \
+			-e GOLANGCI_LINT_CACHE=/cache/gobuild/golangci-lint -e XDG_CACHE_HOME=/cache/ci \
+			-e DOCKER_HOST=tcp://127.0.0.1:2375 -e DOCKER_CONFIG="$ci/docker" \
+			-e REGISTRYGATE_HOSTS="${REGISTRYGATE_HOSTS:-}" -e REGISTRYGATE_TOKEN_FILE="$ci/token" \
+			-e CI_BIN="$ci/bin" -e CI_CA="$ci/ca-bundle.crt" -e CI_STATS="$out/$stage.stats" \
+			-e CI_REPO="$CI_REPO" -e CI_EVENT="$event" \
+			-e CI_WITH_EXIT_FILE="${CI_WITH_EXIT_FILE:-}" -e CI_WITH_LOG="${CI_WITH_LOG:-}" \
+			"${env_args[@]}" -e STAGE_COMMAND="$cmd" -e CI_TOOLS_DIR="$ci/tools" \
+			"$image" bash -c '
+				source /etc/devshell.sh
+				source "$CI_TOOLS_DIR/stage-env.sh"
+				export PATH="$CI_BIN:$PATH"
+				git config --global --add safe.directory "*"
+				status=0
+				bash -c "set -e; $STAGE_COMMAND" || status=$?
+				{
+					echo "memory_peak $(cat /sys/fs/cgroup/memory.peak 2>/dev/null || echo 0)"
+					grep usage_usec /sys/fs/cgroup/cpu.stat 2>/dev/null || echo "usage_usec 0"
+				} >"$CI_STATS"
+				exit "$status"
+			' >"$out/$stage.log" 2>&1 || status=$?
+		date +%s >"$out/$stage.end"
+		echo "$status" >"$out/$stage.exit"
+	) &
+}
+
+command_for() {
+	local stage="$1" cmd
+	if [ "$event" = pull_request ]; then
+		cmd=$(field "$stage" '.stages[$s]["run-pull-request"] // .stages[$s].run')
+	else
+		cmd=$(field "$stage" '.stages[$s].run')
+	fi
+	echo "$cmd"
+}
+
+# Stages that create kind clusters start first, so their clusters come up
+# before the CPU-heavy stages compete for the cores. A stage's `with` job
+# starts next to it; the stage reads CI_WITH_EXIT_FILE and CI_WITH_LOG to wait
+# for it. The `with` jobs are not stages: their logs and times stay out of the
+# stage table.
+first="" rest=""
+for stage in $stages; do
+	if [ "$(field "$stage" '.stages[$s].kind')" = true ]; then first="$first $stage"; else rest="$rest $stage"; fi
+done
+for stage in $first $rest; do
+	with=$(field "$stage" '.stages[$s].with // empty')
+	if [ -n "$with" ]; then
+		CI_WITH_EXIT_FILE="$out/$stage-with.exit" CI_WITH_LOG="$out/$stage-with.log"
+		rm -f "$CI_WITH_EXIT_FILE"
+		export CI_WITH_EXIT_FILE CI_WITH_LOG
+		start_stage "$stage" "$(command_for "$stage")"
+		start_stage "$stage-with" "$with"
+		unset CI_WITH_EXIT_FILE CI_WITH_LOG
+	else
+		start_stage "$stage" "$(command_for "$stage")"
+	fi
+done
+echo "started after $(elapsed)s: $stages"
+
+# Prints each passed stage's log as one block as soon as it ends, and the
+# failed ones last, so the failure is at the end of the step log.
+failed=""
+remaining="$stages"
+while [ -n "$remaining" ]; do
+	next=""
+	for stage in $remaining; do
+		if [ ! -f "$out/$stage.exit" ]; then next="$next $stage"; continue; fi
+		took=$(($(cat "$out/$stage.end") - $(cat "$out/$stage.start")))
+		if [ "$(cat "$out/$stage.exit")" = 0 ]; then
+			echo "==================== stage $stage: passed in ${took}s ===================="
+			cat "$out/$stage.log"
+		else
+			echo "stage $stage: FAILED after ${took}s (log below, after the other stages)"
+			failed="$failed $stage"
+		fi
+	done
+	remaining=$(echo "$next" | xargs)
+	if [ -n "$remaining" ]; then sleep 2; fi
+done
+kill "$sampler" 2>/dev/null || true
+wait
+for stage in $failed; do
+	took=$(($(cat "$out/$stage.end") - $(cat "$out/$stage.start")))
+	echo "==================== stage $stage: FAILED after ${took}s ===================="
+	cat "$out/$stage.log"
+done
+
+# Leave nothing but caches on the volume the promoter may keep (a kind
+# cluster left behind is only its node containers), except this container:
+# ci-stages itself runs in one on the same dockerd. Its ID is in the paths
+# Docker bind-mounts its hosts and resolv.conf from.
+self_id=$(grep -o -m1 '/containers/[0-9a-f]\{64\}' /proc/self/mountinfo | cut -d/ -f3 || true)
+leftover=$(docker ps -aq --no-trunc | grep -v -x "${self_id:-none}" || true)
+if [ -n "$leftover" ]; then
+	# shellcheck disable=SC2086 # a list of IDs
+	docker rm -f $leftover >/dev/null 2>&1 || true
+fi
+
+if [ "$event" = push ]; then
+	date +%s >"$out/cleanup.start"
+	status=0
+	keep_cmd=$(jq -r '.cleanup["keep-images"] // empty' <<<"$config")
+	: >"$out/keep-images"
+	if [ -n "$keep_cmd" ]; then
+		in_image bash -c "$keep_cmd" </dev/null >"$out/keep-images" 2>"$out/cleanup.log" || status=$?
+	fi
+	if [ "$status" = 0 ]; then
+		ci-cleanup "$image" "$out/keep-images" "$project" >>"$out/cleanup.log" 2>&1 || status=$?
+	fi
+	date +%s >"$out/cleanup.end"
+	echo "$status" >"$out/cleanup.exit"
+	echo "==================== cleanup (exit $status) ===================="
+	cat "$out/cleanup.log"
+	stages="$stages cleanup"
+	if [ "$status" != 0 ]; then failed="$failed cleanup"; fi
+fi
+
+# shellcheck disable=SC2086 # a list of stage names
+python3 -I "$lib/stages-report.py" "$out" "$ci/stages.json" $stages
+echo "VM peak memory used: $(($(cat "$peak_file") / 1024)) MiB (page cache excluded)"
+echo "all stages done after $(elapsed)s"
+if [ -n "$failed" ]; then
+	echo "failed stages:$failed" >&2
+	exit 1
+fi

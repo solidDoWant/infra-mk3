@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Prints a pull request's labels, comma-separated, for the test guard (the
+shared pull request Pipeline's test-guard task, as ci-report, through
+githubgate's interceptor). Read when the run starts, so a /retest after the
+owner adds a label picks it up.
+
+    ci-pr-labels <owner/name> <pull request number>
+
+CI_GITHUB_API_URL replaces the GitHub endpoint (tests).
+"""
+import json
+import os
+import sys
+import urllib.request
+
+API = os.environ.get("CI_GITHUB_API_URL", "https://api.github.com")
+
+
+def main(argv):
+    if len(argv) != 3 or not argv[2].isdigit():
+        print("usage: ci-pr-labels <owner/name> <pull request number>", file=sys.stderr)
+        return 2
+    request = urllib.request.Request(
+        f"{API}/repos/{argv[1]}/issues/{argv[2]}/labels?per_page=100",
+        headers={"Accept": "application/vnd.github+json"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        labels = [label["name"] for label in json.load(response)]
+    print(",".join(labels))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

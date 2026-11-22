@@ -1,0 +1,77 @@
+---
+# Tests ci-tools (container images/ci-tools/) when a pull request changes it:
+# the unit tests and shellcheck in the image, then the end-to-end test, which
+# runs the fixture project through ci-stages (push, a docs-only pull request,
+# a failing stage) and a dry-run ci-release on this run's own dind, the way
+# the shared Pipelines in ci-tekton do. Runs as ci-build: pulls only, and
+# GitHub only through githubgate's interceptor.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: ci-tools-pull-request-
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "pull_request" &&
+      target_branch == "master" &&
+      "container images/ci-tools/***".pathChanged()
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+  timeouts:
+    pipeline: 1h
+  workspaces:
+    # Shared by the step and dockerd at the same path.
+    - name: source
+      emptyDir: {}
+  taskRunSpecs:
+    # Builds the ci-tools image and the fixture's CI image (both Nix), then
+    # runs the fixture's stages. No CPU limit (cluster policy).
+    - pipelineTaskName: test
+      sidecarSpecs:
+        - name: dind
+          computeResources:
+            requests:
+              cpu: "4"
+              memory: 8Gi
+            limits:
+              memory: 8Gi
+  pipelineSpec:
+    params:
+      - name: repo_url
+        type: string
+      - name: revision
+        type: string
+    workspaces:
+      - name: source
+    tasks:
+      - name: test
+        taskRef:
+          resolver: cluster
+          params:
+            - name: kind
+              value: task
+            - name: name
+              value: docker
+            - name: namespace
+              value: ci-tekton
+        params:
+          - name: script
+            value: |
+              set -eu
+              apk add --no-cache make git >/dev/null
+              git init -q src
+              cd src
+              git remote add origin "$(params.repo_url)"
+              git fetch -q --depth 1 origin "$(params.revision)"
+              git checkout -q --detach "$(params.revision)"
+              cd "container images/ci-tools"
+              export CI_REPO="{{ repo_owner }}/{{ repo_name }}" CI_CPUS=4
+              make test
+              make e2e E2E_WORKSPACE=/workspace/source/e2e
+        workspaces:
+          - name: source
+            workspace: source

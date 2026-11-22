@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Builds the project's CI image (lib/ci-image.Dockerfile) on the run's dockerd
+# and prints its tag. The build context holds only what the dev shell depends
+# on: flake.nix, flake.lock and ci.yaml's image.inputs (each cut to its
+# `lines` when given), so the layer cache hits unless one of them changed.
+#
+#   image=$(ci-image <project name>)     # from the checkout's root
+set -euo pipefail
+name="${1:?usage: ci-image <project name>}"
+[[ -f flake.nix && -f flake.lock ]] || { echo "ci-image: the project needs flake.nix and flake.lock" >&2; exit 1; }
+context=$(mktemp -d)
+trap 'rm -rf "$context"' EXIT
+cp flake.nix flake.lock "$context/"
+while IFS=$'\t' read -r path lines; do
+	[[ -n "$path" ]] || continue
+	mkdir -p "$context/$(dirname "$path")"
+	if [[ -n "$lines" ]]; then
+		grep -E "$lines" "$path" >"$context/$path" || true
+	else
+		cp "$path" "$context/$path"
+	fi
+done < <(ci-config json | jq -r '.image.inputs[] | [.path, (.lines // "")] | @tsv')
+tag="$name-ci:$( (cd "$context" && find . -type f -print0 | sort -z | xargs -0 cat) | sha256sum | cut -c1-16)"
+docker build -q -f /ci-tools/lib/ci-image.Dockerfile -t "$tag" "$context" >&2
+echo "$tag"

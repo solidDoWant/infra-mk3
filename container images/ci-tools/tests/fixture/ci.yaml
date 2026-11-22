@@ -1,0 +1,18 @@
+version: 1
+image:
+  inputs:
+    - path: go.mod
+      lines: '^(module|go|toolchain) '
+not-code: ["*.md", "**/*.md"]
+stages:
+  lint:
+    run: make lint
+  unit:
+    run: make test
+  docs:
+    run: make docs-check
+    paths: ["**/*.md"]
+release:
+  assets: make release-assets
+  charts: [deploy/charts/fixture]
+  chart-registry: oci://ghcr.io/example/charts
