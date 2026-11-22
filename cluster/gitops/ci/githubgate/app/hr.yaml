@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed yet, so no verify block.
   url: oci://ghcr.io/soliddowant/charts/githubgate
   ref:
-    tag: 0.7.1-rc.1
-    digest: sha256:07c27098bbb8f6d43c647fd30b2124e52c82a832389e6c2e4f7eedd77b71b7c1
+    tag: 0.7.1
+    digest: sha256:263a649c60a2b06903d4a5135ed442bac618bfdc3a753ff0e8982134d56814a7
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -31,7 +31,7 @@ spec:
       enabled: true
       maxUnavailable: 1
     image:
-      digest: sha256:25c17a12ff7e132708a260220ab3804fdcccf69ab19a1096a4a16b80975a8218
+      digest: sha256:cce35616fd9b073fe6542a959dcb5a95780eb59a477b16512d757a6e005011e0
     # Only ci holds the GitHubApp, its key and the GitHubInstallation.
     adminNamespaces:
       - ci
@@ -66,6 +66,6 @@ spec:
       enabled: true
       image:
         # renovate: image=ghcr.io/soliddowant/githubgate-client
-        digest: sha256:aeb1c38a7558b206f322ab9f811419da8181330117358d976c30a6ac1edd13df
+        digest: sha256:93a13b5f4c242843d6940b2ab494af8d429e4be4aed3718409e89af168126471
     serviceMonitor:
       enabled: true
