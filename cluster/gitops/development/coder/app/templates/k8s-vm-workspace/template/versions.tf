@@ -30,6 +30,15 @@ terraform {
     }
 
 
+    # Unused by any resource; installed so workspaces built before GitHub went
+    # through githubgate (whose state has data.github_user and
+    # data.github_rest_api) can be planned, which drops those from state.
+    # Remove once every VM workspace has been built on a later version.
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
+
     # The per-start SSH signing key (signing-keys.tf)
     tls = {
       source  = "hashicorp/tls"
