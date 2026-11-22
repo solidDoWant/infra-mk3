@@ -1,0 +1,67 @@
+---
+# The shared release Pipeline of the agent projects (container
+# images/ci-tools has the design and ci.yaml's format). A project's
+# .tekton/release.yaml runs it on a version tag push (vX.Y.Z or
+# vX.Y.Z-rc.K), with the params below, taskRunTemplate serviceAccountName
+# ci-release (the only ServiceAccount registrygate lets push, and only on
+# release refs), a `source` emptyDir workspace (a claim makes Tekton start an
+# affinity-assistant pod, which the cluster refuses to run as ci-release),
+# and taskRunSpecs that size the `publish` task's dind sidecar.
+#
+# publish clones the tag's commit and runs ci-release: the release assets
+# and images, `latest` for a final version, the charts, and the GitHub
+# release with the assets.
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  namespace: ci-tekton
+  name: ci-release
+  annotations:
+    # The script uses shell ${...} syntax.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  params:
+    # First: ../next patches it by index.
+    - name: ci-tools-image
+      type: string
+      description: The ci-tools image, by digest. Projects leave the default.
+      default: ghcr.io/soliddowant/ci-tools@sha256:a2731670872c8d9bac142d61fd18530de6cd98bae013f44e8168ff3c72708c94
+    - name: repo_url
+      type: string
+    - name: revision
+      type: string
+    - name: repo
+      type: string
+      description: owner/name
+    - name: ref
+      type: string
+      description: The pushed tag, refs/tags/v<version>.
+    - name: cpus
+      type: string
+      description: The publish task's dind CPU request.
+      default: "8"
+  workspaces:
+    - name: source
+  tasks:
+    - name: publish
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: docker
+          - name: namespace
+            value: ci-tekton
+      params:
+        - name: script
+          value: |
+            set -eu
+            export CI_TOOLS_IMAGE='$(params.ci-tools-image)' REPO_URL='$(params.repo_url)' \
+              REVISION='$(params.revision)' CI_REPO='$(params.repo)' CI_CPUS='$(params.cpus)' \
+              RELEASE_REF='$(params.ref)'
+            docker run --rm "$CI_TOOLS_IMAGE" cat /ci-tools/lib/tekton-step.sh >/tmp/tekton-step.sh
+            exec sh /tmp/tekton-step.sh release
+      workspaces:
+        - name: source
+          workspace: source

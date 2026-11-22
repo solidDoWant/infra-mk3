@@ -1,0 +1,16 @@
+---
+# The canary copies, ci-pull-request-next, ci-push-next and ci-release-next:
+# the same Pipelines on a newer ci-tools image. githubgate runs them. Move a
+# new image here first, and to ../base once githubgate's runs pass on it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+nameSuffix: -next
+patches:
+  - target:
+      kind: Pipeline
+    patch: |
+      - op: replace
+        path: /spec/params/0/default
+        value: ghcr.io/soliddowant/ci-tools@sha256:a2731670872c8d9bac142d61fd18530de6cd98bae013f44e8168ff3c72708c94

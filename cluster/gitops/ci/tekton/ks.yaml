@@ -140,6 +140,29 @@ spec:
     # The Task CRD and the ci-tekton namespace
     - name: tekton
 ---
+# The agent projects' shared Pipelines (pipelines/; container
+# images/ci-tools), for their PipelineRuns to reference through the cluster
+# resolver from ci-tekton.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: &app_name tekton-pipelines
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app_name
+  interval: 5m
+  path: /cluster/gitops/ci/tekton/pipelines
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra-mk3
+  wait: true
+  dependsOn:
+    # The Pipeline CRD and the ci-tekton namespace
+    - name: tekton
+---
 # One HelmRelease of cluster/charts/ci/project per repository built by
 # Pipelines-as-Code (projects/<name>.yaml). The releases live in ci; each
 # creates its own ci-<name> namespace with the repository's Repository CR,

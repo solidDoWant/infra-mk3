@@ -1,0 +1,9 @@
+---
+# The shared Pipelines of the agent projects (container images/ci-tools):
+# ci-pull-request, ci-push and ci-release (base/), and their canary copies
+# with a -next suffix (next/).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./base
+  - ./next
