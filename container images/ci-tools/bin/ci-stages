@@ -56,7 +56,28 @@ echo 0 >"$peak_file"
 ) &
 sampler=$!
 
-image=$(ci-image "$project")
+
+# What a stage needs to reach the registries and GitHub like the task pod: the
+# pod's system CAs, the githubgate interceptor's CAs when the pod is
+# intercepted (its stages share the pod's network), registrygate's CA
+# (dockerd's certs.d), its Docker credential helper, its token and the Docker
+# configuration that names it. The stages source $WS/ci/tools/stage-env.sh.
+SYSTEM_CA="$pod/system-ca.crt" TRUST_DIR="$pod/trust" SSL_CERT_FILE="$pod/ssl-cert-file" \
+	sh "$lib/ca-bundle.sh" "$ci/ca-bundle.crt"
+f=$(find /etc/docker/certs.d -mindepth 2 -maxdepth 2 -name ca.crt 2>/dev/null | head -n1 || true)
+if [ -n "$f" ]; then cat "$f" >>"$ci/ca-bundle.crt"; fi
+if [ -x "$pod/docker-credential-registrygate" ]; then
+	cp "$pod/docker-credential-registrygate" "$ci/bin/"
+	cp "$pod/token" "$ci/token"
+fi
+if [ -f "$pod/docker-config.json" ]; then cp "$pod/docker-config.json" "$ci/docker/config.json"; fi
+cp "$lib/stage-env.sh" "$lib/github-api-check.py" "$lib/github_https.py" "$ci/tools/"
+# The CI image's build pulls its base image through registrygate too, so it
+# needs the same credentials (without them, pulls of images missing from the
+# cache fail with 401 Unauthorized).
+DOCKER_CONFIG="$ci/docker" PATH="$ci/bin:$PATH" REGISTRYGATE_TOKEN_FILE="$ci/token" CI_CA="$ci/ca-bundle.crt" \
+	bash -c 'source "$1" && exec ci-image "$2"' bash "$lib/stage-env.sh" "$project" >"$ci/ci-image-tag"
+image=$(cat "$ci/ci-image-tag")
 echo "CI image: $image (after $(elapsed)s)"
 
 # The run's CPU budget: the dind sidecar's CPU request. The pod has no CPU
@@ -92,21 +113,6 @@ else
 	stages=$(ci-config stages pull_request <"$ci/changed-files")
 fi
 
-# What a stage needs to reach the registries and GitHub like the task pod: the
-# pod's system CAs, the githubgate interceptor's CAs when the pod is
-# intercepted (its stages share the pod's network), registrygate's CA
-# (dockerd's certs.d), its Docker credential helper, its token and the Docker
-# configuration that names it. The stages source $WS/ci/tools/stage-env.sh.
-SYSTEM_CA="$pod/system-ca.crt" TRUST_DIR="$pod/trust" SSL_CERT_FILE="$pod/ssl-cert-file" \
-	sh "$lib/ca-bundle.sh" "$ci/ca-bundle.crt"
-f=$(find /etc/docker/certs.d -mindepth 2 -maxdepth 2 -name ca.crt 2>/dev/null | head -n1 || true)
-if [ -n "$f" ]; then cat "$f" >>"$ci/ca-bundle.crt"; fi
-if [ -x "$pod/docker-credential-registrygate" ]; then
-	cp "$pod/docker-credential-registrygate" "$ci/bin/"
-	cp "$pod/token" "$ci/token"
-fi
-if [ -f "$pod/docker-config.json" ]; then cp "$pod/docker-config.json" "$ci/docker/config.json"; fi
-cp "$lib/stage-env.sh" "$lib/github-api-check.py" "$lib/github_https.py" "$ci/tools/"
 
 # Every run checks that GitHub answers over verified TLS, so a broken bundle
 # or interception fails a pull request, not a release. Any HTTP status
