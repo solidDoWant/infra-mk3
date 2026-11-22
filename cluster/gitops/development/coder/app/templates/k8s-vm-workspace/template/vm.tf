@@ -123,6 +123,8 @@ resource "kubectl_manifest" "vm" {
     kubectl_manifest.root_datavolume,
     kubernetes_secret_v1.cloudinit,
     kubernetes_secret_v1.git_signing,
+    # The proxy refuses everything until the policy exists.
+    kubectl_manifest.github_policy,
   ]
 
   server_side_apply = true
@@ -155,8 +157,18 @@ resource "kubectl_manifest" "vm" {
         metadata = {
           # Load-bearing: these propagate to the virt-launcher pod so the
           # CiliumNetworkPolicy endpointSelector matches it.
-          labels      = local.labels
-          annotations = local.annotations
+          labels = merge(local.labels, {
+            # githubgate injects its interceptor into the launcher pod
+            # (github.tf). Not in local.labels: the netpol selector and the
+            # other objects don't need it.
+            "githubgate.soliddowant.dev/inject" = "true"
+          })
+          annotations = merge(local.annotations, {
+            # The interceptor listens on masquerade's guest gateway, which the
+            # guest's /etc/hosts points the GitHub hosts at (image
+            # modules/githubgate). Only the guest and the pod reach it.
+            "githubgate.soliddowant.dev/listen" = "10.0.2.1:443"
+          })
         }
         spec = {
           # RWX block disks are migratable, so let the cluster live-migrate the
@@ -207,6 +219,13 @@ resource "kubectl_manifest" "vm" {
                   # Cluster PKI root CA; the guest builds a combined trust bundle
                   # from it at boot (see nix/.../modules/ca-trust).
                   name     = "root-ca"
+                  virtiofs = {}
+                },
+                {
+                  # githubgate's trust directory: the interceptor's per-pod CA
+                  # (see the volume below). The image adds it to the system CA
+                  # bundle (modules/ca-trust).
+                  name     = "githubgate-trust"
                   virtiofs = {}
                 },
                 {
@@ -284,12 +303,22 @@ resource "kubectl_manifest" "vm" {
               # server's audience.
               name = "serviceaccount"
               serviceAccount = {
-                serviceAccountName = local.teleport_service_account
+                serviceAccountName = local.launcher_service_account
+              }
+            },
+            {
+              # githubgate's webhook mounts its trust directory (the
+              # interceptor's CA and a bundle with it) into every container of
+              # the launcher pod, compute included; this shares it with the
+              # guest.
+              name = "githubgate-trust"
+              containerPath = {
+                path = "/var/run/githubgate/trust"
               }
             },
             {
               # Teleport kubernetes join token (TeleportProvisionToken
-              # coder-vm-workspace allows development:coder-vm-workspace): a
+              # coder-vm-workspace allows development:coder-vm-workspace-*): a
               # token whose audience is the Teleport cluster name, bound to the
               # launcher pod. The coder-vm-workspace-tokens
               # MutatingAdmissionPolicy (coder/app/vm-workspace-tokens.yaml)

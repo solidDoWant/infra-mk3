@@ -98,6 +98,7 @@ resource "coder_env" "coder_url" {
 }
 
 locals {
-  # This is the best indicator available for whether or not the plan is actually running for a workspace or not.
-  is_workspace_plan = local.github_provisioner_token_available
+  # Whether the plan runs for a workspace, not for a template push (where
+  # Coder gives no workspace name).
+  is_workspace_plan = data.coder_workspace.me.name != ""
 }

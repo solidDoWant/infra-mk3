@@ -1,6 +1,7 @@
 ---
-# ServiceAccount projected into every k8s-vm-workspace VM (via a KubeVirt
-# serviceAccount volume) so the in-guest Teleport node can join the cluster with
+# ServiceAccount projected into k8s-vm-workspace VMs of older template versions
+# (via a KubeVirt serviceAccount volume); current versions make one per
+# workspace, coder-vm-workspace-<id>, so the in-guest Teleport node can join the cluster with
 # the kubernetes join method. It has no RBAC permissions - it exists only as a
 # verifiable identity for the Teleport join below. Launcher pods running as it
 # also get a toolgate-audience token (vm-workspace-tokens.yaml).
@@ -33,4 +34,9 @@ spec:
   join_method: kubernetes
   kubernetes:
     allow:
+      # Launcher pods of template versions before the per-workspace accounts
       - service_account: development:coder-vm-workspace
+      # Each workspace's own account (template github.tf), so githubgate can
+      # give each its own policy.
+      - service_account_namespace: development
+        service_account_name: coder-vm-workspace-*

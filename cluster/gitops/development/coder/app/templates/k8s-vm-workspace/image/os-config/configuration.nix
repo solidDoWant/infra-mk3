@@ -9,6 +9,7 @@
     ./modules/ca-trust
     ./modules/git
     ./modules/git-signing
+    ./modules/githubgate
     ./modules/persistence
     ./modules/teleport-node
     ./modules/toolgate-attestation

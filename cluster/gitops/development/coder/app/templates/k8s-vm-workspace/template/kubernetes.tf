@@ -108,12 +108,12 @@ locals {
   # authenticate to Harbor for the root DataVolume import (see vm.tf).
   image_pull_secret = "coder-pull-credentials"
 
-  # ServiceAccount the launcher pod runs as. The guest's Teleport and toolgate
-  # tokens are issued for it (see vm.tf). It is Flux-managed (created once, see
-  # coder/app/teleport-vm-workspace.yaml) and authorized by the matching
-  # TeleportProvisionToken; the template only references it. Not created here -
-  # per-workspace creation would race and conflict.
-  teleport_service_account = "coder-vm-workspace"
+  # ServiceAccount the launcher pod runs as: this workspace's own (github.tf),
+  # so githubgate can tell workspaces apart. The guest's Teleport and toolgate
+  # tokens are issued for it (see vm.tf); the TeleportProvisionToken
+  # (coder/app/teleport-vm-workspace.yaml) and the token policy admit
+  # coder-vm-workspace-*.
+  launcher_service_account = kubernetes_service_account_v1.workspace.metadata[0].name
 
   env_vars = {
     CODER_TELEMETRY_ENABLE = "false"
@@ -132,9 +132,11 @@ locals {
     # (coder-agent.service in ../image) back to 0, and renices it +5. Without
     # this the children would inherit -900 and the agent would lose its edge.
     CODER_PROC_PRIO_MGMT = "1"
-    # Node does not consult the system trust store; point it at the mounted CA so
-    # node-based tooling (e.g. Claude Code) also trusts the cluster PKI root.
-    NODE_EXTRA_CA_CERTS = local.cluster_ca_cert_path
+    # Node does not consult the system trust store; point it at the extra CAs
+    # (the cluster PKI root and githubgate's per-pod CA, assembled by the
+    # image's ca-trust module) so node-based tooling (e.g. Claude Code) trusts
+    # them.
+    NODE_EXTRA_CA_CERTS = "/run/cluster-ca/extra-ca.crt"
     # Default the Teleport proxy so `tsh login` works with no flags.
     TELEPORT_PROXY = local.teleport_proxy
   }
@@ -466,6 +468,30 @@ resource "kubectl_manifest" "netpol" {
                 "ports" = [
                   {
                     "port"     = "3080"
+                    "protocol" = "TCP"
+                  }
+                ]
+              }
+            ]
+          },
+
+          # To githubgate's proxy (ci/githubgate), which the interceptor in the
+          # launcher pod sends the guest's GitHub requests to.
+          {
+            "toEndpoints" = [
+              {
+                "matchLabels" = {
+                  "io.kubernetes.pod.namespace" = "ci"
+                  "app.kubernetes.io/name"      = "githubgate"
+                  "app.kubernetes.io/instance"  = "githubgate"
+                }
+              }
+            ]
+            "toPorts" = [
+              {
+                "ports" = [
+                  {
+                    "port"     = "9443"
                     "protocol" = "TCP"
                   }
                 ]
