@@ -121,6 +121,13 @@ spec:
           osd_class_update_on_start: "false"
           # Configuration for disk predictor module
           device_failure_prediction_mode: local
+          # PGs per OSD. With three OSDs and three copies, every PG of every pool
+          # is on every OSD: 15 pools took 241 of the default 250, much of it on
+          # near-empty RGW pools at their minimum of 8, so busy pools couldn't
+          # get more (ci-cache-ec was held at 8 PGs and its ops queued behind
+          # each other, 2026-11-23). A PG costs a few MB of OSD memory against a
+          # 3.6Gi target, so 500 leaves room to grow.
+          mon_max_pg_per_osd: "500"
         mgr:
           # Amount of time before clearing the warning about recent crashes, in seconds.
           # Default value is 2 weeks.
@@ -403,9 +410,11 @@ spec:
       # 1.5x the data instead of 3x, and still serving with one node down
       # (min_size 2). Builds ran as fast as on ssd-replicated-3x in testing.
       # Not one copy: a size-1 pool makes no OSD ok-to-stop, so Rook can never
-      # update OSDs. Eight PGs: every PG spans all three OSDs, which sit just
-      # under mon_max_pg_per_osd. Only pg_num, as Rook applies pg_num_min in
-      # random order with it (rook/rook#18529).
+      # update OSDs. 32 PGs: CI build disks are its whole load, and with 8 the
+      # OSDs worked on only 2-3 of its PGs each, so ops queued (~1 core busy
+      # per OSD while ops waited tens of ms, 2026-11-23). Autoscaling off, so
+      # the autoscaler doesn't size it back down by stored data. Only pg_num,
+      # as Rook applies pg_num_min in random order with it (rook/rook#18529).
       - name: ci-cache-ec
         spec:
           failureDomain: chassis
@@ -413,7 +422,8 @@ spec:
             dataChunks: 2
             codingChunks: 1
           parameters:
-            pg_num: "8"
+            pg_num: "32"
+            pg_autoscale_mode: "off"
         storageClass:
           enabled: false
     cephBlockPoolsVolumeSnapshotClass:
