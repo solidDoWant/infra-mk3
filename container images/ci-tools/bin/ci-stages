@@ -80,6 +80,16 @@ DOCKER_CONFIG="$ci/docker" PATH="$ci/bin:$PATH" REGISTRYGATE_TOKEN_FILE="$ci/tok
 image=$(cat "$ci/ci-image-tag")
 echo "CI image: $image (after $(elapsed)s)"
 
+# /dev/kvm on the build's dockerd: the dind sidecar makes it in the kata-nested
+# runtime, whose guest kernel has KVM. Stages then get it, for their own VMs
+# (an Android emulator). This container can't see dockerd's devices, so ask
+# dockerd.
+kvm_args=()
+if docker run --rm --device /dev/kvm --entrypoint /bin/sh "$image" -c true >/dev/null 2>&1; then
+	kvm_args=(--device /dev/kvm)
+	echo "KVM: /dev/kvm passed to the stages"
+fi
+
 # The run's CPU budget: the dind sidecar's CPU request. The pod has no CPU
 # limit (cluster policy), so without a cap the stages, which all start at
 # once and each size themselves to every CPU they see, take the whole node
@@ -185,7 +195,7 @@ start_stage() {
 			-e CI_BIN="$ci/bin" -e CI_CA="$ci/ca-bundle.crt" -e CI_STATS="$out/$stage.stats" \
 			-e CI_REPO="$CI_REPO" -e CI_EVENT="$event" -e CI_PR_LABELS="${CI_PR_LABELS:-}" \
 			-e CI_WITH_EXIT_FILE="${CI_WITH_EXIT_FILE:-}" -e CI_WITH_LOG="${CI_WITH_LOG:-}" \
-			"${env_args[@]}" -e STAGE_COMMAND="$cmd" -e CI_TOOLS_DIR="$ci/tools" \
+			"${env_args[@]}" "${kvm_args[@]}" -e STAGE_COMMAND="$cmd" -e CI_TOOLS_DIR="$ci/tools" \
 			"$image" bash -c '
 				source /etc/devshell.sh
 				source "$CI_TOOLS_DIR/stage-env.sh"
