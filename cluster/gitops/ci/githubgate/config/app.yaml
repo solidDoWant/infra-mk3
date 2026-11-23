@@ -18,8 +18,8 @@ spec:
     key: private-key.pem
 ---
 # The App's installation on the account, and the most any policy may get
-# through it. No administration, workflows or other repository settings, so no
-# client can change branch protection, rulesets or Actions.
+# through it. No administration or other repository settings, so no client can
+# change branch protection or rulesets. Workflow files only where listed below.
 apiVersion: githubgate.soliddowant.dev/v1alpha1
 kind: GitHubInstallation
 metadata:
@@ -37,6 +37,13 @@ spec:
         issues: write
         checks: write
         statuses: write
+    # vault-sync's agents maintain its GitHub Actions workflows (its CI stays on
+    # Actions: Windows, macOS and Android jobs). Only a Coder workspace that
+    # turns on "GitHub workflow changes" asks for it.
+    - repositories:
+        - vault-sync
+      permissions:
+        workflows: write
   # Namespaces whose policies may use it (the ci/project chart and the Coder
   # template label them).
   allowedNamespaces:
