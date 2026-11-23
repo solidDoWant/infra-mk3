@@ -260,8 +260,14 @@ spec:
         connections:
           encryption:
             enabled: true
+          # Off: it set ms_osd_compress_mode=force, compressing every message
+          # between OSDs (replica writes and EC chunks) in the messenger
+          # thread of each connection, on a 20 Gbit/s network that peaked at
+          # 3 Gbit/s under CI load (2026-11-23). It only added CPU and
+          # latency. Startup-only like the ms_*_mode settings: OSDs drop it
+          # after a restart.
           compression:
-            enabled: true
+            enabled: false
       placement:
         all:
           nodeAffinity:
