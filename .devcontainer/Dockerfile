@@ -59,7 +59,7 @@ COPY --from=ghcr.io/helmfile/helmfile:v1.8.5@sha256:c4ea222dc6860301a7f24932563b
 COPY --from=registry.k8s.io/kubectl:v1.37.2@sha256:fe049faa65ae483ac200009a949a68fa4c9985daea12c9cb1195c9c7965301fc /bin/kubectl /usr/local/bin/kubectl
 
 # flux
-COPY --from=ghcr.io/fluxcd/flux-cli:v2.10.0@sha256:1a5178b1770052d6e88ab1c7c8434c5ac9bca8a8ab984dcaf6b9df31814ce9f2 /usr/local/bin/flux /usr/local/bin/flux
+COPY --from=ghcr.io/fluxcd/flux-cli:v2.10.1@sha256:0253c5c82a8d98858f33dfe722afdfde83aa17dce05571f5846c26ea40d71b50 /usr/local/bin/flux /usr/local/bin/flux
 
 # Coder
 COPY --from=ghcr.io/coder/coder:v2.39.4@sha256:2ce6b2ab5b78afe05da8b62184efc7950bb0e53a32dcefab4ef1c9b22c15631a /opt/coder /usr/local/bin/coder
