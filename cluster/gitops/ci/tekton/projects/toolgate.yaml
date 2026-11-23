@@ -24,13 +24,14 @@ spec:
     # room for a second one beside the cluster's other reservations. A run
     # that can't be scheduled still counts against the pipeline's 1h timeout,
     # while one waiting in Pipelines-as-Code's concurrency queue doesn't, so a
-    # higher limit made runs time out instead of waiting their turn. Raise it
-    # when the nodes have room for two.
-    concurrencyLimit: 1
+    # higher limit made runs time out instead of waiting their turn. 2 since
+    # githubgate's agent VM (16.4 GiB) was stopped: drop back to 1 if runs
+    # start timing out unscheduled again (e.g. while both agent VMs run).
+    concurrencyLimit: 2
     quota:
-      # Room for the run plus one queued run's pods while the previous one
-      # finishes (~17.6 GiB each). A ceiling, not a reservation.
-      memory: 40Gi
+      # Two runs plus one more's pods while a run finishes (~17.6 GiB each). A
+      # ceiling, not a reservation.
+      memory: 56Gi
       # Up to 3 pods a run (labels, ci, report).
       pods: 15
     harbor:
