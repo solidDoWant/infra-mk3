@@ -9,6 +9,10 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: ci-docker-cache
+  annotations:
+    # StorageClass parameters are immutable: Flux replaces the class when they
+    # change. Existing volumes keep the parameters they were made with.
+    kustomize.toolkit.fluxcd.io/force: enabled
 provisioner: storage.rbd.csi.ceph.com
 reclaimPolicy: Delete
 allowVolumeExpansion: true
@@ -20,6 +24,17 @@ parameters:
   mapOptions: abort_on_full,ms_mode=secure
   imageFormat: "2"
   imageFeatures: layering,exclusive-lock,object-map,fast-diff,deep-flatten
+  # 128 KiB RBD objects, not the default 4 MiB. Every build disk is a clone of
+  # a golden-cache snapshot, and the first write into each object of a clone
+  # copies the whole object up from the parent: with 4 MiB objects a 4 KiB
+  # write cost a 4 MiB read plus a 4 MiB erasure-coded write. Measured on a
+  # clone (2026-11-23, rbd bench, no cache): first 4 KiB writes took 17.6 ms
+  # each with 4 MiB objects and 2.8 ms with 128 KiB (3.1 ms is a plain write to
+  # this pool); 32 at a time, 1,024/s vs 3,459/s. 64 KiB was no faster for 64
+  # KiB writes and doubles the objects each OSD tracks. Golden snapshots made
+  # with 4 MiB objects were deleted once when this changed, so that new disks
+  # don't descend from them.
+  objectSize: "131072"
   csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
   csi.storage.k8s.io/provisioner-secret-namespace: storage
   csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
