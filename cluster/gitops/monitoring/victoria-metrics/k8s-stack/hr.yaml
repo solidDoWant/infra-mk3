@@ -616,7 +616,7 @@ spec:
       image:
         registry: quay.io
         repository: prometheus/node-exporter
-        tag: v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+        tag: v1.13.1@sha256:011e2d12c5bff759b90804bda642664775d7b4b127bf5148539bb82d3f590bb7
       # Read in place of image.tag, which isn't semver with a digest. Only gates
       # a >=1.4.0 check, so it needn't track the tag.
       version: 1.4.0
