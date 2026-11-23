@@ -1,0 +1,49 @@
+---
+# solidDoWant/toolgate: MCP gateway for Claude Code, built by agents. CI runs
+# on the shared Pipelines (cluster/gitops/ci/tekton/pipelines) from the
+# repository's ci.yaml: parallel stages in one dind sidecar per run, with three
+# e2e shards, each on its own kind cluster.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ci-project-toolgate
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./cluster/charts/ci/project
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        namespace: flux-system
+        name: infra-mk3
+  values:
+    name: toolgate
+    # A run holds three kind clusters (Flux, PostgreSQL, S3 and the chart
+    # each) plus the integration tests' containers, so it's the heaviest
+    # project. Start at 3 and raise it once a run's size is measured.
+    concurrencyLimit: 3
+    quota:
+      # 3 runs at ~21.5 GiB each (a 20 GiB dind sidecar plus the task). A
+      # ceiling, not a reservation.
+      memory: 72Gi
+      # Up to 3 pods a run (labels, ci, report).
+      pods: 15
+    harbor:
+      # CI pushes no images: releases go to ghcr.io.
+      enabled: false
+    docker:
+      # The CI image from flake.nix (with Chromium), Go module and build caches
+      # (with -race), the embeddings model, the kind node image and e2e images
+      # for three clusters.
+      cacheVolumeSize: 80Gi
+      registrygate:
+        harborHost: harbor.${SECRET_PUBLIC_DOMAIN_NAME}
+        # Releases (.tekton/release.yaml, on version tags) push the gateway
+        # image and the chart. Only the ci-release ServiceAccount gets push;
+        # PR and master builds only pull.
+        ghcrPush:
+          enabled: true
+          repositories:
+            - soliddowant/toolgate
+            - soliddowant/charts/toolgate

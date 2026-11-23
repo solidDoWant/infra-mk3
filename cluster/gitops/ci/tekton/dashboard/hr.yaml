@@ -55,7 +55,7 @@ spec:
               # The namespaces it shows, one per ci-project release
               # (../projects). Add a project's namespace here when onboarding
               # it; the RoleBinding that grants access comes from the chart.
-              - --namespaces=ci-infra-mk3,ci-registrygate,ci-githubgate
+              - --namespaces=ci-infra-mk3,ci-registrygate,ci-githubgate,ci-toolgate
             env:
               INSTALLED_NAMESPACE:
                 valueFrom:
