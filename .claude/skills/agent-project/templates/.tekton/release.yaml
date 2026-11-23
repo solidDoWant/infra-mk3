@@ -1,0 +1,60 @@
+# Runs the shared release Pipeline (infra-mk3's
+# cluster/gitops/ci/tekton/pipelines) on a version tag: ci.yaml's release.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  # A fixed name collides with the previous run, which Pipelines-as-Code keeps.
+  generateName: {{PROJECT}}-release-
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "push" && target_branch.matches("^refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-rc\\.[0-9]+)?$")
+    pipelinesascode.tekton.dev/max-keep-runs: "10"
+spec:
+  pipelineRef:
+    resolver: cluster
+    params:
+      - name: kind
+        value: pipeline
+      - name: name
+        value: ci-release
+      - name: namespace
+        value: ci-tekton
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: repo
+      value: "{{ repo_owner }}/{{ repo_name }}"
+    - name: ref
+      value: "{{ target_branch }}"
+  timeouts:
+    pipeline: 1h
+  # The only ServiceAccount registrygate lets push, and only on release refs.
+  taskRunTemplate:
+    serviceAccountName: ci-release
+  workspaces:
+    # An emptyDir, never a claim: a claim makes Tekton start an
+    # affinity-assistant pod, which the cluster refuses to run as ci-release.
+    - name: source
+      emptyDir: {}
+  taskRunSpecs:
+    # It cross-compiles four binaries and assembles two images for two
+    # platforms. No CPU limit.
+    - pipelineTaskName: publish
+      sidecarSpecs:
+        - name: dind
+          computeResources:
+            requests:
+              cpu: "8"
+              memory: 6Gi
+            limits:
+              memory: 6Gi
+      stepSpecs:
+        - name: run
+          computeResources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 256Mi

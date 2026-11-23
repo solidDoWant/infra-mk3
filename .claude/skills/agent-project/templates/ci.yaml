@@ -1,0 +1,80 @@
+# CI for the shared Tekton Pipelines (infra-mk3's container images/ci-tools,
+# whose bin/ci-config documents this format). Every stage runs at once, each
+# in its own container of the CI image built from flake.nix (the dev shell),
+# on one dind sidecar in a kata VM.
+version: 1
+image:
+  # Files the CI image depends on besides flake.nix and flake.lock (each cut
+  # to the matching lines), so the image rebuilds only when they change.
+  inputs:
+    - path: go.mod
+      lines: '^(module|go|toolchain) '
+# Stage-wide environment.
+env:
+  # testcontainers' reaper is on Docker Hub, and the build VM is thrown away.
+  TESTCONTAINERS_RYUK_DISABLED: "true"
+# Files that cannot change what the build or the tests produce: a change only
+# to these runs only the stages whose `paths` match (docs, scoreboard).
+not-code:
+  - "*.md"
+  - "docs/**"
+  - ".claude/**"
+  - "LICENSE"
+  - ".github/renovate.json5"
+  - ".github/renovate/**"
+stages:
+  lint:
+    run: make lint
+  unit:
+    run: make test && make build
+  generate:
+    run: make check-generate
+    # It rewrites files while the other stages build them: its own tree.
+    own-tree: true
+  integration:
+    run: make test-integration
+  # Stages that create kind clusters set `kind: true` (they start first and
+  # get ci-kind-config, so nodes pull through registrygate and keep their
+  # image cache). Give each cluster a fixed name: the cache is keyed by it.
+  # e2e:
+  #   run: E2E_CLUSTER={{PROJECT}}-ci make test-e2e
+  #   kind: true
+  #   # Starts next to the stage; the stage waits on CI_WITH_EXIT_FILE.
+  #   # Stages with the same `with` share one job.
+  #   with: ./test/e2e/build-images.sh
+  #   # Changes that don't need e2e: gitignore-like, `!` un-ignores.
+  #   ignore:
+  #     - "**/*_test.go"
+  #     - "!test/e2e/**"
+  docs:
+    run: make docs-check
+    # The style report is advisory.
+    run-pull-request: make docs-check && { ./scripts/docs/style_report.sh origin/master || true; }
+    paths:
+      - "**/*.md"
+      - "scripts/docs/**"
+  scoreboard:
+    # The scoreboard's tests read the real checklist; unit runs them too.
+    run: ./scripts/acceptance-scoreboard_test.py
+    paths:
+      - "docs/acceptance/**"
+    push: false
+# Images master builds keep in the golden cache (printed one per line), e.g.
+# the kind node image and the e2e images: ./scripts/ci/e2e-images.sh --node
+# cleanup:
+#   keep-images: ./scripts/ci/e2e-images.sh --node
+# Fails a pull request that deletes or skips a checklist test (make
+# test-guard, with the PR's labels in TEST_GUARD_PR_LABELS).
+test-guard: true
+# The v<version> tag's run: builds `assets` into $RELEASE_ASSETS (optional),
+# runs `build` (pushing the images), tags the images `latest` for a final
+# version, packages and pushes the charts, then creates the GitHub release
+# from CHANGELOG.md's `## <version>` section with the assets attached.
+release:
+  # assets: ./scripts/ci/build-release-assets.sh "$RELEASE_VERSION" "$RELEASE_ASSETS"
+  build: make build-images VERSION="$RELEASE_VERSION" PUSH_ALL=true
+  images:
+    - ghcr.io/{{GH_USER_LOWER}}/{{PROJECT}}
+  charts:
+    - deploy/charts/{{PROJECT}}
+  chart-registry: oci://ghcr.io/{{GH_USER_LOWER}}/charts

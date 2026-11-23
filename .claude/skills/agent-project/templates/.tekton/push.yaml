@@ -1,0 +1,61 @@
+# Runs the shared master push Pipeline (infra-mk3's
+# cluster/gitops/ci/tekton/pipelines) with this repository's ci.yaml.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  # A fixed name collides with the previous run, which Pipelines-as-Code keeps.
+  generateName: {{PROJECT}}-push-
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "push" && target_branch == "master"
+    pipelinesascode.tekton.dev/max-keep-runs: "10"
+spec:
+  pipelineRef:
+    resolver: cluster
+    params:
+      - name: kind
+        value: pipeline
+      - name: name
+        value: ci-push
+      - name: namespace
+        value: ci-tekton
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: repo
+      value: "{{ repo_owner }}/{{ repo_name }}"
+    # The stages' CPU budget; keep it equal to the dind sidecar's CPU request
+    # below. Raise both (12) for a project with several kind clusters.
+    - name: cpus
+      value: "8"
+  timeouts:
+    pipeline: 1h
+  workspaces:
+    - name: source
+      emptyDir: {}
+  taskRunSpecs:
+    - pipelineTaskName: report
+      serviceAccountName: ci-report
+    # Every stage runs inside the dind sidecar's cgroup, so its memory is the
+    # memory of all stages together. Size it from a measured run: max(4 GiB,
+    # 1.5 × the "VM peak memory used" line). Request == limit (kata); no CPU
+    # limit.
+    - pipelineTaskName: ci
+      sidecarSpecs:
+        - name: dind
+          computeResources:
+            requests:
+              cpu: "8"
+              memory: 8Gi
+            limits:
+              memory: 8Gi
+      stepSpecs:
+        - name: run
+          computeResources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 256Mi
