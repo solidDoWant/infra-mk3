@@ -179,6 +179,12 @@
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
     {
+      description: "node-exporter: cluster image (pinned in the k8s-stack values, but not tied to the chart version) + host exporters (Ansible). Both feed the same rules and dashboards",
+      groupName: "node-exporter",
+      matchPackageNames: ["quay.io/prometheus/node-exporter", "prometheus/node_exporter"],
+      group: { commitMessageTopic: "{{{groupName}}} group" },
+    },
+    {
       description: "tape-archiver: charts + the Ansible-deployed data-worker image",
       groupName: "tape-archiver",
       matchPackageNames: ["/(^|/)tape-archiver-(web|control-worker)$/", "/^ghcr\\.io/soliddowant/tape-archiver//"],
@@ -293,7 +299,7 @@
     // digest. Overrides stop following the chart, so they share its PR.
     // Images shared across charts at different versions are scoped by file.
     {
-      description: "VictoriaMetrics: images pinned in the k8s-stack values (and the logs vmauth, which is the same vmauth)",
+      description: "VictoriaMetrics: images pinned in the k8s-stack values (and the logs vmauth, which is the same vmauth). node-exporter has its own group",
       groupName: "victoria-metrics-operator",
       matchFileNames: [
         "cluster/gitops/monitoring/victoria-metrics/k8s-stack/**",
@@ -305,7 +311,6 @@
         "/^quay\\.io/victoriametrics//",
         "quay.io/prometheus/alertmanager",
         "registry.k8s.io/kube-state-metrics/kube-state-metrics",
-        "quay.io/prometheus/node-exporter",
       ],
       group: { commitMessageTopic: "{{{groupName}}} group" },
     },
