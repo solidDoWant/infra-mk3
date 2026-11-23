@@ -5,6 +5,12 @@
 # only when the toolchain changes.
 FROM ghcr.io/nixos/nix:2.36.0@sha256:746280551ddc1c72177d1a597c05eacac86dfaa18d5d649bf86411278bcd5470
 ENV NIX_CONFIG="experimental-features = nix-command flakes"
+# Nix's fetcher cache (flake inputs, as git tarball caches) stays where the
+# build below fills it. Stages set XDG_CACHE_HOME to their cache volume, which
+# would hide it: a stage that evaluates the flake (`nix build`) would fetch
+# every input again, and build pods may only read their own repository on
+# GitHub. NIX_CACHE_HOME wins over XDG_CACHE_HOME.
+ENV NIX_CACHE_HOME=/root/.cache/nix
 COPY . /src/
 # The flake refuses a path source, so the files go into a throwaway git
 # repository first.
