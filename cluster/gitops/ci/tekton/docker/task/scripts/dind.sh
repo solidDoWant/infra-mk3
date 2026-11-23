@@ -306,6 +306,13 @@ JSON
 # devices of this container). Same device numbers as the kernel's.
 [ -e /dev/kmsg ] || mknod -m 600 /dev/kmsg c 1 11
 
+# inotify instances for the whole VM (this container runs as root in it). The
+# kernel's default of 128 per user runs out with several kind clusters: each
+# node's kubelet, containerd and controllers (kube-proxy first) open their
+# own, and then crash with "failed to create fsnotify watcher: too many open
+# files". The watches limit is raised by the kata kernel_params.
+sysctl -w fs.inotify.max_user_instances=8192 >/dev/null
+
 # Kubelet mounts an image volume as overlayfs with `volatile`, and the kernel
 # refuses such a mount (EIO, "upperdir has an unseen error") once the disk's
 # filesystem has had a write error that no syncfs has reported yet. The kind
