@@ -81,6 +81,14 @@ metadata:
   annotations:
     # The scripts use shell ${...} syntax.
     kustomize.toolkit.fluxcd.io/substitute: disabled
+    # Tekton copies a Task's annotations to its pods too; kata appends this to
+    # the guest kernel's command line. Each hotplugged memory block then keeps
+    # its page descriptors at its start, so no I/O buffer can span two of
+    # Cloud Hypervisor's memory regions: with kata 3.32 (Cloud Hypervisor
+    # v51.1) such a buffer fails with a spurious I/O error and loses a write
+    # (issue #999). Remove after the Talos 1.15 upgrade, whose kata ships the
+    # fix.
+    io.katacontainers.config.hypervisor.kernel_params: "memory_hotplug.memmap_on_memory=1"
 spec:
   params:
     - name: script
