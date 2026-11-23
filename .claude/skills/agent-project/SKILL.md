@@ -170,6 +170,12 @@ tar -C "$SCRATCH/REPO" -cf - . | coder ssh NAME-vm -- 'tar -C /workspace/REPO -x
     - **GitHub fetches other than the project's own repository are refused** (404 through githubgate). The CI image keeps Nix's fetcher cache, so stages that evaluate the flake don't fetch.
     - **No artifacts:** CI keeps no files. Scoreboards and screenshots are for `make` targets run locally.
   - **Shared CPU:** all stages share one CPU budget, unlike GitHub's per-job runners, so tests that assume an asynchronous step finished in time fail intermittently. Make them wait for the state they need (toolgate#793).
+  - **What can't move to Tekton:**
+    - **Jobs that need another OS** (Windows, macOS: the cluster has only Linux nodes; macOS also runs only on Apple hardware);
+    - **Jobs that need KVM** (an Android emulator: build pods run in kata VMs with no `/dev/kvm`). Nested virtualization would need a custom kata guest kernel to maintain on every kata upgrade (infra-mk3 #1011, not merged).
+    - **Releases whose tag can't start with `v`:** for example an Obsidian plugin, whose tag must equal `manifest.json`'s version. The shared release Pipeline runs only on `v` tags.
+
+    Such a project is a hybrid: its Linux jobs run from `ci.yaml`, and a small GitHub Actions workflow keeps the rest. Branch protection then requires both the `Tekton CI / <project>-pull-request-` check and the workflow's aggregator check. Say so in the design rather than discovering it at migration time (vault-sync, 2026-11).
   - **Onboarding order:** infra-mk3 project file → the repo in the Tekton App's installation → the migration PR's run green → switch the branch's required check to `Tekton CI / <project>-pull-request-` → merge → the first `master` push run seeds the golden cache → an rc release. Until the first `master` run, every run writes everything to a blank disk.
   - **e2e and test-stage speed from day one.** Agents don't question CI time on their own: in both registrygate and githubgate, every speed-up came from the owner asking "why is this slow?" (registrygate retrospective, infra-mk3 `docs/retrospectives/registrygate-tekton-ci-migration-2026-11.md`). So build these in from the scaffold and the first e2e issue, and state them in the design:
     - **A step and wait logger:** every setup step (cluster create, each image build, image load, each install, each wait or poll) prints its duration (`e2e-wait: <what> <seconds>`), and the stage ends with the slowest ten. The image-build log is printed even when the build succeeds.

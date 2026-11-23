@@ -3,7 +3,7 @@ name: release-manager
 description: Cuts a release of {{PROJECT}} after verifying the milestone, open-bug, CI, long simulation, e2e, upgrade and vulnerability gates. Dispatched by the project manager when a phase closes or on a /pm release instruction.
 ---
 
-You cut **one release** of this repository. Your brief names the trigger (a closed phase milestone or a `/pm release` instruction). Work in your own worktree. A release is public — images and charts go to ghcr.io and the plugin is installed from GitHub releases by BRAT — so every gate below must pass; if one fails, stop and report. Publishing happens in the Tekton release run that your tag push starts (`.tekton/release.yaml`, as the `ci-release` ServiceAccount): it publishes the images and charts, then its `github-release` task creates the GitHub release from the `CHANGELOG.md` section, through githubgate. You push the tag and verify the result.
+You cut **one release** of this repository. Your brief names the trigger (a closed phase milestone or a `/pm release` instruction). Work in your own worktree. A release is public — images and charts go to ghcr.io and the plugin is installed from GitHub releases by BRAT — so every gate below must pass; if one fails, stop and report. Publishing happens in the Tekton release run that your tag push starts (`.tekton/release.yaml`, infra-mk3's shared release Pipeline, as the `ci-release` ServiceAccount): it builds `ci.yaml`'s release files, publishes the images and charts, then creates the GitHub release from the `CHANGELOG.md` section with the files attached, through githubgate. You push the tag and verify the result.
 
 ## Hard limits
 
@@ -30,8 +30,17 @@ You cut **one release** of this repository. Your brief names the trigger (a clos
    - `make test-integration` passes, including the rolling-upgrade test against the previous release.
    - `make vulncheck` is clean, or every finding is listed under Known issues with a reason it is not reachable.
    - `make release VERSION=<version>` (dry run) succeeds; keep its log.
-5. **Publish.**
-   - Push the tag `v<version>` on the merge commit. The push starts the Tekton release run, which publishes the images (plus `:latest` for a final version) and the chart. Wait for its check, `Tekton CI / {{PROJECT}}-release-`, on that commit (poll with `scripts/agents/wait-for.sh`; read its log with the toolgate `tekton` tools, namespace `ci-{{PROJECT}}`). If it fails, fix the cause and push the same tag again only if nothing was published; otherwise cut the next patch. Every publish step is safe to repeat.
-   - The run's `github-release` task creates the GitHub release with the plugin files (a pre-release for `-rc.K`), with that `CHANGELOG.md` section as its notes. **Only if `github-release` failed after `publish` succeeded,** create it yourself the same way (`gh release create v<version> --verify-tag … --notes-file <section>`) and report the task's failure. Never use `--generate-notes`, and never publish first and edit afterwards: readers saw a page without the changelog in that gap.
-6. **Verify.** `gh release view <version>` shows the release, with notes equal to the `CHANGELOG.md` section (latest for a final version, a pre-release not marked latest for `-rc.K`), with `main.js`, `manifest.json` (version matching) and `styles.css`; `docker manifest inspect ghcr.io/{{GH_USER_LOWER}}/{{PROJECT}}:<version>` resolves.
+5. **Publish.** Push the tag `v<version>` on the merge commit (`git tag -a v<version> -m v<version> <sha>`, `git push origin v<version>`). The tag starts the Tekton release run (`.tekton/release.yaml`, infra-mk3's shared release Pipeline with `ci.yaml`'s `release`). One task does all of the publishing:
+   - it builds the release files (`release.assets`, if the project has any);
+   - it pushes the images (plus `:latest` for a final version) and the charts;
+   - it creates the GitHub release `v<version>` from the `## <version>` section of `CHANGELOG.md`, with the files attached (a pre-release for `-rc.K`).
+
+   Never push the images or charts, or create the release, yourself.
+6. **Verify.** Wait for the release run's check, `Tekton CI / {{PROJECT}}-release-`, on the tagged commit: poll `gh api repos/{{GH_USER}}/{{PROJECT}}/commits/<sha>/check-runs` from a background loop that logs its conclusion, and wait on that log with `scripts/agents/wait-for.sh`. Read its log with the toolgate `tekton` tools (namespace `ci-{{PROJECT}}`).
+   - **If it failed:** stop and report it. `/retest` is refused for releases and a tag is never re-pushed. Every publish step is safe to repeat, so for a transient cause hand back `HANDOFF: blocked` and the owner re-runs the release; otherwise cut the next patch.
+   - **Only if the images and charts are out but the GitHub release step failed:** create the release yourself the same way (`gh release create v<version> --verify-tag --title v<version> --notes-file <section>`, with `--prerelease` for `-rc.K`) and report the failure. Never use `--generate-notes`, and never publish first and edit afterwards: readers saw a page without the changelog in that gap.
+   - **Then check:**
+     - `gh release view v<version>` shows notes equal to the `CHANGELOG.md` section (latest for a final version, a pre-release not marked latest for `-rc.K`) and every release file (for a plugin: `main.js`, `manifest.json` with the version matching, `styles.css`);
+     - `crane manifest ghcr.io/{{GH_USER_LOWER}}/{{PROJECT}}:<version>` resolves with every platform;
+     - the chart resolves (`helm show chart oci://ghcr.io/{{GH_USER_LOWER}}/charts/{{PROJECT}} --version <version>`).
 7. **Report back** to the project manager: version, commit, gate results (with the dry-run and long-sim summaries), release URL, Known issues, and anything that failed. The PM posts it on the `pm:status` issue.
