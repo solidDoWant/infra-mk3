@@ -18,7 +18,7 @@
 # Parameters
 locals {
   github_integration_order_start = 0
-  github_integration_size        = 2
+  github_integration_size        = 3
 
   # The installation's owner, also the user the signing keys are added for
   # (GitHubUserAuthorization ci/soliddowant). Repository names in the policy
@@ -83,6 +83,20 @@ data "coder_parameter" "github_repositories" {
     regex = "^[ ]*(\\*|[A-Za-z0-9._-]+)?([ ]*,[ ]*[A-Za-z0-9._-]+)*[ ]*$"
     error = "Use comma-separated repository names, or \"*\"."
   }
+}
+
+data "coder_parameter" "github_workflows" {
+  name         = "github_workflows"
+  display_name = "GitHub workflow changes"
+  description  = <<-EOT
+    With Full access, also let the workspace change files under
+    .github/workflows (GitHub's "workflows" permission).
+  EOT
+  default      = "false"
+  type         = "bool"
+  icon         = "/icon/github.svg"
+  mutable      = true
+  order        = local.github_integration_order_start + 2
 }
 
 locals {
@@ -161,7 +175,10 @@ locals {
         name      = "soliddowant"
       }
       repositories = local.github_repositories
-      permissions  = local.github_presets[local.github_access].permissions
+      permissions = merge(
+        local.github_presets[local.github_access].permissions,
+        local.github_access == "full" && data.coder_parameter.github_workflows.value ? { workflows = "write" } : {},
+      )
       proxy = merge(
         { enabled = true },
         local.github_presets[local.github_access].proxy,

@@ -18,8 +18,9 @@ spec:
     key: private-key.pem
 ---
 # The App's installation on the account, and the most any policy may get
-# through it. No administration, workflows or other repository settings, so no
-# client can change branch protection, rulesets or Actions.
+# through it. No administration or other repository settings, so no client can
+# change branch protection or rulesets. Workflow files are allowed: a policy
+# gets them only when it asks (the Coder template's "GitHub workflow changes").
 apiVersion: githubgate.soliddowant.dev/v1alpha1
 kind: GitHubInstallation
 metadata:
@@ -37,6 +38,7 @@ spec:
         issues: write
         checks: write
         statuses: write
+        workflows: write
   # Namespaces whose policies may use it (the ci/project chart and the Coder
   # template label them).
   allowedNamespaces:
