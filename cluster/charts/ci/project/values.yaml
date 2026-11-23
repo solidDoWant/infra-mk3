@@ -8,6 +8,10 @@ concurrencyLimit: 2
 # The repository's default branch. Successful push builds on it refresh the
 # golden Docker cache (ci/tekton/docker/promoter).
 defaultBranch: master
+# Build pods may run in the kata-nested runtime class: kata with a guest kernel
+# that has KVM, so a stage can run its own VMs through /dev/kvm (an Android
+# emulator). Pipelines opt in per PipelineRun (podTemplate.runtimeClassName).
+nestedVirt: false
 # The shared docker Task (ci/tekton/docker).
 docker:
   # Size of each build's local Docker cache volume (the golden cache clone),

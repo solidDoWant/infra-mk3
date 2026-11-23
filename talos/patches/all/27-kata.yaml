@@ -126,6 +126,127 @@ contents: |
     kubelet_root_dir = "/var/lib/kubelet"
     pod_resource_api_sock = ""
 ---
+# The kata-nested runtime's configuration: the kata configuration above with one
+# change, a guest kernel with KVM built in (container images/kata-kernel-kvm),
+# so a container in a kata-nested pod can run its own VMs through /dev/kvm
+# (vault-sync's Android emulator in CI). The hosts already pass SVM to kata
+# guests (kvm_amd nested=1). Keep the rest identical to the configuration
+# above: change both together.
+apiVersion: v1alpha1
+kind: EtcFileConfig
+name: kata-containers/configuration-nested.toml
+mode: 0o644
+contents: |
+    [hypervisor.clh]
+    path = "/usr/local/bin/cloud-hypervisor"
+    # Changed for kata-nested: the guest kernel with KVM (container
+    # images/kata-kernel-kvm), copied here by the kata-kernel DaemonSet.
+    kernel = "/var/lib/kata-kernels/vmlinux-kvm"
+    image = "/usr/local/share/kata-containers/kata-containers.img"
+    rootfs_type = "ext4"
+    rootless = false
+    disable_selinux = false
+    disable_guest_selinux = true
+    enable_annotations = ["enable_iommu", "kernel_params", "kernel_verity_params"]
+    valid_hypervisor_paths = ["/usr/local/bin/cloud-hypervisor"]
+    # Changed: everything after the first two parameters. The guest kernel
+    # sizes several limits from the memory it boots with, which is
+    # default_memory (256MiB) - the pod's memory is only added after boot. Left
+    # alone, every kata VM keeps limits sized for 256MiB whatever its size:
+    #   tcp_mem/udp_mem: socket buffers for the whole VM. Memory pressure began
+    #     at 13MB of TCP buffers, and under pressure every connection's receive
+    #     window is cut to four segments: a 64-connection download in CI ran at
+    #     ~100Mbit/s instead of line rate.
+    #   tcp_rmem/tcp_wmem: one connection's buffers, 1.7MB instead of 6MB/4MB.
+    #   threads-max: threads in the whole VM, 1728 (~250 are the guest's own
+    #     kernel threads). The per-user process limit is the other half of this;
+    #     see base-runtime-spec.json below.
+    #   inotify watches: 8192, too few for editors and file watchers.
+    #   nf_conntrack: 2048 connections through NAT (docker in CI builds).
+    #   thash_entries: the TCP connection hash table; the SYN backlog, TIME_WAIT
+    #     and orphan limits are derived from its size in every network
+    #     namespace, so this sets them for pods' namespaces too.
+    # The values are what the kernel picks for a ~4GB machine. They're
+    # ceilings, not reservations: the VM can't use more memory than it has, and
+    # the pod's memory limit still applies inside it.
+    #
+    # ⚠ Kata splits this string on spaces and drops any word it has already
+    # seen, so the bare numbers inside the quoted values (all but the first of
+    # each) must not repeat anywhere in it. With a repeat, the quotes stop
+    # pairing up and the kernel ignores the rest of the line. Check the guest's
+    # /proc/sys values after changing any of them.
+    kernel_params = 'cgroup_no_v1=all systemd.unified_cgroup_hierarchy=1 sysctl.net.ipv4.tcp_mem="49152 65536 98304" sysctl.net.ipv4.udp_mem="36864 49152 73728" sysctl.net.ipv4.tcp_rmem="4096 131072 6291456" sysctl.net.ipv4.tcp_wmem="4096 16384 4194304" sysctl.kernel.threads-max=65536 sysctl.fs.inotify.max_user_watches=524288 sysctl.net.netfilter.nf_conntrack_max=65536 nf_conntrack.hashsize=16384 thash_entries=65536'
+    default_vcpus = 1
+    default_maxvcpus = 0
+    # Changed from 2048. The VM boots with this plus the pod's container
+    # limits, and the RuntimeClass overhead must cover it (the host OOM-kills
+    # the hypervisor otherwise). 256 is kata's minimum: smaller values fall
+    # back to 2048 silently (MinHypervisorMemory).
+    default_memory = 256
+    memory_slots = 10
+    default_maxmemory = 0
+    disable_block_device_use = true
+    shared_fs = "virtio-fs"
+    virtio_fs_daemon = "/usr/local/libexec/virtiofsd"
+    valid_virtio_fs_daemon_paths = ["/usr/local/libexec/virtiofsd"]
+    virtio_fs_cache_size = 0
+    virtio_fs_queue_size = 1024
+    virtio_fs_extra_args = ["--thread-pool-size=1", "--announce-submounts"]
+    virtio_fs_cache = "auto"
+    block_device_driver = "virtio-blk"
+    # Changed: direct I/O for hotplugged block devices (block PVCs), so their
+    # I/O doesn't fill the host page cache, which counts against the pod's
+    # memory limit. cloud-hypervisor only applies block_device_cache_direct
+    # with block_device_cache_set.
+    block_device_cache_set = true
+    block_device_cache_direct = true
+    reclaim_guest_freed_memory = false
+    enable_hugepages = false
+    disable_seccomp = false
+    enable_iommu = false
+    enable_debug = false
+    hypervisor_loglevel = 1
+    disable_image_nvdimm = true
+    hot_plug_vfio = "no-port"
+    cold_plug_vfio = "no-port"
+    guest_hook_path = ""
+    net_rate_limiter_bw_max_rate = 0
+    net_rate_limiter_bw_one_time_burst = 0
+    net_rate_limiter_ops_max_rate = 0
+    net_rate_limiter_ops_one_time_burst = 0
+    disk_rate_limiter_bw_max_rate = 0
+    disk_rate_limiter_bw_one_time_burst = 0
+    disk_rate_limiter_ops_max_rate = 0
+    disk_rate_limiter_ops_one_time_burst = 0
+    [agent.kata]
+    enable_debug = false
+    enable_tracing = false
+    debug_console_enabled = false
+    dial_timeout = 45
+    cdh_api_timeout = 50
+    [runtime]
+    enable_debug = false
+    internetworking_model = "tcfilter"
+    disable_guest_seccomp = true
+    guest_selinux_label = ""
+    enable_tracing = false
+    jaeger_endpoint = ""
+    jaeger_user = ""
+    jaeger_password = ""
+    disable_new_netns = false
+    sandbox_cgroup_only = false
+    static_sandbox_resource_mgmt = false
+    sandbox_bind_mounts = []
+    vfio_mode = "guest-kernel"
+    disable_guest_empty_dir = false
+    emptydir_mode = "shared-fs"
+    experimental = []
+    enable_pprof = false
+    create_container_timeout = 60
+    dan_conf = "/run/kata-containers/dans"
+    kubelet_root_dir = "/var/lib/kubelet"
+    pod_resource_api_sock = ""
+---
 # containerd's base spec for kata containers. CRI normally builds each
 # container's spec from containerd's defaults and removes their rlimits; with a
 # base spec it starts from this file instead and keeps the rlimits in it. This
@@ -359,3 +480,13 @@ content: |-
     base_runtime_spec = "/etc/kata-containers/base-runtime-spec.json"
   [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata.options]
     ConfigPath = "/etc/kata-containers/configuration.toml"
+  # kata-nested: the same runtime with configuration-nested.toml (the guest
+  # kernel with KVM). The extension defines only kata and kata-qemu, so this
+  # one lists everything itself.
+  [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata-nested]
+    runtime_type = "io.containerd.kata.v2"
+    privileged_without_host_devices = true
+    pod_annotations = ["io.katacontainers.*"]
+    base_runtime_spec = "/etc/kata-containers/base-runtime-spec.json"
+  [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.kata-nested.options]
+    ConfigPath = "/etc/kata-containers/configuration-nested.toml"

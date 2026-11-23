@@ -36,8 +36,14 @@ spec:
           r.kind == 'StatefulSet' && r.name.startsWith('affinity-assistant-'))
   validations:
     - expression: >-
-        has(object.spec.runtimeClassName) && object.spec.runtimeClassName == 'kata'
-      message: build pods must run in kata (runtimeClassName kata)
+        has(object.spec.runtimeClassName) &&
+        (object.spec.runtimeClassName == 'kata' ||
+          (object.spec.runtimeClassName == 'kata-nested' &&
+            has(namespaceObject.metadata.labels) &&
+            namespaceObject.metadata.labels[?'ci.home.arpa/nested-virt'].orValue('') == 'true'))
+      message: >-
+        build pods must run in kata (runtimeClassName kata), or kata-nested in
+        a project with nestedVirt (namespace label ci.home.arpa/nested-virt)
     - expression: >-
         !(has(object.spec.hostNetwork) && object.spec.hostNetwork) &&
         !(has(object.spec.hostPID) && object.spec.hostPID) &&

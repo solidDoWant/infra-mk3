@@ -1,0 +1,18 @@
+---
+# The kata runtime with a guest kernel that has KVM (talos/patches/all/27-kata.yaml:
+# configuration-nested.toml), so a container in the pod can run its own VMs
+# through /dev/kvm. For CI stages that need it (vault-sync's Android emulator).
+# Same overhead and nodes as kata; the kata-kernel DaemonSet puts the kernel on
+# those nodes.
+kind: RuntimeClass
+apiVersion: node.k8s.io/v1
+metadata:
+  name: kata-nested
+handler: kata-nested
+overhead:
+  podFixed:
+    memory: 288Mi
+    cpu: 250m
+scheduling:
+  nodeSelector:
+    katacontainers.io/kata-runtime: "true"

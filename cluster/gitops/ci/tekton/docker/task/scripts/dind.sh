@@ -306,6 +306,17 @@ JSON
 # devices of this container). Same device numbers as the kernel's.
 [ -e /dev/kmsg ] || mknod -m 600 /dev/kmsg c 1 11
 
+# In the kata-nested runtime the guest kernel has KVM, for stages that run
+# their own VMs (an Android emulator); kata gives this container none of the
+# VM's devices, so /dev/kvm is made here from the guest's device numbers.
+# Stage containers get it from ci-tools when it exists. Plain kata guests have
+# no KVM, and nothing changes there.
+if [ -r /sys/class/misc/kvm/dev ] && [ ! -e /dev/kvm ]; then
+  IFS=: read -r kvm_major kvm_minor < /sys/class/misc/kvm/dev
+  mknod -m 666 /dev/kvm c "$kvm_major" "$kvm_minor"
+  echo "kvm: /dev/kvm ($kvm_major:$kvm_minor) for nested VMs"
+fi
+
 # inotify instances for the whole VM (this container runs as root in it). The
 # kernel's default of 128 per user runs out with several kind clusters: each
 # node's kubelet, containerd and controllers (kube-proxy first) open their

@@ -1,0 +1,74 @@
+---
+# Copies the kata-nested runtime's guest kernel (container
+# images/kata-kernel-kvm) to /var/lib/kata-kernels/vmlinux-kvm on every kata
+# node, where configuration-nested.toml names it. Talos's root filesystem is
+# read-only, so it can't come with the extension. The copy is atomic (written
+# next to it, then renamed); VMs already running keep the kernel they booted.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kata-kernel
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kata-kernel
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kata-kernel
+    spec:
+      nodeSelector:
+        katacontainers.io/kata-runtime: "true"
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      initContainers:
+        - name: install
+          image: mirror.gcr.io/library/busybox:1.37.0-musl@sha256:f6a95d611e0a8780fabdb2aec43e31275b2720dfefa3e41b16835bfc42454478
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              cp /kernel/vmlinux-kvm /host/.vmlinux-kvm.new
+              mv -f /host/.vmlinux-kvm.new /host/vmlinux-kvm
+              ls -l /host/vmlinux-kvm
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 32Mi
+          volumeMounts:
+            - name: kernel
+              mountPath: /kernel
+              readOnly: true
+            - name: kata-kernels
+              mountPath: /host
+      containers:
+        # Keeps the pod running, so the DaemonSet rolls a new kernel image
+        # out to every node and shows where the copy failed.
+        - name: pause
+          image: registry.k8s.io/pause:3.10.1@sha256:278fb9dbcca9518083ad1e11276933a2e96f23de604a3a08cc3c80002767d24c
+          resources:
+            requests:
+              cpu: 1m
+              memory: 8Mi
+            limits:
+              memory: 8Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65535
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: kernel
+          image:
+            reference: ghcr.io/soliddowant/kata-kernel-kvm:3.32.0-6.18.35-r1@sha256:7d4c1ba5d4aaa55df2a0923b9958540c0682dea0e6c22d73b932c0aa02cc49da
+            pullPolicy: IfNotPresent
+        - name: kata-kernels
+          hostPath:
+            path: /var/lib/kata-kernels
+            type: DirectoryOrCreate

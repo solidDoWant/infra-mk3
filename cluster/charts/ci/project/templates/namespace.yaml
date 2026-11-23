@@ -15,6 +15,11 @@ metadata:
     # Selects project namespaces for the build pod admission policy and the
     # docker cache policy and promoter.
     ci.home.arpa/project: "true"
+    {{- if .Values.nestedVirt }}
+    # Lets build pods run in kata-nested (a guest kernel with KVM, for CI
+    # stages that run their own VMs); see the ci-build-pods admission policy.
+    ci.home.arpa/nested-virt: "true"
+    {{- end }}
     {{- if .Values.docker.registrygate.intercept }}
     # docker Task builds go through registrygate for the registries it stands
     # in for (ci/registrygate/config/kyverno.yaml).
