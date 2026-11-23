@@ -34,7 +34,7 @@
     - name: Install node-exporter via GitHub release
       vars:
         # renovate: datasource=github-releases depName=prometheus/node_exporter
-        node_exporter_version: 1.12.1
+        node_exporter_version: 1.13.1
       ansible.builtin.unarchive:
         src: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
         dest: /usr/local/bin
