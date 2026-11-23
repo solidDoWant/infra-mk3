@@ -90,9 +90,7 @@ data "coder_parameter" "github_workflows" {
   display_name = "GitHub workflow changes"
   description  = <<-EOT
     With Full access, also let the workspace change files under
-    .github/workflows (GitHub's "workflows" permission). Only repositories
-    the installation's ceiling allows it for accept it (ci/githubgate/config/app.yaml);
-    on any other repository the policy is rejected.
+    .github/workflows (GitHub's "workflows" permission).
   EOT
   default      = "false"
   type         = "bool"
