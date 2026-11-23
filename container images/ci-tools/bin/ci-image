@@ -21,5 +21,13 @@ while IFS=$'\t' read -r path lines; do
 	fi
 done < <(ci-config json | jq -r '.image.inputs[] | [.path, (.lines // "")] | @tsv')
 tag="$name-ci:$( (cd "$context" && find . -type f -print0 | sort -z | xargs -0 cat) | sha256sum | cut -c1-16)"
-docker build -q -f /ci-tools/lib/ci-image.Dockerfile -t "$tag" "$context" >&2
+# Quiet on success; on failure, the whole build log (Nix's errors included).
+log="$context.log"
+if ! docker build --progress=plain -f /ci-tools/lib/ci-image.Dockerfile -t "$tag" "$context" >"$log" 2>&1; then
+	echo "ci-image: building the CI image failed:" >&2
+	tail -n 150 "$log" >&2
+	rm -f "$log"
+	exit 1
+fi
+rm -f "$log"
 echo "$tag"
