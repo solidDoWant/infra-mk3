@@ -199,11 +199,7 @@ start_stage() {
 			"$image" bash -c '
 				source /etc/devshell.sh
 				source "$CI_TOOLS_DIR/stage-env.sh"
-				# ci-kind-config is documented as on the PATH of kind stages (the
-				# docker Task mounts /run/ci-kind into them); scripts that look it
-				# up with `command -v` fell back to a plain kind config without the
-				# node image cache or registrygate (toolgate, 2026-11-24).
-				export PATH="$CI_BIN:/run/ci-kind/bin:$PATH"
+				export PATH="$CI_BIN:$PATH"
 				git config --global --add safe.directory "*"
 				status=0
 				bash -c "set -e; $STAGE_COMMAND" || status=$?
