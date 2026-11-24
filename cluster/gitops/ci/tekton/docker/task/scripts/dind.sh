@@ -99,10 +99,17 @@ printf '}}\n'
 SH
   } > "$KIND_DIR/kubelet/bin/registrygate"
   chmod 755 "$KIND_DIR/kubelet/bin/registrygate"
-  kubelet_args='        - name: image-credential-provider-config
+  # kubeadm v1beta4 takes kubeletExtraArgs as a list of name/value pairs,
+  # v1beta3 as a map, and kind writes whichever its version uses (toolgate's
+  # kind writes v1beta3 for Kubernetes 1.35, the others v1beta4). A patch
+  # that names its apiVersion only applies to a config of that version, so
+  # each is given in both forms and exactly one applies.
+  kubelet_args_v1beta4='        - name: image-credential-provider-config
           value: /etc/ci-kind/kubelet/credential-provider.yaml
         - name: image-credential-provider-bin-dir
           value: /etc/ci-kind/kubelet/bin'
+  kubelet_args_v1beta3='        image-credential-provider-config: /etc/ci-kind/kubelet/credential-provider.yaml
+        image-credential-provider-bin-dir: /etc/ci-kind/kubelet/bin'
   cat > "$KIND_DIR/kind-patch.yaml" <<YAML
 # Merge into a kind cluster config: extraMounts into every node,
 # kubeadmConfigPatches into the cluster's. See the docker Task.
@@ -121,15 +128,29 @@ extraMounts:
     readOnly: true
 kubeadmConfigPatches:
   - |
+    apiVersion: kubeadm.k8s.io/v1beta4
     kind: InitConfiguration
     nodeRegistration:
       kubeletExtraArgs:
-$kubelet_args
+$kubelet_args_v1beta4
   - |
+    apiVersion: kubeadm.k8s.io/v1beta4
     kind: JoinConfiguration
     nodeRegistration:
       kubeletExtraArgs:
-$kubelet_args
+$kubelet_args_v1beta4
+  - |
+    apiVersion: kubeadm.k8s.io/v1beta3
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+$kubelet_args_v1beta3
+  - |
+    apiVersion: kubeadm.k8s.io/v1beta3
+    kind: JoinConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+$kubelet_args_v1beta3
 YAML
   echo "kind: node config for registrygate in $KIND_DIR/kind-patch.yaml"
 fi
