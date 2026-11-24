@@ -204,6 +204,16 @@ if [ -f "$patch" ]; then
     | .kubeadmConfigPatches = (.kubeadmConfigPatches // []) + $patch.kubeadmConfigPatches
   ' - "$patch")
 fi
+# etcd on the node's /tmp, which kind mounts as tmpfs. CI clusters are thrown
+# away after the build, and on the build's Docker disk (Ceph RBD) etcd's WAL
+# fsyncs took 35 ms on average and its commits 83 ms (toolgate e2e, 2026-11-24):
+# every API write waited on them, so parallel tests slowed each other 2-3x
+# while the CPUs idled. Appended last, so it wins over a dataDir in FILE;
+# CI_KIND_ETCD_ON_DISK=1 keeps etcd on disk. dataDir alone, as it reads the
+# same in every kubeadm config version.
+if [ "${CI_KIND_ETCD_ON_DISK:-}" != 1 ]; then
+  config=$(printf '%s\n' "$config" | "$yq" '.kubeadmConfigPatches = (.kubeadmConfigPatches // []) + ["kind: ClusterConfiguration\netcd:\n  local:\n    dataDir: /tmp/etcd\n"]')
+fi
 if [ -z "$name" ] || [ -z "$image" ]; then
   printf '%s\n' "$config"
   exit 0
