@@ -52,7 +52,7 @@ spec:
       # The docker Task's CLI image (Alpine with git), so builds pull one image
       # fewer.
       # renovate: image
-      image: mirror.gcr.io/library/docker:29.10.0-cli@sha256:34507eb5069d8be82c95dd3b6987d4250fd5fee49b82e2509b7d7a7030740d6d
+      image: mirror.gcr.io/library/docker:29.10.1-cli@sha256:6e26c5a09acc481245d6b50836f1f713c609e51ebc88735c08f5aa4b3c91e15a
       workingDir: $(workspaces.output.path)
       env:
         - name: URL
