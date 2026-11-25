@@ -47,7 +47,7 @@ spec:
               repository: mirror.gcr.io/rancher/system-upgrade-controller
               tag: v0.21.1@sha256:14636476f2801b9b6556dd4942f3e2371e8ac9e2b33986d5a59b742bc35f5152
             env:
-              SYSTEM_UPGRADE_JOB_KUBECTL_IMAGE: registry.k8s.io/kubectl:v1.37.2@sha256:fe049faa65ae483ac200009a949a68fa4c9985daea12c9cb1195c9c7965301fc
+              SYSTEM_UPGRADE_JOB_KUBECTL_IMAGE: registry.k8s.io/kubectl:v1.37.3@sha256:82f06779a0dcd86225ffdb96c005418b9716093a39907a5ecf686d7a22e6b788
               #   SYSTEM_UPGRADE_JOB_POD_REPLACEMENT_POLICY: Failed # Required for Talos
               SYSTEM_UPGRADE_CONTROLLER_NAME: *app_name
               # Off unless set; required with replicas > 1.
