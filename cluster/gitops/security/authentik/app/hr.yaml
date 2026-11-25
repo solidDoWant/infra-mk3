@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/goauthentik/helm-charts/authentik
   ref:
-    tag: 2026.8.6
-    digest: sha256:41841eeb2b9119a5392156932feca600100256aa570c91176c8818f28ae5b3e4
+    tag: 2026.8.7
+    digest: sha256:03711d23188e580d0a740500e683239db854ca3ed0cb5086abda8a5ea93be0c2
 ---
 # cspell:words REQS certfile
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -144,7 +144,7 @@ spec:
     server:
       image:
         repository: ghcr.io/goauthentik/server
-        tag: 2026.8.6@sha256:da89d8338a3b1889800eb033fd61f8d43f7aa9a1c5a042cb5e03d891b1f0c56c
+        tag: 2026.8.7@sha256:1675a017c46ba7f4f15333aeafeeb64538c581673bcbcd36af872cdf7de4e7f7
       replicas: 2
       env: &envoy_db_env
         # Plaintext to the Envoy sidecar, which does the mTLS. The server's Go
@@ -216,7 +216,7 @@ spec:
     worker:
       image:
         repository: ghcr.io/goauthentik/server
-        tag: 2026.8.6@sha256:da89d8338a3b1889800eb033fd61f8d43f7aa9a1c5a042cb5e03d891b1f0c56c
+        tag: 2026.8.7@sha256:1675a017c46ba7f4f15333aeafeeb64538c581673bcbcd36af872cdf7de4e7f7
       replicas: 2
       env: *envoy_db_env
       initContainers: *envoy_init_containers
