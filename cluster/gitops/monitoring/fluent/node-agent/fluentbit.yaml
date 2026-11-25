@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: fluentbit
     app.kubernetes.io/instance: fluentbit
 spec:
-  image: ghcr.io/fluent/fluent-operator/fluent-bit:v5.2.0@sha256:0cd0bc8a1106eb73657f08253a08a81edeabec90496b0c351dfe218096e9e804
+  image: ghcr.io/fluent/fluent-operator/fluent-bit:v5.2.1@sha256:01049ca9c917b5807c75dda9f2a6e7f4c6beaf3ba118f18d566f3fdd4a22c112
   # Baseline RSS is ~25-30Mi and legitimate memory is bounded (filesystem storage
   # spills chunks to disk; tail mem_buf_limit is 64MB). The 512Mi limit is a
   # safety net for the known v4.0/5.0 memory-leak reports (tail + kubernetes
