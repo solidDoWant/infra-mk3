@@ -26,6 +26,19 @@ spec:
   # TODO figure out auth and ideally multitenancy
   unauthorizedUserAccessSpec:
     url_map:
+      # Scoped queries, for queriers whose own users may only read some logs
+      # (toolgate's victorialogs-ci MCP server, which agents use). A request
+      # with this header only reads the CI project namespaces (ci-<project>,
+      # not ci-tekton): VictoriaLogs ANDs extra_stream_filters into the query
+      # and into every subquery in it (join, union, in()), so no query can
+      # widen it. The first matching entry wins, so this one comes first.
+      - src_paths:
+          - ".*"
+        src_headers:
+          - "X-Log-Scope: ci"
+        # extra_stream_filters={kubernetes.namespace.name=~"ci-.+",kubernetes.namespace.name!="ci-tekton"}
+        url_prefix: "http://srv+victoria-logs.monitoring.svc.cluster.local:9428/?extra_stream_filters=%7Bkubernetes.namespace.name%3D~%22ci-.%2B%22%2Ckubernetes.namespace.name%21%3D%22ci-tekton%22%7D"
+        discover_backend_ips: true
       - src_paths:
           - ".*"
         # Fully qualified on purpose: a literal url_prefix is passed through verbatim, so

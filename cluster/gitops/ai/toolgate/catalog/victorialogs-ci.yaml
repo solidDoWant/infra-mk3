@@ -1,0 +1,137 @@
+---
+# victorialogs, limited to the CI project namespaces' logs (ci-<project>):
+# build logs, including those of runs Tekton has already deleted. Agent VMs
+# get this instead of the full server (no-full-logs-in-agent-vms.yaml).
+#
+# The VictoriaLogs vmauth enforces the limit, not this server: the
+# X-Log-Scope header below selects its route that adds the namespace filter
+# to every query (monitoring/victoria-metrics/logs/vmauth.yaml). Callers
+# can't add their own headers (no MCP_PASSTHROUGH_HEADERS), and no tool
+# argument changes the URL or the headers.
+apiVersion: toolgate.soliddowant.dev/v1alpha1
+kind: MCPServerTemplate
+metadata:
+  name: victorialogs-ci
+spec:
+  description: >-
+    Search the CI build logs (the ci-<project> namespaces) in VictoriaLogs
+    (LogsQL): queries, hit counts, stats, and log streams and fields,
+    including logs of runs Tekton has already deleted. Read-only.
+  idleStop: 2h
+  # Stateless: replace running instances as soon as the template changes.
+  updatePolicy:
+    mode: immediate
+  access:
+    # The same people who can read the CI namespaces through the tekton server.
+    groups:
+      - Tekton access
+    environments: any
+  # MCP is served at the default path, /mcp.
+  endpoint:
+    service: victorialogs-ci
+    port: 8080
+  resources:
+    - apiVersion: v1
+      kind: Pod
+      metadata:
+        name: victorialogs-ci
+        labels:
+          app: victorialogs-ci
+          endpoints.netpols.home.arpa/logs-querier: "true"
+      spec:
+        automountServiceAccountToken: false
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000 # the image's `mcp` user
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - name: server
+            image: ghcr.io/victoriametrics/mcp-victorialogs:v1.9.0@sha256:753bb4fbe402ca1a782842f44636830f9895736f11d7fe783b924f8a0daf083d
+            ports:
+              - name: http
+                containerPort: 8080
+            env:
+              - name: MCP_SERVER_MODE
+                value: http
+              - name: MCP_LISTEN_ADDR
+                value: ":8080"
+              # The same vmauth that Grafana queries, so results cover both
+              # VictoriaLogs instances.
+              - name: VL_INSTANCE_ENTRYPOINT
+                value: http://vmauth-victoria-logs.monitoring.svc.cluster.local:9428
+              - name: MCP_LOG_FORMAT
+                value: json
+              # Selects vmauth's CI-only route.
+              - name: VL_INSTANCE_HEADERS
+                value: X-Log-Scope=ci
+            readinessProbe:
+              httpGet:
+                path: /health/readiness
+                port: http
+              periodSeconds: 10
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 128Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: victorialogs-ci
+      spec:
+        selector:
+          app: victorialogs-ci
+        ports:
+          - name: http
+            port: 8080
+            targetPort: http
+    # toolgate's own policy in the instance namespace admits only the gateway
+    # and DNS. This adds the egress the server needs.
+    - apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: victorialogs-ci
+      spec:
+        endpointSelector:
+          matchLabels:
+            app: victorialogs-ci
+        egress:
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: networking
+                  endpoints.netpols.home.arpa/cluster-dns: "true"
+            toPorts:
+              - ports:
+                  - port: "53"
+                    protocol: UDP
+                  - port: "53"
+                    protocol: TCP
+                rules:
+                  dns:
+                    - matchPattern: "*"
+          # Log queries, through the VictoriaLogs vmauth
+          - toEndpoints:
+              - matchLabels:
+                  io.kubernetes.pod.namespace: monitoring
+                  endpoints.netpols.home.arpa/logs-supplier: "true"
+            toPorts:
+              - ports:
+                  - port: "9428"
+                    protocol: TCP
+        ingress:
+          # Kubelet readiness probe
+          - fromEntities:
+              - host
+            toPorts:
+              - ports:
+                  - port: "8080"
+                    protocol: TCP
