@@ -208,3 +208,28 @@ specs:
       # Admission requests for Repository CRs
       - *admission
       - *metrics
+
+  # Deletes finished runs (TektonConfig's tektonpruner)
+  - description: pruner controller
+    endpointSelector:
+      matchLabels:
+        app: tekton-pruner-controller
+    egress:
+      - *dns_resolution
+      # Kubernetes API: leader election, its config, and the runs it deletes
+      - *to_kube_apiserver
+    ingress:
+      - *metrics
+
+  # Validates the pruner's config ConfigMaps
+  - description: pruner webhook
+    endpointSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: tekton-pruner
+        app.kubernetes.io/component: webhook
+    egress:
+      - *dns_resolution
+      # Kubernetes API: its serving certificate and the webhook configuration
+      - *to_kube_apiserver
+    ingress:
+      - *admission
