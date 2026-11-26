@@ -13,3 +13,9 @@ spec:
     # structure. Starts empty. See docs/insurgency-second-server.md.
     - name: insurgency-test
       owner: insurgency-test
+    # Stats v2 for the test server (tug2 issue #44): the new tables and views, written by
+    # gg2_stats2 next to the old tables in insurgency-test. The game server's user can't
+    # create schemas, so it is made here; gg2_stats2 and the stats_*.sql migrations find it
+    # as the one stats_* schema the connecting user owns.
+    - name: stats_test
+      owner: insurgency-test
