@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/piraeusdatastore/helm-charts/snapshot-controller
   ref:
-    tag: 5.4.0
-    digest: sha256:b885ec62379a71eca0a6b97373fc342280c7f65885608d522ee908c023f86bae
+    tag: 5.4.1
+    digest: sha256:dae3f46022b42a46a1f6d2489a4ee16d9b55f85e07c36c3d6063bcb0e1b35a69
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -30,7 +30,7 @@ spec:
     controller:
       image:
         repository: registry.k8s.io/sig-storage/snapshot-controller
-        tag: v8.7.0@sha256:8511f417d0072efcd937aedd7cc79a937d5066e64ee17beb6097301c92742f19
+        tag: v8.7.1@sha256:d3c3893704c86f0fe428a6429c705b7103a653bea151db0fc5ab0fdb25bb2290
       revisionHistoryLimit: 1
       replicaCount: 2
       pdb:
