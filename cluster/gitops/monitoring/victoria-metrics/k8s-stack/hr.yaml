@@ -7,8 +7,8 @@ spec:
   interval: 1h
   url: oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack
   ref:
-    tag: 0.98.1
-    digest: sha256:686f866acd3e4edcb45721c904ab112bd410fd94fef697849928a1b8f254d07c
+    tag: 0.99.1
+    digest: sha256:19c2c484b6fdec6301a5cbad6e937d7bb5f4970005725d3748f9fde444a36b5b
   verify:
     provider: cosign
     matchOIDCIdentity:
@@ -32,11 +32,11 @@ spec:
       fullnameOverride: victoria-metrics-operator
       image:
         repository: quay.io/victoriametrics/operator
-        tag: v0.75.2@sha256:237fac68b608c7ed7bc4c47ad25ebcb1cbe973c9a789661d2b6cfaa83093f87a
+        tag: v0.76.0@sha256:c0655485e33b4bcac00839f4842778fa807a9344d33729684a14f26e5a1e2755
       configReloader:
         image:
           repository: quay.io/victoriametrics/operator
-          tag: config-reloader-v0.75.2@sha256:6a997c5fe38692bff0384c0f113f8ab560f429d215649b16afc102ff81c80299
+          tag: config-reloader-v0.76.0@sha256:9cd445beaa43c3e6481918562c0aaa4e81c0afc9e10e2895f120b553b3079381
       crds:
         enabled: false
         plain: false
@@ -217,7 +217,7 @@ spec:
           spec:
             image:
               repository: quay.io/victoriametrics/vmauth
-              tag: v1.156.0-enterprise@sha256:3642e74646d082b916e5ab5929a63f669032ff7da7e7aef42f36788861d93902
+              tag: v1.157.0-enterprise@sha256:c6f76d00960221c22b5b19d0b73f083fb9f046f6e9924d95173cbe91a52b6054
             extraArgs:
               # Accept the VictoriaMetrics Enterprise ESA (https://victoriametrics.com/legal/esa/).
               # From v1.156.0 this replaces the license key; it's set on every enterprise component.
@@ -236,7 +236,7 @@ spec:
           revisionHistoryLimitCount: 1
           image:
             repository: quay.io/victoriametrics/vmselect
-            tag: v1.156.0-enterprise-cluster@sha256:5d63620d7da4e92978bc4d315a3b5c09f0327998bc043ac34705f7f36ac42d07
+            tag: v1.157.0-enterprise-cluster@sha256:a2b9911e9f34ccf4789653240e4e1b7c29b30d6f75fdc90070b0811bc108a4a4
           resources:
             # Right-sized 2026-08-01 from 14d of metrics: p95 CPU 378m / peak
             # working set 526Mi (was 1 core / 8Gi).
@@ -292,7 +292,7 @@ spec:
           revisionHistoryLimitCount: 1
           image:
             repository: quay.io/victoriametrics/vminsert
-            tag: v1.156.0-enterprise-cluster@sha256:482e577052f598862e78c5107ae70fb159b7bcf17f2e15bf500941f7e1f53358
+            tag: v1.157.0-enterprise-cluster@sha256:c93950123e42be23ce0d855bf8a0789f6c9f2a76dd1a93b344def0476748e0a4
           resources:
             requests:
               memory: 1Gi
@@ -315,7 +315,7 @@ spec:
           revisionHistoryLimitCount: 1
           image:
             repository: quay.io/victoriametrics/vmstorage
-            tag: v1.156.0-enterprise-cluster@sha256:75e82759b4500b2567e982f686c2d4247f3e13ec695052fb9b5efc2e9b9c980b
+            tag: v1.157.0-enterprise-cluster@sha256:32697e5454cb67b5c41e9e8e93b9268e8a09d3e0a2ed6e8079aa668beda13d84
           # Peak RSS ~2.3Gi, idle ~1.3Gi
           resources:
             requests:
@@ -371,7 +371,7 @@ spec:
       spec:
         image:
           repository: quay.io/prometheus/alertmanager
-          tag: v0.35.0@sha256:5f6e66c01bd610aef6dd671642a52eee775fd3a89bd8788ebada33efaf373d10
+          tag: v0.35.1@sha256:03d4e362b9948eee910802ddac55f9175b320862a2de1fdef5206c3213875a09
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
@@ -420,7 +420,7 @@ spec:
       spec:
         image:
           repository: quay.io/victoriametrics/vmalert
-          tag: v1.156.0-enterprise@sha256:7b2b46796586138cadd43e04476f9691a06c0509e1df5b88aab34f1833731dcc
+          tag: v1.157.0-enterprise@sha256:7324fc27a180c8d9271de6b581a0e9bd4c8375fe40b989c50ab31a8ffc5311d8
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
@@ -458,7 +458,7 @@ spec:
       spec:
         image:
           repository: quay.io/victoriametrics/vmagent
-          tag: v1.156.0-enterprise@sha256:a602300eef4ff48086d57fbb3ece39c28f22acf9037d455c26685562b76256a7
+          tag: v1.157.0-enterprise@sha256:8d0bcc24a3b9d186aae8782aebcd97aae32689a24482805202e77bef303c1b91
         podDisruptionBudget:
           minAvailable: 1
         replicaCount: 2
