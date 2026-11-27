@@ -8,8 +8,8 @@ spec:
   # Not cosign-signed upstream, so there is no `verify` block.
   url: oci://ghcr.io/soliddowant/charts/vault-sync
   ref:
-    tag: 0.6.0
-    digest: sha256:8554f5d7108e2d167255af821690f6235bb0b706ed062fa1005c0ee040409ea8
+    tag: 0.6.1
+    digest: sha256:de57882399b26330fee374ec4dde8f35f119a796fe234678d65534c2c46667f4
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -118,7 +118,7 @@ spec:
             main:
               image: &image
                 repository: ghcr.io/soliddowant/vault-sync
-                tag: 0.6.0@sha256:c0d97a1e60a8cc97fe91f253e74ec1ceadace6b11ee682802c2e9320559de265
+                tag: 0.6.1@sha256:9af203201ffdb965cf1b435771c4125af6817017240581817cd25f906cc8092e
               resources:
                 requests:
                   cpu: 100m
