@@ -37,7 +37,7 @@ spec:
           app:
             image: &image
               repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/stats-api
-              tag: 0.0.12
+              tag: 0.1.0
             env:
               LISTEN_ADDR: ":8080"
               # Both instances share the insurgency-stats hostname; the gateway forwards
@@ -141,38 +141,6 @@ spec:
             securityContext: *container_security_context
             resources: *resources
         pod: *pod
-      # Stats v2 (tug2 issue #44, phase 2): the rewritten API on the test server's schema, where the
-      # v2 tables sit beside the old ones, under /test-v2, beside the old API at /test, until both
-      # servers move over (phase 3).
-      test-v2:
-        replicas: 1
-        strategy: RollingUpdate
-        containers:
-          app:
-            image:
-              repository: harbor.${SECRET_PUBLIC_DOMAIN_NAME}/tug2/stats-api
-              tag: 0.1.0
-            env:
-              LISTEN_ADDR: ":8080"
-              BASE_PATH: /test-v2
-              # As test: direct to the replicas, schema chosen by PGOPTIONS (the pooler drops it).
-              PGHOST: insurgency-postgres-ro.tug2.svc.cluster.local
-              PGPORT: "5432"
-              PGDATABASE: *pg_database
-              PGUSER: *pg_user
-              PGAPPNAME: stats-api-test-v2
-              DATABASE_URL: postgres:///?pool_max_conns=4
-              PGSSLMODE: *pg_sslmode
-              PGSSLCERT: *pg_sslcert
-              PGSSLKEY: *pg_sslkey
-              PGSSLROOTCERT: *pg_sslrootcert
-              PGOPTIONS: -c search_path=insurgency-test -c statement_timeout=5000
-              TZ: *tz
-            ports: *ports
-            probes: *probes
-            securityContext: *container_security_context
-            resources: *resources
-        pod: *pod
     defaultPodOptions:
       # Run under the kata-containers runtime for VM-level isolation (public-facing API).
       runtimeClassName: kata
@@ -207,9 +175,6 @@ spec:
           test:
             app:
               - *postgres_cert_mount
-          test-v2:
-            app:
-              - *postgres_cert_mount
       # Cluster root CA (TLS trust anchor) in its own directory — mounting it as a
       # subPath file inside the postgres cert dir fails (nested volume mount points).
       root-ca:
@@ -227,9 +192,6 @@ spec:
           test:
             app:
               - *root_ca_mount
-          test-v2:
-            app:
-              - *root_ca_mount
     service:
       main:
         controller: main
@@ -241,14 +203,6 @@ spec:
             port: *metrics_port
       test:
         controller: test
-        ports:
-          web:
-            port: *web_port
-            primary: true
-          metrics:
-            port: *metrics_port
-      test-v2:
-        controller: test-v2
         ports:
           web:
             port: *web_port
@@ -278,11 +232,6 @@ spec:
           identifier: test
         jobLabel: *job_label
         endpoints: *service_monitor_endpoints
-      test-v2:
-        service:
-          identifier: test-v2
-        jobLabel: *job_label
-        endpoints: *service_monitor_endpoints
     route:
       stats-api:
         labels:
@@ -294,7 +243,7 @@ spec:
             namespace: networking
           - name: external-gateway
             namespace: networking
-        # Only the base paths reach the app, so the root-level kubelet-only health
+        # Only the two base paths reach the app, so the root-level kubelet-only health
         # endpoints (/readyz, /livez) get the gateway's 404. The prefix is forwarded
         # intact: the app expects it.
         rules:
@@ -311,14 +260,6 @@ spec:
                   value: /test
             backendRefs:
               - identifier: test
-                port: *web_port
-          # PathPrefix matches whole path elements, so /test above does not take /test-v2.
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /test-v2
-            backendRefs:
-              - identifier: test-v2
                 port: *web_port
           # The API used to be served at the root. Redirect the old paths to /main so
           # existing clients and links keep working.
