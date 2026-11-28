@@ -59,13 +59,16 @@ spec:
       # explicit list of stats tables in its own schema, on every start (tug2's
       # plugins/sourcemod/configs/sql-init-scripts/pgsql/discord_bot_grants.sql, run by
       # DatabaseMigrator as the table owner), so connection_log (player IP addresses) stays out of
-      # reach. The bot reloads the cert from disk itself, so a rotation needs no restart.
+      # reach. The same per-table grants give it LoadoutSaverSlots' saved loadouts in
+      # sourcemod-loadoutsaver. The bot reloads the cert from disk itself, so a rotation needs
+      # no restart.
       discord-bot:
         username: discord-bot
         disableReloading: true
         role:
-          comment: Discord bot, read-only SQL on the stats tables
-          connectionLimit: 2
+          comment: Discord bot, read-only SQL on the stats and saved loadout tables
+          # Two pooled connections for query_stats plus one for get_saved_loadouts.
+          connectionLimit: 3
       # Enable the PgBouncer backend user so the read-only pooler can authenticate to the cluster.
       pooler:
         disabled: false
