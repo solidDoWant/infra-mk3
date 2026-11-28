@@ -50,7 +50,8 @@ spec:
               # stats_api_url is the in-cluster address (never shown to users), and
               # includes each instance's BASE_PATH. query_address is the game port,
               # where srcds answers A2S queries. stats_db_schema is the server's schema
-              # in the stats database, for query_stats.
+              # in the stats database, for query_stats. loadout_db_schema is the
+              # server's schema in the loadoutsaver database, for get_saved_loadouts.
               SERVERS: |
                 [
                   {
@@ -59,7 +60,8 @@ spec:
                     "stats_api_url": "http://stats-api-main.tug2.svc.cluster.local:8080/main",
                     "public_stats_api_url": "https://insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}/main",
                     "query_address": "insurgency-server.tug2.svc.cluster.local:27000",
-                    "stats_db_schema": "public"
+                    "stats_db_schema": "public",
+                    "loadout_db_schema": "public"
                   },
                   {
                     "name": "test",
@@ -67,7 +69,8 @@ spec:
                     "stats_api_url": "http://stats-api-test.tug2.svc.cluster.local:8080/test",
                     "public_stats_api_url": "https://insurgency-stats.${SECRET_PUBLIC_DOMAIN_NAME}/test",
                     "query_address": "insurgency-server.tug2.svc.cluster.local:27001",
-                    "stats_db_schema": "insurgency-test"
+                    "stats_db_schema": "insurgency-test",
+                    "loadout_db_schema": "insurgency-test"
                   }
                 ]
               # The model can read every text/announcement channel where the bot has
@@ -92,6 +95,12 @@ spec:
               PGSSLCERT: /etc/discord-bot/certs/postgres/tls.crt
               PGSSLKEY: /etc/discord-bot/certs/postgres/tls.key
               PGSSLROOTCERT: /etc/discord-bot/certs/root-ca/ca.crt
+              # Saved loadouts for get_saved_loadouts. LoadoutSaverSlots keeps them in
+              # their own database, so this is a second one-connection pool with the
+              # same role, cert and pooler as above; only the database name differs.
+              # The role can read only loadouts_slots, loadout_items and theater_items
+              # there (granted by each game server's discord_bot_grants.sql).
+              LOADOUT_DB_URL: postgres:///sourcemod-loadoutsaver
               GITHUB_REPO: solidDoWant/tug2
               # Claude API access through workload identity federation: the SDK swaps
               # the projected service account token below for a short-lived API token.
